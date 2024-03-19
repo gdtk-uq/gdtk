@@ -133,7 +133,6 @@ PreconditionerType preconditionerTypeFromName(string name)
 struct NKGlobalConfig {
     // global control based on step
     int numberOfStepsForSettingReferenceResiduals = 0;
-    int freezeLimiterAtStep = -1;
     // stopping criterion
     int maxNewtonSteps = 1000;
     double stopOnRelativeResidual = 1.0e-99;
@@ -188,7 +187,6 @@ struct NKGlobalConfig {
     void readValuesFromJSON(JSONValue jsonData)
     {
         numberOfStepsForSettingReferenceResiduals = getJSONint(jsonData, "number_of_steps_for_setting_reference_residuals", numberOfStepsForSettingReferenceResiduals);
-        freezeLimiterAtStep = getJSONint(jsonData, "freeze_limiter_at_step", freezeLimiterAtStep);
         maxNewtonSteps = getJSONint(jsonData, "max_newton_steps", maxNewtonSteps);
         stopOnRelativeResidual = getJSONdouble(jsonData, "stop_on_relative_residual", stopOnRelativeResidual);
         stopOnAbsoluteResidual = getJSONdouble(jsonData, "stop_on_absolute_residual", stopOnAbsoluteResidual);
@@ -248,6 +246,7 @@ struct NKPhaseConfig {
     int stepsBetweenPreconditionerUpdate = 10;
     bool useAdaptivePreconditioner = false;
     bool ignoreStoppingCriteria = true;
+    bool frozenLimiterForResidual = false;
     bool frozenLimiterForJacobian = false;
     double linearSolveTolerance = 0.01;
     // Auto CFL control
@@ -266,6 +265,7 @@ struct NKPhaseConfig {
         stepsBetweenPreconditionerUpdate = getJSONint(jsonData, "steps_between_preconditioner_update", stepsBetweenPreconditionerUpdate);
         useAdaptivePreconditioner = getJSONbool(jsonData, "use_adaptive_preconditioner", useAdaptivePreconditioner);
         ignoreStoppingCriteria = getJSONbool(jsonData, "ignore_stopping_criteria", ignoreStoppingCriteria);
+        frozenLimiterForResidual = getJSONbool(jsonData, "frozen_limiter_for_residual", frozenLimiterForResidual);
         frozenLimiterForJacobian = getJSONbool(jsonData, "frozen_limiter_for_jacobian", frozenLimiterForJacobian);
         linearSolveTolerance = getJSONdouble(jsonData, "linear_solve_tolerance", linearSolveTolerance);
         useAutoCFL = getJSONbool(jsonData, "use_auto_cfl", useAutoCFL);
@@ -689,7 +689,7 @@ void readNewtonKrylovConfig()
         if (cfg.is_master_task && phase.residualInterpolationOrder > cfg.interpolation_order) {
             string errMsg;
             errMsg ~= "\n";
-            errMsg ~= format("ERROR: The residual interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
+            errMsg ~= format("ERROR: The residual interpolation order in phase %d exceeds the globally selected interpolation order.\n", i+1);
             errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
                     phase.residualInterpolationOrder, cfg.interpolation_order);
             errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
@@ -698,10 +698,19 @@ void readNewtonKrylovConfig()
         if (cfg.is_master_task && phase.jacobianInterpolationOrder > cfg.interpolation_order) {
             string errMsg;
             errMsg ~= "\n";
-            errMsg ~= format("ERROR: The Jacobian interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
+            errMsg ~= format("ERROR: The Jacobian interpolation order in phase %d exceeds the globally selected interpolation order.\n", i+1);
             errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
                     phase.jacobianInterpolationOrder, cfg.interpolation_order);
             errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
+            throw new Error(errMsg);
+        }
+
+        // Check for nonsensical frozen limiter settings
+        if (cfg.is_master_task && phase.frozenLimiterForResidual && phase.frozenLimiterForJacobian != phase.frozenLimiterForResidual) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: incompatible settings in phase %d,\n", i+1);
+            errMsg ~= "       frozen_limiter_for_jacobian cannot be false when frozen_limiter_for_residual is true.\n";
             throw new Error(errMsg);
         }
     }
@@ -947,23 +956,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             }
         }
 
-        // 0b. Check if we need to freeze limiter
-        if (step == nkCfg.freezeLimiterAtStep) {
-            // We need to compute the limiter a final time before freezing it.
-            // This is achieved via evalRHS
-            if (cfg.frozen_limiter == false) {
-                evalResidual(0);
-            }
-            cfg.frozen_limiter = true;
-        }
-
-        if (step < nkCfg.freezeLimiterAtStep) {
-            // Make sure that limiter is on in case it has been set
-            // to frozen during a Jacobian evaluation.
-            cfg.frozen_limiter = false;
-        }
-
-	// 0c. Compute the CFL for this step
+	// 0b. Compute the CFL for this step
 	if (step > startStep) { // because starting step is taken care of specially BEFORE this loop
 	    if (numberBadSteps == 0) {
 		// then previous update was fine, so proceed to get a new CFL value
@@ -993,10 +986,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	    }
 	}
 
-        // 0d. Set the timestep for this step
+        // 0c. Set the timestep for this step
         dt = setDtInCells(cfl, activePhase.useLocalTimestep);
 
-        // 0e. determine if we need to update preconditioner
+        // 0d. determine if we need to update preconditioner
 
         if (step == startStep || startOfNewPhase || (step % activePhase.stepsBetweenPreconditionerUpdate) == 0 || numberBadSteps > 0) {
             updatePreconditionerThisStep = true;
@@ -1246,8 +1239,14 @@ void allocateGlobalGMRESWorkspace()
 
 void setPhaseSettings(size_t phase)
 {
+    alias cfg = GlobalConfig;
     activePhase = nkPhases[phase];
     foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(activePhase.residualInterpolationOrder);
+    // We need to compute the limiter a final time before freezing it
+    if (activePhase.frozenLimiterForResidual) {
+        if (cfg.frozen_limiter == false) { evalResidual(0); }
+        cfg.frozen_limiter = true;
+    }
 }
 
 void computeResiduals(ref ConservedQuantities residuals)
@@ -2394,9 +2393,8 @@ void evalComplexMatVecProd(double sigma)
         alias cfg = GlobalConfig;
 
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
-        if (activePhase.frozenLimiterForJacobian) {
-            foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = true; }
-        }
+        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
+
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
 
@@ -2433,6 +2431,7 @@ void evalComplexMatVecProd(double sigma)
             foreach(face; blk.faces) { face.fs.clear_imaginary_components(); }
         }
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.residualInterpolationOrder); }
+        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual; }
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
     }
@@ -2449,9 +2448,8 @@ void evalComplexMatVecProd(double sigma)
 void evalRealMatVecProd(double sigma)
 {
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
-    if (activePhase.frozenLimiterForJacobian) {
-        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = true; }
-    }
+    foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
+
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
 
@@ -2481,6 +2479,7 @@ void evalRealMatVecProd(double sigma)
         }
     }
     foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(activePhase.residualInterpolationOrder);
+    foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual; }
 }
 
 /**
