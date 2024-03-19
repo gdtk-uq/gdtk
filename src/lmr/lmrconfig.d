@@ -249,13 +249,15 @@ string gridFilename(int snapshot, int blkId)
  *
  * Authors: RJG
  * Date: 2024-02-07
+ * History:
+ *    2024-03-19 -- remove hist prefix,
+ *                  we think it's somewhat obvious
+ *                  given these files live in a hist/ area
  */
 string historyFilename(size_t blkId, size_t cellId)
 {
-    string hname = lmrCfg.historyDir ~
-        "/" ~
-        lmrCfg.historyPrefix ~
-         "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
+    string hname = lmrCfg.historyDir ~ "/" ~
+         "blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
          "-cell-" ~ format(lmrCfg.cellIdxFmt, cellId) ~
          ".dat";
     return hname;
