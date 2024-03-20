@@ -247,7 +247,7 @@ It is advanced usage to control delegation of "run" to lmr-run
 void printVersion(bool shortVersion=true)
 {
     if (GlobalConfig.is_master_task) {
-        writeln("Eilmer 4.0 compressible-flow simulation code.");
+        writeln("Eilmer 5.0 compressible-flow simulation code.");
         writeln("Revision-id: ", lmrCfg.revisionId);
         writeln("Revision-date: ", lmrCfg.revisionDate);
         writeln("Compiler-name: ", lmrCfg.compilerName);
