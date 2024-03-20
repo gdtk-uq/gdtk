@@ -68,6 +68,13 @@ int main_(string[] args)
         return 1;
     }
 
+    writeln(inputFile == outputFile);
+    if (inputFile == outputFile) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writefln("Output file (%s) overwrites input file", outputFile);
+        return 1;
+    }
+
     if (verbosity > 0) {
         writefln("lmr %s: Begin creation of gas file.", cmdName);
     }

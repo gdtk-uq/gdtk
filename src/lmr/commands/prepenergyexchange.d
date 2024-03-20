@@ -91,6 +91,12 @@ int main_(string[] args)
         return 1;
     }
 
+    if (outputFile == inputFile || outputFile == gasFile || outputFile == reacFile ) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writefln("Output file (%s) overwrites an input file", outputFile);
+        return 1;
+    }
+
     if (verbosity > 0) {
         writefln("lmr %s: Begin creation of energy exchange file.", cmdName);
     }
