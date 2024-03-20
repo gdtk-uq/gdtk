@@ -69,8 +69,8 @@ int main_(string[] args)
     }
 
     if (inputFile == outputFile) {
-        writefln("Eilmer %s program quitting.", cmdName);
-        writefln("Output file (%s) overwrites input file", outputFile);
+        writefln("Eilmer %s program quitting because the output file (%s) would overwrite an input file", cmdName, outputFile);
+        writefln("Try changing the name of your output file");
         return 1;
     }
 
