@@ -24,6 +24,7 @@ import yaml
 import os
 import subprocess
 import shutil
+import shlex
 from math import log
 
 filesToCopyFilename = "FILES_TO_COPY"
@@ -243,7 +244,7 @@ def computeNorms(case, levelsToExec, normsStr, solidNormsStr):
         cmd = f"lmr compute-norms -f -n {normsStr} -r ref-soln.lua -o ../error-norms-k-{k}.txt"
         if solidNormsStr:
             cmd = f"lmr compute-norms -f -n {normsStr} --solid-norms='{solidNormsStr}' -r ref-soln.lua -o ../error-norms-k-{k}.txt"
-        proc = subprocess.run(cmd.split())
+        proc = subprocess.run(shlex.split(cmd))
         assert proc.returncode == 0, f"Failed to compute norms for grid level {k=}"
         os.chdir(cwd)
     return
@@ -277,6 +278,7 @@ def assembleResults(case, gridLevels, levelsToExec, norms, solidNorms):
             row += f"{L1[k][norm]:20.12e} {L2[k][norm]:20.12e} {Linf[k][norm]:20.12e} "
         if solidNorms:
             solid = doc[1]
+            L1_s[k] = {}; L2_s[k] = {}; Linf_s[k] = {};
             for norm in solidNorms:
                 L1_s[k][norm] = solid[norm]["L1"]
                 L2_s[k][norm] = solid[norm]["L2"]
@@ -312,7 +314,7 @@ def assembleResults(case, gridLevels, levelsToExec, norms, solidNorms):
             pLinf = log(Linf[kp1][norm]/Linf[k][norm])/logr
             row += f"{pL1:20.12e} {pL2:20.12e} {pLinf:20.12e} "
         if solidNorms:
-            for norm in norms:
+            for norm in solidNorms:
                 pL1 = log(L1_s[kp1][norm]/L1_s[k][norm])/logr
                 pL2 = log(L2_s[kp1][norm]/L2_s[k][norm])/logr
                 pLinf = log(Linf_s[kp1][norm]/Linf_s[k][norm])/logr
