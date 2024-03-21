@@ -2218,6 +2218,7 @@ public:
                 if (ftl==0) celldata.dUdt0[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
                 if (ftl==1) celldata.dUdt1[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
                 if (ftl==2) celldata.dUdt2[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==3) celldata.dUdt3[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
             }
         }
     } // end time_derivatives()
