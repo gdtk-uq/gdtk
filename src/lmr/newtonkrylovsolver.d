@@ -695,6 +695,17 @@ void readNewtonKrylovConfig()
             throw new Error(errMsg);
         }
 
+        // Check for a nonsensical combination of residual and jacobian interpolation orders.
+        if (cfg.is_master_task && phase.jacobianInterpolationOrder > phase.residualInterpolationOrder) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: The Jacobian interpolation order in phase %d exceeds the Residual interpolation order.\n", i+1);
+            errMsg ~= format("       Jacobian interpolation order= %d  Residual interpolation order= %d\n",
+                    phase.jacobianInterpolationOrder,  phase.residualInterpolationOrder);
+            errMsg ~= "       This is not allowed, the Jacobian interpolation order should be <= the Residual interpolation order.\n";
+            throw new Error(errMsg);
+        }
+
         // Check for nonsensical frozen limiter settings
         if (cfg.is_master_task && phase.frozenLimiterForResidual && phase.frozenLimiterForJacobian != phase.frozenLimiterForResidual) {
             string errMsg;
