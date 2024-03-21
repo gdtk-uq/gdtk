@@ -6,11 +6,14 @@
  *
  * Authors: KAD and RJG
  * Date: 2023-07-18
+ * History:
+ *   2024-03-21 moved from the lmr commands to its own separate executable to allow for complex number version
  */
 
 module checkjacobian;
 
 import std.stdio;
+import std.algorithm;
 import std.random;
 import std.getopt;
 import std.range : empty;
@@ -34,14 +37,18 @@ import lmrconfig;
 import blockio;
 import flowsolution;
 
+string cmdName;
 Command checkJacCmd;
-
-string cmdName = "check-jacobian";
 
 static this()
 {
+    version(complex_numbers) {
+        cmdName = "lmrZ-check-jacobian";
+    } else {
+        cmdName = "lmr-check-jacobian";
+    }
     checkJacCmd.type = LmrCmdType.dev;
-    checkJacCmd.main = &main_;
+    checkJacCmd.main = &main;
     checkJacCmd.description = `
 Check formation of the Jacobian via two internal methods:
 1. The sparse matrix representation multiplied by a test vector; and
@@ -49,7 +56,7 @@ Check formation of the Jacobian via two internal methods:
 `;
     checkJacCmd.shortDescription = "Check the formation of the Jacobian.";
     checkJacCmd.helpMsg = format(
-`lmr %s [options]
+`%s [options]
 
 Check the formation of the Jacobian for a snapshot of the field variables.
 
@@ -79,8 +86,9 @@ options ([+] can be repeated):
 `, cmdName);
 }
 
-int main_(string[] args)
+int main(string[] args)
 {
+    bool helpWanted = false;
     int verbosity = 0;
     int snapshot = -1;
     string outFilename;
@@ -88,6 +96,7 @@ int main_(string[] args)
     try {
         getopt(args,
                config.bundling,
+               "h|help", &helpWanted,
                "v|verbose+", &verbosity,
                "s|snapshot", &snapshot,
                "o|output", &outFilename,
@@ -99,7 +108,12 @@ int main_(string[] args)
         return 1;
     }
 
-    if (verbosity > 0) writefln("lmr %s: Begin program.", cmdName);
+    if (helpWanted || canFind(args, "help")) {
+        writeln(checkJacCmd.helpMsg);
+        return 0;
+    }
+
+    if (verbosity > 0) writefln("%s: Begin program.", cmdName);
 
     // Use stdout if no output filename is supplied,
     // or open a file ready for use if one is.
@@ -114,7 +128,7 @@ int main_(string[] args)
         // Rather than handle this error, let's define it away
         // A snapshot request beyond the number available gets set to the final snapshot
         // We'll warn the user though.
-        writefln("lmr %s: WARNING", cmdName);
+        writefln("%s: WARNING", cmdName);
         writefln("W: The snapshot requested {%d} is not available. Instead, selecting final snapshot {%d}.", snapshot, finalSnapshot);
         snapshot = finalSnapshot;
     }

@@ -41,6 +41,7 @@ MULTI_T_GAS ?= 1
 MHD ?= 1
 TURBULENCE ?= 1
 WITH_E4DEBUG ?= 0
+WITH_CHECK_JAC ?=0
 
 # For the ldc2 compiler, we can turn on some extra checking at run-time.
 # There will be a computational cost associated with these checks.
@@ -67,6 +68,9 @@ ifeq ($(WITH_MPICH),1)
     MPI_DIR = $(MPICH_DIR)
     MPI_FILES = $(MPICH_FILES)
 	MPI_IMPLEMENTATION := MPICH
+endif
+ifeq ($(WITH_CHECK_JAC), 1)
+	SUB_PROGRAMS += lmr-check-jacobian lmrZ-check-jacobian
 endif
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
@@ -154,7 +158,7 @@ REPO_DIR := $(shell cd ../../; pwd)
 DFLAGS :=
 DLINKFLAGS :=
 
-ifeq ($(DMD), $(filter $(DMD), dmd ldmd2))
+ifeq ($(DMD), dmd)
     DEBUG_DFLAGS := -w -g -debug -version=flavour_debug
     PROFILE_DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
     FAST_DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
@@ -448,6 +452,53 @@ lmrZ-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LM
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS) -L-lmpi
+
+lmr-check-jacobian: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+	$(DYAML_FILES) $(TINYENDIAN_FILES)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)newton_krylov \
+		$(LMR_CMD)/checkjacobian.d \
+		lmrconfig_with_str_subst.d \
+		$(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(DLINKFLAGS)
+
+lmrZ-check-jacobian: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+	$(DYAML_FILES) $(TINYENDIAN_FILES)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)newton_krylov \
+		$(DVERSION)complex_numbers \
+		$(LMR_CMD)/checkjacobian.d \
+		lmrconfig_with_str_subst.d \
+		$(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(DLINKFLAGS)
 
 #### Python programs
 lmr-verify: $(PY_PROG_DIR)/lmr_verify.py

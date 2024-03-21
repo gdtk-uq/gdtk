@@ -4,7 +4,6 @@ import std.algorithm;
 
 import lmrconfig;
 import command;
-import checkjacobian;
 import computenorms;
 import customscript;
 import probeflow;
@@ -82,7 +81,6 @@ Show help for a given Eilmer command or topic.
     // add alias for structured2unstructured
     commands["sgrid2ugrid"] = commands["structured2unstructured"];
     // 2. Add dev/diag commands
-    commands["check-jacobian"] = checkJacCmd;
 }
 
 int main(string[] args)

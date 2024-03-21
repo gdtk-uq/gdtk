@@ -94,8 +94,7 @@ LMR_EFIELD_FILES := $(LMR)/efield/efield.d \
 LMR_LUA_FILES = $(LMR_LUA_WRAP)/luaflowsolution.d \
 	$(LMR_LUA_WRAP)/luaflowstate.d
 
-LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
-	$(LMR_CMD)/cmdhelper.d \
+LMR_CMD_FILES = $(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/command.d \
 	$(LMR_CMD)/computenorms.d \
 	$(LMR_CMD)/customscript.d \
