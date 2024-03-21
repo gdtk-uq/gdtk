@@ -154,7 +154,7 @@ REPO_DIR := $(shell cd ../../; pwd)
 DFLAGS :=
 DLINKFLAGS :=
 
-ifeq ($(DMD), dmd)
+ifeq ($(DMD), $(filter $(DMD), dmd ldmd2))
     DEBUG_DFLAGS := -w -g -debug -version=flavour_debug
     PROFILE_DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
     FAST_DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
