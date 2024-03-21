@@ -607,16 +607,6 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // Do some memory clean-up and reporting.
     GC.collect();
     GC.minimize();
-    debug {
-        if (cfg.verbosity_level > 0) {
-            auto myStats = GC.stats();
-            auto heapUsed = to!double(myStats.usedSize)/(2^^20);
-            auto heapFree = to!double(myStats.freeSize)/(2^^20);
-            writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
-                     cfg.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
-            stdout.flush();
-        }
-    }
 
     if (cfg.verbosity_level > 0 && cfg.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
@@ -799,6 +789,25 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             cflSelector = new LinearRampCFL(lastEntry.step, nkCfg.maxNewtonSteps, lastEntry.cfl, lastEntry.cfl);
         }
     }
+
+    // At this point we should have all our large data structures initialized, so compute some memory usage for reporting
+    auto myStats = GC.stats();
+    double heapUsed = to!double(myStats.usedSize)/(2^^20);
+    double heapFree = to!double(myStats.freeSize)/(2^^20);
+    double minTotal = heapUsed+heapFree;
+    double maxTotal = heapUsed+heapFree;
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE,&heapUsed,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&heapFree,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&minTotal,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&maxTotal,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+    }
+    if (cfg.is_master_task) {
+        writefln("Heap memory used: %.0f MB, unused: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
+                 heapUsed, heapFree, heapUsed+heapFree, minTotal, maxTotal);
+        stdout.flush();
+    }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
     if (snapshotStart > 0) {
         /*----------------------------------------------
