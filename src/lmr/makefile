@@ -30,13 +30,9 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-WITH_NK ?= 0
-WITH_PIR ?= 0
-WITH_SSC ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
 DEBUG_CHEM ?= 0
-WITH_COMPLEX_NUMBERS ?= 0
 WITH_FPE ?= 0
 WITH_DVODE ?= 0
 WITH_DIAGNOSTICS ?= 0
@@ -330,7 +326,7 @@ lmr: main.d lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_
 		$(DVERSION)newton_krylov \
 		main.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+		$(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -356,7 +352,7 @@ lmr-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA
 		$(DVERSION)newton_krylov \
 		runsim_shared.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		-i=$(GAS_PACKAGE) -I=$(GAS_DIR) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -383,7 +379,7 @@ lmrZ-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LU
 		$(DVERSION)complex_numbers \
 		runsim_shared.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		-i=$(GAS_PACKAGE) -I=$(GAS_DIR) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -412,7 +408,7 @@ lmr-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR
 		$(DVERSION)newton_krylov \
 		runsim_mpi.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -442,7 +438,7 @@ lmrZ-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LM
 		$(DVERSION)complex_numbers \
 		runsim_mpi.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
