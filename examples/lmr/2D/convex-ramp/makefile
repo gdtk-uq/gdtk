@@ -28,5 +28,4 @@ post:
 
 clean:
 	- rm -rf $(LMR_DIR)
-	- rm air-5sp-gas-model.lua air-5sp-2T.gas GuptaEtAl-air-reactions-2T.lua
-	- rm air-energy-exchange.lua air-5sp-6r-2T.chem air-VT.exch
+	- rm air-5sp-gas-model.lua air-5sp-2T.gas
