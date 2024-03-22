@@ -26,6 +26,9 @@ run-steady:
 post:
 	lmr snapshot2vtk --all
 
+test:
+	PYTHONDONTWRITEBYTECODE=1 pytest -v
+
 clean:
 	- rm -rf $(LMR_DIR)
 	- rm air-5sp-gas-model.lua air-5sp-2T.gas
