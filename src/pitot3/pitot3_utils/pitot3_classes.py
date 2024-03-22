@@ -2977,7 +2977,7 @@ class Tube(object):
     def __init__(self, tube_name, tube_length, tube_diameter, fill_pressure, fill_temperature, fill_gas_model, fill_gas_name, fill_gas_filename,
                  fill_state_name, shocked_fill_state_name, entrance_state_name, entrance_state, unsteadily_expanded_entrance_state_name,
                  expand_to, expansion_factor,
-                 preset_gas_models_folder, unsteady_expansion_steps, vs_guess_1, vs_guess_2, vs_limits, vs_tolerance,
+                 preset_gas_models_folder, unsteady_expansion_steps, vs_guess_1, vs_guess_2, vs_limits, vs_tolerance, vs_max_iterations,
                  outputUnits = 'massf', species_MW_dict = None):
 
         self.tube_name = tube_name
@@ -3108,6 +3108,7 @@ class Tube(object):
         self.vs_guess_2 = vs_guess_2
         self.vs_limits = vs_limits
         self.vs_tolerance = vs_tolerance
+        self.vs_max_iterations = vs_max_iterations
 
         return
 
@@ -3180,7 +3181,21 @@ class Tube(object):
         print(self.unsteadily_expanding_state)
 
         # calculate the shock speed using a secant solver
-        self.vs = secant(error_in_velocity_function, self.vs_guess_1, self.vs_guess_2, limits = self.vs_limits, tol=self.vs_tolerance)
+        try:
+            self.vs = secant(error_in_velocity_function, self.vs_guess_1, self.vs_guess_2, limits = self.vs_limits,
+                             tol=self.vs_tolerance, max_iterations = self.vs_max_iterations)
+        except Exception as e:
+            print(e)
+            if 'Did not converge after ' in e.args:
+                print("Shock speed calculation did not converge")
+                print("This happens sometimes so we'll give it a go one more time with a slightly lower tolerance.")
+
+                new_vs_tolerance = self.vs_tolerance*10.0
+
+                print(f"The old tolerance was {self.vs_tolerance}, the new tolerance is {new_vs_tolerance}.")
+
+                self.vs = secant(error_in_velocity_function, self.vs_guess_1, self.vs_guess_2, limits=self.vs_limits,
+                                 tol=new_vs_tolerance, max_iterations=self.vs_max_iterations)
 
         self.Ms = self.vs / self.fill_state.get_gas_state().a
 

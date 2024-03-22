@@ -67,6 +67,7 @@ vsd_guess_1 : 4000.0 #m/s
 vsd_guess_2 : 5000.0 #m/s
 vsd_limits : [400.0, 20000.0] #m/s
 vsd_tolerance : 2.0e-5
+vsd_max_iterations : 50
 Tsd1 : 'T_0' # the code will set this to the T_0 value above...
 secondary_driver_gas_gas_model : 'CEAGas'
 secondary_driver_gas_name : 'he-with-ions'
@@ -80,6 +81,7 @@ vs1_guess_1 : 2000.0 #m/s
 vs1_guess_2 : 3000.0 #m/s
 vs1_limits : [400.0, 20000.0] # m/s
 vs1_tolerance : 1.0e-5
+vs1_max_iterations : 50
 T1 : 'T_0' # the code will set this to the T_0 value above...
 
 # acceleration tube default values
@@ -91,6 +93,7 @@ vs2_guess_1 : 'vs1 + 2000.0' #m/s, the code is able to interpret this
 vs2_guess_2 : 'vs1 + 3000.0' #m/s, the code is able to interpret this
 vs2_limits : ['vs1', 25000.0] #m/s, the code is able to interpret this
 vs2_tolerance : 1.0e-5
+vs2_max_iterations : 50
 T5 : 'T_0' # the code will set this to the T_0 value above...
 accelerator_gas_gas_model : 'CEAGas'
 accelerator_gas_name : 'air13species'

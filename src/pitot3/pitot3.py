@@ -416,6 +416,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
         vsd_guess_2 = config_data['vsd_guess_2']
         vsd_limits = config_data['vsd_limits']
         vsd_tolerance = config_data['vsd_tolerance']
+        vsd_max_iterations = config_data['vsd_max_iterations']
+
 
         secondary_driver_shocked_state_name = config_data['secondary_driver_shocked_state_name']
         secondary_driver_unsteadily_expanded_state_name = config_data['secondary_driver_unsteadily_expanded_state_name']
@@ -431,7 +433,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
                                 expand_to=secondary_driver_expand_to, expansion_factor=secondary_driver_expansion_factor,
                                 preset_gas_models_folder=preset_gas_models_folder,
                                 unsteady_expansion_steps=secondary_driver_unsteady_expansion_steps,
-                                vs_guess_1=vsd_guess_1, vs_guess_2=vsd_guess_2, vs_limits=vsd_limits, vs_tolerance=vsd_tolerance,
+                                vs_guess_1=vsd_guess_1, vs_guess_2=vsd_guess_2, vs_limits=vsd_limits,
+                                vs_tolerance=vsd_tolerance, vs_max_iterations = vsd_max_iterations,
                                 outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
         gas_path.append(secondary_driver)
@@ -476,6 +479,7 @@ def run_pitot3(config_dict = {}, config_filename = None,
     vs1_guess_2 = config_data['vs1_guess_2']
     vs1_limits = config_data['vs1_limits']
     vs1_tolerance = config_data['vs1_tolerance']
+    vs1_max_iterations = config_data['vs1_max_iterations']
 
     shock_tube_shocked_state_name = config_data['shock_tube_shocked_state_name']
     shock_tube_unsteadily_expanded_state_name = config_data['shock_tube_unsteadily_expanded_state_name']
@@ -490,7 +494,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
                       expand_to = shock_tube_expand_to, expansion_factor = shock_tube_expansion_factor,
                       preset_gas_models_folder = preset_gas_models_folder,
                       unsteady_expansion_steps = shock_tube_unsteady_expansion_steps,
-                      vs_guess_1 = vs1_guess_1, vs_guess_2 = vs1_guess_2, vs_limits = vs1_limits, vs_tolerance = vs1_tolerance,
+                      vs_guess_1 = vs1_guess_1, vs_guess_2 = vs1_guess_2, vs_limits = vs1_limits,
+                      vs_tolerance = vs1_tolerance, vs_max_iterations = vs1_max_iterations,
                       outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
     gas_path.append(shock_tube)
@@ -564,6 +569,7 @@ def run_pitot3(config_dict = {}, config_filename = None,
         vs2_guess_2 = config_data['vs2_guess_2']
         vs2_limits = config_data['vs2_limits']
         vs2_tolerance = config_data['vs2_tolerance']
+        vs2_max_iterations = config_data['vs2_max_iterations']
 
         acceleration_tube_shocked_state_name = config_data['acceleration_tube_shocked_state_name']
         acceleration_tube_unsteadily_expanded_state_name = config_data['acceleration_tube_unsteadily_expanded_state_name']
@@ -607,7 +613,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
                                  expand_to = acceleration_tube_expand_to, expansion_factor = acceleration_tube_expansion_factor,
                                  preset_gas_models_folder = preset_gas_models_folder,
                                  unsteady_expansion_steps = acceleration_tube_unsteady_expansion_steps,
-                                 vs_guess_1 = vs2_guess_1, vs_guess_2 = vs2_guess_2, vs_limits = vs2_limits, vs_tolerance = vs2_tolerance,
+                                 vs_guess_1 = vs2_guess_1, vs_guess_2 = vs2_guess_2, vs_limits = vs2_limits,
+                                 vs_tolerance = vs2_tolerance, vs_max_iterations = vs2_max_iterations,
                                  outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
         gas_path.append(acceleration_tube)
