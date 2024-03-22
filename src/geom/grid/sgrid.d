@@ -1421,6 +1421,47 @@ public:
         return conv_flag;
     } // end determine_rs_grids()
 
+    void rotateGrid(double q0, double q1, double q2, double q3)
+    {
+        /+ Rotate grid by applying the quaternion rotation of the form
+                 q0 + q1 ihat + q2 jhat + q3 khat
+            to all points. Some good info on quaternions and their relation
+            to rotation matrices can be found in:
+            https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
+
+        +/
+
+        number norm = q0*q0 + q1*q1 + q2*q2 + q3*q3;
+
+        if ((abs(norm) - 1.0) > 1e-8) {
+            throw new Exception("Invalid quaternion provided.
+                                Ensure norm is equal to 1.0.");
+        }
+
+        number r0, r1, r2, r3, r4, r5, r6, r7, r8;
+
+        r0 = q0*q0 + q1*q1 - q2*q2 - q3*q3;
+        r1 = 2*q1*q2 - 2*q0*q3;
+        r2 = 2*q1*q3 + 2*q0*q2;
+        r3 = 2*q1*q2 + 2*q0*q3;
+        r4 = q0*q0 - q1*q1 + q2*q2 - q3*q3;
+        r5 = 2*q2*q3 - 2*q0*q1;
+        r6 = 2*q1*q3 - 2*q0*q2;
+        r7 = 2*q2*q3 + 2*q0*q1;
+        r8 = q0*q0 - q1*q1 - q2*q2 + q3*q3; // Implementation checked against
+                                            // scipy rotation package.
+
+        const(number[]) Rmat = [r0, r1, r2, r3, r4, r5, r6, r7, r8];
+
+        foreach (k; 0 .. nkv) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
+                    this[i,j,k].apply_matrix_transform(Rmat);
+                }
+            }
+        }
+    } // end rotateGrid
+
 } // end class StructuredGrid
 
 //-----------------------------------------------------------------
