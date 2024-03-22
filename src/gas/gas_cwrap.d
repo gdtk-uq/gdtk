@@ -826,6 +826,25 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
     }
 }
 
+extern (C) int thermochemical_reactor_eval_source_terms(int cr_i, int gm_i, int gs_i,
+                                                        int nsp, int nmodes, double* source)
+{
+    try {
+        auto reactor = thermochemical_reactors[cr_i];
+
+        double[] sourceTerms;
+        sourceTerms.length = nsp + nmodes;
+        reactor.eval_source_terms(gas_models[gm_i], *(gas_states[gs_i]), sourceTerms);
+        foreach (i,v; sourceTerms) {
+            source[i] = v;
+        }
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 //---------------------------------------------------------------------------
 extern (C) int reaction_mechanism_new(int gm_i, const char* filename)
 {

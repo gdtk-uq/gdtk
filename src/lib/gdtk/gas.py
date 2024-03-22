@@ -63,6 +63,7 @@ ffi.cdef("""
     int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2);
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                 double* dt_suggest);
+    int thermochemical_reactor_eval_source_terms(int cr_i, int gm_i, int gs_i, int nsp, int nmodes, double* source);
 
     int reaction_mechanism_new(int gm_i, char* filename);
     int reaction_mechanism_n_reactions(int rm_i);
@@ -637,6 +638,13 @@ class ThermochemicalReactor(object):
         if flag < 0: raise Exception("could not update state.")
         return dt_suggestp[0]
 
+    def source_terms(self, gstate):
+        source = ffi.new("double[]", [0.0]*(self.gmodel.n_species + self.gmodel.n_modes))
+        flag = so.thermochemical_reactor_eval_source_terms(self.id, self.gmodel.id, gstate.id,
+                                                           self.gmodel.n_species, self.gmodel.n_modes, source)
+        if flag < 0: raise Exception("Could not compute source terms.")
+        return [source[i] for i in range(self.gmodel.n_species+self.gmodel.n_modes)]
+
 # -----------------------------------------------------------------------------------
 class ReactionMechanism(object):
     def __init__(self, gmodel, filename):
@@ -676,6 +684,7 @@ class ReactionMechanism(object):
 
         if flag < 0: raise Exception("Could not compute reaction tickrates.")
         return [backwardrates[i] for i in range(self.n_reactions)]
+
 
 
 #------------------------------------------------------------------------------------
