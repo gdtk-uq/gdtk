@@ -1423,6 +1423,7 @@ public:
 
     void rotateGrid(double q0, double q1, double q2, double q3)
     {
+        // Flynn Hack 2024-03-23
         /+ Rotate grid by applying the quaternion rotation of the form
                  q0 + q1 ihat + q2 jhat + q3 khat
             to all points. Some good info on quaternions and their relation

@@ -247,6 +247,7 @@ extern(C) int joinGrid(lua_State* L)
 
 extern(C) int rotateGrid(lua_State* L)
 {
+    // Flynn Hack 2023-03-23
     int narg = lua_gettop(L);
     auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
     lua_remove(L, 1); // remove grid from stack
