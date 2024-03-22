@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '17-Mar-2024'
+VERSION_STRING = '22-Mar-2024'
 
 import sys, os, math
 import yaml
@@ -223,7 +223,7 @@ def run_pitot3(config_dict = {}, config_filename = None,
             print("Using driver condition specified in a dictionary in the input config.")
         driver_condition_input_data = config_data['driver_dict']
 
-    if facility.shock_tube_diameter:
+    if facility and facility.shock_tube_diameter:
         D_shock_tube = facility.shock_tube_diameter
     else:
         D_shock_tube = None

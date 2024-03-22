@@ -3659,11 +3659,11 @@ class Nozzle(object):
 
             entrance_gas_state = self.entrance_state.get_gas_state()
 
-            # setting it to 1.01 as we want it to be above 1 so it supersonic!
+            # setting it to 1.02 as we want it to be above 1 so it supersonic!
             # (the p0/p is ideal gas).
-            # We also have some code to catch up if it ends up subsonic below too
+            # We also have some code to catch up if it ends up a bit subsonic below too
             v6 = entrance_state_gas_flow_object.expand_from_stagnation(entrance_gas_state,
-                                                                       1.0 / p0_p(1.01, entrance_gas_state.gamma),
+                                                                       1.0 / p0_p(1.02, entrance_gas_state.gamma),
                                                                        state6)
 
             M6 = v6 / state6.a
