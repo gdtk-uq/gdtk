@@ -1,0 +1,30 @@
+# X2's 95%He/5%Ar 2 mm driver condition
+# Empirical rupture Values from Table 2 of Gildfind et al. (2015)
+# Free-piston driver performance characterisation using experimental shock speeds through helium
+# for the 80%He no orifice plate version of this driver condition, but I figured that those numbers
+# are better than nothing... (and 80%He should be similar to this condition than 100%He)
+#
+# This is a new driver condition that I made after realising that there is a much larger gap in performance
+# between the 90 and 100% He conditions than the 80 to 90 % He conditions. This should plug the gap nicely.
+#
+# I actually went through and changed M_throat to D_throat as to me it seems more 'physical' for the user.
+# 
+# Chris James (c.james4@uq.edu.au) - 23/03/24
+
+driver_condition_name : 'x2-lwp-2.0mm-0'
+driver_condition_type : 'empirical'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':0.8,'Ar':0.2} 
+driver_speciesList : ['He','Ar']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+p4 : 23.9e6 # Pa
+T4 : 2747.0 # K
+
+D_throat : 0.0721 # m (72.1 mm rounded to one decimal place) 
+
+#(M_throat = 1.84 but I specified it with D_throat above so it was more 'physical' for users)
+
+

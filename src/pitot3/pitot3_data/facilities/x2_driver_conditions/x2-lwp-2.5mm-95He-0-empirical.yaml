@@ -1,8 +1,11 @@
-# X2's 90%He/10%Ar 2.5 mm driver condition with an empirical T4 value.
+# X2's 95%He/5%Ar 2.5 mm driver condition with an empirical T4 value.
 # Values from Figure 6.8 in Gildfind (2012) 
 # Development of High Total Pressure Scramjet Flow Conditions using the X2 Expansion Tube
 # M_throat was calculated using the formula from Gildfind et al. (2015) 
 # Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions 
+#
+# This is a new driver condition that I made after realising that there is a much larger gap in performance
+# between the 90 and 100% He conditions than the 80 to 90 % He conditions. This should plug the gap nicely.
 #
 # I actually went through and changed M_throat to D_throat as to me it seems more 'physical' for the user.
 # 
@@ -20,6 +23,8 @@ driver_withIons : False
 p4 : 35.7e6 # Pa
 T4 : 3077.0 # K
 
-D_throat : 0.0772 # m (77.2 mm), (the old M_throat was 1.59, but this actually gives 1.61, just FYI! so old PITOT3 results will be slightly different...)
+D_throat : 0.0721 # m (72.1 mm rounded to one decimal place) 
+
+#(M_throat = 1.84 but I specified it with D_throat above so it was more 'physical' for users)
 
 

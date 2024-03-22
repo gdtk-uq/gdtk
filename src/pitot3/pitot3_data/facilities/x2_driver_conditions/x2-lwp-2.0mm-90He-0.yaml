@@ -1,6 +1,8 @@
-# X2's 80%He/20%Ar 2 mm driver condition
+# X2's 90%He/10%Ar 2 mm driver condition
 # Empirical rupture Values from Table 2 of Gildfind et al. (2015)
 # Free-piston driver performance characterisation using experimental shock speeds through helium
+# for the 80%He no orifice plate version of this driver condition, but I figured that those numbers
+# are better than nothing... (and 80%He should be similar to this condition than 100%He)
 #
 # I actually went through and changed M_throat to D_throat as to me it seems more 'physical' for the user.
 # 
@@ -18,6 +20,6 @@ driver_withIons : False
 p4 : 23.9e6 # Pa
 T4 : 2747.0 # K
 
-D_throat : 0.085 # m (85 mm), (this is just the shock tube diameter, i.e. M_throat = 1 )
+D_throat : 0.0772 # m (77.2 mm), (the old M_throat was 1.59, but this actually gives 1.61, just FYI! so old PITOT3 results will be slightly different...)
 
 

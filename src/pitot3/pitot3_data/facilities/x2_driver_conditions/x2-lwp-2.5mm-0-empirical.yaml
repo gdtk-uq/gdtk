@@ -1,6 +1,10 @@
-# X2's 80%He 2.5 mm driver condition with an empirical T4 value.
+# X2's 80%He/20%Ar 2.5 mm driver condition with an empirical T4 value.
 # Values from Figure 6.8 in Gildfind (2012) 
 # Development of High Total Pressure Scramjet Flow Conditions using the X2 Expansion Tube
+
+# I actually went through and changed M_throat to D_throat as to me it seems more 'physical' for the user.
+# 
+# Chris James (c.james4@uq.edu.au) - 23/03/24
 
 driver_condition_name : 'x2-lwp-2.5mm-0-empirical'
 driver_condition_type : 'empirical'
@@ -14,6 +18,6 @@ driver_withIons : False
 p4 : 35.7e6 # Pa
 T4 : 3077.0 # K
 
-M_throat : 1.0
+D_throat : 0.085 # m (85 mm), (this is just the shock tube diameter, i.e. M_throat = 1 )
 
 

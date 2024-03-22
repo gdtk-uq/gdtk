@@ -3,6 +3,10 @@
 # Development of High Total Pressure Scramjet Flow Conditions using the X2 Expansion Tube
 # M_throat for the 65 mm orifice plate is from the text of Gildfind et al. (2015) 
 # Free-piston driver performance characterisation using experimental shock speeds through helium
+# 
+# I actually went through and changed M_throat to D_throat as to me it seems more 'physical' for the user.
+# 
+# Chris James (c.james4@uq.edu.au) - 23/03/24
 
 driver_condition_name : 'x2-lwp-2.5mm-100He-0-empirical'
 driver_condition_type : 'empirical'
@@ -16,6 +20,6 @@ driver_withIons : False
 p4 : 35.7e6 # Pa
 T4 : 3077.0 # K
 
-M_throat : 2.17
+D_throat : 0.065 #m (65 mm), (the related M_throat is 2.17)
 
 
