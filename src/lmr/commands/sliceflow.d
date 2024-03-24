@@ -58,7 +58,7 @@ options ([+] can be repeated):
        --names=rho
      default:
        --names=all
-     The output will always start with pos.x,pos.y,pos.z
+     The output will always start with pos.x,pos.y and, for 3D, pos.z.
 
  --add-vars
      comma separated array of auxiliary variables to add to the flow solution
@@ -88,6 +88,7 @@ options ([+] can be repeated):
 
  -s, --snapshot[s]+
      comma separated array of snapshots to convert
+     Note that only the last one will be processed.
      examples:
        --snapshots=0,1,5 : processes snapshots 0, 1 and 5
        --snapshot=2 : processes snapshot 2 only
