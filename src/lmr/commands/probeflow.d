@@ -19,6 +19,7 @@ import std.range;
 import std.algorithm;
 import std.string;
 import std.regex;
+import std.uni;
 
 import globalconfig;
 import fileutil;
@@ -44,7 +45,7 @@ static this()
 Probe flow-field snapshots based on a selection of field variables.
 
 If no selection of variable names is supplied, then the default action is
-to probe just the density field (--names="rho").
+to probe all flow field variables (--names=all).
 
 If no options related to snapshot selection are given,
 then the default is to process the final snapshot.
@@ -54,14 +55,14 @@ options ([+] can be repeated):
  -n, --names
      comma separated list of variable names for reporting
      examples:
-       --names="rho,vel.x,vel.y"
-       --names="rho"
+       --names=rho,vel.x,vel.y
+       --names=rho
      default:
-       --names="rho,p,T,vel.x,vel.y"
+       --names=all
 
  --add-vars
      comma separated array of auxiliary variables to add in VTK
-     eg. --add-vars="mach,pitot"
+     eg. --add-vars=mach,pitot
      Other variables include:
          total-h, total-p, total-T,
          enthalpy, entropy, molef, conc,
@@ -73,9 +74,10 @@ options ([+] can be repeated):
      probes the flow field at locations 0, 1 and 2 by accepting a string of the form
      "x0,y0,z0;x1,y1,z1;x2,y2,z2"
 
-     for 2D, simply supply z = 0.0 for z
+     For 2D, simply supply 0 for z, or omit.
+     To avoid the shell cutting your command at the semicolon, use quotes.
      example:
-       --location="0.25,0.25,0.0;0.75,0.75,0.0"
+       --location="0.25,0.25,0.0;0.75,0.75"
 
      default: none (report nothing)
 
@@ -144,11 +146,9 @@ int main_(string[] args)
         writefln("lmr %s: Begin program.", cmdName);
     }
 
-    if (namesStr.empty) { // add default of "rho,p,T,vel.x,vel.y" when nothing supplied
-        namesStr ~= "rho,p,T,vel.x,vel.y";
+    if (namesStr.empty) { // add default of "all" when nothing supplied
+        namesStr ~= "all";
     }
-    auto namesVariables = namesStr.split(",");
-    foreach (var; namesVariables) var = strip(var);
 
     // Use stdout if no output filename is supplied,
     // or open a file ready for use if one is.
@@ -188,11 +188,23 @@ int main_(string[] args)
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
         soln.add_aux_variables(addVarsList);
+        //
+        string[] namesList;
+        auto namesVariables = namesStr.split(",");
+        foreach (var; namesVariables) {
+            var = strip(var);
+            if (var.toLower() == "all") {
+                foreach (name; soln.flowBlocks[0].variableNames) namesList ~= name;
+            } else {
+                namesList ~= var;
+            }
+        }
         outfile.writeln("---"); // YAML document opener
         outfile.writefln("snapshot: %s", snap);
         foreach (ip; 0 .. xp.length) {
             if (verbosity > 2) {
-                writefln("lmr %s: Probing flow field at location [%g,%g,%g]", cmdName, xp[ip], yp[ip], zp[ip]);
+                writefln("lmr %s: Probing flow field at location [%g,%g,%g]",
+                         cmdName, xp[ip], yp[ip], zp[ip]);
             }
             auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
             size_t iblk = nearest[0]; size_t icell = nearest[1];
@@ -200,7 +212,7 @@ int main_(string[] args)
                              soln.get_value_str(iblk, icell, "pos.x"),
                              soln.get_value_str(iblk, icell, "pos.y"),
                              soln.get_value_str(iblk, icell, "pos.z"));
-            foreach (var; namesVariables) {
+            foreach (var; namesList) {
                 if (verbosity > 2) {
                     writefln("lmr %s: Probing flow field for variable= %s", cmdName, var);
                 }
