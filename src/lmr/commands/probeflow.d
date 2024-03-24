@@ -61,7 +61,7 @@ options ([+] can be repeated):
        --names=all
 
  --add-vars
-     comma separated array of auxiliary variables to add in VTK
+     comma separated array of auxiliary variables to add to the flow solution
      eg. --add-vars=mach,pitot
      Other variables include:
          total-h, total-p, total-T,
@@ -88,7 +88,6 @@ options ([+] can be repeated):
        --snapshot=2 : processes snapshot 2 only
        --snapshot 1  --snapshot 4 : processes snapshots 1 and 4
      default: none (empty array)
-
 
  -f, --final
      process the final snapshot

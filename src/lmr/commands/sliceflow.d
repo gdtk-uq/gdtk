@@ -43,8 +43,8 @@ Slice flow-field snapshots across index-directions,
 for a selection of flow field variables.
 The really only makes sense for structured-grid blocks.
 
-If no selection of variable names is supplied, then the default
-is to use --names="rho,p,T,vel.x,vel.y"
+If no selection of variable names is supplied, then the default action is
+to report all flow field variables (--names=all).
 
 If no options related to snapshot selection are given,
 then the default is to process the final snapshot.
@@ -54,20 +54,35 @@ options ([+] can be repeated):
  -n, --names
      comma separated list of variable names for reporting
      examples:
-       --names="rho"
+       --names=rho,vel.x,vel.y
+       --names=rho
      default:
-       --names="rho,p,T,vel.x,vel.y"
+       --names=all
      The output will always start with pos.x,pos.y,pos.z
+
+ --add-vars
+     comma separated array of auxiliary variables to add to the flow solution
+     eg. --add-vars=mach,pitot
+     Other variables include:
+         total-h, total-p, total-T,
+         enthalpy, entropy, molef, conc,
+         Tvib (for some gas models)
+         nrf (non-rotating-frame velocities)
+         cyl (cylindrical coordinates: r, theta)
 
  -l, --slice-list
      slices the flow field in a range of blocks by accepting a string of the form
      "blk-range,i-range,j-range:k-range;"
 
-     example:
+     examples:
+       --slice-list=0:2,:,$,0
+       will select blocks 0 and 1, writing out the top strip (j=njc-1) of cells, stepping in i
+       Note that you can specify the last value of any index with $.
+
        --slice-list="0:2,:,0,0;2,$,:,0"
        will select blocks 0 and 1, writing out a strip of cells stepping in i, keeping j=0, k=0, plus
        from block 2, write out a strip of cells stepping in j, keeping i=nic-1 and k=0
-       Note that you can specify the last value of an index with $.
+       Note that you need the quotes to stop the shell from cutting your command at the semicolon.
 
      default: none (report nothing)
 
@@ -112,6 +127,7 @@ int main_(string[] args)
     string outFilename;
     string sliceListStr;
     string luaRefSoln;
+    string addVarsStr;
     try {
         getopt(args,
                config.bundling,
@@ -121,7 +137,8 @@ int main_(string[] args)
                "f|final", &finalSnapshot,
                "a|all", &allSnapshots,
                "o|output", &outFilename,
-               "l|slice-list", &sliceListStr
+               "l|slice-list", &sliceListStr,
+               "add-vars", &addVarsStr
                );
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
@@ -134,17 +151,20 @@ int main_(string[] args)
         writefln("lmr %s: Begin program.", cmdName);
     }
 
+    string[] addVarsList;
+    addVarsStr = addVarsStr.strip();
+    addVarsStr = addVarsStr.replaceAll(regex("\""), "");
+    if (addVarsStr.length > 0) {
+        addVarsList = addVarsStr.split(",");
+    }
     if (namesStr.empty) {
         // add default, for when nothing supplied
-        namesStr ~= "rho,p,T,vel.x,vel.y";
+        namesStr ~= "all";
     }
-    auto namesVariables = namesStr.split(",");
-    foreach (var; namesVariables) var = strip(var);
-
     // Use stdout if no output filename is supplied,
     // or open a file ready for use if one is.
     File outfile = outFilename.empty() ? stdout : File(outFilename, "w");
-
+    //
     initConfiguration(); // To read in GlobalConfig
     auto availSnapshots = determineAvailableSnapshots();
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
@@ -154,20 +174,33 @@ int main_(string[] args)
     }
     sliceListStr = sliceListStr.strip();
     sliceListStr = sliceListStr.replaceAll(regex("\""), "");
-
+    //
     auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
-    bool is3dimensional =  canFind(soln.flowBlocks[0].variableNames, "pos.z");
-    outfile.write("pos.x pos.y");
-    if (is3dimensional) outfile.write(" pos.z");
+    bool threeD =  canFind(soln.flowBlocks[0].variableNames, "pos.z");
+    soln.add_aux_variables(addVarsList);
+    //
+    string[] namesList;
+    auto namesVariables = namesStr.split(",");
     foreach (var; namesVariables) {
-        if (!canFind(soln.flowBlocks[0].variableNames, var)) {
-            writefln("Ignoring requested variable %q.", var);
-            writeln("This does not appear in list of flow solution variables.");
-            continue;
+        var = strip(var);
+        if (var.toLower() == "all") {
+            foreach (name; soln.flowBlocks[0].variableNames) {
+                if (!canFind(["pos.x","pos.y","pos.z"], name)) { namesList ~= name; }
+            }
+        } else {
+            if (canFind(soln.flowBlocks[0].variableNames, var)) {
+                namesList ~= var;
+            } else {
+                writefln("Ignoring requested variable: %s", var);
+                writeln("This does not appear in list of flow solution variables.");
+            }
         }
-        outfile.write(" ", var);
     }
-    outfile.write("\n");
+    string headerStr = "pos.x pos.y";
+    if (threeD) headerStr ~= " pos.z";
+    foreach (var; namesList) { headerStr ~= " " ~ var; }
+    outfile.writeln(headerStr);
+    //
     foreach (sliceStr; sliceListStr.split(";")) {
         auto rangeStrings = sliceStr.split(",");
         auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
@@ -183,13 +216,11 @@ int main_(string[] args)
                     foreach (i; i_range[0] .. i_range[1]) {
                         outfile.write(format(" %g %g", soln.flowBlocks[ib]["pos.x", i, j, k],
                                              soln.flowBlocks[ib]["pos.y", i, j, k]));
-                        if (is3dimensional) {
+                        if (threeD) {
                             outfile.write(format(" %g", soln.flowBlocks[ib]["pos.z", i, j, k]));
                         }
-                        foreach (var; namesVariables) {
-                            if (canFind(soln.flowBlocks[0].variableNames, var)) {
-                                outfile.write(format(" %g", soln.flowBlocks[ib][var, i, j, k]));
-                            }
+                        foreach (var; namesList) {
+                            outfile.write(format(" %g", soln.flowBlocks[ib][var, i, j, k]));
                         }
                         outfile.write("\n");
                     }
