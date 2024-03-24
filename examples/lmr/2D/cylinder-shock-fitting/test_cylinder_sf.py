@@ -58,7 +58,7 @@ def test_snapshot():
     assert os.path.exists('lmrsim/vtk')
 
 def test_slice():
-    cmd = 'lmr slice-flow --slice-list="0,:,0,0;2,:,0,0;4,:,0,0"'
+    cmd = 'lmr slice-flow --slice-list="0,:,0,0;2,:,0,0;4,:,0,0" --names=rho,p,T,vel.x,vel.y'
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     lines = proc.stdout.split("\n")
