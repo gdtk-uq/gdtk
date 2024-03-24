@@ -579,13 +579,15 @@ public:
         // We assume a lot about the data that has been read in so,
         // we need to skip this function if all is not in place
         bool ok_to_proceed = true;
-        foreach (name; ["pos.x", "pos.y", "a", "rho", "p", "vel.x", "vel.y", "vel.z", "u"]) {
+        foreach (name; ["pos.x", "pos.y", "a", "rho", "p", "vel.x", "vel.y", "e"]) {
             if (!canFind(variableNames, name)) { ok_to_proceed = false; }
         }
         if (!ok_to_proceed) {
             writeln("FluidBlockLite.add_aux_variables(): Some essential variables not found.");
             return;
         }
+        bool threeD = canFind(variableNames, "pos.z");
+        //
         bool add_nrf_velocities = canFind(addVarsList, "nrf"); // nonrotating-frame velocities
         bool add_cyl_coords = canFind(addVarsList, "cyl"); // cylindrical coordinates, r and theta
         bool add_mach = canFind(addVarsList, "mach");
@@ -672,7 +674,7 @@ public:
         foreach (i; 0 .. ncells) {
             double x = _data[i][variableIndex["pos.x"]];
             double y = _data[i][variableIndex["pos.y"]];
-            double z = _data[i][variableIndex["pos.z"]];
+            double z = (threeD) ? _data[i][variableIndex["pos.z"]] : 0.0;
             double a = _data[i][variableIndex["a"]];
             double p = _data[i][variableIndex["p"]];
             double rho = _data[i][variableIndex["rho"]];
@@ -682,7 +684,7 @@ public:
             // may be rotating for turbomachinery calculations.
             double wx = _data[i][variableIndex["vel.x"]];
             double wy = _data[i][variableIndex["vel.y"]];
-            double wz = _data[i][variableIndex["vel.z"]];
+            double wz = (threeD) ? _data[i][variableIndex["vel.z"]] : 0.0;
             double w = sqrt(wx*wx + wy*wy + wz*wz);
             double M = w/a;
             if (add_cyl_coords) {
@@ -730,7 +732,7 @@ public:
                 _data[i] ~= total_p;
             }
             if (add_total_h) {
-                double e0 = _data[i][variableIndex["u"]];
+                double e0 = _data[i][variableIndex["e"]];
                 double tke;
 		double e_int = 0.0;
                 if (canFind(variableNames, "tke")) {
@@ -738,14 +740,14 @@ public:
                 } else {
                     tke = 0.0;
                 }
-		// We need to be greedy: search for as many u_modes as you can find.
+		// We need to be greedy: search for as many e_modes as we can find.
 		// And tally into e_int.
 		int imode = 0;
-		string u_mode_str = "u_modes[0]";
-		while (canFind(variableNames, u_mode_str)) {
-		    e_int += _data[i][variableIndex[u_mode_str]];
+		string e_mode_str = "e_modes[0]";
+		while (canFind(variableNames, e_mode_str)) {
+		    e_int += _data[i][variableIndex[e_mode_str]];
 		    imode++;
-		    u_mode_str = format("u_modes[%d]", imode);
+		    e_mode_str = format("e_modes[%d]", imode);
 		}
 		// Sum up the bits of energy.
                 double total_h = p/rho + e0 + e_int + 0.5*w*w + tke;

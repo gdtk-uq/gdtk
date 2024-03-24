@@ -13,6 +13,8 @@ import std.format;
 import std.getopt;
 import std.conv : to;
 import std.range;
+import std.string;
+import std.regex;
 
 import globalconfig;
 import fileutil;
@@ -67,7 +69,12 @@ options ([+] can be repeated):
  --add-vars
      comma separated array of auxiliary variables to add in VTK
      eg. --add-vars="mach,pitot"
-     [TODO] not implemented presently
+     Other variables include:
+         total-h, total-p, total-T,
+         enthalpy, entropy, molef, conc,
+         Tvib (for some gas models)
+         nrf (non-rotating-frame velocities)
+         cyl (cylindrical coordinates: r, theta)
 
  -r, --subtract-ref-solution
      name of file containing a Lua-format reference solution
@@ -101,7 +108,7 @@ int main_(string[] args)
     bool binaryFormat = false;
     string luaRefSoln;
     string luaSolidRefSoln;
-    // [TODO] implement --add-vars
+    string addVarsStr;
     try {
         getopt(args,
                config.bundling,
@@ -111,7 +118,8 @@ int main_(string[] args)
                "a|all", &allSnapshots,
                "b|binary-format", &binaryFormat,
                "r|subtract-ref-solution", &luaRefSoln,
-               "subtract-solid-ref-solution", &luaSolidRefSoln);
+               "subtract-solid-ref-solution", &luaSolidRefSoln,
+               "add-vars", &addVarsStr);
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
         writeln("There is something wrong with the command-line arguments/options.");
@@ -127,6 +135,13 @@ int main_(string[] args)
     size_t nFluidBlocks = GlobalConfig.nFluidBlocks;
     auto availSnapshots = determineAvailableSnapshots();
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
+
+    string[] addVarsList;
+    addVarsStr = addVarsStr.strip();
+    addVarsStr = addVarsStr.replaceAll(regex("\""), "");
+    if (addVarsStr.length > 0) {
+        addVarsList = addVarsStr.split(",");
+    }
 
     /*
      * When doing time-marching, also add timestep information.
@@ -145,7 +160,7 @@ int main_(string[] args)
         if (verbosity > 1) { writeln("lmr snapshot2vtk: Removing old VTK files."); }
         lmrCfg.vtkDir.rmdirRecurse;
     }
-    
+
     /*
      * Now write vtk files for each snapshot
      */
@@ -161,6 +176,7 @@ int main_(string[] args)
         }
         double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks, simTime);
+        soln.add_aux_variables(addVarsList);
         if (!luaRefSoln.empty) soln.subtract_ref_soln(luaRefSoln);
         // [TODO] add aux variables.
         string pvtuFileName = lmrCfg.fluidPrefix ~ "-s" ~ snap ~ ".pvtu";
