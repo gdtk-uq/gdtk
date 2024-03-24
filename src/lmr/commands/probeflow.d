@@ -17,6 +17,8 @@ import std.getopt;
 import std.conv : to;
 import std.range;
 import std.algorithm;
+import std.string;
+import std.regex;
 
 import globalconfig;
 import fileutil;
@@ -56,6 +58,16 @@ options ([+] can be repeated):
        --names="rho"
      default:
        --names="rho,p,T,vel.x,vel.y"
+
+ --add-vars
+     comma separated array of auxiliary variables to add in VTK
+     eg. --add-vars="mach,pitot"
+     Other variables include:
+         total-h, total-p, total-T,
+         enthalpy, entropy, molef, conc,
+         Tvib (for some gas models)
+         nrf (non-rotating-frame velocities)
+         cyl (cylindrical coordinates: r, theta)
 
  -l, --location
      probes the flow field at locations 0, 1 and 2 by accepting a string of the form
@@ -108,6 +120,7 @@ int main_(string[] args)
     string outFilename;
     string locationStr;
     string luaRefSoln;
+    string addVarsStr;
     try {
         getopt(args,
                config.bundling,
@@ -117,7 +130,8 @@ int main_(string[] args)
                "f|final", &finalSnapshot,
                "a|all", &allSnapshots,
                "o|output", &outFilename,
-               "l|location", &locationStr
+               "l|location", &locationStr,
+               "add-vars", &addVarsStr
                );
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
@@ -133,7 +147,6 @@ int main_(string[] args)
     if (namesStr.empty) { // add default of "rho,p,T,vel.x,vel.y" when nothing supplied
         namesStr ~= "rho,p,T,vel.x,vel.y";
     }
-
     auto namesVariables = namesStr.split(",");
     foreach (var; namesVariables) var = strip(var);
 
@@ -144,6 +157,13 @@ int main_(string[] args)
     initConfiguration(); // To read in GlobalConfig
     auto availSnapshots = determineAvailableSnapshots();
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
+
+    string[] addVarsList;
+    addVarsStr = addVarsStr.strip();
+    addVarsStr = addVarsStr.replaceAll(regex("\""), "");
+    if (addVarsStr.length > 0) {
+        addVarsList = addVarsStr.split(",");
+    }
 
     if (verbosity > 0) {
         writefln("lmr %s: Probing flow field.", cmdName);
@@ -156,7 +176,7 @@ int main_(string[] args)
         auto items = triple.split(",");
         xp ~= to!double(items[0]);
         yp ~= to!double(items[1]);
-        zp ~= to!double(items[2]);
+        zp ~= (items.length > 2) ? to!double(items[2]) : 0.0;
     }
     if (xp.length == 0) {
         writeln("No probe locations given.");
@@ -167,6 +187,7 @@ int main_(string[] args)
             writefln("lmr %s: Probing flow field for snapshot %s.", cmdName, snap);
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+        soln.add_aux_variables(addVarsList);
         outfile.writeln("---"); // YAML document opener
         outfile.writefln("snapshot: %s", snap);
         foreach (ip; 0 .. xp.length) {
@@ -184,8 +205,9 @@ int main_(string[] args)
                     writefln("lmr %s: Probing flow field for variable= %s", cmdName, var);
                 }
                 if (!canFind(soln.flowBlocks[0].variableNames, var)) {
-                    writefln("Ignoring requested variable %q.", var);
-                    writeln("This does not appear in list of flow solution variables.");
+                    writefln("Ignoring requested variable: %s", var);
+                    writeln("This does not appear in list of flow solution variables:");
+                    writeln("  ", soln.flowBlocks[0].variableNames);
                     continue;
                 }
                 outfile.writefln("       %s: %s", var, soln.get_value_str(iblk, icell, var));
