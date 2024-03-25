@@ -2678,6 +2678,9 @@ double applyLineSearch(double omega)
     //
     // 2. evaluate slope := - F(x)^T w(x,p)
     mixin(dotOverBlocks("initSlope", "w", "R"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &initSlope, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
     initSlope = -initSlope;
 
     bool reduceLambda = true;
