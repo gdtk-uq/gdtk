@@ -133,7 +133,7 @@ int main(string[] args)
         snapshot = finalSnapshot;
     }
 
-    if (verbosity > 1) writefln("lmt %s: Performing check with snapshot {%d}", cmdName, snapshot);
+    if (verbosity > 1) writefln("%s: Performing check with snapshot {%d}", cmdName, snapshot);
 
     /*
      * 0. Initialize Newton-Krylov simulation
@@ -149,15 +149,21 @@ int main(string[] args)
     }
     activePhase = nkPhases[$-1]; // set to the last phase from the simulation
     evalResidual(0); // we perform a residual evaluation here to populate the ghost-cells
+    alias cfg = GlobalConfig;
+    size_t nConserved = cfg.cqi.n;
+
+    if (verbosity > 1) writefln("%s: Performing check with Jacobian perturbation parameter %.4e and Frechet perturbation parameter %.4e",
+                                cmdName, nkCfg.preconditionerPerturbation, nkCfg.frechetDerivativePerturbation);
+
+    // prepare fluidblock (note that this program only operates on a single fluidblock)
+    auto blk = localFluidBlocks[0];
+    if (readFrozenLimiterValues) readLimiterValues(snapshot);
 
     /*
      * 1. Do calculation of sparse-matrix Jacobian by test vector.
      */
     // 1a. Populate Jacobian
-    alias cfg = GlobalConfig;
-    auto blk = localFluidBlocks[0];
-    if (readFrozenLimiterValues) readLimiterValues(snapshot);
-    blk.initialize_jacobian(cfg.interpolation_order, 1.0e-250, 0);
+    blk.initialize_jacobian(cfg.interpolation_order, nkCfg.preconditionerPerturbation, 0);
     blk.evaluate_jacobian();
     // 1b. Prepare a test vector
     double[] testVec;
@@ -182,9 +188,18 @@ int main(string[] args)
     allocateGlobalGMRESWorkspace();
     blk.allocate_GMRES_workspace(1);
 
-    // 2b. Do Frechet step
+    // 2b. Do Frechet step (note for the real-valued variant we need to fill R)
+    version(complex_numbers) {
+        // do nothing
+    } else {
+        int startIdx = 0;
+        foreach (cell; blk.cells) {
+            foreach (ivar; 0 .. nConserved) { blk.R[startIdx+ivar] = cell.dUdt[0][ivar].re; }
+            startIdx += nConserved;
+        }
+    }
     blk.zed[] = testVec[];
-    evalJacobianVectorProduct(1.0e-250);
+    evalJacobianVectorProduct(nkCfg.frechetDerivativePerturbation);
 
     /*
      * 3. Compare vectors and write result to file.
@@ -201,7 +216,6 @@ int main(string[] args)
     writefln("c1, 2-norm= %.16e", c1_2norm.re);
 
     outfile.writeln("# array_idx cell_idx c0   c1   c0-c1   abs(c0-c1)");
-    size_t nConserved = cfg.cqi.n;
     foreach (i; 0 .. c0.length) {
         auto delta = c0[i] - blk.zed[i];
         size_t cell_id = i/nConserved;
