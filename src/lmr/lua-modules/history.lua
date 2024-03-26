@@ -66,9 +66,10 @@ function history.setHistoryPoint(args)
       local i = args.i
       local j = args.j
       local k = args.k or 0
-      local nic = fluidBlocks[ib+1].nic
-      local njc = fluidBlocks[ib+1].njc
-      local nkc = fluidBlocks[ib+1].nkc
+      local blk = fluidBlocks[ib+1] -- one-based block array
+      local nic = blk.nic
+      local njc = blk.njc
+      local nkc = blk.nkc
       -- Allow the user to specify the last index value in each direction
       -- by simply clipping the index values to actual range in the grid
       if i >= nic then
@@ -98,7 +99,17 @@ function history.setHistoryPoint(args)
    local n = #historyCells
    local ib = historyCells[n].ib -- zero-based block index
    local i = historyCells[n].i
-   local pos = fluidBlocks[ib+1].grid:cellCentroid(i) -- one-based block array
+   local blk = fluidBlocks[ib+1] -- one-based block array
+   if (blk.grid == nil) then
+      -- Likely we've initialised only based on metadata
+      if (blk.gridMetadata['type'] == 'structured_grid') then
+         blk.grid = StructuredGrid:new{filename=lmrconfig.gridFilename(blk.id), fmt=config.grid_format}
+      end
+      if (blk.gridMetadata['type'] == 'unstructured_grid') then
+         blk.grid = UnstructuredGrid:new{filename=lmrconfig.gridFilename(blk.id), fmt=config.grid_format}
+      end
+   end
+   local pos = blk.grid:cellCentroid(i)
    print(string.format("Fluid History point [%d] ib=%d i=%d x=%g y=%g z=%g",
                        n, ib, i, pos.x, pos.y, pos.z))
    local fhpfile = "./lmrsim/fluid-history-points.list"
