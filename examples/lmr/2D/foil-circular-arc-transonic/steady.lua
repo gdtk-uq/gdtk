@@ -24,36 +24,40 @@ bcDict = {
    outflow=OutFlowBC_FixedP:new{p_outside=p_inf}
 }
 makeFluidBlocks(bcDict, flowDict)
+mpiDistributeBlocks{ntasks=7}
 
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
+config.thermo_interpolator = "rhop"
+config.extrema_clipping = false
 
 NewtonKrylovGlobalConfig{
-   number_of_steps_for_setting_reference_residuals = 3,
+   number_of_steps_for_setting_reference_residuals = 0,
    stop_on_relative_residual = 1.0e-6,
-   number_of_phases = 2,
-   max_steps_in_initial_phases = { 15 },
+   number_of_phases = 1,
+   --max_steps_in_initial_phases = { 250 },
+   --phase_changes_at_relative_residual = { 1.0e-3 },
    use_physicality_check = true,
-   max_linear_solver_iterations = 10,
+   frechet_derivative_perturbation = 1.0e-50,
+   use_preconditioner = true,
+   preconditioner = "ilu",
+   ilu_fill = 1,
+   max_linear_solver_iterations = 100,
    total_snapshots = 3,
-   steps_between_status = 1,
-   steps_between_snapshots = 5,
+   steps_between_status = 10,
+   steps_between_snapshots = 50,
    steps_between_diagnostics = 1
-}
-
-NewtonKrylovPhase:new{
-   residual_interpolation_order = 1,
-   jacobian_interpolation_order = 1,
-   linear_solve_tolerance = 0.1,
-   use_auto_cfl = true,
-   threshold_relative_residual_for_cfl_growth = 0.9,
-   start_cfl = 2.0,
-   max_cfl = 1.0e6,
-   auto_cfl_exponent = 0.9
 }
 
 NewtonKrylovPhase:new{
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
-   start_cfl = 10.0
+   frozen_preconditioner = true,
+   steps_between_preconditioner_update = 5,
+   linear_solve_tolerance = 0.1,
+   use_auto_cfl = true,
+   threshold_relative_residual_for_cfl_growth = 0.9,
+   start_cfl = 5.0,
+   max_cfl = 1.0e6,
+   auto_cfl_exponent = 0.9
 }

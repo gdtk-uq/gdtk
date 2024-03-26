@@ -13,7 +13,7 @@ prep: ideal-air.lua grid.lua
 
 run-steady: steady.lua
 	lmr prep-sim --job=steady.lua
-	lmr run
+	mpirun --use-hwthread-cpus -np 7 lmrZ-mpi-run
 
 run-transient: transient.lua
 	lmr prep-sim --job=transient.lua
