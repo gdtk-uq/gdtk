@@ -10,7 +10,7 @@
 --   Acta Astronautica, 17, pp.589--597
 --
 config.title = "Lehr experiment M=3.55"
-R = 7.5e-3 -- nose radis, metres
+R = 7.5e-3 -- nose radius, metres
 
 -- Free stream conditions
 -- taken from Table 1, Entry 5.
