@@ -193,6 +193,9 @@ end -- end Grid:tojson()
 -- needs storage: connectionList = {}
 
 local function connectGrids(idA, faceA, idB, faceB, orientation)
+   -- in 2D, there is only one orientation for connecting a pair of faces.
+   -- Since the user will probably not think of providing it, let's default to 0.
+   orientation = orientation or 0
    if false then -- debug
       print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
                           idA, faceA, idB, faceB, orientation))
