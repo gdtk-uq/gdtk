@@ -3,22 +3,20 @@ LMR_DIR := lmrsim
 help:
 	@echo "Main targets available are:"
 	@echo "   prep"
-	@echo "   init-steady"
-	@echo "   init-transient"
-	@echo "   run"
+	@echo "   run-steady"
+	@echo "   run-transient"
 	@echo "   post"
 
 prep: ideal-air.lua grid.lua
 	lmr prep-gas -i ideal-air.lua -o ideal-air.gas
 	lmr prep-grid --job=grid.lua
 
-init-steady: steady.lua
+run-steady: steady.lua
 	lmr prep-sim --job=steady.lua
+	lmr run
 
-init-transient: transient.lua
+run-transient: transient.lua
 	lmr prep-sim --job=transient.lua
-
-run:
 	lmr run
 
 post:

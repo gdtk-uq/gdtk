@@ -24,6 +24,7 @@ bcDict = {
 }
 makeFluidBlocks(bcDict, flowDict)
 
+config.solver_mode = "transient"
 config.flux_calculator = "adaptive"
 config.gasdynamic_update_scheme = "classic-rk3"
 config.cfl_value = 0.8
