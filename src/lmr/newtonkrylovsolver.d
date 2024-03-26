@@ -1156,7 +1156,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          */
         wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();
         if (((step % nkCfg.stepsBetweenDiagnostics) == 0) || (finalStep && nkCfg.writeDiagnosticsOnLastStep)) {
-            writeDiagnostics(step, dt, cfl, wallClockElapsed, omega, residualsUpToDate);
+            writeDiagnostics(step, dt, cfl, wallClockElapsed, omega, currentPhase, residualsUpToDate);
         }
 
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
@@ -2840,6 +2840,8 @@ void applyNewtonUpdate(double relaxationFactor)
  *
  * Authors: KAD and RJG
  * Date: 2022-07-24
+ * History:
+ *   2024-03-26 changed format to match other output files (e.g. loads)
  */
 void initialiseDiagnosticsFile()
 {
@@ -2848,26 +2850,13 @@ void initialiseDiagnosticsFile()
 
     alias cfg = GlobalConfig;
 
-    diagnostics.writeln("#  1: step");
-    diagnostics.writeln("#  2: dt");
-    diagnostics.writeln("#  3: CFL");
-    diagnostics.writeln("#  4: linear-solve-residual-rel-target");
-    diagnostics.writeln("#  5: wall-clock, s");
-    diagnostics.writeln("#  6: nRestarts");
-    diagnostics.writeln("#  7: nIters");
-    diagnostics.writeln("#  8: nFnCalls");
-    diagnostics.writeln("#  9: global-residual-abs");
-    diagnostics.writeln("# 10: global-residual-rel");
-    diagnostics.writeln("# 11: mass-balance");
-    diagnostics.writeln("# 12: linear-solve-residual-rel");
-    diagnostics.writeln("# 13: omega");
-    int n_entry = 14;
+    string header;
+    header ~= "step wall-clock phase dt CFL relaxation-factor linear-solve-residual-rel-target linear-solve-residual-rel-achieved ";
+    header ~= "n-restarts n-iters n-fn-calls mass-balance global-residual-abs global-residual-rel ";
     foreach (ivar; 0 .. cfg.cqi.n) {
-        diagnostics.writefln("# %02d: %s-abs", n_entry, cfg.cqi.names[ivar]);
-        n_entry++;
-        diagnostics.writefln("# %02d: %s-rel", n_entry, cfg.cqi.names[ivar]);
-        n_entry++;
+        header ~= format("%s-abs %s-rel ", cfg.cqi.names[ivar], cfg.cqi.names[ivar]);
     }
+    diagnostics.writeln(header);
     diagnostics.close();
 }
 
@@ -2877,8 +2866,10 @@ void initialiseDiagnosticsFile()
  *
  * Authors: KAD and RJG
  * Date: 2022-07-24
+ * History:
+ *   2024-03-26 added some additional entries and reordered contents
  */
-void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, double omega, ref bool residualsUpToDate)
+void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, double omega, int phase, ref bool residualsUpToDate)
 {
     alias cfg = GlobalConfig;
 
@@ -2892,11 +2883,10 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
     if (!cfg.is_master_task) return;
 
     diagnostics = File(diagFile, "a");
-    diagnostics.writef("%8d %20.16e %20.16e %20.16e %.8f %2d %3d %8d %20.16e %20.16e %20.16e %20.16e %20.16e ",
-                       step, dt, cfl, activePhase.linearSolveTolerance, wallClockElapsed,
-                       gmresInfo.nRestarts, gmresInfo.iterationCount, fnCount,
-                       globalResidual, globalResidual/referenceGlobalResidual,
-                       massBalance, gmresInfo.finalResidual/gmresInfo.initResidual, omega);
+    diagnostics.writef("%8d %.8f %2d %20.16e %20.16e %20.16e %20.16e %20.16e %2d %4d %8d %20.16e %20.16e %20.16e ",
+                       step, wallClockElapsed, phase, dt, cfl, omega, activePhase.linearSolveTolerance, gmresInfo.finalResidual/gmresInfo.initResidual,
+                       gmresInfo.nRestarts, nkCfg.maxLinearSolverIterations*gmresInfo.nRestarts+gmresInfo.iterationCount, fnCount,
+                       massBalance, globalResidual, globalResidual/referenceGlobalResidual);
     foreach (ivar; 0 .. cfg.cqi.n) {
         diagnostics.writef("%20.16e %20.16e ", currentResiduals[ivar].re, currentResiduals[ivar].re/referenceResiduals[ivar].re);
     }
