@@ -22,4 +22,4 @@ test:
 
 clean:
 	- rm -rf $(LMR_DIR)
-	- rm ideal-air.gas
+	- rm ideal-n2.gas
