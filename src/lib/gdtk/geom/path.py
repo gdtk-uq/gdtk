@@ -139,7 +139,7 @@ class Arc(Path):
         # the local xy-plane, with ca along the x-axis.
         cb_local = Vector3(cb)
         cb_local.transform_to_local_frame(tangent1, tangent2, n)
-        if np.any(np.absolute(cb_local.z)) > 1.0e-6:
+        if np.any(np.absolute(cb_local.z) > 1.0e-6):
             raise Exception("Arc: problem with transformation cb_local=%s" % cb_local)
         # Angle of the final point on the arc is in the range -pi < th <= +pi.
         theta = np.arctan2(cb_local.y, cb_local.x)
