@@ -259,4 +259,6 @@ void readLimiterValues(int snapshot)
         }
     }
     cfg.frozen_limiter = true;
+    activePhase.frozenLimiterForJacobian = true;
+    activePhase.frozenLimiterForResidual = true;
 }
