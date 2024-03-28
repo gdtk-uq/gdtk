@@ -1011,7 +1011,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         // 0d. determine if we need to update preconditioner
 
-        if (step == startStep || startOfNewPhase || (step % activePhase.stepsBetweenPreconditionerUpdate) == 0 || numberBadSteps > 0) {
+        bool maxLinearSolverIterationsUsed = (nkCfg.maxLinearSolverRestarts == gmresInfo.nRestarts &&
+                                              nkCfg.maxLinearSolverIterations == gmresInfo.iterationCount);
+        if (step == startStep || startOfNewPhase || numberBadSteps > 0 ||
+            (step % activePhase.stepsBetweenPreconditionerUpdate) == 0 ||
+            (activePhase.useAdaptivePreconditioner && maxLinearSolverIterationsUsed)) {
             updatePreconditionerThisStep = true;
         }
         else {
