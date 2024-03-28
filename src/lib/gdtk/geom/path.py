@@ -221,15 +221,26 @@ class Polyline(Path):
         return text
 
     def __call__(self, t):
+        """
+        Bug fix here in March 2024 by NNG, originally found by Morgan van Hoffen from UniSQ.
+
+         - Essentially we need different criteria for the first and last segments, to allow
+           a little bit of extrapolation if the user calls with t<0.0 or t>1.0.
+        """
         n = len(self.segments)
         if n == 1: return self.segments[0](t)
 
-        f = self.segments[0](t) # Hmmmmmmmm FIXME
+        f = self.segments[0](t)
         f*= 0.0
 
         for i, tl, tu in zip(range(n),self.t_values[:-1], self.t_values[1:]):
             t_local = (t-tl)/(tu-tl)
-            isokay = np.logical_and(t_local>=-1e-9, t_local<1.000000001)
+            if i==0:
+                isokay = t_local<=1.0
+            elif i==n-1:
+                isokay = t_local>0.0
+            else:
+                isokay = np.logical_and(t_local>0.0, t_local<=1.0)
             f += self.segments[i](t_local)*isokay
         return f
 
