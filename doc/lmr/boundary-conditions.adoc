@@ -1,0 +1,602 @@
+= Boundary Conditions
+
+To complete a definition of a FluidBlock, boundary conditions for all
+block boundaries, need to be specified.
+These may be given as a list to the FluidBock constructor or
+they may be attached to particular boundaries of an already existing
+FluidBlock object.
+In the absence of your specification, the default boundary condition
+is a slip wall, `WallBC_WithSlip`.
+
+
+== Walls
+
+=== Slip wall
+
+  WallBC_WithSlip:new{label, group}
+  or
+  WallBC_WithSlip0:new{label, group}
+
+is used where we want a solid wall with no viscous effects.
+The effect of the solid wall is achieved with the use of ghost cells and
+an appropriate reflection of the velocity vector.
+This is the default boundary condition where no other condition is specified.
+
+`label`::
+  _string_, default "" +
+  A an optional tag string that may be applied to the boundary.
+
+`group`::
+  _string_, default "" +
+  A an optional tag string that identifies the group to which this boundary belongs.
+  It can be used, at run time and in postprocessing,
+  to group the data for several boundaries together.
+  This might be for force and moment estimation, for example.
+
+There are variants to the basic wall condition.
+
+  WallBC_WithSlip1:new{label, group}
+
+achieves a similar effect to WallBC_WithSlip0 but without the use of ghost cell data.
+To do this, the code makes use of one-sided flux-calculators at the boundary.
+You will need to specify this variant of the boundary condition for a moving-grid
+simulation where this boundary wall may have non-zero velocity.
+The one-sided flux calculators will correctly handle the normal component of the
+wall velocity while, effectively, the tangential velocity will be ignored.
+
+
+  WallBC_WithSlip2:new{label, group}
+
+is Ingo's variant of WallBC_WithSlip for moving mesh simulations for walls
+with normal velocity.
+It uses ghost cells with appropriate velocity settings.
+
+
+=== No-slip, fixed-temperature
+
+  WallBC_NoSlip_FixedT:new{Twall, wall_function, catalytic_type, wall_massf_composition, label, group}
+  or
+  WallBC_NoSlip_FixedT0:new{Twall, wall_function, catalytic_type, wall_massf_composition, label, group}
+
+is used where we want convective and viscous effects to impose a no-slip velocity
+condition and a fixed wall temperature.
+The convective effect of the solid wall is achieved with the use of ghost cells and
+an appropriate reflection of the velocity vector.
+We need to set `config.viscous=true` to make the temperature-setting part
+of this boundary condition effective.
+
+`Twall`::
+  The fixed wall temperature, in degrees K. 
+
+`wall_function`::
+  an optional analytical model for the turbulent wall stress and heat transfer, allowing
+  the user to scrimp on small grid cells close to the wall. Suitable for use with the
+  k-omega turbulence model only.
+
+`catalytic_type`::
+  an optional boundary condition used for species transport equations in a reacting 
+  simulation. Options are: `none` which assumes no catalytic interaction with the
+  wall, `equilibrium` which assumes instantly completed reactions at the wall,
+  and `fixed_composition` which sets the mass fractions to a user-defined value.
+
+`catalytic_type`::
+  A table of species mass fractions required for `catalytic_type=fixed_composition`.
+
+  `WallBC_NoSlip_FixedT1`
+
+is variant of the boundary condition that does not use ghost cells and
+is suitable for moving-grid simulations.
+
+=== No-slip, user-defined temperature
+
+  WallBC_NoSlip_UserDefinedT:new{Twall, wall_function, catalytic_type, wall_massf_composition, label, group}
+
+is similar to the fixed-temperature wall but allows an arbitrary temperature
+function to be specified via a lua script. This may be useful for simulating a
+heated experimental model, where some specific part of the model is heated by
+electrical resistance heating to a known elevatated temperature. Optional
+arguments are the same as the fixed temperature case.
+
+`Twall`::
+  The name of the lua file used to specify the wall temperature. Inside the code,
+  this file is passed to a UserDefinedInterface effect, which takes care of calling
+  it once per face in the boundary, for each timestep. For further information, see
+  the section regarding user defined interface effects in the PDF User Guide.
+
+=== No-slip, adiabatic
+
+  WallBC_NoSlip_Adiabatic:new{wall_function, catalytic_type, wall_massf_composition, label, group}
+  or
+  WallBC_NoSlip_Adiabatic0:new{wall_function, catalytic_type, wall_massf_composition, label, group}
+
+is used where we want convective and viscous effects to impose no-slip at the wall
+but where there is no heat transfer. Optional arguments are the same as the fixed
+temperature case.
+We need to set `config.viscous=true` to make this boundary condition effective.
+
+
+  WallBC_NoSlip_Adiabatic1:new{label, group}
+
+is variant of the boundary condition that does not use ghost cells and
+is suitable for moving-grid simulations.
+
+
+=== Translating-surface, fixed-temperature
+
+  WallBC_TranslatingSurface_FixedT:new{Twall, v_trans, label, group}
+
+is used where we want convective and viscous effects to impose
+a specified translating velocity condition and a fixed wall temperature,
+in a simulation with no grid motion.
+By _translating_ we mean that the (flat) wall is moving tangential to the block boundary
+such that the gas velocity is nonzero and aligned with the edge of the (fixed) grid.
+We need to set `config.viscous=true` to make this boundary condition fully effective.
+An example of use is Couette flow between moving plates.
+
+`Twall`::
+  The fixed wall temperature, in degrees K.
+
+`v_trans`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Vector velocity of the translating wall.
+  The value may be specified as a table of three named (x,y,z) components.
+
+
+=== Translating-surface, adiabatic
+
+  WallBC_TranslatingSurface_Adiabatic:new{v_trans, label, group}
+
+is used where we want convective and viscous effects to impose
+a specified translating velocity condition but no heat transfer,
+in a simulation with no grid motion.
+By _translating_ we mean that the (flat) wall is moving tangential to the block boundary
+such that the gas velocity is nonzero and aligned with the edge of the (fixed) grid.
+We need to set `config.viscous=true` to make this boundary condition fully effective.
+
+`v_trans`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Vector velocity of the translating wall.
+  The value may be specified as a table of three named (x,y,z) components.
+
+
+=== Rotating-surface, fixed-temperature
+
+  WallBC_RotatingSurface_FixedT:new{Twall, r_omega, centre, label, group}
+
+is used where we want convective and viscous effects to impose
+a specified velocity condition and a fixed wall temperature on a circular or cylindrical
+fixed surface.
+By _rotating_ we mean that the (curved) wall is moving tangential to the block boundary
+such that the gas velocity is nonzero and aligned the edge of the (fixed) grid.
+We need to set `config.viscous=true` to make this boundary condition fully effective.
+
+`Twall`::
+  The fixed wall temperature, in degrees K.
+
+`r_omega`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Angular-velocity vector of the wall.
+  The value may be specified as a table of three named (x,y,z) components.
+
+`centre`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Axis about which the wall surface rotates.
+  The value may be specified as a table of three named (x,y,z) components.
+
+=== Rotating-surface, adiabatic
+
+  WallBC_RotatingSurface_Adiabatic:new{r_omega, centre, label, group}
+
+is used where we want convective and viscous effects to impose
+a specified velocity condition but no heat transfer on a circular or cylindrical
+fixed surface.
+By _rotating_ we mean that the (curved) wall is moving tangential to the block boundary
+such that the gas velocity is nonzero and aligned the edge of the (fixed) grid.
+We need to set `config.viscous=true` to make this boundary condition fully effective.
+
+`Twall`::
+  The fixed wall temperature, in degrees K.
+
+`r_omega`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Angular-velocity vector of the wall.
+  The value may be specified as a table of three named (x,y,z) components.
+
+`centre`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Axis about which the wall surface rotates.
+  The value may be specified as a table of three named (x,y,z) components.
+
+
+== In-flow
+
+=== Simple supersonic
+
+  InFlowBC_Supersonic:new{flowState, x0=0.0, y0=0.0, z0=0.0, r=0.0}
+
+is used where we want to specify a fixed (supersonic) in-flow condition
+that gets copied into the ghost cells each time step.
+
+`flowState`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a virtual source flow.
+This is intended to model the flow from a conical nozzle, where the nominal flow state
+is at distance `r` from the virtual source located at `x0`, `y0` and `z0`.
+The actual flow state on the inflow faces is computed as a perturbation to this nominal flow state.
+
+=== Static profile
+
+  InFlowBC_StaticProfile:new{fileName, match}
+
+is used where we want to specify an inflow condition that might vary
+in a complicated manner across the boundary.
+Data for the flow condition, on a per-cell basis, is contained in the specified file.
+It may be that the file is obtained from an earlier simulation, with a post-processing
+option like `--extract-line` used to write the file entries.
+Matching of the ghost cells to particular entries in the data file is controlled by
+the `match` string value,
+where the default is to match to the nearest location on all three coordinates
+of the ghost-cell position `match="xyz-to-xyz"`.
+
+.Other possible values are
+  * `"xyA-to-xyA"` For 2D or 3D simulations, don't care about z-component of position.
+  * `"AyA-to-AyA"` For 2D or 3D simulations, care about the y-component of position only.
+  * `"xy-to-xR"` Starting with a profile from a 2D simulation,
+    map it to a radial profile in a 3D simulation, considering the x-component
+    of the position of the ghost cells.
+  * `"Ay-to-AR"` Starting with a profile from a 2D simulation,
+    map it to a radial profile in a 3D simulation, ignoring the x-component
+    of the position of the ghost cells.
+
+
+=== Transient
+
+  InFlowBC_Transient:new{fileName}
+
+is used  where we want to specify the time-varying inflow condition at the boundary.
+Data for the inflow condition,
+at particular time instants and assumed uniform across the full boundary,
+is contained in the specified file.
+The user needs to write this file according to the expected format encoded
+in the `FlowHistory` class, found toward the end of the `flowstate.d` module.
+Each data line will have the following space-delimited items:
+
+  time velx vely velz p T mass-fractions Tmodes (if any)
+
+
+=== Constant flux
+
+  InFlowBC_ConstFlux:new{flowState, x0=0.0, y0=0.0, z0=0.0, r=0.0}
+
+is used where we want to specify directly the fluxes of mass, momentum and energy
+across the boundary faces.
+The fluxes are computed from the supplied <<FlowState,_FlowState_>>.
+
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a virtual source flow.
+This is intended to model the flow from a conical nozzle, where the nominal flow state
+is at distance `r` from the virtual source located at `x0`, `y0` and `z0`.
+The actual flow state on the inflow faces is computed as a perturbation to this nominal flow state.
+
+
+
+=== Shock-fitting
+
+  InFlowBC_ShockFitting:new{flowState, x0=0.0, y0=0.0, z0=0.0, r=0.0}
+
+is used where we want to have the inflow boundary be the location of a bow shock.
+The fluxes across the boundary are computed from the supplied flow condition and the boundary
+velocities are set to follow the shock.
+Note that we need to set `config.moving_grid=true` and select
+an appropriate gas-dynamic update scheme for the moving grid.
+
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a virtual source flow.
+This is intended to model the flow from a conical nozzle, where the nominal flow state
+is at distance `r` from the virtual source located at `x0`, `y0` and `z0`.
+The actual flow state on the inflow faces is computed as a perturbation to this nominal flow state.
+
+
+=== Isentropic from stagnation
+
+  InFlowBC_FromStagnation:new{stagnationState, fileName,
+    direction_type, direction_x, direction_y, direction_z,
+    alpha, beta, mass_flux, relax_factor}
+
+is used where we want a subsonic inflow with a particular stagnation pressure and
+temperature and a velocity _direction_ at the boundary.
+Note that many of the fields are shown with their default values,
+so you don't need to specify them.
+When applied at each time step, the average local pressure across the block boundary
+is used with the stagnation conditions to compute a stream-flow condition.
+Depending on the value for `direction_type`, the computed velocity's direction can be set
+
+* `"normal"` to the local boundary,
+* `"uniform"` in direction and aligned with direction vector whose components
+  are `direction_x`, `direction_y` and `direction_z`
+* `"radial"` radially-in through a cylindrical surface using flow angles
+  `alpha` and `beta`, or
+* `"axial"` axially-in through a circular surface using the same flow angles.
+
+For the case with a nonzero value specified for `mass_flux`,
+the current mass flux (per unit area) across the block face
+is computed and the nominal stagnation pressure is incremented
+such that the mass flux across the boundary relaxes toward the specified value.
+Note that when we select a nonzero mass flux, we no longer control the stagnation pressure.
+This will be adjusted to give the desired mass flux.
+The value for `relax_factor` adjusts the rate of convergence for this feedback mechanism.
+
+Note, that for multi-temperature simulations, all of the temperatures
+are set to be the same as the transrotational temperature.
+This should usually be a reasonable physical approximation because this boundary condition
+is typically used to simulate inflow from a reservoir, and stagnated flow in a reservoir
+has ample time to equilibriate at a common temperature.
+The implementation of this boundary condition may not be time accurate,
+particularly when large waves cross the boundary, however,
+it tends to work well in the steady-state limit.
+
+When `mass_flux` is zero and `fileName` is left as the default empty string,
+the specified FlowState is used as a constant stagnation condition.
+This may be modified by a user-defined function if `fileName` is a non-empty string
+that give the name of a Lua script containing a function with the name `stagnationPT`
+On every boundary condition application, this function receives a table of data
+(including the current simulation time)
+and returns values for stagnation pressure and temperature.
+
+Here is a minimal example:
+----
+function stagnationPT(args)
+   -- print("t=", args.t)
+   p0 = 500.0e3 -- Pascals
+   T0 = 300.0 -- Kelvin
+   return p0, T0
+end
+----
+The intention is that the user may program the stagnation pressure
+as more interesting functions of time.
+
+
+== Out-flow
+
+
+=== Simple flux
+
+  OutFlowBC_Simple:new{}
+  or
+  OutFlowBC_SimpleFlux:new{}
+
+is used where we want a (mostly) supersonic outflow condition.
+It should work with subsonic outflow as well, however, remember that you are
+deliberately ignoring information that may propagate into the domain from
+the real (physical) region that you have truncated.
+The outflow flux is determined from the flow state in the cell just inside the boundary.
+If the velocity in that cell tries to produce an influx of mass,
+the flux calculation switches to that of an impermeable wall.
+
+
+=== Simple extrapolation
+
+  OutFlowBC_SimpleExtrapolate:new{xOrder}
+
+is used where we want a (mostly) supersonic outflow condition.
+Flow data is effectively copied (`xOrder=0`) or linearly-extrapolated (`xOrder=1`)
+from just inside the boundary to the ghost cells just outside the boundary, every time step.
+In subsonic flow, this can lead to physically invalid behaviour.
+If you encounter strange flow behaviour that seems to start at this boundary and propagate
+upstream into your flow domain, try extending your simulated flow domain such that
+you eventually have an outflow boundary across which nothing exciting happens.
+
+
+=== Fixed pressure
+
+  OutFlowBC_FixedP:new{p_outside}
+
+is used where we want something like `OutFlowBC_Simple` but with a specified back pressure.
+This can be analogous to a vacuum pump that removes gas at the boundary to maintain
+a fixed pressure in the ghost cells.
+
+
+=== Fixed pressure and temperature
+
+  OutFlowBC_FixedPT:new{p_outside, T_outside}
+
+is like `OutFlowBC_FixedP`, above, but also sets the temperature in the ghost cells.
+
+
+== In-flow and Out-flow
+
+These boundary conditions can be used on a boundary that allows inflow and outflow.
+
+=== Ambient
+
+  InOutFlowBC_Ambient:new{flowState}
+
+is used where we want to allow the flow to go in or out across the boundary and you are
+assuming an ambient flow state outside of the domain.
+If the velocity of the cell just inside the boundary is directed outward across the boundary face,
+then the interior flow properties are copied into the ghost-cells.
+If the cell's flow velocity is directed inward, then the specified (ambient) flow state is copied
+into the ghost cells.
+
+`flowState`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+
+=== DualState
+
+  InOutFlowBC_DualState:new{flowState1, flowState2, p, n}
+
+is used where we want to allow the flow to go in or out across the boundary and you are
+assuming two flow states are present outside of the domain.
+Outside the flow domain, the flow states exist either side of a plane defined by 
+the point `p` and the normal vector `n`.
+`flowState1` exists on the side of the plane in the direction of `n`, while `flowState2` 
+is on the other side of that plane.
+
+An example of use is in a domain that has an oblique shock processing the nominal free-stream flow.
+The flow before the shock would be `flowState1` and after the shock `flowState2`, with the oblique shock
+being coincident with the plane.
+
+If the velocity of the cell just inside the boundary is directed outward across the boundary face,
+then the interior flow properties are copied into the ghost-cells.
+If the cell's flow velocity is directed inward, then relevant flow state is copied
+into the ghost cells.
+The relevant flow state is selected based on the location of a few smaple points of the boundary face.
+If the face sits across the plane, a blending of the flow states is used.
+
+`flowState1`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+  On side of plane in the direction of `n`.
+
+`flowState2`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+  On side of plane in opposite to the direction of `n`.
+
+`p`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  A point on the plane that separates the flow states.
+  The value may be specified as a table of three named (x,y,z) components.
+
+`n`::
+  _Vector3_, default: {x=0.0, y=1.0, z=0.0} +
+  Normal vector to the plane.
+  The value may be specified as a table of three named (x,y,z) components.
+
+
+== Inter-block Exchange
+
+=== Full block-face
+
+  ExchangeBC_FullFace:new{otherBlock, otherFace, orientation,
+    reorient_vector_quantities, Rmatrix}
+
+Usually, this boundary condition is applied implicitly, by calling the function
+`identifyBlockConnections`, for cases where one structured-grid block interfaces with another
+and the block boundaries are cleanly aligned,
+however, it can be applied manually for cases where you want the flow to be plumbed
+from one block face into another and the blocks are not geometrically aligned.
+A non-unity transformation matrix, `Rmatrix`,
+can be provided for cases where the flow vector quantities need to
+be reoriented when they are copied from the other boundary to this one.
+
+Note that this boundary condition is only for structured-grid blocks.
+If one or both of the blocks to be joined is based on an unstructured-grid,
+you will need to use the following `MappedCell` flavour of the exchange boundary condition.
+Also, if you have two structured-grid faces but the cells along each of the faces
+do not align, you will also need to use the `MappedCell` flavour.
+
+`otherBlock`::
+  _FluidBlock_ object, default: nil +
+  A reference to the other block that is joined to this boundary.
+
+`otherFace`::
+  _FaceLabel_, default: nil +
+  An enum value specifying the face on the other block, from which cell data will be copied.
+  Possible values are `north`, `east`, `south`, `west`, `bottom`, `top`.
+
+`orientation`::
+  _int_: default: `-1` +
+  Although there is only one possible orientation for face-to-face connections in 2D,
+  there are 4 possible ways to (rotationally) orient a face-to-face connection in 3D.
+
+`reorient_vector_quantities`::
+  _boolean_, default: `false` +
+  If true, vector quantities are multiplied by the `Rmatrix` as they are copied from
+  the source cell into the destination ghost cell.
+
+`Rmatrix`::
+  _array of float_, default: {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} +
+  This is a 3-by-3 matrix written in row-major format.
+  It is applied, in the usual matrix-vector multiply manner, to vector quantities
+  such as velocity and magnetic field.
+  The user is responsible for computing appropriate coefficients.
+
+
+=== Mapped cell
+
+  ExchangeBC_MappedCell:new{transform_position, c0, n, alpha, delta,
+    list_mapped_cells, reorient_vector_quantities, Rmatrix}
+
+is something like the `ExchangeBC_FullFace` boundary condition but with a mapping
+of destination(ghost)-cell location to source-cell location.
+It allows us to stitch boundaries together, even if the cells do not align, one-for-one.
+The position of the source cell is computed by taking the position of the ghost cell,
+computing the solid-body rotation of `alpha` radians about the axis `n`
+through the point `c0`, then adding a displacement `delta`.
+This will accommodate general rigid-body transformations.
+
+`c0`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Centre of rotation for position transformation.
+
+`n`::
+  _Vector3_ default: {x=0.0, y=0.0, z=1.0} +
+  Axis of rotation for the position transformation.
+
+`alpha`::
+  _float_, default: 0.0 +
+  Angle of rotation for the position transformation.
+  Right-hand rule gives the sense of direction.
+
+`delta`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Translational displacement for the position transformation.
+
+`list_mapped_cells`::
+  _boolean_, default: `false` +
+  Flag to indicate whether we want the program to list the indices of the mapped cells
+  as they are located at run time.
+
+`reorient_vector_quantities`::
+  _boolean_, default: `false` +
+  If true, vector quantities are multiplied by the `Rmatrix` as they are copied from
+  the source cell into the destination ghost cell.
+
+`Rmatrix`::
+  _array of float_, default: {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} +
+  This is a 3-by-3 matrix written in row-major format.
+  It is applied, in the usual matrix-vector multiply manner, to vector quantities
+  such as velocity and magnetic field.
+  The user is responsible for computing appropriate coefficients.
+
+
+== User Defined
+This is a get-out-of-jail boundary condition that allows you to do anything
+you wish to code (in Lua).
+Please read the Appendix on these boundary conditions in the PDF User Guide before
+your first attempt to use them.
+
+
+=== Setting ghost cells
+
+   UserDefinedGhostCellBC:new{fileName, label, group}
+
+is used to allow the user to define the ghost-cell flow properties and
+interface properties at run time.
+This is done via a set of functions defined by the user,
+written in the Lua programming language, and provided in the specified file.
+
+=== Setting fluxes
+
+  UserDefinedFluxBC:new{fileName, funcName, label, group}
+
+is used to allow the user to define the interface convective-fluxes at run time.
+This is done via a function defined by the user, written in the Lua programming language,
+and provided in the specified file.
+If the user does not specify the function name,
+`convectiveFlux` is used as the default name.
+
+=== Full block-face followed by user-defined
+
+  ExchangeBC_FullFacePlusUDF:new{otherBlock, otherFace, orientation,
+    reorient_vector_quantities, Rmatrix, fileName, label, group}
+
+is used when you might conditionally want to exchange block-boundary data
+or do something else altogether.
+This boundary condition allows that by first doing a FullFace exchange of data and then
+calling upon your user-defined functions (as for `UserDefinedGhostCellBC`)
+to conditionally overwrite the data.
+This turns out to be a convenient way to implement diaphragm models
+for shock-tunnel simulations.
+Note that this boundary condition can work across MPI tasks
+but is only implemented for structured-grid blocks.
+
+

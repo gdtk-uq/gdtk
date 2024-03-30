@@ -1,0 +1,645 @@
+= Configuration options
+
+There are a large number of configuration options
+that can be set in the input script.
+The options are set in the input script by adding
+lines of the form:
+
+ config.option = value
+
+Here are all of the available configuration options and the default
+values if left unset.
+Note you do not have to set all of these values in the
+input script.
+In a typical input script, one might set 10-15 input variables.
+
+== Solver mode
+`config.solver_mode` ::
+   _string_, default: `'transient'` +
+  The options are: `'transient'` or `'steady'`
+
+== Geometry
+
+[#config-dimensions]
+`config.dimensions` ::
+     _int_, default: `2` +
+    Spatial dimensionality, 2 or 3
+
+`config.axisymmetric` ::
+    _bool_, default: `false` +
+    Sets axisymmetric mode for 2D geometries.
+    The axis of rotation aligns with the x-axis (at y=0).
+
+
+== Time-stepping
+
+`config.gasdynamic_update_scheme` ::
+  _string_, default: `'predictor-corrector'` +
+  The options are: `'euler'`, `'pc'`, `'predictor-corrector'`,
+  `'midpoint'`, `'classic-rk3'`, `'tvd-rk3'`, `'denman-rk3'`,
+  `'moving-grid-1-stage'`, `'moving-grid-2-stage'`,
+  `'backward_euler'`, `'implicit_rk1'`.
+  Most of the update schemes are explicit, except for the last two listed here.
+  Note that `'pc'` is equivalent to `'predictor-corrector'`.
+  If you want time-accurate solutions, use a two- or three-stage explicit stepping scheme,
+  otherwise, (explicit) Euler stepping has less computational expense
+  but you may get less accuracy and the code will not be as robust for the same CFL value.
+  For example the shock front in the Sod shock tube example is quite noisy for Euler
+  stepping at CFL=0.85 but is quite neat with any of the two- or three-stage stepping schemes
+  at the same value of CFL.
+  The explicit midpoint and predictor-corrector schemes produce a tidy shock up to CFL = 1.0
+  and the rk3 schemes still look tidy up to CFL = 1.2.
+  If you care mainly about the end result, you might be able to use an implicit scheme
+  with larger CFL number.
+  We have run the `'backward_euler'` scheme up to a CFL value of 50 for some of
+  the turbulent flat-plate examples.
+  The implicit schemes are more expensive than the low-order explicit schemes, per time-step
+  and, at large CFL numbers, will not be time accurate.
+  The trade-off will be something that you have to explore but, if you care only about
+  a steady state, the `'backward_euler'` scheme may get you there more quickly than any
+  of the explicit schemes.
+  Your mileage _will_ vary.
+  Note that you may use dashes or underscores when spelling the scheme names.
+
+`config.fixed_time_step` ::
+  _boolean_, default: `false` +
+  Normally, we allow the time step size to be determined from cell conditions and CFL number.
+  Setting `config.fixed_time_step=true` forces the time step size to be unchanged from
+  `config.dt_init`.
+
+`config.cfl_value` ::
+  _float_, default: `0.5` +
+  The CFL number is ratio of the time-step divided by the time
+  for the fastest signal to cross a cell.
+  The time-step adjustment process tries to set the time-step for the overall simulation
+  to a value such that the maximum CFL number for any cell is at this `cfl_value`.
+  If you are having trouble with a simulation that has lots of sudden flow field changes,
+  decreasing the size of `cfl_value` may help.
+
+`config.cfl_schedule` ::
+  _table of float pairs_, default `{{0.0, config.cfl_value},}` +
+  If you want to vary the `cfl_value` as the simulation proceeds,
+  possibly starting with small values and then increasing them as the flow field
+  settles to something not too difficult for the flow solver,
+  you can specify a table of `{time,cfl_value}` pairs that are interpolated by the solver.
+  Outside the specified range of times, the `cfl_value` will be the closest end-point value.
+
+`config.dt_init` ::
+  _float_, default: `1.0e-3` +
+  Although the computation of the time step size is usually automatic,
+  there might be cases where this process does not select a small enough value to get the
+  simulation started stably.
+  For the initial step, the user may override the computed value of time step by assigning
+  a suitably small value to `config.dt_init`.
+  This will then be the initial time step (in seconds) that will be used for the
+  first few steps of the simulation process.
+  Be careful to set a value small enough for the time-stepping to be stable.
+  Since the time stepping is synchronous across all parts of the flow domain,
+  this time step size should be smaller than half of the smallest time for a signal
+  (pressure wave) to cross any cell in the flow domain.
+  If you are sure that your geometric and boundary descriptions are correct but your simulation
+  fails for no clear reason, try setting the initial time step to a very small value.
+  For some simulations of viscous hypersonic flow on fine grids,
+  it is not unusual to require time steps to be as small as a nanosecond.
+
+`config.dt_max` ::
+  _float_, default: `1.0e-3` +
+  Maximum allowable time step (in seconds).
+  Sometimes, especially when strong source terms are at play, the CFL-based time-step
+  determination does not suitably limit the size of the allowable time step.
+  This parameter allows the user to limit the maximum time step directly.
+
+`config.viscous_signal_factor` ::
+  _float_, default: `1.0` +
+  By default, the full viscous effect for the signal
+  calculation will be used within the time-step calculation.
+  It has been suggested that the full viscous effect may not be needed
+  to ensure stable calculations for highly-resolved viscous calculations.
+  A value of `0.0` will completely suppress the viscous contribution to
+  the signal speed calculation but you may end up with unstable stepping.
+  It's a matter of _try a value and see_ if you get a larger time-step
+  while retaining a stable simulation.
+
+`config.stringent_cfl` ::
+  _boolean_, default: `false` +
+  The default action for structured grids is to use different cell widths
+  in each index direction.
+  Setting `config.stringent_cfl=true` will use the smallest cross-cell distance
+  in the time-step size check.
+
+`config.cfl_count` ::
+  _int_, default: `10` +
+  The number of time steps between checks of the size of the time step.
+  This check is expensive so we don't want to do it too frequently but, then,
+  we have to be careful that the flow does not develop suddenly and
+  the time step become unstable.
+
+`config.max_time` ::
+  _float_, default: `1.0e-3` +
+  The simulation will be terminated on reaching this value of time.
+
+`config.max_step` ::
+  _int_, default: `100` +
+  The simulation will be terminated on reaching this number of time steps.
+  You will almost certainly want to use a larger value, however,
+  a small value is a good way to test the starting process of a simulation, to see that
+  all seems to be in order.
+
+`config.dt_plot` ::
+  _float_, default: `1.0e-3` +
+  The whole flow solution will be written to disk when
+  this amount of simulation time has elapsed, and then again,
+  each occasion the same increment of simulation time has elapsed.
+
+`config.dt_history` ::
+  _float_, default: `1.0e-3` +
+  The history-point data will be written to disk repeatedly,
+  each time this increment of simulation time has elapsed.
+  To obtain history data, you will also need to specify one or more history points.
+
+`config.with_local_time_stepping` ::
+  _boolean_, default: `false` +
+  If a steady-state solution is sought, then it is possible to accelerate
+  the explicit time-stepping scheme by allowing each cell in the domain
+  to integrate in time with their own time-step that satisfies only the local CFL condition.
+  This is sometimes referred to as Local Time-Stepping (LTS).
+  Setting `config.with_local_time_stepping=true` enables this mode of time-stepping.
+  Note that this mode of time-stepping is only suitable for steady-state simulations.
+
+`config.local_time_stepping_limit_factor` ::
+  _int_, default: `10000` +
+  To improve the stability of simulations that enable `config.with_local_time_stepping`,
+  users can limit the largest allowable local time-step as a function
+  of the smallest global time-step.
+  The allowable time-step for each cell is set to be the minimum of the cell's local time-step
+  and the global minimum time-step multiplied by `config.local_time_stepping_limit_factor`.
+  The `config.local_time_stepping_limit_factor` is typically set to a value between 500 and 10000.
+
+`config.residual_smoothing` ::
+  _boolean_, default: `false` +
+  Residual smoothing essentially applies an averaging filter on the residuals
+  during the time-integration procedure.
+  Residual smoothing has two advantages: (1) The averaging increases the allowable CFL
+  for a particular explicit time-stepping scheme; and (2) The averaging ensures that
+  the local time-step for two adjacent cells doesn't differ by a large magnitude
+  when using `config.with_local_time_stepping`, this has a stabilising effect.
+
+`config.residual_smoothing_type` ::
+  _string_, default: `'explicit'` +
+  The options are: `'explicit'`, `'implicit'`.
+  When `config.residual_smoothing=true`, the residuals can either be smoothed
+  via an explicit averaging method or an implicit averaging method.
+  Explicit averaging has less computational expense, however, implicit averaging
+  typically results in a larger stable time step.
+
+`config.residual_smoothing_weight` ::
+  _float_, default: `0.2` +
+  A weighting factor used in the residual averaging when `config.residual_smoothing=true`.
+
+`config.residual_smoothing_iterations` ::
+  _int_, default: `2` +
+  The number of Jacobi iterations used for the implicit residual averaging
+  when `config.residual_smoothing=true` and `config.residual_smoothing_type='implicit'`.
+
+== Block marching
+
+`config.block_marching` ::
+  _boolean_, default: `false` +
+  Normal time iteration proceeds on all blocks simultaneously, however,
+  such a time-marching calulation may be very expensive computationally.
+  Setting `config.block_marching=true` enables a sequencing of the time integration
+  such that at any one instant, only two slices of blocks are being integrated.
+  The i-direction is the marching direction and the assumed dominant (supersonic) flow direction.
+  The blocks are assumed to be in a regular array
+  with a fixed number of blocks in the j- and k-directions to the entire flow domain.
+
+`config.nib`, `config.njb`, `config.nkb` ::
+  _int_ default: `1`, `1`, `1` +
+  are the number of blocks in each index direction.
+  To make the best of block marching, you should have `config.nib` set to a fairly large number.
+  Since the array of blocks is assumed regular, you cannot have very complicated geometries.
+  Simple ducts, nozzles and plates are the intended applications.
+  As seen in the examples, it may be convenient to define the full domain with one or more calls
+  to the constructor `FBArray:new`.
+  There is a restriction that the overall flow domain be assembled as
+  a single structured array of `FlowBlock` objects.
+
+`config.propagate_inflow_data` ::
+  _boolean_, default: `false` +
+  By default, the integration begins in each set of blocks
+  from the initial gas state set up in the preparation phase of the simulation.
+  Some advantage may be gained following integration of the first block slices by initializing
+  subsequent block slices with the downstream (east boundary) flow states.
+  Setting `config.propagate_inflow_data=true` propagates these data across each new block slice,
+  before the integration process for the slice begins.
+
+`config.save_intermediate_results` ::
+  _boolean_, default: `false` +
+  Usually, a single set of solution files
+  (after marching over all block slices) is all that is required.
+  Sometimes, when debugging a troublesome calculation, it may be useful to have a solution
+  written after the time-integration process for each pair of block slices.
+  Set this parameter `true` to get these intermediate solutions written.
+
+
+== Spatial reconstruction
+
+`config.interpolation_order` ::
+  _int_, default: `2` +
+  Before applying the flux calculator, high-order reconstruction is applied.
+  Setting `config.interpolation_order=1` results in no reconstruction
+  of intra-cell flow properties.
+
+`config.interpolation_delay` ::
+  _float_, default: `0.0` +
+  The time (in seconds) to wait before increasing the interpolation order.
+  If the delay is enabled, the simulation will begin using `interpolation_order=1`.
+  After the delay time, the interpolation order will switch to that specified in
+  the configuration.
+  This delay is useful to help with robustness during transient starts because the
+  first order spatial reconstruction is very reliable (albeit less accurate as compared
+  to high order reconstruction).
+
+`config.apply_limiter` ::
+  _boolean_, default: `true` +
+  By default, we apply a limiter to the flow-field reconstruction.
+
+`config.extrema_clipping` ::
+  _boolean_, default: `true` +
+  By default, we do extrema clipping at end of each scalar-field reconstruction.
+  Setting `config.extrema_clipping=false` suppresses clipping.
+
+`config.thermo_interpolator` ::
+  _string_, default: `'rhou'` +
+  String to choose the set of interpolation variables to use in the interpolation,
+  options are `'rhou'`, `'rhop'`, `'rhoT'` and `'pT'`.
+
+
+== Flux calculator
+
+[[hortizontal]]
+`config.flux_calculator` ::
+  _string_, default: `'adaptive_hanel_ausmdv'` +
+  Selects the flavour of the flux calculator.
+  Options are:
+
+  - `'efm'` A cheap and very diffusive scheme by Pullin and Macrossan.
+    For most hypersonic flows, it is too diffusive to be used for the whole flow field
+    but it does work very nicely in conjunction with AUSMDV,
+    especially for example, in the shock layer of a blunt-body flow.
+
+  - `'ausmdv'` A good all-round scheme with low-diffusion for supersonic flows.
+
+  - `'adaptive_efm_ausmdv'` A blend of the low-dissipation AUSMDV scheme
+     for the regions away from shocks
+     with the much more diffusive EFM used for cell interfaces near shocks.
+     It seems to work quite reliably for hypersonic flows that are a mix
+     of very strong shocks with mixed regions of subsonic and supersonic flow.
+     The blend is controlled by the parameters `config.compression_tolerance` and
+     `config.shear_tolerance` that are described below.
+
+  - `'ausm_plus_up'` Implemented from the description by MS Liou (2006).
+     It should be accurate and robust for all speed regimes.
+     It is the flux calculator of choice for very low Mach number flows,
+     where the fluid behaviour approaches the incompressible limit.
+     For best results, you should set the value of `M_inf`.
+
+  - `'hlle'` The Harten-Lax-vanLeer-Einfeldt (HLLE) scheme.
+     It is somewhat dissipative and is the only scheme usable with MHD terms.
+
+  - `'adaptive_hlle_ausmdv'` As for `'adaptive_efm_ausmdv'` but with the dissipative scheme
+     being the HLLE flux calculator.
+
+  - `'hanel'` The Hanel-Schwane-Seider scheme, from their 1987 paper.
+     It also dissipative and is somewhat better behaved than our EFM implementation.
+
+  - `'adaptive_hanel_ausmdv'` As for `'adaptive_efm_ausmdv'` but with the dissipative scheme
+     being the Hanel-Schwane-Seider flux calculator.
+
+  - `'roe'` The Phil Roe's classic linearized flux calculator.
+
+  - `'adaptive_hlle_roe'` A blend of Roe's low-dissipation scheme and
+     the more dissipative HLLE flux calculator.
+
+  - `'adaptive_ausmdv_asf'` A blend of Summation-by-Parts method of Fisher (high order,
+    low-dissipation scheme) and the ausmdv method.
+
+The default adaptive scheme is a good all-round scheme that uses AUSMDV away from
+shocks and Hanel-Schwane-Seider flux calculator near shocks.
+
+Any of the schemes with the prefix `'adaptive'` can be used in a blended mode
+if the <<shock_detector_smoothing,`shock_detector_smoothing`>> is enabled.
+
+`config.compression_tolerance` ::
+  _float_, default: `-0.30` +
+   The value of relative velocity change (normalised by local sound-speed)
+   across a cell-interface that triggers the shock-point detector.
+   A negative value indicates a compression.
+   When an adaptive flux calculator is used and the shock detector is triggered,
+   the more-dissipative flux calculation will be used
+   in place of the default low-dissipation calculation.
+   A value of `-0.05` seems OK for the Sod shock tube and sharp-cone inviscid flow simulations,
+   however, a higher value is needed for cases with viscous boundary layers,
+   where it is important to not have too much numerical dissipation in the boundary layer region.
+
+`config.shear_tolerance` ::
+  _float_, default: `0.20` +
+  The value of the relative tangential-velocity change
+  (normalised by local sound speed) across a cell-interface that suppresses the use of the
+  high-dissipation flux calculator even if the
+  shock detector indicates that high-dissipation scheme should be used
+  within the adaptive flux calculator.
+  The default value is experimentally set at 0.20 to get smooth shocks
+  in the stagnation region of bluff bodies.
+  A smaller value (say, `0.05`) may be needed to get strongly expanding flows to behave
+  when regions of shear are also present.
+
+`config.M_inf` ::
+  _float_, default: `0.01` +
+  representative Mach number for the free stream.
+   Used by the `ausm_plus_up` flux calculator.
+
+[#shock_detector_smoothing]
+`config.shock_detector_smoothing` ::
+ _int_, default = `0` +
+ How many iterations of shock detector averaging. Higher values spread the influence of the shock
+ detector further from the shock, increasing numerical dissipation but providing a smoother
+ transition between flux calculators in adaptive schemes.
+
+TIP: You can read more about this in the technical note
+https://gdtk.uqcloud.net/docs/eilmer/technical-notes/hybrid-fluxes/[Hybrid fluxes, shock detection and smoothing.]
+
+
+`config.strict_shock_detector` ::
+  _boolean_, default: `true` +
+  If this is true then any face that is part
+  of a cell with S>0 will have its own S value set to 1. This is to
+  emulate legacy behaviour and thus defaults to true. For true
+  blending of fluxes this should be set to false.
+
+`config.frozen_shock_detector` ::
+ _boolean_, default: `false` +
+ If set to true, the shock detector field will be frozen after the number of time steps
+ prescribed by config.shock_detector_freeze_step. Used to prevent flickering of adaptive
+ flux methods between their constituent flux calculators.
+
+`config.shock_detector_freeze_step` ::
+ _int_, default: `1000` +
+ The time step at which the shock detector field will be frozen.
+
+== Viscous effects
+
+`config.viscous` ::
+  _boolean_, default: `false` +
+  If set `true`, viscous effects will be included in the simulation.
+
+`config.separate_update_for_viscous_terms` ::
+  _boolean_, default: `false` +
+  If set `true`, the update for the viscous transport terms is done separately
+  to the update for the convective terms.
+  By default the updates are done together in the gas-dynamic update procedure.
+
+`config.viscous_delay` ::
+  _float_, default: `0.0` +
+  The time (in seconds) to wait before applying the viscous terms.
+  This might come in handy when trying to start blunt-body simulations.
+
+`config.viscous_factor_increment` ::
+  _float_, default: `0.01` +
+  The per-time-step increment of the viscous effects, once simulation time exceeds
+  `config.viscous_delay`.
+
+`config.turbulence_model` ::
+  _string_, default: `'none'` +
+  String specifying which model to use.
+  Options are: `'none'` `'k_omega'` `'spalart_allmaras'`
+
+`config.turbulence_prandtl_number` ::
+  _float_, default: `0.89`
+
+`config.turbulence_schmidt_number` ::
+  _float_, default: `0.75`
+
+`config.max_mu_t_factor` ::
+  _float_, default: `300` +
+  The turbulent viscosity is limited to laminar viscosity multiplied by this factor.
+
+`config.transient_mu_t_factor` ::
+  _float_, default: `1.0`
+
+
+== Finite-rate thermo-chemistry
+
+`config.reacting` ::
+  _boolean_, default: `false` +
+  Set to `true` to activate the finite-rate chemical reactions.
+
+`config.reactions_file` ::
+  _string_, default: `'chemistry.lua'` +
+  File name for reaction scheme configuration.
+
+`config.reaction_time_delay` ::
+  _float_, default: `0.0` +
+  Time after which finite-rate reactions are allowed to start.
+
+`config.reaction_fraction_schedule` ::
+  _table of float pairs_, default `{{0.0, 1.0},}` +
+  If you want to vary the fraction of the reaction time step per gas-dynamic time step
+  as the simulation proceeds,
+  you can specify a table of `{time, fraction}` pairs that are interpolated by the solver.
+  If the initial flow is likely to have a harsh shock reflection with high temperatures
+  and correspondingly high reaction rates, it may be beneficial to discard time accuracy
+  and start with a small fraction, increasing it (to a maximum of 1.0) as the flow field settles.
+  Outside the specified range of times, the `fraction` will be the closest end-point value.
+
+`config.T_frozen` ::
+  _float_, default: `300.0` +
+  Temperature (in degrees K) below which reactions are frozen.
+  The default value is `300.0` since most reaction schemes seem to be valid for temperatures
+  above this, however, you may have good reasons to set it higher or lower.
+
+
+== Species Diffusion
+
+`config.mass_diffusion_model` ::
+  _string_, default: `'none'` +
+  Set the expression for laminar diffusion flux of species along concentration gradients.
+  Valid options are: `'none'` (no diffusion) and `'ficks_first_law'` (self explanatory).
+  Note that this option is ignored in turbulent flow, where the turbulent diffusivity is
+  used instead.
+
+`config.diffusion_coefficient_type` ::
+  _string_, default: `'none'` +
+  Set the type of formula used to compute the species diffusion coefficients in a
+  diffusion enabled simulation.
+  Valid options are: `'constant_lewis_number'` (works with any multi-species model),
+  `'species_specific_lewis_numbers'` (requires specific gas models), and
+  `'binary_diffusion'` (requires specific gas models).
+  Note that leaving this parameter as `'none'` in a simulation where
+  `config.mass_diffusion_model='ficks_first_law'` will cause a run-time error.
+
+`config.lewis_number` ::
+  _float_, default: `1.0` +
+  Set the value for the Lewis number, which computes the species diffusion coefficients
+  based on the thermal conductivity, in a diffusion enabled simulation with
+  `config.diffusion_coefficient_type=constant_lewis_number`.
+
+== Special initialisation
+
+`config.diffuse_wall_bcs_on_init` ::
+    _bool_, default: `false` +
+    Set to diffuse(/blend) conditions at the wall
+    into the flow domain as an initial condition
+
+`config.number_init_passes` ::
+    _int_, default: `30` +
+    Set how many passes the diffusion is applied.
+    Each pass diffuses another layer of cells into domain.
+    So 10 passes would effect 10 layers of cells from the wall (in a structured grid).
+
+`config.wall_temperature_on_init` ::
+    _float_, default: `-1.0` +
+    Set the wall temperature to use when diffusing the wall conditions.
+    This value *_must_* be set when an adiabatic wall condition is selected
+    since there is no initial guess of the wall temperature.
+    If this value is set for a fixed temperature wall, then this value overrides
+    the wall temperature for the purposes of this diffusion-style initialisation.
+    It does not change the wall temperature selected in the boundary condition.
+    A value of `-1.0` indicates that this selection is not active and the wall
+    boundary temperature should be used. This is default action.
+
+The following lines are an example of using the diffusion-style initialisation.
+We assume an adiabatic wall and give a starting guess of 600.0 K for the wall temperature.
+The blending operation is performed 20 times in this example:
+
+ config.diffuse_wall_bcs_on_init = true
+ config.number_init_passes = 20
+ config.wall_temperature_on_init = 600.0
+
+
+== Miscellaneous
+
+`config.title` ::
+    _string_, default: `"Eilmer4 simulation"` +
+    Title for the simulation
+
+`config.adjust_invalid_cell_data` ::
+  _boolean_, default: `false` +
+  Usually, you will want the flow solver to provide
+  its best estimate for your flow, however, there are flow situations
+  for which the flow solver will not compute physically valid flow data.
+  If you encounter a difficult flow situation and are prepared to fudge over a few cells,
+  then set this parameter to `true` and `max_invalid_cells` to a non-zero value.
+  Be cautious when using this option and use it only when you have exhausted more
+  reasoned options.
+  If there is a problem that is more than just a difficult patch of flow that will blow by,
+  it may allow you to go further into a bad situation and get even more confused
+  about what the underlying issue really is.
+
+`config.max_invalid_cells` ::
+  _int_, default: `0` +
+  The maximum number of bad cells that will be tolerated on decoding conserved quantities.
+  If this number is exceeded, the simulation will stop.
+
+`config.report_invalid_cells` ::
+  _boolean_, default: `true` +
+  If you are stuck with having to fudge over cells, you probably
+  will want to know about them until, of course, that you don't.
+  Set this parameter to `false` to silence the reports of bad cells being fudged over.
+
+`config.apply_bcs_in_parallel` ::
+  _boolean_, default, `true` +
+  This will be the fastest calculation, however, some boundary
+  conditions, such as the shock-fitting need to cooperate across blocks and
+  so will have race conditions if applied in parallel.
+  If your simulation has such a boundary condition, set this parameter to `false`
+  to favour safety above speed.
+
+`config.udf_source_terms` ::
+  _boolean_, default: `false` +
+  Set to `true` to apply user-defined source terms, as supplied in a Lua file.
+
+`config.udf_source_terms_file` ::
+  _string_, default: "dummy-source-terms.txt" +
+  Name of the Lua file for the user-defined source terms.
+
+`config.print_count` ::
+  _int_, default: `20` +
+  Number of time steps between printing status information to the console.
+
+`config.control_count` ::
+  _int_, default: `10` +
+  Number of time steps between re-parsing the job`.control` file.
+  If the job`.control` has been edited, then the new values are used after re-parsing.
+
+`config.MHD` ::
+  _boolean_, default: `false` +
+  Set to `true` to make MHD physics active.
+
+`config.do_temporal_DFT` ::
+  _boolean_, default: `false` +
+  Set to `true` to calculate the temporal Discrete Fourier Transform of the pressure
+  on a cell-by-cell basis on-the-go.
+  Useful for large jobs where storing the number of snapshots required
+  for Fourier decomposition is prohibitive.
+  Results written to file `DFT/jobName.DFT.bxxxx.tar.gz`,
+  with a line containing the real and imaginary components of each Fourier mode
+  i.e. Re(A0), Im(A0), Re(A1), Im(A1), ... Im(A_n).
+  Requires setting of additional config options `config.DFT_n_modes` and `config.DFT_step_interval`.
+  Use of `config.fixed_time_step` is also very strongly recommended, non-fixed time stepping
+  will lead to erronous mode amplitudes and phases.
+
+`config.DFT_n_modes` ::
+  _int_, default: `5` +
+  The number of Fourier modes to be computed in the temporal Discrete Fourier Transform.
+  Should be equal to `config.max_steps / config.DFT_step_interval` (see next entry).
+
+`config.DFT_step_interval` ::
+  _int_, default: `10` +
+  The number of steps between each increment of the temporal Discrete Fourier Transform modes.
+  Should be equal to `config.max_steps / config.DFT_n_modes`.
+
+
+== Special Zones
+
+Sometimes you may wish to apply specific configuration only for a limited region.
+There are special zones that can be constructed for turbulence, reactions and ignition
+and order of reconstruction.
+The region of application is defined by a pair of diagonally-opposing points
+that specify the minimum and maximum coordinate values.
+
+  TurbulentZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}}
+
+The turbulence model is active throughout the flow
+but its effect on the flow field is masked outside of any defined turbulent zones.
+This is achieved by the code setting the turbulence viscosity and conductivity to zero
+for finite-volume cells that fall outside of all regions defined as a TurbulentZone.
+If there are no such defined regions, the whole flow field is allowed to have nonzero turbulence viscosity.
+
+  ReactionZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}}
+
+In a flow with an active reaction scheme, this type of zone makes it possible to selectively allow
+reactions to proceed, or not.
+If the centre of a cell lies within the reaction zone, the finite-rate chemistry is allowed to proceed,
+else the species fractions are maintained constant.
+If no reaction zones are specified and a reaction scheme is active,
+then reactions are permitted for the entire flow field.
+
+  IgnitionZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}, T=Tig}
+
+`Tig` controls the reaction rate used for chemical reactions,
+without effecting the gas temperature in the flow field.
+The rate-controlling temperature is used to evaluate the chemical reaction rates
+only within the physical extents of the ignition zone.
+The effect of this zone can be limited in time by specifying a nonzero values for
+`config.ignition_time_start` and `config.ignition_time_stop`.
+While the zone is active, the reaction rates within the zone are altered.
+The rate-controlling temperature is typically set to an artificially inflated
+value to promote ignition.
+
+  SuppressReconstructionZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}}
+
+Inside such a zone, high-order reconstruction of the flow properties is suppressed.
+This can sometimes help with difficult flow features, such as an expansion around a sharp corner.
+
+

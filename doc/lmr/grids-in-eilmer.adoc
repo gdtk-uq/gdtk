@@ -1,0 +1,66 @@
+= Grid preparation
+
+Grids may be built with the Eilmer built-in gridding tools or built in a 3rd-party gridder and imported.
+This section describes the high-level functions for importing and registering grids.
+Grids need to be registered during the grid preparation stage for later use
+in defining fluid or solid blocks.
+The details of building individual grid
+objects is not covered here.
+Those details can be found in xref:../geom/grid/grid-user.adoc#grid-user[Grid objects].
+
+== Importing grids
+
+`importGridproGrid(filename[, scale])`
+
+`filename`:: name of Gridpro multi-block grid file
+`scale`:: value by which to scale the grid coordinates (default: 1.0)
+
+`importPlot3DGrid(filename, dim[, scale])`
+
+`filename`:: name of Plot3D file (needs to be in text format)
+`dim`:: dimensionality of grid: 2 or 3
+`scale`:: value by which to scale the grid coordinates (default: 1.0)
+
+SU2 import is via the `UnstructuredGrid` object directly:
+
+`UnstructuredGrid:new{filename=filename, fmt='su2text'[, scale=1.0]}`
+
+`filename`:: name of SU2 grid file
+`fmt`:: supply 'su2text' as format to import an SU2 grid
+`scale`:: value by which to scale the grid coordinates (default: 1.0)
+
+== Registering grids
+
+We call the `registerFluidGrid` function  so that we can set information about boundary conditions and the initial condition in the volume defined by the grid.
+
+
+`registerFluidGrid{grid, tag, fsTag, bcTags}`
+
+`grid`:: a `Grid` object. This might be created as `StructuredGrid` or `UnstructuredGrid` objects, or grid objects created during an import call.
+`tag`:: a user-supplied tag that might be used to identify a grid or collection of grids
+`fsTag`:: a string that will be used to select the initial flow condition from a dictionary when the FluidBlock is later constructucted
+`bcTags`:: a table of strings that will be used to attach boundary conditions from a dictionary when the FluidBlock is later constructed
+
+The `registerFluidGridArray` function can be used to carve a structured grid into subgrids.
+It does not work on unstructured grids.
+
+`registerFluidGridArray{grid, tag, fsTag, bcTags, nib, njb, nkb, shock_fitting}`
+
+`grid`:: a `Grid` object. This might be created as `StructuredGrid` or `UnstructuredGrid` objects, or grid objects created during an import call.
+`tag`:: a user-supplied tag that might be used to identify a grid or collection of grids
+`fsTag`:: a string that will be used to select the initial flow condition from a dictionary when the FluidBlock is later constructucted
+`bcTags`:: a table of strings that will be used to attach boundary conditions from a dictionary when the FluidBlock is later constructed
+`nib`:: number of blocks to use for subdivision in `i` grid direction
+`njb`:: number of blocks to use for subdivision in `j` grid direction
+`nkb`:: number of blocks to use for subdivision in `k` grid direction
+(has no meaning for 2D grids)
+`shock_fitting`:: boolean, set to `true` if using a shock-fit `WEST` boundary
+
+
+
+
+
+
+
+
+

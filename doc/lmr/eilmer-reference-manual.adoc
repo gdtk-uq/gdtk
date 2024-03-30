@@ -1,0 +1,48 @@
+= Eilmer Reference Manual for Users, v5.0
+Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
+2024-03-30
+:toc: right
+:stylesheet: ../readthedocs.css
+:sectnums:
+:imagesdir: images
+
+:leveloffset: +1
+
+Eilmer is a multi-physics analysis code with an emphasis on the simulation of
+compressible gas flows.
+In broad terms, the workflow for a simulation consists of 3 steps:
+. pre-processing;
+. running a simulation; and
+. post-processing.
+A simulation is set up by writing input scripts (possibly separately for
+grid and flow definition) and running them through the pre-processors,
+such as `prep-grid` and `prep-sim`.
+The `lmr run` command is used to launch a simulation for single node jobs,
+and there are MPI-flavoured executables for launching distributed-memory
+parallel jobs, for example, on cluster computers.
+There are a variety of post-processing tools to support extraction and
+visualisation of the simulated flow field data.
+Commonly users will call the `snapshot2vtk` command to produce
+VTK files for viewing in a tool such as Paraview.
+The following sections provide brief details on many items that
+might go into your input script.
+Note that this document is for reference, after you have read the guides at
+https://gdtk.uqcloud.net/docs/eilmer/user-guide/ .
+
+include::config-options-user.adoc[]
+include::grids-in-eilmer.adoc[]
+include::flow-state-user.adoc[]
+include::fluid-block-user.adoc[]
+include::boundary-conditions.adoc[]
+include::flowsolution_user.adoc[]
+
+include::../geom/elements-lua.adoc[]
+:leveloffset: +1
+include::../geom/surfaces/surfaces.adoc[]
+:leveloffset: -1
+include::../geom/grid/grid-user.adoc[]
+include::../geom/grid/sgrid-user.adoc[]
+
+:leveloffset: -1
+
+
