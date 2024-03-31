@@ -2,7 +2,7 @@
 Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
 2024-03-30
 :toc: right
-:stylesheet: ../readthedocs.css
+:stylesheet: readthedocs.css
 :sectnums:
 :imagesdir: images
 
@@ -11,9 +11,11 @@ Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
 Eilmer is a multi-physics analysis code with an emphasis on the simulation of
 compressible gas flows.
 In broad terms, the workflow for a simulation consists of 3 steps:
+
 . pre-processing;
 . running a simulation; and
 . post-processing.
+
 A simulation is set up by writing input scripts (possibly separately for
 grid and flow definition) and running them through the pre-processors,
 such as `prep-grid` and `prep-sim`.
