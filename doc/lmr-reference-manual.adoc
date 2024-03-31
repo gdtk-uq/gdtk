@@ -29,21 +29,21 @@ might go into your input script.
 Note that this document is for reference, after you have read the guides at
 https://gdtk.uqcloud.net/docs/eilmer/user-guide/ .
 
-include::config-options-user.adoc[]
-include::grids-in-eilmer.adoc[]
-include::flow-state-user.adoc[]
-include::fluid-block-user.adoc[]
-include::boundary-conditions.adoc[]
-include::flowsolution_user.adoc[]
+include::lmr/config-options-user.adoc[]
+include::lmr/grids-in-eilmer.adoc[]
+include::lmr/flow-state-user.adoc[]
+include::lmr/fluid-block-user.adoc[]
+include::lmr/boundary-conditions.adoc[]
+include::lmr/flowsolution_user.adoc[]
 
-include::../geom/elements-lua.adoc[]
+include::geom/elements-lua.adoc[]
 :leveloffset: +1
-include::../geom/surfaces/surfaces.adoc[]
+include::geom/surfaces/surfaces.adoc[]
 :leveloffset: -1
-include::../geom/grid/grid-user.adoc[]
-include::../geom/grid/sgrid-user.adoc[]
+include::geom/grid/grid-user.adoc[]
+include::geom/grid/sgrid-user.adoc[]
 
-include::running-a-simulation.adoc[]
+include::lmr/running-a-simulation.adoc[]
 
 :leveloffset: -1
 
