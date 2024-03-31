@@ -1,0 +1,101 @@
+= Running a simulation
+
+The overall process of simulation of a gas flow is divided into
+three stages:
+
+  (1) preparation of the defining data,
+  (2) running the main simulation program, and
+  (3) postprocessing of the output data from the simulation.
+
+Information is passed from one stage to the next in data files.
+
+== Command-line interface
+
+Eilmer tools and commands are invoked at the command line in the form:
+
+`lmr` _verb_ [_options_] [_arguments_]
+
+To get general help:
+
+   $ lmr help
+
+To list all available commands:
+
+   $ lmr help -a
+
+Help is available for a specific command:
+
+   $ lmr help command-name
+
+
+== Pre-processing
+To start a simulation, we need a gas model,
+maybe a chemical-kinetics model for reacting flow,
+simulation configuration and control files, and
+the initial grid and flow state.
+Generation of all of these data is the activity of
+the pre-processing (or preparation) stage.
+
+=== `prep-gas`
+----
+include::commands/prep-gas.txt[]
+----
+=== `prep-reactions`
+----
+include::commands/prep-reactions.txt[]
+----
+=== `prep-energy-exchange`
+----
+include::commands/prep-energy-exchange.txt[]
+----
+=== `prep-grid`
+----
+include::commands/prep-grid.txt[]
+----
+=== `prep-sim`
+----
+include::commands/prep-sim.txt[]
+----
+
+== Run-time
+Now that the initial flow and grid files exist, it is time to run the main
+flow simulation process.
+By default, four executables are built:
+`lmr-run`, `lmrZ-run`, `lmr-mpi-run` and `lmrZ-mpi-run`.
+The `Z` variants use complex values; the others use real values.
+For shared memory, the user can call `lmr run` and the launcher will figure out the best executable to call based on whether one is running `transient` or `steady`.
+For running with MPI, things are a bit trickier because we need to play nicely with the MPI launcher.
+We recommend using `lmr-mpi-run` for most transient simulations and `lmrZ-mpi-run` for steady mode.
+
+=== `run`
+----
+include::commands/run.txt[]
+----
+
+== Post-processing
+The Eilmer flow field data is a native format.
+We will typically need to process it in some way to make is usable for analysis or visualisation.
+Here are some of the Eilmer tools that
+can be used as a part of your post-processing.
+
+=== `snapshot2vtk`
+----
+include::commands/snapshot2vtk.txt[]
+----
+=== `probe-flow`
+----
+include::commands/probe-flow.txt[]
+----
+=== `slice-flow`
+----
+include::commands/slice-flow.txt[]
+----
+=== `extract-line`
+----
+include::commands/extract-line.txt[]
+----
+=== `compute-norms`
+----
+include::commands/compute-norms.txt[]
+----
+

@@ -43,6 +43,8 @@ include::../geom/surfaces/surfaces.adoc[]
 include::../geom/grid/grid-user.adoc[]
 include::../geom/grid/sgrid-user.adoc[]
 
+include::running-a-simulation.adoc[]
+
 :leveloffset: -1
 
 
