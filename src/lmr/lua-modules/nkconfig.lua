@@ -179,6 +179,7 @@ NewtonKrylovPhaseDefaults = {
    steps_between_preconditioner_update = 10,
    use_adaptive_preconditioner = false,
    ignore_stopping_criteria = true,
+   frozen_shock_detector = false,
    frozen_limiter_for_residual = false,
    frozen_limiter_for_jacobian = false,
 
@@ -243,6 +244,7 @@ function NewtonKrylovPhase:tojson()
    str = str .. string.format('    "steps_between_preconditioner_update": %d,\n', self.steps_between_preconditioner_update)
    str = str .. string.format('    "use_adaptive_preconditioner": %s,\n', tostring(self.use_adaptive_preconditioner))
    str = str .. string.format('    "ignore_stopping_criteria": %s,\n', tostring(self.ignore_stopping_criteria))
+   str = str .. string.format('    "frozen_shock_detector": %s,\n', tostring(self.frozen_shock_detector))
    str = str .. string.format('    "frozen_limiter_for_residual": %s,\n', tostring(self.frozen_limiter_for_residual))
    str = str .. string.format('    "frozen_limiter_for_jacobian": %s,\n', tostring(self.frozen_limiter_for_jacobian))
    str = str .. string.format('    "linear_solve_tolerance": %.18e,\n', self.linear_solve_tolerance)

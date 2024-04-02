@@ -246,6 +246,7 @@ struct NKPhaseConfig {
     int stepsBetweenPreconditionerUpdate = 10;
     bool useAdaptivePreconditioner = false;
     bool ignoreStoppingCriteria = true;
+    bool frozenShockDetector = false;
     bool frozenLimiterForResidual = false;
     bool frozenLimiterForJacobian = false;
     double linearSolveTolerance = 0.01;
@@ -265,6 +266,7 @@ struct NKPhaseConfig {
         stepsBetweenPreconditionerUpdate = getJSONint(jsonData, "steps_between_preconditioner_update", stepsBetweenPreconditionerUpdate);
         useAdaptivePreconditioner = getJSONbool(jsonData, "use_adaptive_preconditioner", useAdaptivePreconditioner);
         ignoreStoppingCriteria = getJSONbool(jsonData, "ignore_stopping_criteria", ignoreStoppingCriteria);
+        frozenShockDetector = getJSONbool(jsonData, "frozen_shock_detector", frozenShockDetector);
         frozenLimiterForResidual = getJSONbool(jsonData, "frozen_limiter_for_residual", frozenLimiterForResidual);
         frozenLimiterForJacobian = getJSONbool(jsonData, "frozen_limiter_for_jacobian", frozenLimiterForJacobian);
         linearSolveTolerance = getJSONdouble(jsonData, "linear_solve_tolerance", linearSolveTolerance);
@@ -1266,10 +1268,24 @@ void setPhaseSettings(size_t phase)
     alias cfg = GlobalConfig;
     activePhase = nkPhases[phase];
     foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(activePhase.residualInterpolationOrder);
-    // We need to compute the limiter a final time before freezing it
+
+    // We need to compute the limiter and/or shock detector a final time before freezing it
+    if ((activePhase.frozenLimiterForResidual && !cfg.frozen_limiter) ||
+        (activePhase.frozenShockDetector && !cfg.frozen_shock_detector)) {
+        /*
+        debug {
+            writeln("DEBUG: setPhaseSettings()");
+            writeln(" Evaluating Residual.");
+        }
+        */
+        evalResidual(0);
+    }
+
     if (activePhase.frozenLimiterForResidual) {
-        if (cfg.frozen_limiter == false) { evalResidual(0); }
         cfg.frozen_limiter = true;
+    }
+    if (activePhase.frozenShockDetector) {
+        cfg.frozen_shock_detector = true;
     }
 }
 
@@ -2290,7 +2306,7 @@ void evalResidual(int ftl)
     // We don't want to switch between flux calculator application while
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
-    if (ftl == 0 && GlobalConfig.do_shock_detect) { detect_shocks(0, ftl); }
+    if (ftl == 0 && GlobalConfig.do_shock_detect && !GlobalConfig.frozen_shock_detector) { detect_shocks(0, ftl); }
 
     // We need to apply the copy_cell_data BIE at this point to allow propagation of
     // "shocked" cell information (fs.S) to the boundary interface BEFORE the convective
