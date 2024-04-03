@@ -88,8 +88,8 @@ public:
             break;
         case "multi-temperature-gas":
             getArrayOfStrings(L, "energy_modes", _energy_mode_names);
-            create_energy_mode_reverse_lookup();
             _n_modes = to!int(_energy_mode_names.length);
+            create_energy_mode_reverse_lookup();
             mThermo = new MultiTemperatureGasMixture(L, _species_names, _energy_mode_names);
             mTransProps = new MultiTemperatureTransProps(L, _species_names, _energy_mode_names);
             break;
