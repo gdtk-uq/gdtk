@@ -627,18 +627,18 @@ public:
                 final switch (myConfig.spatial_deriv_calc) {
                 case SpatialDerivCalc.least_squares:
                     foreach(vtx; vertices) {
-                        vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
+                        vtx.grad.gradients_leastsq(myConfig, vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
                     }
                     break;
                 case SpatialDerivCalc.divergence:
                     foreach(vtx; vertices) {
-                        vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
+                        vtx.grad.gradients_xy_div(myConfig, vtx.cloud_fs, vtx.cloud_pos);
                     }
                 } // end switch
             } else {
                 // Have only least-squares in 3D.
                 foreach(vtx; vertices) {
-                    vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
+                    vtx.grad.gradients_leastsq(myConfig, vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
                 }
             }
 
@@ -660,19 +660,19 @@ public:
                 final switch (myConfig.spatial_deriv_calc) {
                 case SpatialDerivCalc.least_squares:
                     foreach(iface; faces) {
-                        iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, *(iface.ws_grad));
+                        iface.grad.gradients_leastsq(myConfig, iface.cloud_fs, iface.cloud_pos, *(iface.ws_grad));
                     }
                     break;
                 case SpatialDerivCalc.divergence:
                     foreach(iface; faces) {
-                        iface.grad.gradients_xy_div(iface.cloud_fs, iface.cloud_pos);
+                        iface.grad.gradients_xy_div(myConfig, iface.cloud_fs, iface.cloud_pos);
                     }
                 } // end switch
             } else { //3D
                 final switch (myConfig.spatial_deriv_calc) {
                 case SpatialDerivCalc.least_squares:
                     foreach(iface; faces) {
-                        iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, *(iface.ws_grad));
+                        iface.grad.gradients_leastsq(myConfig, iface.cloud_fs, iface.cloud_pos, *(iface.ws_grad));
                     }
                     break;
                 case SpatialDerivCalc.divergence:
@@ -695,7 +695,7 @@ public:
             final switch (myConfig.spatial_deriv_calc) {
             case SpatialDerivCalc.least_squares:
                 foreach(cell; cells) {
-                    cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, *(cell.ws_grad));
+                    cell.grad.gradients_leastsq(myConfig, cell.cloud_fs, cell.cloud_pos, *(cell.ws_grad));
                 }
                 break;
             case SpatialDerivCalc.divergence:
@@ -1573,7 +1573,7 @@ public:
             // currently only for least-squares at faces
             // TODO: generalise for all spatial gradient methods
             foreach(c; cell_list) {
-                c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, *(c.ws_grad)); // flow_property_spatial_derivatives(0);
+                c.grad.gradients_leastsq(myConfig, c.cloud_fs, c.cloud_pos, *(c.ws_grad)); // flow_property_spatial_derivatives(0);
             }
 
             // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
@@ -1705,13 +1705,13 @@ public:
                 foreach (vtx; c.vtx) {
                     if (myConfig.dimensions == 2) {
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
+                            vtx.grad.gradients_leastsq(myConfig, vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
                         } else {
-                            vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
+                            vtx.grad.gradients_xy_div(myConfig, vtx.cloud_fs, vtx.cloud_pos);
                         }
                     } else {
                         // Have only least-squares in 3D.
-                        vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
+                        vtx.grad.gradients_leastsq(myConfig, vtx.cloud_fs, vtx.cloud_pos, *(vtx.ws_grad));
                     }
                 } // end foreach vtx
                 // We've finished computing gradients at vertices, now copy them around if needed.
@@ -1726,13 +1726,13 @@ public:
                 foreach(f; c.iface) {
                     if (myConfig.dimensions == 2) {
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            f.grad.gradients_leastsq(f.cloud_fs, f.cloud_pos, *(f.ws_grad));
+                            f.grad.gradients_leastsq(myConfig, f.cloud_fs, f.cloud_pos, *(f.ws_grad));
                         } else {
-                            f.grad.gradients_xy_div(f.cloud_fs, f.cloud_pos);
+                            f.grad.gradients_xy_div(myConfig, f.cloud_fs, f.cloud_pos);
                         }
                     } else {
                         // 3D has only least-squares available.
-                        f.grad.gradients_leastsq(f.cloud_fs, f.cloud_pos, *(f.ws_grad));
+                        f.grad.gradients_leastsq(myConfig, f.cloud_fs, f.cloud_pos, *(f.ws_grad));
                     } // end if (myConfig.dimensions)
                 } // end foreach f
                 // Finished computing gradients at faces, now copy them around if needed.
@@ -1742,7 +1742,7 @@ public:
                 }
                 break;
             case SpatialDerivLocn.cells:
-                c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, *(c.ws_grad));
+                c.grad.gradients_leastsq(myConfig, c.cloud_fs, c.cloud_pos, *(c.ws_grad));
                 // We need to average cell-centered spatial (/viscous) gradients
                 // to get approximations of the gradients at the faces for the viscous flux.
                 foreach(f; c.iface) { f.average_cell_deriv_values(gtl); }
