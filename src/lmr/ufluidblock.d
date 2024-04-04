@@ -376,7 +376,7 @@ public:
                                 nboundaries, grid.nboundaries);
             throw new FlowSolverException(msg);
         }
-        int ghost_cell_count = 0;
+        int ghost_cell_id = to!int(cells.length);
         foreach (i, bndry; grid.boundaries) {
             auto nf = bndry.face_id_list.length;
             if (nf != bndry.outsign_list.length) {
@@ -395,9 +395,10 @@ public:
 		if (bc[i].ghost_cell_data_available) {
                     // Make ghost-cell id values distinct from FluidFVCell ids so that
                     // the warning/error messages are somewhat informative.
-                    FluidFVCell ghost0 = new FluidFVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
-                    ghost_cell_count++;
+                    FluidFVCell ghost0 = new FluidFVCell(myConfig, false, ghost_cell_id);
+                    ghost_cell_id++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
+                    ghost0.is_ghost = true;
                     bc[i].ghostcells ~= ghost0;
                     if (my_outsign == 1) {
                         if (my_face.right_cell) {

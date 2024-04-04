@@ -450,7 +450,7 @@ public:
                 }
             }
             // Now, construct the ghost cells, attaching them to the boundary faces.
-            int cell_id = ghost_cell_start_id;
+            int cell_id = to!int(nic*njc*nkc);
             // North and South boundaries.
             if (bc[Face.north].ghost_cell_data_available) {
                 foreach (k; 0 .. nkc) {
@@ -458,7 +458,7 @@ public:
                         auto f = get_ifj(i, njc, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -470,7 +470,7 @@ public:
                         auto f = get_ifj(i, 0, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -482,7 +482,7 @@ public:
                         auto f = get_ifi(nic, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -494,7 +494,7 @@ public:
                         auto f = get_ifi(0, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -507,7 +507,7 @@ public:
                             auto f = get_ifk(i, j, nkc);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                                c.id = cell_id; ++cell_id;
+                                c.id = cell_id; ++cell_id; c.is_ghost = true;
                                 f.right_cells ~= c;
                             }
                         }
@@ -519,7 +519,7 @@ public:
                             auto f = get_ifk(i, j, 0);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                                c.id = cell_id; ++cell_id;
+                                c.id = cell_id; ++cell_id; c.is_ghost = true;
                                 f.left_cells ~= c;
                             }
                         }

@@ -8,11 +8,6 @@ import std.stdio;
 import globalconfig;
 import util.lua;
 
-// To distinguish ghost cells from active cells, we start their id values at
-// an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
-// if you start using grids larger I expect.
-enum ghost_cell_start_id = 1_000_000_000;
-
 class Block {
 public:
     int id;      // block identifier: assumed to be the same as the block number.

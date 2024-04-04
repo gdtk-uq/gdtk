@@ -40,6 +40,8 @@ import solidprops;
 import block;
 import jacobian;
 
+enum ghost_cell_start_id = 1_000_000_000;
+
 class SSolidBlock : SolidBlock {
 public:
     size_t n_ghost_cell_layers;
