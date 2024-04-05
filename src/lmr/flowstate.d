@@ -55,7 +55,7 @@ public:
         number divB;   // divergence of the magnetic field
     }
     version(turbulence) {
-        number[] turb; // turbulence primitives
+        number[2] turb; // turbulence primitives
     }
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
@@ -68,7 +68,7 @@ public:
          in double T_init,
          in double[] T_modes_init,
          in Vector3 vel_init,
-         in double[] turb_init,
+         in double[2] turb_init,
          in double[] massf_init=[1.0,],
          in double quality_init=1.0,
          in Vector3 B_init=Vector3(0.0,0.0,0.0),
@@ -84,7 +84,6 @@ public:
             divB = divB_init;
         }
         version(turbulence) {
-            turb.length = turb_init.length;
             foreach (i; 0 .. turb.length) turb[i] = turb_init[i];
         }
         mu_t = mu_t_init;
@@ -103,7 +102,6 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
-            turb.length = other.turb.length;
             foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
@@ -138,7 +136,6 @@ public:
             divB = 0.0;
         }
         version(turbulence) {
-            turb.length = nturb;
             foreach (i; 0 .. turb.length) turb[i] = 0.0;
         }
         mu_t = 0.0;
@@ -174,9 +171,8 @@ public:
             divB = getJSONdouble(json_data, "divB", 0.0);
         }
         version(turbulence) {
-            double[] turb_in;
-            turb_in = getJSONdoublearray(json_data, "turb", []);
-            turb.length = turb_in.length;
+            double[2] turb_in;
+            turb_in = getJSONdoublearray(json_data, "turb", [0.0, 1.0]);
             foreach (i; 0 .. turb.length) turb[i] = turb_in[i];
         }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);

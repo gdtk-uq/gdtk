@@ -188,9 +188,9 @@ public:
         int n_modes = myConfig.n_modes;
         double T = 300.0;
         double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        double[] turb_init;
+        double[2] turb_init;
         foreach(i; 0 .. myConfig.turb_model.nturb)
-            turb_init ~= myConfig.turb_model.turb_limits(i).re;
+            turb_init[i] = myConfig.turb_model.turb_limits(i).re;
         fs = FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0), turb_init);
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         foreach(i; 0 .. myConfig.n_flow_time_levels) {

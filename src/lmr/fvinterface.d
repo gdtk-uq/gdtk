@@ -123,9 +123,9 @@ public:
         uint n_species = myConfig.n_species;
         uint n_modes = myConfig.n_modes;
         double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        double[] turb_init;
+        double[2] turb_init;
         foreach(i; 0 .. myConfig.turb_model.nturb)
-            turb_init ~= myConfig.turb_model.turb_limits(i).re;
+            turb_init[i] = myConfig.turb_model.turb_limits(i).re;
         fs = FlowState(gmodel, 100.0e3, 300, T_modes, Vector3(0.0,0.0,0.0), turb_init);
         F = new_ConservedQuantities(myConfig.cqi.n);
         F.clear();
