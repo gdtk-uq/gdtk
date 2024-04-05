@@ -777,7 +777,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     }
     allocateGlobalGMRESWorkspace();
     foreach (blk; localFluidBlocks) {
-        blk.allocate_GMRES_workspace(nkCfg.maxLinearSolverIterations);
+        blk.allocate_GMRES_workspace(nkCfg.maxLinearSolverIterations, nkCfg.useRealValuedFrechetDerivative);
     }
     /* solid blocks don't work just yet.
     allocate_global_solid_workspace();
@@ -1489,9 +1489,12 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
      * 0. Preparation for iterations.
      *---
      */
+
     evalResidual(0);
 
     setResiduals();
+
+    if (nkCfg.useRealValuedFrechetDerivative) { setR0(); }
 
     computeGlobalResidual();
 
@@ -1653,6 +1656,43 @@ void setResiduals()
                 blk.R[startIdx+ivar] = cell.dUdt[0][ivar].re;
             }
             startIdx += nConserved;
+        }
+    }
+}
+
+/**
+ * Set the unperturbed state R0 used in the real-valued Frechet derivative.
+ *
+ * Note that this routine assumes that the R array attached to each FluidBlock has been set prior to being called.
+ *
+ * Authors: RJG and KAD
+ * Date: 2024-03-28
+ */
+void setR0()
+{
+    size_t nConserved = GlobalConfig.cqi.n;
+    bool defectCorrectionUpdate = activePhase.frozenLimiterForJacobian || activePhase.jacobianInterpolationOrder != activePhase.residualInterpolationOrder;
+    if (defectCorrectionUpdate) {
+        // When performing a defect-correction update with a real-valued Frechet derivative, we cannot use R as our unperturbed state.
+        // We must evaluate the Residual vector with the defects applied and store it as R0 for later use in the Fechet derivative.
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
+        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
+        evalResidual(1);
+        foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(activePhase.residualInterpolationOrder);
+        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual; }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                foreach (ivar; 0 .. nConserved) {
+                    blk.R0[startIdx+ivar] = cell.dUdt[1][ivar].re;
+                }
+                startIdx += nConserved;
+            }
+        }
+    } else {
+        // If we aren't performing a defect-correction update, then just set R0 to the already evaluated R vector.
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.R0[] = blk.R[];
         }
     }
 }
@@ -2512,7 +2552,7 @@ void evalRealMatVecProd(double sigma)
         size_t startIdx = 0;
         foreach (cell; blk.cells) {
             foreach (ivar; 0 .. nConserved) {
-                blk.zed[startIdx+ivar] = (cell.dUdt[1][ivar].re - blk.R[startIdx+ivar])/(sigma);
+                blk.zed[startIdx+ivar] = (cell.dUdt[1][ivar].re - blk.R0[startIdx+ivar])/(sigma);
             }
             cell.decode_conserved(0, 0, 0.0);
             startIdx += nConserved;

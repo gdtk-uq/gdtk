@@ -186,15 +186,15 @@ int main(string[] args)
      */
     // 2a. Populate z with test vector
     allocateGlobalGMRESWorkspace();
-    blk.allocate_GMRES_workspace(1);
+    blk.allocate_GMRES_workspace(1, nkCfg.useRealValuedFrechetDerivative);
 
-    // 2b. Do Frechet step (note for the real-valued variant we need to fill R)
+    // 2b. Do Frechet step (note for the real-valued variant we need to fill R0)
     version(complex_numbers) {
         // do nothing
     } else {
         int startIdx = 0;
         foreach (cell; blk.cells) {
-            foreach (ivar; 0 .. nConserved) { blk.R[startIdx+ivar] = cell.dUdt[0][ivar].re; }
+            foreach (ivar; 0 .. nConserved) { blk.R0[startIdx+ivar] = cell.dUdt[0][ivar].re; }
             startIdx += nConserved;
         }
     }

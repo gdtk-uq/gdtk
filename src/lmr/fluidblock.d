@@ -126,7 +126,7 @@ public:
     double normAcc, dotAcc;
     size_t nvars;
     Matrix!number Minv;
-    double[] R, dU, DinvR, r0, x0, rhs;
+    double[] R, R0, dU, DinvR, r0, x0, rhs;
     double[] v, w, zed;
     double[] g0, g1;
     Matrix!double Q1;
@@ -1636,7 +1636,7 @@ public:
 
     } // end evalRHS()
 
-    void allocate_GMRES_workspace(int maxLinearSolverIterations)
+    void allocate_GMRES_workspace(int maxLinearSolverIterations, bool useRealValuedFrechetDerivative)
     {
         size_t nConserved = GlobalConfig.cqi.n;
         int n_species = GlobalConfig.gmodel_master.n_species();
@@ -1649,6 +1649,7 @@ public:
         nvars = n;
         // Now allocate arrays and matrices
         R.length = n;
+        if (useRealValuedFrechetDerivative) { R0.length = n; }
         dU.length = n; dU[] = 0.0;
         r0.length = n;
         x0.length = n;
