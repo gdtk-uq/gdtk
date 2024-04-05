@@ -1,1 +1,2 @@
-model = "TwoTemperatureNitrogen"
+model = "TwoTemperatureGas"
+species = {"N2"}

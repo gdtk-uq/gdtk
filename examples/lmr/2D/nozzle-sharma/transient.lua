@@ -1,9 +1,10 @@
 print("EAST facility with nozzle and 2T nitrogen")
 -- Peter J. 2024-04-05
 --
-nsp, nmodes, gm = setGasModel("two-temp-n2.lua")
+nsp, nmodes, gm = setGasModel("two-temp-n2.gas")
 config.reacting = true
-config.reactions_file = "VT-relaxation-time-selection.lua"
+config.reactions_file = "chem.chem"
+config.energy_exchange_file = "VT-relaxation-time-selection.kin"
 --
 -- Conditions before shock and at throat.
 initial = FlowState:new{p=20.0e3, T=300.0, T_modes=300.0}
