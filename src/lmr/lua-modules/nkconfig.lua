@@ -123,7 +123,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write('],\n')
    f:write('"phase_changes_at_relative_residual": [')
    for i,e in ipairs(nkConfig.phase_changes_at_relative_residual) do
-      f:write(string.format('%f', e))
+      f:write(string.format('%.18e', e))
       if i < #(nkConfig.phase_changes_at_relative_residual) then f:write(', ') end
    end
    f:write('],\n')
