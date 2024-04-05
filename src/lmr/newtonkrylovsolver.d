@@ -244,6 +244,7 @@ struct NKPhaseConfig {
     int jacobianInterpolationOrder = 2;
     bool frozenPreconditioner = true;
     int stepsBetweenPreconditionerUpdate = 10;
+    bool enforceLinearSolverTolerance = false;
     bool useAdaptivePreconditioner = false;
     bool ignoreStoppingCriteria = true;
     bool frozenShockDetector = false;
@@ -264,6 +265,7 @@ struct NKPhaseConfig {
         jacobianInterpolationOrder = getJSONint(jsonData, "jacobian_interpolation_order", jacobianInterpolationOrder);
         frozenPreconditioner = getJSONbool(jsonData, "frozen_preconditioner", frozenPreconditioner);
         stepsBetweenPreconditionerUpdate = getJSONint(jsonData, "steps_between_preconditioner_update", stepsBetweenPreconditionerUpdate);
+        enforceLinearSolverTolerance = getJSONbool(jsonData, "enforce_linear_solver_tolerance", enforceLinearSolverTolerance);
         useAdaptivePreconditioner = getJSONbool(jsonData, "use_adaptive_preconditioner", useAdaptivePreconditioner);
         ignoreStoppingCriteria = getJSONbool(jsonData, "ignore_stopping_criteria", ignoreStoppingCriteria);
         frozenShockDetector = getJSONbool(jsonData, "frozen_shock_detector", frozenShockDetector);
@@ -1038,7 +1040,12 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	    omega = applyLineSearch(omega);
 	}
 
-        if (omega >= nkCfg.minRelaxationFactorForUpdate) {
+        /* 1c. check if we achived the allowable linear solver tolerance */
+        bool failedToAchieveAllowableLinearSolverTolerance =
+            (gmresInfo.finalResidual/gmresInfo.initResidual) > activePhase.linearSolveTolerance &&
+            activePhase.enforceLinearSolverTolerance;
+
+        if (omega >= nkCfg.minRelaxationFactorForUpdate && !failedToAchieveAllowableLinearSolverTolerance) {
             // Things are good. Apply omega-scaled update and continue on.
             // We think??? If not, we bail at this point.
             try {
@@ -1059,7 +1066,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             }
             numberBadSteps = 0;
         }
-        else if (omega < nkCfg.minRelaxationFactorForUpdate && activePhase.useAutoCFL) {
+        else if ((omega < nkCfg.minRelaxationFactorForUpdate || failedToAchieveAllowableLinearSolverTolerance) && activePhase.useAutoCFL) {
             numberBadSteps++;
             if (numberBadSteps == nkCfg.maxConsecutiveBadSteps) {
                 writeln("Too many consecutive bad steps while trying to update flow state.\n");
