@@ -239,23 +239,58 @@ void readLimiterValues(int snapshot)
 
     fileFmt = cfg.field_format;
     variables = readVariablesFromMetadata(lmrCfg.limiterMetadataFile);
+    size_t[string] variableIndex;
+    foreach (i, var; variables) variableIndex[var] = i;
     auto soln = new FlowSolution(to!int(snapshot), cfg.nFluidBlocks);
     foreach (i, blk; localFluidBlocks) {
-        readValuesFromFile(data, limiterFilename(to!int(snapshot), to!int(i)), variables,
-            soln.flowBlocks[0].ncells, fileFmt);
+        readValuesFromFile(data, limiterFilename(to!int(snapshot), to!int(i)),
+                           variables, soln.flowBlocks[0].ncells, fileFmt);
         foreach (j, cell; blk.cells) {
-            cell.gradients.rhoPhi = data[j][0];
-            cell.gradients.pPhi = data[j][1];
-            cell.gradients.velxPhi = data[j][2];
-            cell.gradients.velyPhi = data[j][3];
-            if (blk.myConfig.dimensions == 3) {
-                cell.gradients.velzPhi = data[j][4];
+            cell.gradients.velxPhi = data[j][variableIndex["vel.x"]];
+            cell.gradients.velyPhi = data[j][variableIndex["vel.y"]];
+            if (cfg.dimensions == 3) {
+                cell.gradients.velzPhi = data[j][variableIndex["vel.z"]];
             } else {
                 cell.gradients.velzPhi = 0.0;
             }
-            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-                cell.gradients.turbPhi[it] = data[j][5+it];
-	    }
+            final switch (cfg.thermo_interpolator) {
+                case InterpolateOption.pt:
+                    cell.gradients.pPhi = data[j][variableIndex["p"]];
+                    cell.gradients.TPhi = data[j][variableIndex["T"]];
+                    break;
+                case InterpolateOption.rhou:
+                    cell.gradients.rhoPhi = data[j][variableIndex["rho"]];
+                    cell.gradients.uPhi = data[j][variableIndex["e"]];
+                    break;
+                case InterpolateOption.rhop:
+                    cell.gradients.rhoPhi = data[j][variableIndex["rho"]];
+                    cell.gradients.pPhi = data[j][variableIndex["p"]];
+                    break;
+                case InterpolateOption.rhot:
+                    cell.gradients.rhoPhi = data[j][variableIndex["rho"]];
+                    cell.gradients.TPhi = data[j][variableIndex["T"]];
+                    break;
+            }
+            foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+                cell.gradients.rho_sPhi[isp] = data[j][variableIndex["massf-" ~ cfg.gmodel_master.species_name(isp)]];
+            }
+            foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+                if (cfg.thermo_interpolator == InterpolateOption.rhou ||
+                    cfg.thermo_interpolator == InterpolateOption.rhop ) {
+                    cell.gradients.u_modesPhi[imode] = data[j][variableIndex["e-" ~ cfg.gmodel_master.energy_mode_name(imode)]];
+                }
+                else {
+                    cell.gradients.T_modesPhi[imode] = data[j][variableIndex["T-" ~ cfg.gmodel_master.energy_mode_name(imode)]];
+                }
+            }
+            if (cfg.turbulence_model_name != "none") {
+                foreach (iturb; 0 .. cfg.turb_model.nturb) {
+                    cell.gradients.turbPhi[iturb] = data[j][variableIndex["tq-" ~ cfg.turb_model.primitive_variable_name(iturb)]];
+                }
+            }
+            if (cfg.MHD) {
+                writeln("WARNING: lmr-check-jacobian currently does not support reading MHD limiter values, proceeding with re-evaluated MHD limiter values.");
+            }
         }
     }
     cfg.frozen_limiter = true;
