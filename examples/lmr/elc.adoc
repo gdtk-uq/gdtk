@@ -17,6 +17,8 @@ include::2D/manufactured-solutions/README.adoc[tag=description]
 
 include::2D/turbulent-flat-plate/README.adoc[tag=description]
 
+include::2D/reacting-ramp/README.adoc[tag=description]
+
 include::3D/manufactured-solutions/README.adoc[tag=description]
 
 

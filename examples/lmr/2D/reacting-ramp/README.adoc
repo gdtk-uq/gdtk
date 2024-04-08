@@ -1,0 +1,17 @@
+//tag::description[]
+= Reacting premixed hydrogen over a 15 degree ramp
+`gdtk/examples/lmr/2D/reacting-ramp`
+
+Nick N. Gibbons & Kyle Damm
+2024-04-08
+
+This example is an inviscid, reacting, supersonic flow at Mach 3.4, consisting
+of a premixed hydrogen flow that impacts a 15 degree ramp. The subsequent
+shock compression causes the flow to ignite, a process which is modelled
+using the kinetic mechanism of Rogers and Schexnayder.
+
+At present the ramp is solved first order, as I was mainly using it to
+tinker with the species equations in the JFNK, however it should solve
+second order with the correct limiter limiter settings.
+
+//end::description[]
