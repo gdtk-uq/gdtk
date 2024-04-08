@@ -725,7 +725,7 @@ private:
 
         lua_getfield(L, tblIdx, "mass");
         if ( !lua_isnil(L, -1) ) {
-            iface.F[cqi.mass] += getDouble(L, tblIdx, "mass");
+            if (cqi.mass==0) iface.F[cqi.mass] += getDouble(L, tblIdx, "mass");
         }
         lua_pop(L, 1);
 
@@ -785,7 +785,7 @@ private:
                         foreach (i; 0 .. cqi.n_species) {
                             totalmassflux += massflux[i];
                         }
-                        iface.F[cqi.mass] += totalmassflux;
+                        if (cqi.mass==0) iface.F[cqi.mass] += totalmassflux;
 
                         foreach (i; 0 .. cqi.n_species) {
                             iface.F[cqi.species+i] += massflux[i]/totalmassflux;

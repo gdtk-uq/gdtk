@@ -501,7 +501,7 @@ public:
         ConservedQuantities myU = U[ftl];
         number myrho = fs.gas.rho;
         // Mass per unit volume.
-        myU[cqi.mass] = myrho;
+        if (cqi.mass==0) myU[cqi.mass] = myrho;
         // Momentum per unit volume.
         myU[cqi.xMom] = fs.gas.rho*fs.vel.x;
         myU[cqi.yMom] = fs.gas.rho*fs.vel.y;
@@ -562,8 +562,6 @@ public:
                 }
             }
         }
-        assert(U[ftl][cqi.mass] > 0.0, "invalid density in conserved quantities vector" ~
-               " at end of FluidFVCell.encode_conserved().");
         return;
     } // end encode_conserved()
 

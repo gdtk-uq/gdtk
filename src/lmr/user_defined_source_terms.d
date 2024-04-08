@@ -52,7 +52,7 @@ void getUDFSourceTermsForCell(lua_State* L, FluidFVCell cell, size_t gtl,
     //
     // Grab values from user-returned table at TOS
     // For any missing values, put in 0.0
-    cell.Qudf[cqi.mass] = getNumberFromTable(L, -1, "mass", false, 0.0);
+    if (cqi.mass==0) cell.Qudf[cqi.mass] = getNumberFromTable(L, -1, "mass", false, 0.0);
     cell.Qudf[cqi.xMom] = getNumberFromTable(L, -1, "momentum_x", false, 0.0);
     cell.Qudf[cqi.yMom] = getNumberFromTable(L, -1, "momentum_y", false, 0.0);
     if (cqi.threeD) { cell.Qudf[cqi.zMom] = getNumberFromTable(L, -1, "momentum_z", false, 0.0); }

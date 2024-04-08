@@ -815,7 +815,7 @@ public:
         auto cqi = myConfig.cqi;
         L2_residual = 0.0;
         foreach (cell; cells) {
-            L2_residual += fabs(cell.dUdt[0][cqi.mass])^^2;
+            if (cqi.mass==0) L2_residual += fabs(cell.dUdt[0][cqi.mass])^^2;
 	    L2_residual += fabs(cell.dUdt[0][cqi.xMom])^^2;
 	    L2_residual += fabs(cell.dUdt[0][cqi.yMom])^^2;
 	    if (cqi.threeD) { L2_residual += fabs(cell.dUdt[0][cqi.zMom])^^2; }
@@ -846,7 +846,13 @@ public:
         foreach(boundary; bc) {
             if (boundary.type != "exchange_over_full_face" && boundary.type != "exchange_using_mapped_cells") {
                 foreach(i, face; boundary.faces) {
-                    mass_balance += boundary.outsigns[i] * face.F[cqi.mass].re * face.area[0].re;
+                    double massflux=0.0;
+                    if (cqi.mass==0) {
+                        massflux = face.F[cqi.mass].re;
+                    } else {
+                        foreach(isp; 0 .. cqi.n_species) massflux += face.F[cqi.species+isp].re;
+                    }
+                    mass_balance += boundary.outsigns[i] * massflux * face.area[0].re;
                 }
             }
         }

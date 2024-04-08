@@ -91,15 +91,20 @@ public:
 
     this(int dimensions, size_t nturb, bool MHD, size_t nspecies, size_t nmodes, ref GasModel gmodel, ref TurbulenceModel turb_model) {
 
-        bool put_mass_in_last_position = false;
+        bool drop_mass_from_calculation = false;
         version (newton_krylov) {
-            // we will drop the mass continuity equation if we are running a multi-species calculation with
-            // the steady-state solver, note that we still need an entry in the conserved quantities vector
-            // for the mass (some parts of the code expect it), so we will place it in the last position
-            if (nspecies > 1) { put_mass_in_last_position = true; }
+            // Note that for a multi-species simulation, the n species conservation
+            // equations and the total mass conservation equation are linearly
+            // dependent. Because of this, we deduct the number of conserved
+            // quantities by 1 for multi-species simulations, and remove the total
+            // mass conservation equation from the system of equations we are
+            // solving. For a discussion on this and other possible approaches see
+            // pg. 8 of Multicomponent Flow Modelling by V. Giovangigli (1999).
+            // (Comment moved here by NNG 24/04/08)
+            if (nspecies > 1) { drop_mass_from_calculation = true; }
         }
 
-        if (put_mass_in_last_position) {
+        if (drop_mass_from_calculation) {
             xMom = 0; names ~= "x-mom";
             yMom = 1; names ~= "y-mom";
             if (dimensions == 3 || MHD) {
@@ -141,9 +146,8 @@ public:
                 n += nmodes;
                 foreach (i; 0 .. nmodes) names ~= gmodel.energy_mode_name(to!int(i));
             }
-            // we still need the mass in the conserved quantities vector in some places of the code
-            mass = n; names ~= "mass";
-            n += 1;
+            // Set mass to a nonzero value to indicate no mass equation being solved.
+            mass = 999999;
         } else {
             // fill out the array using our standard ordering (for the transient code)
             mass = 0; names ~= "mass";
