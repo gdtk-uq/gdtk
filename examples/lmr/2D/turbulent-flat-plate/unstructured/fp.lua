@@ -5,6 +5,7 @@
 --  Y. He and R. G. Morgan
 --  Aeronautical Journal, February 1994
 
+--config.solver_mode = "transient"
 config.solver_mode = "steady"
 config.dimensions = 2
 config.flux_calculator = "ausmdv"
@@ -18,7 +19,7 @@ config.smooth_limiter_coeff = 1e-6
 config.suppress_reconstruction_at_boundaries = true
 
 -- Gas model and flow conditions to match Table 1, the first entry
-nsp, nmodes, gm = setGasModel('ideal-air.gas')
+nsp, nmodes, gm = setGasModel('lmrsim/ideal-air.gas')
 p_inf = 3.25e3  -- Pa
 u_inf = 2100.0  -- m/s
 T_inf = 254     -- K
@@ -49,6 +50,18 @@ makeFluidBlocks(bcDict, flowDict)
 -- loads settings
 config.boundary_groups_for_loads = "wall"
 config.write_loads = true
+
+-- Geometry of the flow domain
+flow_length = 600e-3
+flow_time = flow_length/u_inf
+no_flow_times = 0.5
+
+config.gasdynamic_update_scheme = "pc"
+config.max_time = no_flow_times*flow_time
+config.max_step = 80000
+config.dt_init = 1.0e-10
+config.cfl_value = 0.50
+config.dt_plot = config.max_time/10.0
 
 NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 0,
