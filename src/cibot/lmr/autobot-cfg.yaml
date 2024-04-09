@@ -7,6 +7,7 @@ devsOnReceiveList:
 lmrDir: '/home/groups/gdtk-dev/gdtk/src/lmr'
 testDir: '/home/groups/gdtk-dev/lmr-test'
 exDir: '/home/groups/gdtk-dev/gdtk/examples/lmr'
+instDir: '/home/groups/gdtk-dev/gdtkinst'
 logDir: '/home/groups/gdtk-dev/lmr-test/logs'
 logFilePrefix: 'lmr-test'
 mailFilePrefix: 'autobot-mail'

@@ -149,7 +149,8 @@ def whenBuildIsBad(output, error):
 
 def installCode():
     os.chdir(cfg['lmrDir'])
-    subprocess.run((cfg['buildCommand'] + ' install').split(), check=True)
+    cmd = f"{cfg['buildCommand']} INSTALL_DIR={cfg['instDir']} install"
+    subprocess.run(shlex.split(cmd), check=True)
     return
 
 def runTests(revid):
