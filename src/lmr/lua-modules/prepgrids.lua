@@ -112,6 +112,12 @@ function setHistoryPoint()
       print("    setHistoryPoint(): Do NOTHING when in prep-grid mode.")
    end
 end
+-- We also need to define the storage for special zones, otherwise prep-grid complains that they don't exist
+ignitionZones = {}
+reactionZones = {}
+turbulentZones = {}
+suppressReconstructionZones = {}
+suppressViscousStressesZones = {}
 
 -------------------------------------------------------------------------
 
