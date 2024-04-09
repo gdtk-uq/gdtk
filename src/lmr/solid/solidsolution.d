@@ -65,7 +65,9 @@ public:
             throw new Error(text("Failed to parse JSON from config file: ", cfgFile));
         }
         string fieldFmt = jsonData["field_format"].str;
+        GlobalConfig.field_format = fieldFmt;
         string gridFmt = jsonData["grid_format"].str;
+        GlobalConfig.grid_format = gridFmt;
 
         // Find variables from metadata file
         string solidMetadataFile = dir ~ "/" ~ lmrCfg.solidMetadataFile;

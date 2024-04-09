@@ -81,7 +81,9 @@ public:
             throw new Error(text("Failed to parse JSON from config file: ", cfgFile));
         }
         string fieldFmt = jsonData["field_format"].str;
+        GlobalConfig.field_format = fieldFmt;
         string gridFmt = jsonData["grid_format"].str;
+        GlobalConfig.grid_format = gridFmt;
         grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising from JSONData
 
