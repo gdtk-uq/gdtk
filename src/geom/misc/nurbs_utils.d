@@ -19,10 +19,17 @@ int findSpan(double u, int n, int p, const double[] U) {
     // This is algorithm A2.1 from Piegl and Tiller (1997) - 'The NURBS Book'
     
     // check that given parameter is within given parameter range
-    if (u < U[0] || u > U[U.length-1]) {
-        string errMsg = "Error in FindSpan: the supplied parameter value is not within the supplied parameter range.\n";
-        errMsg ~= format("Supplied parameter value: %f\n", u);
-        errMsg ~= format("Supplied parameter range: [%(%f, %)]", [U[0], U[U.length-1]]);
+    // adjust parameter value if slightly out of range 
+    double tol = 1.0e-12;
+    if ((u < U[0]) && (U[0]-u < tol)) {
+        u = U[0];
+    } else if ((u > U[$-1]) && (u-U[$-1] < tol)) {
+        u = U[$-1];
+    } else if (u < U[0] || u > U[$-1]) {
+        string errMsg = "Error in FindSpan.\n";
+        errMsg ~= "The parameter value is not compatible with the chosen knot vector.\n";
+        errMsg ~= format("Supplied parameter value: %.18e\n", u);
+        errMsg ~= format("Valid parameter range: [%.18e, %.18e]", U[0], U[U.length-1]);
         throw new Exception(errMsg);
     }
     
@@ -37,7 +44,7 @@ int findSpan(double u, int n, int p, const double[] U) {
         mid = (low+high)/2;
     }
     return mid;
-    }
+}
 
 struct NURBSWorkspace {
     double[] left;
