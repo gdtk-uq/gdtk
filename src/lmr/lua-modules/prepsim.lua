@@ -202,7 +202,7 @@ function makeFluidBlocks(bcDict, flowDict)
          for face, bc in pairs(bcs) do print("    face=", face, " bc=", bc) end
          print("  ]")
       end
-      fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs}
+      fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs, active=g.active}
    end
    if false then -- debug
       print("Make block-to-block connections.")

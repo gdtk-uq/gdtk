@@ -19,6 +19,7 @@ function RegisteredGrid:new(o)
    --    or imported.
    -- tag: a string to identify the grid later in the user's script
    -- fieldType: a string labelling the intended domain as 'fluid' or 'solid'
+   -- active: a boolean to indicate if the domain on the grid is active (default: true)
    -- fsTag: a string that will be used to select the initial flow condition from
    --    a dictionary when the FluidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
@@ -38,7 +39,7 @@ function RegisteredGrid:new(o)
    if not flag then
       error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
-   flag = checkAllowedNames(o, {"grid", "tag", "fieldType", "fsTag", "bcTags", "gridArrayId",
+   flag = checkAllowedNames(o, {"grid", "tag", "fieldType", "active", "fsTag", "bcTags", "gridArrayId",
                                 "ssTag", "solidPropsTag", "solidBCTags"})
    if not flag then
       error("Invalid name for item supplied to Grid constructor.", 2)
@@ -57,6 +58,11 @@ function RegisteredGrid:new(o)
    -- Set the field type
    -- (we expect the call from registerFluidGrid of registerSolidGrid to set this correctly)
    o.fieldType = o.fieldType or "fluid"
+   -- Most common is that grids represent active parts of the domain, however there may be reasons
+   -- to deactivate certain regions
+   if (o.active == nil) then
+      o.active = true
+   end
    -- Set to -1 if NOT part of a grid-array, otherwise use supplied value
    o.gridArrayId = o.gridArrayId or -1
    -- Initial FlowState tag
@@ -133,6 +139,7 @@ function RegisteredGrid:tojson()
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
    str = str .. string.format('  "type": "%s",\n', self.type)
    str = str .. string.format('  "fieldType": "%s",\n', self.fieldType)
+   str = str .. string.format('  "active": %s,\n', self.active)
    if self.type == "structured_grid" then
       str = str .. string.format('  "dimensions": %d,\n', self.grid:get_dimensions())
       str = str .. string.format('  "niv": %d,\n', self.grid:get_niv())
