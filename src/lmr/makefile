@@ -33,7 +33,6 @@ $(info PLATFORM=$(PLATFORM))
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
 DEBUG_CHEM ?= 0
-WITH_FPE ?= 0
 WITH_DVODE ?= 0
 WITH_DIAGNOSTICS ?= 0
 MULTI_SPECIES_GAS ?= 1
@@ -222,6 +221,7 @@ ifeq ($(FLAVOUR), profile)
 endif
 ifeq ($(FLAVOUR), fast)
     FLAVOUR_FLAGS := $(FAST_DFLAGS)
+    WITH_FPE ?= 0
 endif
 
 # Add platform version if necessary
