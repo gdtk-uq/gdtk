@@ -136,6 +136,7 @@ class GasModel
   def initialize(file_name)
     @file_name = file_name
     @id = Gas.gas_model_new(file_name)
+    if @id < 0 then raise "Could not construct new gas model." end
     nsp = Gas.gas_model_n_species(@id)
     @species_names = []
     buf = Fiddle::Pointer.malloc(32)

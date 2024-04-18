@@ -70,7 +70,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     } catch (Exception e) {
         string msg = "In function init_gas_model() in gas_model.d, ";
         msg ~= "there was a problem reading the 'model' name";
-        msg ~= " from the gas model input Lua file.";
+        msg ~= format(" from the gas model input Lua file: %s", file_name);
         throw new GasModelException(msg);
     }
     GasModel gm;

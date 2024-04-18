@@ -133,6 +133,8 @@ class GasModel(object):
     def __init__(self, file_name):
         self.file_name = file_name
         self.id = so.gas_model_new(bytes(self.file_name, 'utf-8'))
+        if self.id < 0:
+            raise RuntimeError("Could not construct a new gas model.")
         self.species_names = []
         buf = ffi.new("char[]", b'\000'*32)
         for i in range(self.n_species):
