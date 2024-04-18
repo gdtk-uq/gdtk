@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# A script that plots the contents of lmrsim/diagnostics/nk-diagnostics.dat
+# A script that plots the contents of lmrsim/diagnostics/nk-diagnostics
 #
 # author: Kyle A. Damm
 # date: 2024-03-26
@@ -85,7 +85,7 @@ def generate_plot(container, xVar, xLabel):
 if __name__=='__main__':
 
     fileDir = './lmrsim/diagnostics/'
-    fileName = 'nk-diagnostics.dat'
+    fileName = 'nk-diagnostics'
     data = import_data(fileDir+fileName)
     generate_plot(data, 'step', 'Nonlinear Step')
     generate_plot(data, 'wall-clock', 'Wall-clock (s)')
