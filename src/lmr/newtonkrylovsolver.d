@@ -14,10 +14,11 @@ import core.stdc.stdlib : exit;
 import core.memory : GC;
 import std.algorithm : min;
 import std.algorithm.searching : countUntil;
+import std.range : walkLength;
 import std.datetime : DateTime, Clock;
 import std.parallelism : parallel, defaultPoolThreads;
 import std.stdio : File, writeln, writefln, stdout;
-import std.file : rename, readText, exists;
+import std.file: copy, rename, dirEntries, SpanMode, DirEntry, readText, exists;
 import std.array : appender;
 import std.format : formattedWrite;
 import std.json : JSONValue;
@@ -741,9 +742,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     currentResiduals = new ConservedQuantities(nConserved);
     rowScale = new ConservedQuantities(nConserved);
     colScale = new ConservedQuantities(nConserved);
-    if (cfg.is_master_task) {
-        initialiseDiagnosticsFile();
-    }
     if (nkCfg.writeLoads && (nWrittenLoads == 0)) {
         if (cfg.is_master_task) {
             initLoadsFiles();
@@ -851,6 +849,31 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
         }
+        // On restart, we need to do some diagonstics file housekeeping
+        if (cfg.is_master_task) {
+            // we first ensure the diagnostics directory and file exist before proceeding
+            ensure_directory_is_present(diagDir);
+            if (!exists(diagFile)) {
+                writeln("Bailing out!...unable to find the Newton-Krylov solver diagnostics file: ", diagFile);
+                exit(1);
+            }
+            // we next make a copy of the current diagnostics file,
+            // being careful not to overwrite any previously saved files
+            auto numberOfExistingDiagFiles = walkLength(dirEntries(diagDir, "*", SpanMode.shallow));
+            string diagFileCopy = diagFile;
+            foreach (i; 0..numberOfExistingDiagFiles) {
+                diagFileCopy ~= ".save";
+            }
+            copy(diagFile, diagFileCopy);
+            // we now wind the base diagnostics file back to the restart step
+            auto outputFile = File(diagFile, "w");
+            auto inputFile = File(diagFileCopy, "r");
+            foreach (line; inputFile.byLine) {
+                if (line.split[0] == to!string(startStep)) break;
+                outputFile.writeln(line);
+            }
+            outputFile.close();
+        }
         if (cfg.is_master_task) {
             writeln("*** RESTARTING SIMULATION ***");
             writefln("RESTART-SNAPSHOT: %d", snapshots.length);
@@ -858,6 +881,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
     }
     else {
+        // On fresh start, we need to create the diagnostics file
+        if (cfg.is_master_task) {
+            initialiseDiagnosticsFile();
+        }
         // On fresh start, the phase setting must be at 0
         setPhaseSettings(0);
         if (activePhase.useAutoCFL) {
@@ -2096,16 +2123,16 @@ bool performIterations(int maxIterations, double targetResidual,
         nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
         // Accumulate Gamma rotations in Q.
         if (j == 0) {
-            copy(Gamma, Q1);
+            nm.bbla.copy(Gamma, Q1);
         }
         else {
             nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
         }
 
         // Prepare for next step
-        copy(H1, H0);
+        nm.bbla.copy(H1, H0);
         g0[] = g1[];
-        copy(Q1, Q0);
+        nm.bbla.copy(Q1, Q0);
 
         // Get residual
         resid = fabs(g1[j+1]);
