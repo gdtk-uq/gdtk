@@ -578,6 +578,7 @@ void plottingTableToFlowStateTable(lua_State *L)
     auto managedGasModel = GlobalConfig.gmodel_master;
     auto n_species = managedGasModel.n_species;
     auto n_modes = managedGasModel.n_modes;
+    auto n_turb  = to!int(GlobalConfig.turb_model.nturb);
 
     // 0. Set a type string so that we may later identify this table as
     // having all the relevant data for making a FlowState object.
@@ -619,6 +620,17 @@ void plottingTableToFlowStateTable(lua_State *L)
         lua_setfield(L, -2, toStringz(spName));
     }
     lua_setfield(L, tblIdx, "massf");
+
+    // 5. Convert turbulence variables
+    lua_newtable(L);
+    foreach ( iturb; 0 .. n_turb ) {
+        string turbName = GlobalConfig.turb_model.primitive_variable_name(iturb);
+        string key = format("tq-%s", turbName);
+        lua_getfield(L, tblIdx, toStringz(key));
+        lua_rawseti(L, -2, iturb+1);
+    }
+    lua_setfield(L, tblIdx, "turb");
+
 }
 
 extern(C) int get_cell_data(lua_State* L)
