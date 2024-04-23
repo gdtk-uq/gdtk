@@ -1125,7 +1125,7 @@ public:
         auto cqi = myConfig.cqi;
         L2_residual = 0.0;
         foreach (cell; cells) {
-            L2_residual += fabs(cell.dUdt[0][cqi.mass])^^2;
+            if (cqi.mass==0) L2_residual += fabs(cell.dUdt[0][cqi.mass])^^2;
 	    L2_residual += fabs(cell.dUdt[0][cqi.xMom])^^2;
 	    L2_residual += fabs(cell.dUdt[0][cqi.yMom])^^2;
 	    if (cqi.threeD) { L2_residual += fabs(cell.dUdt[0][cqi.zMom])^^2; }
