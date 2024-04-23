@@ -1540,18 +1540,6 @@ public:
                 }
             }
         }
-        // We will also need derivative storage in ghostcells because the special
-        // interface gradient averaging functions will expect to be able to access the gradients
-        // either side of each interface.
-        // We will be able to get these gradients from the mapped-cells
-        // in an adjoining block.
-        foreach (bci; bc) {
-            if (bci.ghost_cell_data_available) {
-                foreach (c; bci.ghostcells) {
-                    c.grad = new FlowGradients(myConfig);
-                }
-            }
-        }
     } // end store_references_for_derivative_calc_at_faces
 
     void store_references_for_derivative_calc_at_faces(size_t gtl)
