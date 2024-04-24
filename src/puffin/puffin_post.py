@@ -200,14 +200,14 @@ if __name__ == '__main__':
         print("streamIndex=", streamIndex)
         if "--cell-index" in uoDict:
             cellIndexStr = uoDict.get("--cell-index", "")
-        elif "-s" in uoDict:
-            cellIndexStr = uoDict.get("-s", "")
+        elif "-c" in uoDict:
+            cellIndexStr = uoDict.get("-c", "")
         else:
             raise Exception("Cell index is not specified.")
         if (cellIndexStr == "$"):
             cellIndex = ncells_all[streamIndex] - 1
         else:
-            cellIndex = int(cellindexStr)
+            cellIndex = int(cellIndexStr)
         print("cellIndex=", cellIndex)
         writeStreamLineFile(jobName, streamIndex, ncells_all[streamIndex], cellIndex)
     elif plotFormat == "cross":
