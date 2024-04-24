@@ -20,6 +20,8 @@ import nm.number;
 import geom.luawrap;
 import gas;
 import gas.luagas_model;
+// import kinetics;
+import kinetics.luaequilibrium_calculator;
 import nm.luabbla;
 import geom: gridTypeName, Grid_t;
 
@@ -89,6 +91,7 @@ void registerLuaEnvironment(lua_State *L, LuaEnvOptions opt)
     }
     if (opt.withGas) {
         registerGasModel(L);
+        registerEquilibriumCalculator(L);
     }
     if (opt.withFlow) {
         registerFlowSolution(L);
