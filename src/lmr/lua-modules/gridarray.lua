@@ -31,7 +31,9 @@ function GridArray:new(o)
    if not flag then
       error("GridArray constructor expected to receive a single table with named entries", 2)
    end
-   local flag = checkAllowedNames(o, {"tag", "fsTag", "bcTags", "shock_fitting",
+   local flag = checkAllowedNames(o, {"tag", "fieldType",
+                                      "fsTag", "bcTags", "shock_fitting",
+                                      "ssTag", "solidBCTags", "solidPropsTag",
                                       "grid", "gridArray", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to GridArray constructor.", 2)
@@ -47,12 +49,22 @@ function GridArray:new(o)
    assert(o.grid, "need to supply a grid")
    assert(o.grid:get_type() == "structured_grid", "supplied grid needs to be a structured grid")
    o.tag = o.tag or ""
+   -- Typically, we expect a construction via registerFluidGridArray or registerSolidGridArray
+   -- and these should set the field type correctly
+   o.fieldType = o.fieldType or "fluid"
    o.fsTag = o.fsTag or ""
    o.shock_fitting = o.shock_fitting or false
    o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
    for _,face in ipairs(faceList(config.dimensions)) do
       o.bcTags[face] = o.bcTags[face] or o.grid:get_tag(face)
    end
+   --
+   o.ssTag = o.ssTag or ""
+   o.solidBCTags = o.solidBCTags or {}
+   for _,face in ipairs(faceList(config.dimensions)) do
+      o.solidBCTags[face] = o.solidBCTags[face] or o.grid:get_tag(face)
+   end
+   o.solidPropsTag = o.solidPropsTag or ""
    --
    if o.grid then
       -- We will take a single grid and divide it into an array of subgrids.
@@ -364,34 +376,36 @@ function GridArray:new(o)
    for ib = 1, o.nib do
       o.myGrids[ib] = {}
       for jb = 1, o.njb do
-	 if config.dimensions == 2 then
-	    -- 2D flow
-	    local subgrid = o.grids[ib][jb]
-	    local bcTags = {north="", east="", south="", west=""}
-	    if ib == 1 then bcTags['west'] = o.bcTags['west'] end
-	    if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
-	    if jb == 1 then bcTags['south'] = o.bcTags['south'] end
-	    if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
-	    local g = RegisteredGrid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
-	    gridCollection[#gridCollection+1] = g
+         if config.dimensions == 2 then
+	          -- 2D flow
+            local subgrid = o.grids[ib][jb]
+            local bcTags = {north="", east="", south="", west=""}
+            if ib == 1 then bcTags['west'] = o.bcTags['west'] end
+            if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+            if jb == 1 then bcTags['south'] = o.bcTags['south'] end
+            if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+            local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, fsTag=o.fsTag, bcTags=bcTags,
+                                         ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidPropsTag=o.solidPropsTag,  gridArrayId=o.id}
+            gridCollection[#gridCollection+1] = g
             o.myGrids[ib][jb] = g
-	 else
-	    -- 3D flow, need one more level in the array
+         else
+	          -- 3D flow, need one more level in the array
             o.myGrids[ib][jb] = {}
-	    for kb = 1, o.nkb do
-	       local subgrid = o.grids[ib][jb][kb]
-	       local bcTags = {north="", east="", south="", west="", top="", bottom=""}
-	       if ib == 1 then bcTags['west'] = o.bcTags['west'] end
-	       if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
-	       if jb == 1 then bcTags['south'] = o.bcTags['south'] end
-	       if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
-	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
-	       if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
-	       local g = RegisteredGrid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
-	       gridCollection[#gridCollection+1] = g
+            for kb = 1, o.nkb do
+               local subgrid = o.grids[ib][jb][kb]
+               local bcTags = {north="", east="", south="", west="", top="", bottom=""}
+               if ib == 1 then bcTags['west'] = o.bcTags['west'] end
+               if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+               if jb == 1 then bcTags['south'] = o.bcTags['south'] end
+               if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+               if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
+               if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
+               local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, fsTag=o.fsTag, bcTags=bcTags,
+                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidPropsTag=o.solidPropsTag, gridArrayId=o.id}
+               gridCollection[#gridCollection+1] = g
                o.myGrids[ib][jb][kb] = g
-	    end -- kb loop
-	 end -- dimensions
+            end -- kb loop
+         end -- dimensions
       end -- jb loop
    end -- ib loop
    -- Make the inter-subblock connections
@@ -410,9 +424,12 @@ function GridArray:tojson()
    -- in the dlang simulation code, when doing shock fitting.
    local str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', self.tag)
+   str = str .. string.format('  "fieldType": "%s",\n', self.fieldType)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
    str = str .. string.format('  "type": "%s",\n', self.myType)
    str = str .. string.format('  "shock_fitting": %s,\n', tostring(self.shock_fitting))
+   str = str .. string.format('  "ssTag": "%s",\n', self.ssTag)
+   str = str .. string.format('  "solidPropsTag": "%s",\n', self.solidPropsTag)
    -- Write the block ids as a list of lists because that if the
    -- highest quality information.
    str = str .. '  "idarray": [\n'

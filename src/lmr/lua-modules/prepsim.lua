@@ -96,6 +96,12 @@ function registerSolidGrid()
    end
 end
 
+function registerSolidGridArray()
+   if verbosity >= 1 then
+      print("    registerSolidGridArray(): Do NOTHING when in prep-sim mode.")
+   end
+end
+
 function identifyGridConnections()
    if verbosity >= 1 then
       print("    identifyGridConnections(): Do NOTHING when in prep-sim mode.")
