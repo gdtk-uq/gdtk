@@ -137,6 +137,7 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, 
        m.Ustar = t.Ustar
        m.mode = energyModes[t.mode] or 0
        m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
+       m.non_boltzmann_correction = t.non_boltzmann_correction
    else
       print("The rate constant model: ", m.model, " is not known.")
       print("Bailing out!")
@@ -144,6 +145,16 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, 
    end
 
    return m
+end
+
+local function nonBoltzmannCorrectionToLuaStr(nbc)
+   -- this function assumes the non-boltzmann correction is valid
+   if nbc.model == "constant" then
+      return string.format("non_boltzmann_correction = {model='constant', factor=%f}", nbc.factor)
+   else
+      print("The non boltzmann correction model: ", nbc.model, " is not known.")
+      os.exit(1)
+   end
 end
 
 local function rateConstantToLuaStr(rc)
@@ -184,6 +195,10 @@ local function rateConstantToLuaStr(rc)
        str = "{model='Modified-Marrone-Treanor', "
        str = str .. string.format("T_D=%16.12e, aU=%16.12e, Ustar=%16.12e, theta=%16.12e, mode=%d, rate=", rc.T_D, rc.aU, rc.Ustar, rc.theta, rc.mode)
        str = str .. rateConstantToLuaStr(rc.rate)
+       if rc.non_boltzmann_correction ~= nil then
+          str = str .. ", "
+          str = str .. nonBoltzmannCorrectionToLuaStr(rc.non_boltzmann_correction)
+       end
        str = str .. "}"
    elseif rc.model == 'fromEqConst' then
      if not rc.rctIndex then

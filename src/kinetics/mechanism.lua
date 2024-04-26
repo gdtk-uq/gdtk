@@ -160,6 +160,7 @@ local function buildChemistryCouplingModel(m, participating_species, db)
       ccm.Ustar = m.Ustar
       ccm.aU = m.aU
       ccm.T_D = m.T_D or mechanism.calculateDissociationEnergy(participating_species, db) / Runiv
+      ccm.non_boltzmann = m.non_boltzmann or 0.0
    elseif m.model == "HeavyParticleCollisionIonisation" then
       -- nothing extra to do
    elseif m.model == "ImpartialChem" then
@@ -235,7 +236,7 @@ local function chemistryCouplingTypeToLuaStr(ct)
    elseif ct.model == "MarroneTreanorDissociation" then
       str = string.format("{model='MarroneTreanorDissociation', D=%f, Thetav=%f, U=%f}", ct.D, ct.Thetav, ct.U)
    elseif ct.model == "ModifiedMarroneTreanorDissociation" then
-      str = string.format("{model='ModifiedMarroneTreanorDissociation', T_D=%f, Thetav=%f, Ustar=%f, aU=%f}", ct.T_D, ct.Thetav, ct.Ustar, ct.aU)
+      str = string.format("{model='ModifiedMarroneTreanorDissociation', T_D=%f, Thetav=%f, Ustar=%f, aU=%f, non_boltzmann=%f}", ct.T_D, ct.Thetav, ct.Ustar, ct.aU, ct.non_boltzmann)
    elseif ct.model == "ImpartialChem" or ct.model == "HeavyParticleCollisionIonisation" then
       str = "{model = 'ImpartialChem'}"
    else
