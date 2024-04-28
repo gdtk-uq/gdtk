@@ -62,6 +62,10 @@ local solidblock = require 'solidblock'
 SolidBlock = solidblock.SolidBlock
 SolidBlockArray = solidblock.SolidBlockArray
 
+local solidthermalmodel = require 'solidthermalmodel'
+ConstantPropertiesModel = solidthermalmodel.ConstantPropertiesModel
+registerSolidModels = solidthermalmodel.registerSolidModels
+
 local mpi = require 'mpi'
 mpiDistributeBlocks = mpi.mpiDistributeBlocks
 mpiDistributeFBArray = mpi.mpiDistributeFBArray
@@ -123,6 +127,7 @@ reactionZones = {}
 turbulentZones = {}
 suppressReconstructionZones = {}
 suppressViscousStressesZones = {}
+_solidModels = {}
 
 -------------------------------------------------------------------------
 
@@ -179,7 +184,7 @@ function registerSolidGrid(o)
    --    a dictionary when the SolidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
-   -- propsTag: a string that will be used to select the properties model
+   -- modelTag: a string that will be used to select the solid thermal model
    --    from a dictionary when the SolidBlock is later constructed.
    --
    -- Returns:
@@ -194,7 +199,7 @@ function registerSolidGrid(o)
    t.grid = o.grid
    t.tag = o.tag
    t.ssTag = o.ssTag
-   t.solidPropsTag = o.propsTag
+   t.solidModelTag = o.modelTag
    t.solidBCTags = o.bcTags
    local rgrid = RegisteredGrid:new(t)
    return rgrid.id
@@ -210,22 +215,20 @@ function registerSolidGridArray(o)
    --    a dictionary when the SolidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
-   -- propsTag: a string that will be used to select the properties model
+   -- modelTag: a string that will be used to select the solid thermal model
    --    from a dictionary when the SolidBlock is later constructed.
    --
    -- Returns:
-   -- the grid id number so that we may assign it and use it when making connections.
+   -- the id of GridArray object so that the user may use the interior pieces later in their script.
    --
-
    -- This function does some translation of parameter names.
-   -- The user provides what seems sensible withing a registerSolidGrid function.
-   -- We re-pack the table here with the names expected by the back-end RegisteredGrid object.
+   -- The user provides what seems sensible withing a registerSolidGridArray function.
    t = {}
    t.fieldType = "solid"
    t.grid = o.grid
    t.tag = o.tag
    t.ssTag = o.ssTag
-   t.solidPropsTag = o.propsTag
+   t.solidModelTag = o.modelTag
    t.solidBCTags = o.bcTags
    t.nib = o.nib or 1
    t.njb = o.njb or 1

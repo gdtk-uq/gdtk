@@ -312,7 +312,7 @@ public:
             dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
             
             kG_dnG = myBC.gasCells[i].fs.gas.k / dnG;
-            kS_dnS = myBC.solidCells[i].sp.k / dnS;
+            kS_dnS = myBC.solidCells[i].ss.k / dnS;
             
             T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
             q = -kS_dnS * (T - myBC.solidCells[i].T);

@@ -25,7 +25,6 @@ import globalconfig;
 import solidfvcell;
 import solidfvinterface;
 import solidbc;
-import solidprops;
 import block;
 import jacobian;
 
@@ -35,8 +34,11 @@ import ntypes.complex;
 import nm.smla;
 import nm.bbla;
 
+import lmr.solid.solidthermalmodel;
+
 class SolidBlock : Block {
 public:
+    SolidThermalModel stm;
     double energyResidual; // monitor this for steady state
     Vector3 energyResidualLoc; // location of worst case
     int hncell; // number of history cells
@@ -47,27 +49,19 @@ public:
 
     FlowJacobian jacobian; // storage space for a Jacobian matrix
 
-    version(nk_accelerator)
-    {
-        // Work-space for Newton-Krylov accelerator
-        // These arrays and matrices are directly tied to using the
-        // GMRES iterative solver.
-        double maxRate, residuals;
-        double normAcc, dotAcc;
-        size_t nvars;
-        double[] Fe, de, Dinv, r0, x0;
-        double[] v, w, zed;
-        double[] g0, g1;
-        Matrix!double Q1;
-        Matrix!double V;
-    }
-
     this(int id, string label)
     {
         super(id, label);
     }
 
     override string toString() const { return "SolidBlock(id=" ~ to!string(id) ~ ")"; }
+
+    void initSolidThermalModel(JSONValue jsonData)
+    {
+        auto model = jsonData["solid_block_" ~ to!string(id)]["model"].str;
+        stm = lmr.solid.solidthermalmodel.initSolidThermalModel(jsonData["solid_thermal_models"][model]);
+    }
+
     abstract void assembleArrays();
     abstract void initLuaGlobals();
     abstract void initBoundaryConditions(JSONValue jsonData);
@@ -91,33 +85,5 @@ public:
     abstract void averageTGradients();
     abstract void computeFluxes();
     abstract void clearSources();
-
-    version(nk_accelerator) {
-    void allocate_GMRES_workspace()
-    {
-        size_t mOuter = to!size_t(GlobalConfig.sdluOptions.maxGMRESIterations);
-        size_t n = cells.length;
-        nvars = n;
-        // Now allocate arrays and matrices
-        Fe.length = n;
-        de.length = n; de[] = 0.0;
-        r0.length = n;
-        x0.length = n;
-        Dinv.length = n;
-        v.length = n;
-        w.length = n;
-        zed.length = n;
-        g0.length = mOuter+1;
-        g1.length = mOuter+1;
-        //h_outer.length = mOuter+1;
-        //hR_outer.length = mOuter+1;
-        V = new Matrix!double(n, mOuter+1);
-        //H0_outer = new Matrix!number(mOuter+1, mOuter);
-        //H1_outer = new Matrix!number(mOuter+1, mOuter);
-        //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);
-        //Q0_outer = new Matrix!number(mOuter+1, mOuter+1);
-        Q1 = new Matrix!double(mOuter+1, mOuter+1);
-    }
-    }
 }
 

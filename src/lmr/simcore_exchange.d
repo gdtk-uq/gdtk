@@ -26,7 +26,6 @@ import fluidblock;
 import sfluidblock;
 import ufluidblock;
 import ssolidblock;
-import solidprops;
 import solidfvinterface;
 import solid_full_face_copy;
 import solid_gas_full_face_copy;

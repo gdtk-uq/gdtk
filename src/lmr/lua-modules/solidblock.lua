@@ -15,7 +15,7 @@ function SolidBlock:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"grid", "gridMetadata", "initTemperature", "active",
-                                "label", "bcList", "properties"})
+                                "label", "bcList", "modelTag"})
    if not flag then
       error("Invalid name for item supplied to SolidBlock constructor.", 2)
    end
@@ -30,21 +30,12 @@ function SolidBlock:new(o)
    -- Must have a grid, initial temperature and properties
    assert(o.grid or o.gridMetadata, "need to supply a grid or its metadata")
    assert(o.initTemperature, "need to supply an initTemperature")
-   assert(o.properties, "need to supply")
-   if (type(o.properties) == 'table') then
-      local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp",
-						     "k11", "k12", "k13",
-						     "k21", "k22", "k23",
-						     "k31", "k32", "k33"})
-      if not flag2 then
-         error("Invalid name for item supplied in SolidBlock properties table.", 2)
-      end
-      -- Fill in the k-directional values as 0.0 if not set.
-      local kProps = {"k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
-      for _,kName in ipairs(kProps) do
-         o.properties[kName] = o.properties[kName] or 0.0
-      end
+   assert(o.modelTag, "need to supply a solid thermal model")
+   if _solidModels[o.modelTag] == nil then
+      local msg = string.format("The solid model tag '%s' has not been registered in call to registerSolidModels().", o.modelTag)
+      error(msg, 2)
    end
+   
    -- Fill in some defaults, if not already set
    if o.active == nil then
       o.active = true
@@ -143,6 +134,7 @@ function SolidBlock:tojson()
    local str = string.format('"solid_block_%d": {\n', self.id)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
+   str = str .. string.format('    "model": "%s",\n', self.modelTag)
    str = str .. string.format('    "nic": %d,\n', self.nic)
    str = str .. string.format('    "njc": %d,\n', self.njc)
    str = str .. string.format('    "nkc": %d,\n', self.nkc)

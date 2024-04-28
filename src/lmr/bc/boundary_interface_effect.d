@@ -1473,7 +1473,7 @@ public:
         dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
 
         kG_dnG = myBC.gasCells[f.i_bndry].fs.gas.k / dnG;
-        kS_dnS = myBC.solidCells[f.i_bndry].sp.k / dnS;
+        kS_dnS = myBC.solidCells[f.i_bndry].ss.k / dnS;
 
         T = (myBC.gasCells[f.i_bndry].fs.gas.T*kG_dnG + myBC.solidCells[f.i_bndry].T*kS_dnS) / (kG_dnG + kS_dnS);
 
@@ -1505,7 +1505,7 @@ public:
             dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
 
             kG_dnG = myBC.gasCells[i].fs.gas.k / dnG;
-            kS_dnS = myBC.solidCells[i].sp.k / dnS;
+            kS_dnS = myBC.solidCells[i].ss.k / dnS;
 
             T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
 

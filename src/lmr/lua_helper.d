@@ -489,18 +489,7 @@ void pushSolidCellToTable(lua_State* L, int tblIdx, ref const(SolidFVCell) cell)
     lua_pushnumber(L, cell.pos.z); lua_setfield(L, tblIdx, "z");
     lua_pushnumber(L, cell.volume); lua_setfield(L, tblIdx, "vol");
     lua_pushnumber(L, cell.T); lua_setfield(L, tblIdx, "T");
-    lua_pushnumber(L, cell.sp.rho); lua_setfield(L, tblIdx, "rho");
-    lua_pushnumber(L, cell.sp.Cp); lua_setfield(L, tblIdx, "Cp");
-    lua_pushnumber(L, cell.sp.k); lua_setfield(L, tblIdx, "k");
-
-    lua_pushnumber(L, cell.sp.k11); lua_setfield(L, tblIdx, "k11");
-    lua_pushnumber(L, cell.sp.k12); lua_setfield(L, tblIdx, "k12");
-    lua_pushnumber(L, cell.sp.k13); lua_setfield(L, tblIdx, "k13");
-    lua_pushnumber(L, cell.sp.k21); lua_setfield(L, tblIdx, "k21");
-    lua_pushnumber(L, cell.sp.k22); lua_setfield(L, tblIdx, "k22");
-    lua_pushnumber(L, cell.sp.k23); lua_setfield(L, tblIdx, "k23");
-    lua_pushnumber(L, cell.sp.k31); lua_setfield(L, tblIdx, "k31");
-    lua_pushnumber(L, cell.sp.k32); lua_setfield(L, tblIdx, "k32");
-    lua_pushnumber(L, cell.sp.k33); lua_setfield(L, tblIdx, "k33");
-
+    lua_pushnumber(L, cell.ss.rho); lua_setfield(L, tblIdx, "rho");
+    lua_pushnumber(L, cell.ss.Cp); lua_setfield(L, tblIdx, "Cp");
+    lua_pushnumber(L, cell.ss.k); lua_setfield(L, tblIdx, "k");
 } // end pushSolidCellToTable()

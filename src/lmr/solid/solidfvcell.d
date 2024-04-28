@@ -20,7 +20,8 @@ import nm.number;
 import geom;
 import solidfvinterface;
 import solidfvvertex;
-import solidprops;
+import lmr.solid.solidstate;
+import lmr.solid.solidthermalmodel;
 import std.stdio;
 import globalconfig;
 import lmr.fvcell : FVCell;
@@ -32,9 +33,8 @@ public:
     number volume;
     number areaxy;
     Vector3 pos;
-    // Cell material properties
-    SolidProps sp;
     // Cell state
+    SolidState ss;
     number T;
     number[] e;
     number[] dedt;
@@ -76,16 +76,18 @@ public:
      * Authors: RJG
      * Date: 2024-03-03
      */
-    this(in Vector3 pos, number volume, double T, SolidProps sp, int id_init=-1)
+    this(in Vector3 pos, number volume, double T, SolidThermalModel stm, int id_init=-1)
     // stripped down initialisation
     {
         id = id_init;
         this.pos = pos;
         this.volume = volume;
         this.T = T;
-        this.sp = sp;
+        this.ss = SolidState();
+        ss.T = T;
+        stm.updateEnergy(ss);
         this.e.length = 1;
-        this.e[0] = updateEnergy(sp, this.T);
+        this.e[0] = ss.e;
     }
 
 
@@ -94,7 +96,7 @@ public:
         volume = other.volume;
         areaxy = other.areaxy;
         pos = other.pos;
-        sp = other.sp;
+        ss = other.ss;
         T = other.T;
         foreach (i; 0..e.length) { e[i] = other.e[i] ; }
         foreach (i; 0..dedt.length) { dedt[i] = other.dedt[i] ; }
@@ -115,18 +117,9 @@ public:
         volume = to!double(items.front); items.popFront();
         e[0] = to!double(items.front); items.popFront();
         T = to!double(items.front); items.popFront();
-        sp.rho = to!double(items.front); items.popFront();
-        sp.Cp = to!double(items.front); items.popFront();
-        sp.k = to!double(items.front); items.popFront();
-        sp.k11 = to!double(items.front); items.popFront();
-        sp.k12 = to!double(items.front); items.popFront();
-        sp.k13 = to!double(items.front); items.popFront();
-        sp.k21 = to!double(items.front); items.popFront();
-        sp.k22 = to!double(items.front); items.popFront();
-        sp.k23 = to!double(items.front); items.popFront();
-        sp.k31 = to!double(items.front); items.popFront();
-        sp.k32 = to!double(items.front); items.popFront();
-        sp.k33 = to!double(items.front); items.popFront();
+        ss.rho = to!double(items.front); items.popFront();
+        ss.Cp = to!double(items.front); items.popFront();
+        ss.k = to!double(items.front); items.popFront();
     }
 
     void timeDerivatives(int ftl, int dimensions)

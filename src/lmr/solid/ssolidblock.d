@@ -36,9 +36,10 @@ import solidfvcell;
 import solidfvinterface;
 import solidfvvertex;
 import solidbc;
-import solidprops;
 import block;
 import jacobian;
+
+import lmr.solid.solidthermalmodel;
 
 enum ghost_cell_start_id = 1_000_000_000;
 
@@ -111,7 +112,7 @@ public:
         else if (lua_isfunction(L, 3)) {
             lua_fn = true;
         }
-        auto sp = SolidProps(L, 4);
+        auto stm = lmr.solid.solidthermalmodel.initSolidThermalModel(L, 4);
         Vector3 pos;
         number volume, iLen, jLen, kLen;
         size_t[3] ijk;
@@ -162,7 +163,7 @@ public:
                 }
             }
             // make the cell
-            cell = new SolidFVCell(pos, volume, T_init, sp, to!int(cell_idx));
+            cell = new SolidFVCell(pos, volume, T_init, stm, to!int(cell_idx));
         }
         lua_settop(L, 0);
     }
@@ -1103,7 +1104,8 @@ public:
                 auto kLen = sqrt(dx^^2 + dy^^2 + dz^^2);
                 L_min = min(iLen, jLen, kLen);
             }
-            alpha = cell.sp.k / (cell.sp.rho*cell.sp.Cp);
+            stm.updateProperties(cell.ss);
+            alpha = cell.ss.k / (cell.ss.rho*cell.ss.Cp);
             // Computational Fluid Mechanics and Heat Transfer
             // J. C. Tannehill, D. A. Anderson, and R. H Pletcher
             // Second Edition, Taylor & Francis, 1997
@@ -1246,7 +1248,9 @@ public:
         else { eps = eps0*fabs(pcell.e[0]) + eps0; }
         pcell.e[ftl] = pcell.e[0];
         pcell.e[ftl] += eps;
-        pcell.T = updateTemperature(pcell.sp, pcell.e[ftl]);
+        pcell.ss.e = pcell.e[ftl];
+        stm.updateTemperature(pcell.ss);
+        pcell.T = pcell.ss.T;
 
         // evaluate perturbed residuals in local stencil
         evalRHS(dim, gtl, ftl, pcell.cell_list, pcell.face_list, pcell);

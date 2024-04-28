@@ -943,18 +943,9 @@ public:
                     c.pos.x.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.x.im = incoming_solidstate_buf[ii++]; }
                     c.pos.y.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.y.im = incoming_solidstate_buf[ii++]; }
                     c.pos.z.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.z.im = incoming_solidstate_buf[ii++]; }
-                    c.sp.rho.re = incoming_solidstate_buf[ii++];
-                    c.sp.k.re = incoming_solidstate_buf[ii++];
-                    c.sp.Cp.re = incoming_solidstate_buf[ii++];
-                    c.sp.k11.re = incoming_solidstate_buf[ii++];
-                    c.sp.k12.re = incoming_solidstate_buf[ii++];
-                    c.sp.k13.re = incoming_solidstate_buf[ii++];
-                    c.sp.k21.re = incoming_solidstate_buf[ii++];
-                    c.sp.k22.re = incoming_solidstate_buf[ii++];
-                    c.sp.k23.re = incoming_solidstate_buf[ii++];
-                    c.sp.k31.re = incoming_solidstate_buf[ii++];
-                    c.sp.k32.re = incoming_solidstate_buf[ii++];
-                    c.sp.k33.re = incoming_solidstate_buf[ii++];
+                    c.ss.rho.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.ss.rho.im = incoming_solidstate_buf[ii++]; }
+                    c.ss.k.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.ss.k.im = incoming_solidstate_buf[ii++]; }
+                    c.ss.Cp.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.ss.Cp.im = incoming_solidstate_buf[ii++]; }
                     c.T.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.T.im = incoming_solidstate_buf[ii++]; }
                     c.de_prev.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.de_prev.im = incoming_solidstate_buf[ii++]; }
                     c.Q.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.Q.im = incoming_solidstate_buf[ii++]; }

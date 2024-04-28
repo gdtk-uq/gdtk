@@ -33,7 +33,7 @@ function GridArray:new(o)
    end
    local flag = checkAllowedNames(o, {"tag", "fieldType",
                                       "fsTag", "bcTags", "shock_fitting",
-                                      "ssTag", "solidBCTags", "solidPropsTag",
+                                      "ssTag", "solidBCTags", "solidModelTag",
                                       "grid", "gridArray", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to GridArray constructor.", 2)
@@ -64,7 +64,7 @@ function GridArray:new(o)
    for _,face in ipairs(faceList(config.dimensions)) do
       o.solidBCTags[face] = o.solidBCTags[face] or o.grid:get_tag(face)
    end
-   o.solidPropsTag = o.solidPropsTag or ""
+   o.solidModelTag = o.solidModelTag or ""
    --
    if o.grid then
       -- We will take a single grid and divide it into an array of subgrids.
@@ -429,7 +429,7 @@ function GridArray:tojson()
    str = str .. string.format('  "type": "%s",\n', self.myType)
    str = str .. string.format('  "shock_fitting": %s,\n', tostring(self.shock_fitting))
    str = str .. string.format('  "ssTag": "%s",\n', self.ssTag)
-   str = str .. string.format('  "solidPropsTag": "%s",\n', self.solidPropsTag)
+   str = str .. string.format('  "solidModelTag": "%s",\n', self.solidModelTag)
    -- Write the block ids as a list of lists because that if the
    -- highest quality information.
    str = str .. '  "idarray": [\n'

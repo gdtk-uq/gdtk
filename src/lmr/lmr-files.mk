@@ -27,6 +27,7 @@ LMR_CORE_FILES = $(LMR)/block.d \
 	$(LMR)/history.d \
 	$(LMR)/init.d \
 	$(LMR)/jacobian.d \
+	$(LMR)/lmrerrors.d \
 	$(LMR)/lmrexceptions.d \
 	$(LMR)/loads.d \
 	$(LMR)/lsqinterp.d \
@@ -80,8 +81,9 @@ LMR_SOLID_FILES := $(LMR)/solid/solidbc.d \
 	$(LMR)/solid/solidfvcell.d \
 	$(LMR)/solid/solidfvinterface.d \
 	$(LMR)/solid/solidfvvertex.d \
-	$(LMR)/solid/solidprops.d \
 	$(LMR)/solid/solidsolution.d \
+	$(LMR)/solid/solidstate.d \
+	$(LMR)/solid/solidthermalmodel.d \
 	$(LMR)/solid/solid_udf_source_terms.d
 
 LMR_EFIELD_FILES := $(LMR)/efield/efield.d \

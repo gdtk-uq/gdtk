@@ -364,7 +364,7 @@ void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgrids
         of.writeln("    \"dummy_entry_without_trailing_comma\": \"xxxx\"");
         of.writeln("   },");
         of.writefln("  \"ssTag\": \"%s\",", sgridsMetadata[ig]["ssTag"].str);
-        of.writefln("  \"solidPropsTag\": \"%s\",", sgridsMetadata[ig]["solidPropsTag"].str);
+        of.writefln("  \"solidModelTag\": \"%s\",", sgridsMetadata[ig]["solidModelTag"].str);
         // [TODO] RJG, 2024-03-06
         // We don't actually have unstructured grids for solid domains,
         // so I don't yet know how to write out the boundary information.

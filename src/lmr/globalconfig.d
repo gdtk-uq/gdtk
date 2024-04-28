@@ -2323,6 +2323,7 @@ void set_config_for_blocks(JSONValue jsonData)
         // Note that we want the solidblock ids to continue on from the fluidblocks.
         auto sblk = cast(SSolidBlock) globalBlocks[i];
         assert(sblk !is null, "Oops, this should be a SolidBlock object.");
+        sblk.initSolidThermalModel(jsonData);
         sblk.initLuaGlobals();
         sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
         if (cfg.udfSolidSourceTerms) {

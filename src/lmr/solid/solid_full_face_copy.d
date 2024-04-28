@@ -981,9 +981,9 @@ public:
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
                 outgoing_solidstate_tag = make_mpi_tag(blk.id, which_boundary, 5);
-                size_t ne = ghost_cells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 24);
+                size_t ne = ghost_cells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 15);
                 version(complex_numbers) {
-                    ne += ghost_cells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 11);
+                    ne += ghost_cells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 14);
                 }
                 if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
                 size_t ii = 0;
@@ -997,18 +997,9 @@ public:
                     outgoing_solidstate_buf[ii++] = c.pos.x.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.x.im; }
                     outgoing_solidstate_buf[ii++] = c.pos.y.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.y.im; }
                     outgoing_solidstate_buf[ii++] = c.pos.z.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.z.im; }
-                    outgoing_solidstate_buf[ii++] = c.sp.rho.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.Cp.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k11.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k12.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k13.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k21.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k22.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k23.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k31.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k32.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k33.re;
+                    outgoing_solidstate_buf[ii++] = c.ss.rho.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.ss.rho.im; }
+                    outgoing_solidstate_buf[ii++] = c.ss.k.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.ss.k.im; }
+                    outgoing_solidstate_buf[ii++] = c.ss.Cp.re;version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.ss.Cp.im; }
                     outgoing_solidstate_buf[ii++] = c.T.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.T.im; }
                     outgoing_solidstate_buf[ii++] = c.de_prev.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.de_prev.im; }
                     outgoing_solidstate_buf[ii++] = c.Q.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.Q.im; }
@@ -1065,18 +1056,9 @@ public:
                     c.pos.x.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.x.im = incoming_solidstate_buf[ii++]; }
                     c.pos.y.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.y.im = incoming_solidstate_buf[ii++]; }
                     c.pos.z.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.z.im = incoming_solidstate_buf[ii++]; }
-                    c.sp.rho.re = incoming_solidstate_buf[ii++];
-                    c.sp.k.re = incoming_solidstate_buf[ii++];
-                    c.sp.Cp.re = incoming_solidstate_buf[ii++];
-                    c.sp.k11.re = incoming_solidstate_buf[ii++];
-                    c.sp.k12.re = incoming_solidstate_buf[ii++];
-                    c.sp.k13.re = incoming_solidstate_buf[ii++];
-                    c.sp.k21.re = incoming_solidstate_buf[ii++];
-                    c.sp.k22.re = incoming_solidstate_buf[ii++];
-                    c.sp.k23.re = incoming_solidstate_buf[ii++];
-                    c.sp.k31.re = incoming_solidstate_buf[ii++];
-                    c.sp.k32.re = incoming_solidstate_buf[ii++];
-                    c.sp.k33.re = incoming_solidstate_buf[ii++];
+                    c.ss.rho.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.ss.rho.im = incoming_solidstate_buf[ii++]; }
+                    c.ss.k.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.ss.k.im = incoming_solidstate_buf[ii++]; }
+                    c.ss.Cp.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.ss.Cp.im = incoming_solidstate_buf[ii++]; }
                     c.T.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.T.im = incoming_solidstate_buf[ii++]; }
                     c.de_prev.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.de_prev.im = incoming_solidstate_buf[ii++]; }
                     c.Q.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.Q.im = incoming_solidstate_buf[ii++]; }

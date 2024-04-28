@@ -892,8 +892,8 @@ public:
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
                 outgoing_solidstate_tag = make_mpi_tag(blk.id, which_boundary, 2);
-                size_t ne = myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 24);
-                version(complex_numbers) { ne += myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 11); }
+                size_t ne = myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 15);
+                version(complex_numbers) { ne += myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 14); }
                 if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
                 size_t ii = 0;
                 foreach (i, c; outgoing_mapped_cells) {
@@ -906,18 +906,9 @@ public:
                     outgoing_solidstate_buf[ii++] = c.pos.x.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.x.im; }
                     outgoing_solidstate_buf[ii++] = c.pos.y.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.y.im; }
                     outgoing_solidstate_buf[ii++] = c.pos.z.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.z.im; }
-                    outgoing_solidstate_buf[ii++] = c.sp.rho.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.Cp.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k11.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k12.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k13.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k21.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k22.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k23.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k31.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k32.re;
-                    outgoing_solidstate_buf[ii++] = c.sp.k33.re;
+                    outgoing_solidstate_buf[ii++] = c.ss.rho.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.ss.rho.im; }
+                    outgoing_solidstate_buf[ii++] = c.ss.k.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.ss.k.im; }
+                    outgoing_solidstate_buf[ii++] = c.ss.Cp.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.ss.Cp.im; }
                     outgoing_solidstate_buf[ii++] = c.T.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.T.im; }
                     outgoing_solidstate_buf[ii++] = c.de_prev.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.de_prev.im; }
                     outgoing_solidstate_buf[ii++] = c.Q.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.Q.im; }

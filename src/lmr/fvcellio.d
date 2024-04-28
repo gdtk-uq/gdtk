@@ -374,9 +374,9 @@ public:
         case "vol": return scell.volume.re;
         case "e": return scell.e[0].re;
         case "T": return scell.T.re;
-        case "rho": return scell.sp.rho.re;
-        case "Cp": return scell.sp.Cp.re;
-        case "k": return scell.sp.k.re;
+        case "rho": return scell.ss.rho.re;
+        case "Cp": return scell.ss.Cp.re;
+        case "k": return scell.ss.k.re;
         default:
             throw new LmrException("Invalid selection for solid cell variable: " ~ var);
         }
@@ -391,16 +391,16 @@ public:
         }
 
         switch (var) {
-	    case "pos.x": scell.pos.x.re = value; return scell.pos.x.re;
-	    case "pos.y": scell.pos.y.re = value; return scell.pos.y.re;
-    	case "pos.z": scell.pos.z.re = value; return scell.pos.z.re;
-	    case "vol": scell.volume.re = value; return scell.volume.re;
+        case "pos.x": scell.pos.x.re = value; return scell.pos.x.re;
+        case "pos.y": scell.pos.y.re = value; return scell.pos.y.re;
+        case "pos.z": scell.pos.z.re = value; return scell.pos.z.re;
+        case "vol": scell.volume.re = value; return scell.volume.re;
         case "e": scell.e[0].re = value; return scell.e[0].re;
-	    case "T": scell.T.re = value; return scell.T.re;
-    	case "rho": scell.sp.rho.re = value; return scell.sp.rho.re;
-    	case "Cp": scell.sp.Cp.re = value; return scell.sp.Cp.re;
-    	case "k": scell.sp.k.re = value; return scell.sp.k.re;
-	    default:
+        case "T": scell.T.re = value; return scell.T.re;
+        case "rho": scell.ss.rho.re = value; return scell.ss.rho.re;
+        case "Cp": scell.ss.Cp.re = value; return scell.ss.Cp.re;
+        case "k": scell.ss.k.re = value; return scell.ss.k.re;
+        default:
 	        throw new LmrException("Invalid selection for cell variable: " ~ var);
 	    }
     }
