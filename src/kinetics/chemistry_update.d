@@ -642,7 +642,7 @@ private:
         }
 
         if ( sigma <= 0.0 ) {
-            h_new = h;
+            h_new = 10.0*h;
         }
         else {
             double x = sigma;
