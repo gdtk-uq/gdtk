@@ -21,7 +21,20 @@ function ConstantPropertiesModel:tojson()
    str = str .. string.format('  "rho": %.18e,\n', self.rho)
    str = str .. string.format('  "k": %.18e,\n', self.k)
    str = str .. string.format('  "Cp": %.18e\n', self.Cp)
-   str = str .. '  }'
+   str = str .. '   }'
+   return str
+end
+
+LinearVariationModel = SolidThermalModel:new{min=nil, max=nil}
+LinearVariationModel.type = "linear_variation"
+function LinearVariationModel:tojson()
+   local str = '  {\n'
+   str = str .. string.format('   "type": "%s",\n', self.type)
+   str = str .. string.format('   "min": { "T": %.18e, "rho": %.18e, "k": %.18e, "Cp": %.18e },\n',
+      self.min.T, self.min.rho, self.min.k, self.min.Cp)
+   str = str .. string.format('   "max": { "T": %.18e, "rho": %.18e, "k": %.18e, "Cp": %.18e }\n',
+      self.max.T, self.max.rho, self.max.k, self.max.Cp)
+   str = str .. '   }'
    return str
 end
 
