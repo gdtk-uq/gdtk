@@ -25,7 +25,6 @@ import fluidblock;
 import sfluidblock;
 import ufluidblock;
 import ssolidblock;
-import solidprops;
 import solidfvinterface;
 import solid_full_face_copy;
 import solid_gas_full_face_copy;
@@ -123,7 +122,9 @@ void solid_step(double dt_solid)
             }
             scell.timeDerivatives(ftl, GlobalConfig.dimensions);
             scell.eulerUpdate(dt_solid);
-            scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+            scell.ss.e = scell.e[ftl+1];
+            sblk.stm.updateTemperature(scell.ss);
+            scell.T = scell.ss.T;
         } // end foreach scell
     } // end foreach sblk
     foreach (sblk; localSolidBlocks) {

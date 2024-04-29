@@ -178,12 +178,13 @@ private:
 }
 
 class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
-    this (double theta_v, double T_D, double aU, double Ustar, int mode) {
+    this (double theta_v, double T_D, double aU, double Ustar, int mode, double non_boltzmann) {
         this._theta_v = theta_v;
         this._T_D = T_D;
         this._aU = aU;
         this._Ustar = Ustar;
         this._mode = mode;
+        this._non_boltzmann = non_boltzmann;
     }
 
     this (lua_State *L, int mode) {
@@ -191,11 +192,12 @@ class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
         double T_D = getDouble(L, -1, "T_D");
         double aU = getDouble(L, -1, "aU");
         double Ustar = getDouble(L, -1, "Ustar");
-        this(theta_v, T_D, aU, Ustar, mode);
+        double non_boltzmann = getDoubleWithDefault(L, -1, "non_boltzmann", 0.0);
+        this(theta_v, T_D, aU, Ustar, mode, non_boltzmann);
     }
 
     ExchangeChemistryCoupling dup() {
-        return new ModifiedMarroneTreanorDissociation(_theta_v, _T_D, _aU, _Ustar, _mode);
+        return new ModifiedMarroneTreanorDissociation(_theta_v, _T_D, _aU, _Ustar, _mode, _non_boltzmann);
     }
 
     @nogc
@@ -205,7 +207,8 @@ class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
         number Uinv = _aU / T + 1 / _Ustar;
         number T_F_inv = 1./Tv - 1./T - Uinv;
 
-        return R_universal * ( _theta_v / (exp(_theta_v * T_F_inv) - 1.) - _T_D / (exp(_T_D * T_F_inv) - 1.));
+        number boltzmann = R_universal * ( _theta_v / (exp(_theta_v * T_F_inv) - 1.) - _T_D / (exp(_T_D * T_F_inv) - 1.));
+        return boltzmann + _non_boltzmann * R_universal * _T_D;
     }
 
     @nogc
@@ -218,6 +221,7 @@ class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
 private:
     int _mode;
     double _aU, _Ustar, _theta_v, _T_D;
+    double _non_boltzmann;
 }
 
 

@@ -40,7 +40,7 @@ function RegisteredGrid:new(o)
       error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
    flag = checkAllowedNames(o, {"grid", "tag", "fieldType", "active", "fsTag", "bcTags", "gridArrayId",
-                                "ssTag", "solidPropsTag", "solidBCTags"})
+                                "ssTag", "solidModelTag", "solidBCTags"})
    if not flag then
       error("Invalid name for item supplied to Grid constructor.", 2)
    end
@@ -70,7 +70,7 @@ function RegisteredGrid:new(o)
    -- Initial SolidState tag
    o.ssTag = o.ssTag or ""
    -- Solid properties tag
-   o.solidPropsTag = o.solidPropsTag or ""
+   o.solidModelTag = o.solidModelTag or ""
    -- Must have a grid.
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
@@ -180,7 +180,7 @@ function RegisteredGrid:tojson()
    str = str .. '    "dummy_entry_without_trailing_comma": "xxxx"\n'
    str = str .. '  },\n'
    str = str .. string.format('  "ssTag": "%s",\n', self.ssTag)
-   str = str .. string.format('  "solidPropsTag": "%s",\n', self.solidPropsTag)
+   str = str .. string.format('  "solidModelTag": "%s",\n', self.solidModelTag)
    str = str .. '  "solidBCTags": {\n'
    -- Only handle structured case presently
    for k, v in pairs(self.solidBCTags) do

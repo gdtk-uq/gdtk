@@ -13,6 +13,7 @@ import std.typecons;
 import std.string;
 import ntypes.complex;
 import nm.number;
+import std.conv;
 
 import util.lua;
 import util.lua_service;
@@ -453,9 +454,53 @@ private:
     int _mode;
 }
 
+// This interface is used by the modified Marrone-Treanor model to approximately account
+// for non-Boltzmann effects (see AIAA 2020-3272)
+interface MMTNonBoltzmannCorrection {
+    MMTNonBoltzmannCorrection dup();
+    @nogc number eval(in GasState Q);
+}
+
+class ConstantNonBoltzmann : MMTNonBoltzmannCorrection {
+    this (number factor) {
+        _factor = factor;
+    }
+
+    ConstantNonBoltzmann dup() {
+        return new ConstantNonBoltzmann(_factor);
+    }
+
+    @nogc number eval(in GasState Q) {
+        return _factor;
+    }
+
+private:
+    number _factor;
+}
+
+MMTNonBoltzmannCorrection create_non_boltzmann_correction(lua_State* L){
+    // If a non-boltzmann correction model hasn't been supplied,
+    // we return null here. The Modified-Marrone-Treanor rate constant
+    // checks for a null non-boltzmann correction and handles it
+    // appropiately.
+    if (lua_isnil(L, -1)) {
+        return null;
+    }
+
+    string model = getString(L, -1, "model");
+    switch (model) {
+        case "constant":
+            double factor = getDouble(L, -1, "factor");
+            return new ConstantNonBoltzmann(to!number(factor));
+        default:
+            throw new Exception("Invalid non Boltzmann correction factor for MMT");
+    }
+}
+
 class MMTRateConstant : RateConstant {
 public:
-    this(RateConstant rate, number T_D, number theta, number aU, number U_star, int mode)
+    this(RateConstant rate, number T_D, number theta, number aU, number U_star, 
+         int mode, MMTNonBoltzmannCorrection nb_correction=null)
     {
         _rate = rate;
         _T_D = T_D;
@@ -463,11 +508,12 @@ public:
         _aU = aU;
         _U_star = U_star;
         _mode = mode;
+        _nb_correction = nb_correction;
     }
 
     MMTRateConstant dup()
     {
-        return new MMTRateConstant(_rate, _T_D, _theta, _aU, _U_star, _mode);
+        return new MMTRateConstant(_rate, _T_D, _theta, _aU, _U_star, _mode, _nb_correction);
     }
 
     this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
@@ -477,8 +523,13 @@ public:
         _T_D = getDouble(L, -1, "T_D");
         _theta = getDouble(L, -1, "theta");
         _mode = getInt(L, -1, "mode");
+
         lua_getfield(L, -1, "rate");
         _rate = createRateConstant(L, efficiencies, gmodel);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "non_boltzmann_correction");
+        _nb_correction = create_non_boltzmann_correction(L);
         lua_pop(L, 1);
     }
 
@@ -495,7 +546,8 @@ public:
         number Q_TF = _Q(TF, _T_D, _theta);
         number Q_Tv = _Q(Q.T_modes[_mode], _T_D, _theta);
         number Q_U = _Q(-U, _T_D, _theta);
-        return kEQ * Q_T * Q_TF / (Q_Tv * Q_U);
+        number nb_correction = _nb_correction ? _nb_correction.eval(Q) : to!number(1.0);
+        return nb_correction * kEQ * Q_T * Q_TF / (Q_Tv * Q_U);
     }
 
 private:
@@ -505,6 +557,10 @@ private:
     number _aU; // model parameter (unitless)
     number _U_star; // model parameter (K)
     int _mode;
+
+    // A correction for non Boltzmann distributions
+    MMTNonBoltzmannCorrection _nb_correction;
+
 }
 
 

@@ -108,12 +108,16 @@ function output.write_config_file(fileName)
    f:write('],\n')
    --
    f:write(string.format('"solid_domain_cfl" : %.18e,\n', config.solid_domain_cfl))
-   f:write(string.format('"coupling_with_solid_domains": "%s",\n',
-			 config.coupling_with_solid_domains))
-   f:write(string.format('"solid_has_isotropic_properties": %s,\n', tostring(config.solid_has_isotropic_properties)))
-   f:write(string.format('"solid_has_homogeneous_properties": %s,\n', tostring(config.solid_has_homogeneous_properties)))
+   f:write(string.format('"coupling_with_solid_domains": "%s",\n', config.coupling_with_solid_domains))
    f:write(string.format('"solid_domain_augmented_deriv_avg": %s,\n', tostring(config.solid_domain_augmented_deriv_avg)))
    f:write(string.format('"fluid_solid_bc_use_heat_transfer_coeff": %s,\n', tostring(config.fluid_solid_bc_use_heat_transfer_coeff)))
+   f:write('"solid_thermal_models": {\n')
+   for k,v in pairs(_solidModels) do
+      f:write(string.format(' "%s": \n', k))
+      f:write(string.format('%s,', v:tojson()))
+   end
+   f:write('\n "dummy_entry_without_trailing_comma": 0\n') -- no comma on last entry
+   f:write('},\n')
    --[[ RJG, 2024-02-13 disabled temporarily
    f:write('"solid_domain_loose_update_options" : {\n')
    f:write(string.format('   "max_newton_iterations" : %d,\n', SolidDomainLooseUpdate.max_newton_iterations))

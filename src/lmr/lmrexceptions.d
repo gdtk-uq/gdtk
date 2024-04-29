@@ -1,5 +1,14 @@
 /**
  * Module to hold Eilmer-specific exceptions.
+ *
+ * Exceptions are:
+ *  + LmrException : a non-specific exception
+ *  + NewtonKrylovExcepetion : when things go awry in the N-K solver
+ *  + TimeMarchingException : for signalling problems in the time-marcher
+ *  + LmrPostProcessingException : for post-processing badness
+ *  + LmrPreProcessingException : for pre-processing badness
+ *  + LmrInitialisationException : for bad events during the simulation (D-lang) initialisation
+ *
  */
 
 module lmrexceptions;
@@ -73,6 +82,21 @@ class LmrPostProcessingException : LmrException {
  * Date: 2024-03-09
  */
 class LmrPreProcessingException : LmrException {
+    @nogc
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+         Throwable next=null)
+    {
+        super(message, file, line, next);
+    }
+}
+
+/**
+ * Class to signal an exception at run-time initialisation.
+ *
+ * Authors: RJG
+ * Date: 2024-04-27
+ */
+class LmrInitialisationException : LmrException {
     @nogc
     this(string message, string file=__FILE__, size_t line=__LINE__,
          Throwable next=null)

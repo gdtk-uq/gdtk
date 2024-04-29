@@ -13,11 +13,11 @@ import ntypes.complex;
 import nm.number;
 
 import geom;
-import solidprops;
 import ssolidblock;
 import globaldata;
 import globalconfig;
 import solidfvcell;
+import lmr.solid.solidstate;
 
 class SolidFVInterface {
 public:
@@ -33,9 +33,8 @@ public:
     Vector3 n;
     Vector3 t1;
     Vector3 t2;
-    // Material properties
-    SolidProps sp;
-    // State
+    // Inteface state
+    SolidState ss;
     number T;
     number e;
     number flux;
@@ -110,19 +109,9 @@ public:
         // Note: this function assumes that the temperature gradients
         //       have already been approximated at the interfaces.
         number qx, qy, qz;
-        if (solid_has_isotropic_properties) {
-            qx = -sp.k * dTdx;
-            qy = -sp.k * dTdy;
-            qz = -sp.k * dTdz;
-        } else { // assume solid_has_homogeneous_properties
-            if ( dim == 2 ) {
-                qx = -sp.k11 * dTdx - sp.k12 * dTdy;
-                qy = -sp.k21 * dTdx - sp.k22 * dTdy;
-                qz = 0.0;
-            } else { // assume 3D
-                throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-            }
-        }
+        qx = -ss.k * dTdx;
+        qy = -ss.k * dTdy;
+        qz = -ss.k * dTdz;
         flux = qx * n.x + qy * n.y + qz * n.z;
     }
 
@@ -192,7 +181,7 @@ void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
                         // There is no Rght cell, so
                         Rght = Lft;
                     }
-                    IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+                    harmonicAverage(Lft.ss, Rght.ss, IFace.ss);
                 } // i loop
             } // j loop
         } // for k
@@ -211,7 +200,7 @@ void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
                         // There is no Rght cell, so
                         Rght = Lft;
                     }
-                    IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+                    harmonicAverage(Lft.ss, Rght.ss, IFace.ss);
                 } // j loop
             } // i loop
         } // for k
@@ -231,7 +220,7 @@ void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
                             // There is no Rght cell, so
                             Rght = Lft;
                         }
-                        IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+                        harmonicAverage(Lft.ss, Rght.ss, IFace.ss);
                     } // for k
                 } // j loop
             } // i loop

@@ -42,6 +42,10 @@ identifyBlockConnections = fluidblock.identifyBlockConnections
 local solidblock = require 'solidblock'
 SolidBlock = solidblock.SolidBlock
 
+local solidthermalmodel = require 'solidthermalmodel'
+ConstantPropertiesModel = solidthermalmodel.ConstantPropertiesModel
+registerSolidModels = solidthermalmodel.registerSolidModels
+
 local mpi = require 'mpi'
 mpiDistributeBlocks = mpi.mpiDistributeBlocks
 mpiDistributeFBArray = mpi.mpiDistributeFBArray
@@ -142,6 +146,8 @@ mpiTasks = nil
 
 -- Storgage for later definitions of SolidBlock objects
 solidBlocks = {}
+-- Storage for solid models
+_solidModels = {}
 
 -- Storage for history cells
 historyCells = {}
@@ -226,7 +232,7 @@ end
 
 -- ---------------------------------------------------------------------------------------
 
-function makeSolidBlocks(bcDict, temperatureDict, propertiesDict)
+function makeSolidBlocks(bcDict, temperatureDict)
    if false then -- debug
       print("Make SolidBlock objects.")
    end
@@ -246,11 +252,6 @@ function makeSolidBlocks(bcDict, temperatureDict, propertiesDict)
       if g.ssTag then initT = temperatureDict[g.ssTag] end
       if not initT then
          error(string.format("Grid.id=%d ssTag='%s': does not seem to have a valid initial temperature state.", g.id, g.ssTag))
-      end
-      local props
-      if g.solidPropsTag then props = propertiesDict[g.solidPropsTag] end
-      if not props then
-         error(string.format("Grid.id=%d solidPropsTag='%s': does not seem to have a valid properties setting.", g.id, g.solidPropsTag))
       end
 
       if g.type == "structured_grid" then
@@ -272,7 +273,7 @@ function makeSolidBlocks(bcDict, temperatureDict, propertiesDict)
          for face, bc in pairs(bcs) do print("    face=", face, " bc=", bc) end
          print("  ]")
       end
-      sb = SolidBlock:new{gridMetadata=g, initTemperature=initT, properties=props, bcList=bcs}
+      sb = SolidBlock:new{gridMetadata=g, initTemperature=initT, modelTag=g.solidModelTag, bcList=bcs}
    end
    if false then -- debug
       print("Make block-to-block connections.")
@@ -443,7 +444,7 @@ function buildGridAndFieldFiles()
       -- Copy from staging area to initial snapshot area
       os.execute("cp " .. gridFilename .. " " .. gridForSimFilename)
       --
-      writeInitialSolidFile(id, blk.grid, blk.initTemperature, blk.properties)
+      writeInitialSolidFile(id, blk.grid, blk.initTemperature, _solidModels[blk.modelTag])
    end
 end
 

@@ -30,7 +30,6 @@ import fluidblock;
 import sfluidblock;
 import ufluidblock;
 import ssolidblock;
-import solidprops;
 import solidfvinterface;
 import solid_full_face_copy;
 import solid_gas_full_face_copy;
@@ -554,7 +553,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                         scell.stage1RKL2Update(dt_global, 1, SimState.s_RKL); // RKL2 (j=1)
                     }
                 }
-                scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                scell.ss.e = scell.e[ftl+1];
+                sblk.stm.updateTemperature(scell.ss);
+                scell.T = scell.ss.T;
 	    } // end foreach scell
 	} // end foreach sblk
     } // end if tight solid domain coupling.
@@ -812,45 +813,47 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	//
 	if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
             GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
-	    // Next do solid domain update IMMEDIATELY after at same flow time level
-            exchange_ghost_cell_solid_boundary_data(); // we need up to date temperatures for the spatial derivative calc.
-	    foreach (sblk; parallel(localSolidBlocks, 1)) {
-		if (!sblk.active) continue;
-                sblk.averageTemperatures();
-		sblk.clearSources();
-		sblk.computeSpatialDerivatives(ftl);
-            }
-            exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
+        // Next do solid domain update IMMEDIATELY after at same flow time level
+        exchange_ghost_cell_solid_boundary_data(); // we need up to date temperatures for the spatial derivative calc.
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
+            if (!sblk.active) continue;
+            sblk.averageTemperatures();
+            sblk.clearSources();
+            sblk.computeSpatialDerivatives(ftl);
+        }
+        exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
+            if (!sblk.active) continue;
+            sblk.averageTGradients();
+            sblk.computeFluxes();
+        }
+        if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (!sblk.active) continue;
-                sblk.averageTGradients();
-                sblk.computeFluxes();
-	    }
-	    if (GlobalConfig.apply_bcs_in_parallel) {
-		foreach (sblk; parallel(localSolidBlocks, 1)) {
-		    if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-		}
-	    } else {
-		foreach (sblk; localSolidBlocks) {
-		    if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-		}
-	    }
-	    // We need to synchronise before updating
-	    foreach (sblk; parallel(localSolidBlocks, 1)) {
-		foreach (scell; sblk.cells) {
-		    if (GlobalConfig.udfSolidSourceTerms) {
-			addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
-		    }
-		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                        scell.stage2RKL1Update(dt_global, j, SimState.s_RKL); // RKL1 (j=1)
-                    } else {
-                        scell.stage2RKL2Update(dt_global, j, SimState.s_RKL); // RKL2 (j=1)
-                    }
-		    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
-		} // end foreach scell
-	    } // end foreach sblk
-	} // end if tight solid domain coupling.
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
+            }
+        } else {
+            foreach (sblk; localSolidBlocks) {
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
+            }
+        }
+        // We need to synchronise before updating
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
+            foreach (scell; sblk.cells) {
+                if (GlobalConfig.udfSolidSourceTerms) {
+                    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
+                }
+                scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                    scell.stage2RKL1Update(dt_global, j, SimState.s_RKL); // RKL1 (j=1)
+                } else {
+                    scell.stage2RKL2Update(dt_global, j, SimState.s_RKL); // RKL2 (j=1)
+                }
+                scell.ss.e = scell.e[ftl+1];
+                sblk.stm.updateTemperature(scell.ss);
+                scell.T = scell.ss.T;
+            } // end foreach scell
+        } // end foreach sblk
+    } // end if tight solid domain coupling.
 
 	// shuffle time-levels for next iteration (U1 goes to U0 & U2 goes to U1)
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1421,7 +1424,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             case 4: scell.stage4Update(SimState.dt_global); break;
                             default: throw new Error("Invalid state for explicit update.");
                             }
-                            scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                            scell.ss.e = scell.e[ftl+1];
+                            sblk.stm.updateTemperature(scell.ss);
+                            scell.T = scell.ss.T;
                         } // end foreach scell
                     } // end foreach sblk
                 } catch (Exception e) {
@@ -1908,7 +1913,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     }
                     scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                     scell.stage1Update(SimState.dt_global);
-                    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                    scell.ss.e = scell.e[ftl+1];
+                    sblk.stm.updateTemperature(scell.ss);
+                    scell.T = scell.ss.T;
                 } // end foreach scell
             } // end foreach sblk
         } catch (Exception e) {
@@ -2267,7 +2274,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
                         }
                         scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                         scell.stage2Update(SimState.dt_global);
-                        scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                        scell.ss.e = scell.e[ftl+1];
+                        sblk.stm.updateTemperature(scell.ss);
+                        scell.T = scell.ss.T;
                     } // end foreach cell
                 } // end foreach blk
             } catch (Exception e) {
@@ -2620,7 +2629,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         }
                         scell.timeDerivatives(ftl0, GlobalConfig.dimensions);
                         scell.stage1Update(SimState.dt_global);
-                        scell.T = updateTemperature(scell.sp, scell.e[ftl1]);
+                        scell.ss.e = scell.e[ftl1];
+                        sblk.stm.updateTemperature(scell.ss);
+                        scell.T = scell.ss.T;
                     } // end foreach scell
                 } // end foreach sblk
             } catch (Exception e) {
@@ -3032,7 +3043,9 @@ void gasdynamic_implicit_increment_with_moving_grid()
                         }
                         scell.timeDerivatives(ftl0, GlobalConfig.dimensions);
                         scell.stage1Update(SimState.dt_global);
-                        scell.T = updateTemperature(scell.sp, scell.e[ftl1]);
+                        scell.ss.e = scell.e[ftl1];
+                        sblk.stm.updateTemperature(scell.ss);
+                        scell.T = scell.ss.T;
                     } // end foreach scell
                 } // end foreach sblk
             } catch (Exception e) {

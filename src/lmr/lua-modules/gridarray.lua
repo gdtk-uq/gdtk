@@ -31,9 +31,9 @@ function GridArray:new(o)
    if not flag then
       error("GridArray constructor expected to receive a single table with named entries", 2)
    end
-   local flag = checkAllowedNames(o, {"tag", "fieldType",
+   local flag = checkAllowedNames(o, {"tag", "fieldType", "active",
                                       "fsTag", "bcTags", "shock_fitting",
-                                      "ssTag", "solidBCTags", "solidPropsTag",
+                                      "ssTag", "solidBCTags", "solidModelTag",
                                       "grid", "gridArray", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to GridArray constructor.", 2)
@@ -52,6 +52,9 @@ function GridArray:new(o)
    -- Typically, we expect a construction via registerFluidGridArray or registerSolidGridArray
    -- and these should set the field type correctly
    o.fieldType = o.fieldType or "fluid"
+   if (o.active == nil) then
+      o.active = true
+   end
    o.fsTag = o.fsTag or ""
    o.shock_fitting = o.shock_fitting or false
    o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
@@ -64,7 +67,7 @@ function GridArray:new(o)
    for _,face in ipairs(faceList(config.dimensions)) do
       o.solidBCTags[face] = o.solidBCTags[face] or o.grid:get_tag(face)
    end
-   o.solidPropsTag = o.solidPropsTag or ""
+   o.solidModelTag = o.solidModelTag or ""
    --
    if o.grid then
       -- We will take a single grid and divide it into an array of subgrids.
@@ -384,8 +387,8 @@ function GridArray:new(o)
             if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
             if jb == 1 then bcTags['south'] = o.bcTags['south'] end
             if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
-            local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, fsTag=o.fsTag, bcTags=bcTags,
-                                         ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidPropsTag=o.solidPropsTag,  gridArrayId=o.id}
+            local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, active=o.active, fsTag=o.fsTag, bcTags=bcTags,
+                                         ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag,  gridArrayId=o.id}
             gridCollection[#gridCollection+1] = g
             o.myGrids[ib][jb] = g
          else
@@ -400,8 +403,8 @@ function GridArray:new(o)
                if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
                if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
                if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
-               local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, fsTag=o.fsTag, bcTags=bcTags,
-                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidPropsTag=o.solidPropsTag, gridArrayId=o.id}
+               local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, active=o.active, fsTag=o.fsTag, bcTags=bcTags,
+                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag, gridArrayId=o.id}
                gridCollection[#gridCollection+1] = g
                o.myGrids[ib][jb][kb] = g
             end -- kb loop
@@ -425,11 +428,12 @@ function GridArray:tojson()
    local str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fieldType": "%s",\n', self.fieldType)
+   str = str .. string.format('  "active": %s,\n', tostring(self.active))
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
    str = str .. string.format('  "type": "%s",\n', self.myType)
    str = str .. string.format('  "shock_fitting": %s,\n', tostring(self.shock_fitting))
    str = str .. string.format('  "ssTag": "%s",\n', self.ssTag)
-   str = str .. string.format('  "solidPropsTag": "%s",\n', self.solidPropsTag)
+   str = str .. string.format('  "solidModelTag": "%s",\n', self.solidModelTag)
    -- Write the block ids as a list of lists because that if the
    -- highest quality information.
    str = str .. '  "idarray": [\n'
