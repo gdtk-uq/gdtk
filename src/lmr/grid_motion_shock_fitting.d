@@ -123,7 +123,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             fba.face_ws[j0+j][k0+k] = wave_speed(inflow, Rght, f.n);
                         } else {
                             // Using the first cell-centre state for R0 is first-order.
-                            fba.face_ws[j0+j][k0+k] = wave_speed(inflow, blk.get_cell(0,j,k).fs, f.n);
+                            fba.face_ws[j0+j][k0+k] = wave_speed(inflow, *(blk.get_cell(0,j,k).fs), f.n);
                         }
                         fba.face_pos[j0+j][k0+k] = f.pos;
                         fba.face_a[j0+j][k0+k] = blk.get_cell(0,j,k).fs.gas.a;

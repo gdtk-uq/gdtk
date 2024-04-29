@@ -33,6 +33,7 @@ import gas.fuel_air_mix;
 import globaldata : SimState;
 import turbulence;
 import lmr.fvcell : FVCell;
+import lmr.coredata : FluidCellData;
 
 import kinetics.chemistry_update;
 import kinetics.reaction_mechanism;
@@ -110,7 +111,8 @@ public:
     bool contains_flow_data;
     bool is_interior_to_domain; // true if the cell is interior to the flow domain
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
-    FlowState fs; // Flow properties
+    FluidCellData* fvcd; // Pointer to block densified storage structure
+    FlowState* fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
@@ -171,7 +173,7 @@ public:
 public:
     @disable this();
 
-    this(LocalConfig myConfig, bool allocate_spatial_deriv_lsq_workspace=false, int id_init=-1)
+    this(LocalConfig myConfig, FluidCellData* fvcd, int id_init)
     {
         this.myConfig = myConfig;
         id = id_init;
@@ -184,45 +186,63 @@ public:
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
 
-        int n_species = myConfig.n_species;
-        int n_modes = myConfig.n_modes;
-        double T = 300.0;
-        double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        double[2] turb_init;
-        foreach(i; 0 .. myConfig.turb_model.nturb)
-            turb_init[i] = myConfig.turb_model.turb_limits(i).re;
-        fs = FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0), turb_init);
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
-        foreach(i; 0 .. myConfig.n_flow_time_levels) {
-            U ~= new_ConservedQuantities(ncq);
-            U[i].clear();
-            dUdt ~= new_ConservedQuantities(ncq);
+        size_t nftl = myConfig.n_flow_time_levels;
+
+        if (fvcd.U0){
+            U.length = nftl;
+                        U[0] = fvcd.U0[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>1) U[1] = fvcd.U1[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>2) U[2] = fvcd.U2[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>3) U[3] = fvcd.U3[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>4) U[4] = fvcd.U4[id*ncq + 0 .. id*ncq + ncq];
+            foreach(i; 0 .. nftl) {
+                U[i].clear();
+            }
         }
-        Q = new_ConservedQuantities(ncq);
-        Q.clear();
+        if (fvcd.dUdt0){
+            dUdt.length = nftl;
+                        dUdt[0] = fvcd.dUdt0[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>1) dUdt[1] = fvcd.dUdt1[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>2) dUdt[2] = fvcd.dUdt2[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>3) dUdt[3] = fvcd.dUdt3[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>4) dUdt[4] = fvcd.dUdt4[id*ncq + 0 .. id*ncq + ncq];
+            foreach(i; 0 .. nftl) {
+                dUdt[i].clear();
+            }
+        }
         Qudf = new_ConservedQuantities(ncq);
         Qudf.clear();
         if (myConfig.residual_smoothing) {
             dUdt_copy[0] = new_ConservedQuantities(ncq);
             dUdt_copy[1] = new_ConservedQuantities(ncq);
         }
-        grad = new FlowGradients(myConfig);
-        if (allocate_spatial_deriv_lsq_workspace) {
-            ws_grad = new WLSQGradWorkspace();
+
+        this.fvcd = fvcd;
+        this.fs = &(fvcd.flowstates[id]);
+        this.grad = &(fvcd.gradients[id]);
+        this.ws_grad = &(fvcd.workspaces[id]);
+        if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
+        if (fvcd.lsqgradients) this.gradients = &(fvcd.lsqgradients[id]);
+        if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
+        if (fvcd.source_terms) {
+            this.Q = fvcd.source_terms[id*ncq + 0 .. id*ncq + ncq];
+            Q.clear();
         }
-        //
+
         version(newton_krylov) {
-            grad_save = new FlowGradients(myConfig);
-            gradients_save = new LSQInterpGradients(myConfig.n_species, myConfig.n_modes, myConfig.turb_model.nturb);
-            Q_save = new_ConservedQuantities(ncq);
+            if (fvcd.saved_gradients) this.grad_save = &(fvcd.saved_gradients[id]);
+            if (fvcd.saved_lsqgradients) this.gradients_save = &(fvcd.saved_lsqgradients[id]);
+            if (fvcd.saved_source_terms) this.Q_save = fvcd.saved_source_terms[id*ncq .. id*ncq + ncq];
+
+            // TODO: This is new.
             dRdU.length = ncq; // number of conserved variables
-            foreach (ref a; dRdU) a.length = ncq;
-            foreach (i; 0..dRdU.length) {
-                foreach (j; 0..dRdU[i].length) {
-                    dRdU[i][j] = 0.0;
-                }
+            foreach (i; 0 .. dRdU.length) {
+                size_t idx = id*ncq*ncq + i*ncq;
+                dRdU[i] = fvcd.cell_jacobians[idx .. idx+ncq];
             }
         }
+
         version(debug_chem) {
             // The savedGasState is a module-level variable.
             // It only needs to be initialised when debug_chem mode
@@ -236,7 +256,7 @@ public:
         //
     }
 
-    this(LocalConfig myConfig, in Vector3 pos, FlowState fs, in number volume, int id_init=-1)
+    this(LocalConfig myConfig, in Vector3 pos, FluidCellData* fvcd, in number volume, int id_init=-1)
     // stripped down initialisation
     {
         id = id_init;
@@ -245,7 +265,8 @@ public:
         this.pos[0] = pos;
         this.volume.length = 1;
         this.volume[0] = volume;
-        this.fs = fs;
+        if (fvcd.flowstates) this.fs = &(fvcd.flowstates[id_init]);
+
     }
 
     @nogc
@@ -525,7 +546,7 @@ public:
                 foreach(i; 0 .. myConfig.turb_model.nturb){
                     myU[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
                 }
-                myU[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
+                myU[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(*fs);
             }
         }
         version(MHD) {
@@ -671,7 +692,7 @@ public:
                         fs.turb[i] = myU[cqi.rhoturb+i] * dinv;
                     }
                 }
-                u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
+                u -= myConfig.turb_model.turbulent_kinetic_energy(*fs);
             }
         }
         // Remove kinetic energy for bulk flow.
@@ -856,7 +877,7 @@ public:
             // for this gas model thermochemical reactor we need turbulence info
             if (params.length < 1) { throw new Error("params vector too short."); }
             version(turbulence) {
-                params[0]=myConfig.turb_model.turbulent_signal_frequency(fs);
+                params[0]=myConfig.turb_model.turbulent_signal_frequency(*fs);
             } else {
                 throw new Error("FuelAirMix needs komega capability.");
             }
@@ -1017,7 +1038,7 @@ public:
         }
         this.signal_parab = signal - this.signal_hyp; // store parabolic signal for STS
         version(turbulence) {
-            number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(fs);
+            number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(*fs);
             turbulent_signal *= myConfig.turbulent_signal_factor;
             signal = fmax(signal, turbulent_signal);
             this.signal_parab = fmax(signal_parab, turbulent_signal);
@@ -1100,8 +1121,8 @@ public:
     void turbulence_viscosity()
     {
         auto gmodel = myConfig.gmodel;
-        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, *grad, pos[0].y, dwall);
-        fs.k_t = myConfig.turb_model.turbulent_conductivity(fs, gmodel);
+        fs.mu_t = myConfig.turb_model.turbulent_viscosity(*fs, *grad, pos[0].y, dwall);
+        fs.k_t = myConfig.turb_model.turbulent_conductivity(*fs, gmodel);
     }
 
     /*
@@ -1213,7 +1234,7 @@ public:
         version(turbulence) {
             if (in_turbulent_zone) {
                 number[] rhoturb = Q[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
-                myConfig.turb_model.source_terms(fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
+                myConfig.turb_model.source_terms(*fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
             }
         }
 
@@ -1602,4 +1623,14 @@ public:
 
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
+    @nogc
+    void update_celldata_geometry(size_t gtl=0){
+        // TODO: Temporary scaffolding for NNG's refactor. This should be removed soon.
+        fvcd.areas[id]     = areaxy[gtl];
+        fvcd.volumes[id]   = volume[gtl];
+        fvcd.positions[id] = pos[gtl];
+        fvcd.lengths[id][0] = lengths[0];
+        fvcd.lengths[id][1] = lengths[1];
+        fvcd.lengths[id][2] = lengths[2];
+    }
 } // end class FluidFVCell

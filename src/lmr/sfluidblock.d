@@ -37,10 +37,12 @@ import flowgradients;
 import fvvertex;
 import fvinterface;
 import lmr.fluidfvcell;
+import lmr.coredata;
 import onedinterp;
 import fluidblock;
 import bc;
 import grid_motion;
+import conservedquantities;
 import grid_motion_udf;
 import geom.luawrap.luasgrid;
 import luaflowstate;
@@ -80,6 +82,7 @@ public:
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     OneDInterpolator one_d;
+    ConservedQuantities flux;
 
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
@@ -126,7 +129,7 @@ public:
         njc = grid.njv - 1;
         nkc = grid.nkv - 1;
         if (GlobalConfig.dimensions == 2) nkc = 1;
-        const size_t ncells = nic*njc*nkc;
+        ncells = nic*njc*nkc;
         super(-1, "nil");
         grid_type = Grid_t.structured_grid;
         ncells_expected = ncells;
@@ -136,6 +139,10 @@ public:
         myConfig = new LocalConfig(-1);
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
+
+        // We don't need the full celldata for the prep stage, just the flowstates
+        celldata.flowstates.reserve(ncells);
+
         bool lua_fs = false;
         FlowState* myfs;
         // check where our flowstate is coming from
@@ -200,7 +207,8 @@ public:
                 }
             }
             // make the cell
-            cell = new FluidFVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
+            celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
+            cell = new FluidFVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
         }
         if (lua_fs) { lua_settop(L, 0); }
     } // end constructor from Lua state
@@ -428,9 +436,29 @@ public:
             && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
         try {
+            // First allocate densely packed core data structures
+            auto gmodel = myConfig.gmodel;
+            size_t nturb = myConfig.turb_model.nturb;
+            size_t neq = myConfig.cqi.n;
+            size_t nftl = myConfig.n_flow_time_levels;
+
+            flux = new_ConservedQuantities(neq);
+            ncells = nic*njc*nkc;
+            size_t nifaces = niv*njc*nkc;
+            size_t njfaces = nic*njv*nkc;
+            size_t nkfaces = nic*njc*nkv;
+            nfaces = nifaces + njfaces;
+            if (myConfig.dimensions == 3) nfaces += nkfaces;
+            size_t nbfaces = nkc*nic*2 + nkc*njc*2;
+            if (myConfig.dimensions == 3) nbfaces += 2*njc*nic;
+            size_t nghost = (2*njc*nkc + 2*nic*nkc)*n_ghost_cell_layers;
+            if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
+
+            allocate_dense_celldata(ncells, nghost, neq, nftl);
+
             // Create the interior cell, vertex and interface objects for the block.
             foreach (n; 0 .. nic*njc*nkc) {
-                cells ~= new FluidFVCell(myConfig,  lsq_workspace_at_cells);
+                cells ~= new FluidFVCell(myConfig, &celldata, to!int(n));
             }
             foreach (n; 0 .. niv*njv*nkv) {
                 vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
@@ -457,8 +485,8 @@ public:
                     foreach (i; 0 .. nic) {
                         auto f = get_ifj(i, njc, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id; c.is_ghost = true;
+                            auto c = new FluidFVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -469,8 +497,8 @@ public:
                     foreach (i; 0 .. nic) {
                         auto f = get_ifj(i, 0, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id; c.is_ghost = true;
+                            auto c = new FluidFVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -481,8 +509,8 @@ public:
                     foreach (j; 0 .. njc) {
                         auto f = get_ifi(nic, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id; c.is_ghost = true;
+                            auto c = new FluidFVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -493,8 +521,8 @@ public:
                     foreach (j; 0 .. njc) {
                         auto f = get_ifi(0, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                            c.id = cell_id; ++cell_id; c.is_ghost = true;
+                            auto c = new FluidFVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -506,8 +534,8 @@ public:
                         foreach (i; 0 .. nic) {
                             auto f = get_ifk(i, j, nkc);
                             foreach (n; 0 .. n_ghost_cell_layers) {
-                                auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                                c.id = cell_id; ++cell_id; c.is_ghost = true;
+                                auto c = new FluidFVCell(myConfig, &celldata, cell_id);
+                                ++cell_id; c.is_ghost = true;
                                 f.right_cells ~= c;
                             }
                         }
@@ -518,8 +546,8 @@ public:
                         foreach (i; 0 .. nic) {
                             auto f = get_ifk(i, j, 0);
                             foreach (n; 0 .. n_ghost_cell_layers) {
-                                auto c = new FluidFVCell(myConfig,  lsq_workspace_at_cells);
-                                c.id = cell_id; ++cell_id; c.is_ghost = true;
+                                auto c = new FluidFVCell(myConfig, &celldata, cell_id);
+                                ++cell_id; c.is_ghost = true;
                                 f.left_cells ~= c;
                             }
                         }
@@ -611,7 +639,6 @@ public:
         // We will depend on this equality in other parts of the flow solver.
         // We also note that these cells are interior to the block (i.e. not ghost cells)
         foreach (i, c; cells) {
-            c.id = to!int(i);
             c.contains_flow_data = true;
             c.is_interior_to_domain = true;
         }
@@ -700,6 +727,63 @@ public:
                 }
             }
         }
+        // Now do the id based mapping to vertices used for the new datastructures
+        size_t nvtxs = 4;
+        if (myConfig.dimensions == 3) nvtxs = 8;
+        celldata.c2v.length = nkc*njc*nic;
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t c = cell_index(i,j,k);
+                    celldata.c2v[c].length = nvtxs;
+                    celldata.c2v[c][0] = vertex_index(i,j,k);
+                    celldata.c2v[c][1] = vertex_index(i+1,j,k);
+                    celldata.c2v[c][2] = vertex_index(i+1,j+1,k);
+                    celldata.c2v[c][3] = vertex_index(i,j+1,k);
+                    if (myConfig.dimensions == 3) {
+                        celldata.c2v[c][4] = vertex_index(i,j,k+1);
+                        celldata.c2v[c][5] = vertex_index(i+1,j,k+1);
+                        celldata.c2v[c][6] = vertex_index(i+1,j+1,k+1);
+                        celldata.c2v[c][7] = vertex_index(i,j+1,k+1);
+                    }
+                }
+            }
+        }
+        // Test out a index based cell to face mapping
+        celldata.c2f.length = nkc*njc*nic;
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t c = cell_index(i,j,k);
+                    celldata.c2f[c] ~= ifj_index(i,j+1,k);// north
+                    celldata.c2f[c] ~= ifi_index(i+1,j,k);// east
+                    celldata.c2f[c] ~= ifj_index(i,j,k);  // south
+                    celldata.c2f[c] ~= ifi_index(i,j,k);  // west
+                    if (myConfig.dimensions == 3) {
+                        celldata.c2f[c] ~= ifk_index(i,j,k+1); // top
+                        celldata.c2f[c] ~= ifk_index(i,j,k);   // bottom
+                    }
+                    celldata.nfaces[c] = celldata.c2f[c].length;
+                }
+            }
+        }
+        celldata.outsigns.length = nkc*njc*nic;
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t c = cell_index(i,j,k);
+                    celldata.outsigns[c] ~= 1;// north
+                    celldata.outsigns[c] ~= 1;// east
+                    celldata.outsigns[c] ~= -1;  // south
+                    celldata.outsigns[c] ~= -1;  // west
+                    if (myConfig.dimensions == 3) {
+                        celldata.outsigns[c] ~= 1; // top
+                        celldata.outsigns[c] ~= -1;   // bottom
+                    }
+                }
+            }
+        }
+
         //
         // for instances when a numerical Jacobian will be formed (precondition matrix or adjoint operator), it is helpful
         // to have the cell_cloud filled with references to the nearby cells that effect the convective fluxes for the given
@@ -926,6 +1010,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -956,6 +1041,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -986,6 +1072,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1016,6 +1103,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1047,6 +1135,7 @@ public:
                             extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                             ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                         }
+                        foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                     }
                 }
             }
@@ -1077,6 +1166,7 @@ public:
                             extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                             ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                         }
+                        foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                     }
                 }
             }
@@ -1114,11 +1204,11 @@ public:
     {
         final switch (myConfig.spatial_deriv_locn) {
         case SpatialDerivLocn.vertices:
-            store_references_for_derivative_calc_at_vertices(gtl);
-            break;
+            //store_references_for_derivative_calc_at_vertices(gtl);
+            throw new Error("Least-squared derivatives at vertices is no longer supported.");
         case SpatialDerivLocn.faces:
-            store_references_for_derivative_calc_at_faces(gtl);
-            break;
+            //store_references_for_derivative_calc_at_faces(gtl);
+            throw new Error("Least-squared derivatives at faces is no longer supported.");
         case SpatialDerivLocn.cells:
             store_references_for_derivative_calc_at_cells(gtl);
             break;
@@ -1131,7 +1221,7 @@ public:
         foreach (c; cells) {
             // First cell in the cloud is the cell itself.  Differences are taken about it.
             c.cloud_pos ~= &(c.pos[0]);
-            c.cloud_fs ~= &(c.fs);
+            c.cloud_fs ~= c.fs;
             // Subsequent cells are the surrounding interfaces.
             foreach (i, f; c.iface) {
                 c.cloud_pos ~= &(f.pos);
@@ -1153,838 +1243,7 @@ public:
                 }
             }
         }
-        // We will also need derivative storage in ghostcells because the special
-        // interface gradient averaging functions will expect to be able to access the gradients
-        // either side of each interface.
-        // We will be able to get these gradients from the mapped-cells
-        // in an adjoining block.
-        foreach (bci; bc) {
-            if (bci.ghost_cell_data_available) {
-                foreach (c; bci.ghostcells) {
-                    c.grad = new FlowGradients(myConfig);
-                }
-            }
-        }
-    } // end store_references_for_derivative_calc_at_faces
-
-    void store_references_for_derivative_calc_at_faces(size_t gtl)
-    {
-        // The weighted least squares calculation is expecting the interface
-        // at which the gradient is being calculated to be stored in position [0].
-        // However the divergence calculation is expecting a specific ordering of
-        // the cloud points, as such we must look up the spatial_deriv_calc type
-        // to decide which cloud to use.
-        if (myConfig.dimensions == 2) {
-            // First, i-faces
-            foreach (i; 0 .. niv) {
-                foreach (j; 0 .. njc) {
-                    FVInterface face = get_ifi(i,j);
-                    // Points nearby.
-                    if (i == 0) {
-                        // west boundary
-                        FVInterface D = get_ifj(i,j);
-                        FluidFVCell E = get_cell(i,j);
-                        FVInterface F = get_ifj(i,j+1);
-                        // Retain locations and references to flow states for later.
-                        face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                        face.cloud_fs = [&(face.fs), &(D.fs), &(E.fs), &(F.fs)];
-                    } else if (i == nic) {
-                        // east boundary
-                        FVInterface A = get_ifj(i-1,j+1);
-                        FluidFVCell B = get_cell(i-1,j);
-                        FVInterface C = get_ifj(i-1,j);
-                        // Retain locations and references to flow states for later.
-                        if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs)];
-                        } else {
-                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(face.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(face.fs)];
-                        }
-                    } else {
-                        // interior face
-                        FVInterface A = get_ifj(i-1,j+1);
-                        FluidFVCell B = get_cell(i-1,j);
-                        FVInterface C = get_ifj(i-1,j);
-                        FVInterface D = get_ifj(i,j);
-                        FluidFVCell E = get_cell(i,j);
-                        FVInterface F = get_ifj(i,j+1);
-                        // Retain locations and references to flow states for later.
-                        if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
-                                              &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
-                        } else {
-                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos),
-                                              &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
-                        }
-                    }
-                } // j loop
-            } // i loop
-            // Now, j-faces
-            foreach (i; 0 .. nic) {
-                foreach (j; 0 .. njv) {
-                    FVInterface face = get_ifj(i,j);
-                    // Points nearby.
-                    if (j == 0) {
-                        // south boundary
-                        FVInterface D = get_ifi(i+1,j);
-                        FluidFVCell E = get_cell(i,j);
-                        FVInterface F = get_ifi(i,j);
-                        // Retain locations and references to flow states for later.
-                        face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                        face.cloud_fs = [&(face.fs), &(D.fs), &(E.fs), &(F.fs)];
-                    } else if (j == njc) {
-                        // north boundary
-                        FVInterface A = get_ifi(i,j-1);
-                        FluidFVCell B = get_cell(i,j-1);
-                        FVInterface C = get_ifi(i+1,j-1);
-                        // Retain locations and references to flow states for later.
-                        if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs)];
-                        } else {
-                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(face.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(face.fs)];
-                        }
-                    } else {
-                        // interior face
-                        FVInterface A = get_ifi(i,j-1);
-                        FluidFVCell B = get_cell(i,j-1);
-                        FVInterface C = get_ifi(i+1,j-1);
-                        FVInterface D = get_ifi(i+1,j);
-                        FluidFVCell E = get_cell(i,j);
-                        FVInterface F = get_ifi(i,j);
-                        // Retain locations and references to flow states for later.
-                        face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
-                                          &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                        face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
-                        if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
-                                              &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
-                        } else {
-                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos),
-                                              &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
-                        }
-                    }
-                } // j loop
-            } // i loop
-        } else { // for 3D.
-            // First, i-faces
-            foreach (i; 0 .. niv) {
-                foreach (j; 0 .. njc) {
-                    foreach (k; 0 .. nkc) {
-                        FVInterface face = get_ifi(i,j,k);
-                        // Points nearby.
-                        if (i == 0) {
-                            // west boundary
-                            FVInterface F = get_ifj(i,j+1,k);
-                            FVInterface G = get_ifj(i,j,k);
-                            FVInterface H = get_ifk(i,j,k+1);
-                            FVInterface I = get_ifk(i,j,k);
-                            FluidFVCell J = get_cell(i,j,k);
-                            // Retain locations and references to flow states for later.
-                            face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
-                                              &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [&(face.fs), &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                        } else if (i == nic) {
-                            // east boundary
-                            FVInterface A = get_ifj(i-1,j+1,k);
-                            FVInterface B = get_ifj(i-1,j,k);
-                            FVInterface C = get_ifk(i-1,j,k+1);
-                            FVInterface D = get_ifk(i-1,j,k);
-                            FluidFVCell E = get_cell(i-1,j,k);
-                            // Retain locations and references to flow states for later.
-                            if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
-                                                  &(E.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs)];
-                            } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
-                                                  &(E.pos[gtl]), &(face.pos)];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(face.fs)];
-                            }
-                        } else {
-                            // interior face
-                            FVInterface A = get_ifj(i-1,j+1,k);
-                            FVInterface B = get_ifj(i-1,j,k);
-                            FVInterface C = get_ifk(i-1,j,k+1);
-                            FVInterface D = get_ifk(i-1,j,k);
-                            FluidFVCell E = get_cell(i-1,j,k);
-                            FVInterface F = get_ifj(i,j+1,k);
-                            FVInterface G = get_ifj(i,j,k);
-                            FVInterface H = get_ifk(i,j,k+1);
-                            FVInterface I = get_ifk(i,j,k);
-                            FluidFVCell J = get_cell(i,j,k);
-                            // Retain locations and references to flow states for later.
-                            if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
-                                                  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                            } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
-                                                  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                            }
-                        }
-                    } // k loop
-                } // j loop
-            } // i loop
-            // Next, j-faces
-            foreach (i; 0 .. nic) {
-                foreach (j; 0 .. njv) {
-                    foreach (k; 0 .. nkc) {
-                        FVInterface face = get_ifj(i,j,k);
-                        // Points nearby.
-                        if (j == 0) {
-                            // south boundary
-                            FVInterface F = get_ifi(i+1,j,k);
-                            FVInterface G = get_ifi(i,j,k);
-                            FVInterface H = get_ifk(i,j,k+1);
-                            FVInterface I = get_ifk(i,j,k);
-                            FluidFVCell J = get_cell(i,j,k);
-                            // Retain locations and references to flow states for later.
-                            face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
-                                              &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [&(face.fs), &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                        } else if (j == njc) {
-                            // north boundary
-                            FVInterface A = get_ifi(i+1,j-1,k);
-                            FVInterface B = get_ifi(i,j-1,k);
-                            FVInterface C = get_ifk(i,j-1,k+1);
-                            FVInterface D = get_ifk(i,j-1,k);
-                            FluidFVCell E = get_cell(i,j-1,k);
-                            // Retain locations and references to flow states for later.
-                            if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
-                                                  &(E.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs)];
-                            } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
-                                                  &(E.pos[gtl]), &(face.pos)];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(face.fs)];
-                            }
-                        } else {
-                            // interior face
-                            FVInterface A = get_ifi(i+1,j-1,k);
-                            FVInterface B = get_ifi(i,j-1,k);
-                            FVInterface C = get_ifk(i,j-1,k+1);
-                            FVInterface D = get_ifk(i,j-1,k);
-                            FluidFVCell E = get_cell(i,j-1,k);
-                            FVInterface F = get_ifi(i+1,j,k);
-                            FVInterface G = get_ifi(i,j,k);
-                            FVInterface H = get_ifk(i,j,k+1);
-                            FVInterface I = get_ifk(i,j,k);
-                            FluidFVCell J = get_cell(i,j,k);
-                            // Retain locations and references to flow states for later.
-                            if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
-                                                  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                            } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
-                                                  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                            }
-                        }
-                    } // k loop
-                } // j loop
-            } // i loop
-            // Finally, k-faces
-            foreach (i; 0 .. nic) {
-                foreach (j; 0 .. njc) {
-                    foreach (k; 0 .. nkv) {
-                        FVInterface face = get_ifk(i,j,k);
-                        // Points nearby.
-                        if (k == 0) {
-                            // bottom boundary
-                            FVInterface F = get_ifj(i,j+1,k);
-                            FVInterface G = get_ifj(i,j,k);
-                            FVInterface H = get_ifi(i+1,j,k);
-                            FVInterface I = get_ifi(i,j,k);
-                            FluidFVCell J = get_cell(i,j,k);
-                            // Retain locations and references to flow states for later.
-                            face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
-                                              &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [&(face.fs), &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                        } else if (k == nkc) {
-                            // top boundary
-                            FVInterface A = get_ifj(i,j+1,k-1);
-                            FVInterface B = get_ifj(i,j,k-1);
-                            FVInterface C = get_ifi(i+1,j,k-1);
-                            FVInterface D = get_ifi(i,j,k-1);
-                            FluidFVCell E = get_cell(i,j,k-1);
-                            // Retain locations and references to flow states for later.
-                            if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
-                                                  &(E.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs)];
-                            } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
-                                                  &(E.pos[gtl]), &(face.pos)];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(face.fs)];
-                            }
-                        } else {
-                            // interior face
-                            FVInterface A = get_ifj(i,j+1,k-1);
-                            FVInterface B = get_ifj(i,j,k-1);
-                            FVInterface C = get_ifi(i+1,j,k-1);
-                            FVInterface D = get_ifi(i,j,k-1);
-                            FluidFVCell E = get_cell(i,j,k-1);
-                            FVInterface F = get_ifj(i,j+1,k);
-                            FVInterface G = get_ifj(i,j,k);
-                            FVInterface H = get_ifi(i+1,j,k);
-                            FVInterface I = get_ifi(i,j,k);
-                            FluidFVCell J = get_cell(i,j,k);
-                            // Retain locations and references to flow states for later.
-                            if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
-                                                  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                            } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
-                                                  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
-                            }
-                        }
-                    } // k loop
-                } // j loop
-            } // i loop
-        } // end if (myConfig.dimensions
-        //
-        // Check that we have some points in all clouds.
-        foreach (f; faces) {
-            auto ncloud = f.cloud_pos.length;
-            if (ncloud < 3) {
-                string msg = format("Too few points in cloud around midpoint of face id=%d ncloud=%d", f.id, ncloud);
-                throw new FlowSolverException(msg);
-            }
-        }
-    } // end store_references_for_derivative_calc_at_faces()
-
-    void store_references_for_derivative_calc_at_vertices(size_t gtl)
-    {
-        if (myConfig.dimensions == 2) {
-            // First, do all of the internal secondary cells.
-            // i.e. Those not on a boundary.
-            foreach (i; 1 .. niv-1) {
-                foreach (j; 1 .. njv-1) {
-                    // Secondary-cell centre is a primary-cell vertex.
-                    FVVertex vtx = get_vtx(i,j);
-                    // These are the corners of the secondary cell.
-                    FluidFVCell A = get_cell(i,j-1);
-                    FluidFVCell B = get_cell(i,j);
-                    FluidFVCell C = get_cell(i-1,j);
-                    FluidFVCell D = get_cell(i-1,j-1);
-                    // Retain locations and references to flow states for later.
-                    vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos[gtl]), &(C.pos[gtl]), &(D.pos[gtl])];
-                    vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
-                } // j loop
-            } // i loop
-            // Half-cells along the edges of the block.
-            // East boundary
-            foreach (j; 1 .. njv-1) {
-                size_t i = niv-1;
-                FVVertex vtx = get_vtx(i,j);
-                FVInterface A = get_ifi(i,j-1);
-                FVInterface B = get_ifi(i,j);
-                FluidFVCell C = get_cell(i-1,j);
-                FluidFVCell D = get_cell(i-1,j-1);
-                vtx.cloud_pos = [&(A.pos), &(B.pos), &(C.pos[gtl]), &(D.pos[gtl])];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
-            } // j loop
-            // West boundary
-            foreach (j; 1 .. njv-1) {
-                size_t i = 0;
-                FVVertex vtx = get_vtx(i,j);
-                // These are the corners of the secondary cell.
-                FluidFVCell A = get_cell(i,j-1);
-                FluidFVCell B = get_cell(i,j);
-                FVInterface C = get_ifi(i,j);
-                FVInterface D = get_ifi(i,j-1);
-                vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos[gtl]), &(C.pos), &(D.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
-            } // j loop
-            // North boundary
-            foreach (i; 1 .. niv-1) {
-                size_t j = njv-1;
-                FVVertex vtx = get_vtx(i,j);
-                FluidFVCell A = get_cell(i,j-1);
-                FVInterface B = get_ifj(i,j);
-                FVInterface C = get_ifj(i-1,j);
-                FluidFVCell D = get_cell(i-1,j-1);
-                vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos), &(C.pos), &(D.pos[gtl])];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
-            } // i loop
-            // South boundary
-            foreach (i; 1 .. niv-1) {
-                size_t j = 0;
-                FVVertex vtx = get_vtx(i,j);
-                FVInterface A = get_ifj(i,j);
-                FluidFVCell B = get_cell(i,j);
-                FluidFVCell C = get_cell(i-1,j);
-                FVInterface D = get_ifj(i-1,j);
-                vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos[gtl]), &(D.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
-            } // i loop
-            // For the corners, we are going to use the same divergence-theorem-based
-            // gradient calculator and let one edge collapse to a point, thus giving
-            // it a triangle to compute over.  This should be fine.
-            // North-east corner
-            {
-                size_t i = niv-1; size_t j = njv-1;
-                FVVertex vtx = get_vtx(i,j);
-                FVInterface A = get_ifi(i,j-1);
-                FVInterface B = get_ifj(i-1,j);
-                FluidFVCell C = get_cell(i-1,j-1);
-                vtx.cloud_pos = [&(A.pos), &(B.pos), &(C.pos[gtl])];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
-            }
-            // South-east corner
-            {
-                size_t i = niv-1; size_t j = 0;
-                FVVertex vtx = get_vtx(i,j);
-                FVInterface A = get_ifi(i,j);
-                FluidFVCell B = get_cell(i-1,j);
-                FVInterface C = get_ifj(i-1,j);
-                vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
-            }
-            // South-west corner
-            {
-                size_t i = 0; size_t j = 0;
-                FVVertex vtx = get_vtx(i,j);
-                FVInterface A = get_ifj(i,j);
-                FluidFVCell B = get_cell(i,j);
-                FVInterface C = get_ifi(i,j);
-                vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
-            }
-            // North-west corner
-            {
-                size_t i = 0; size_t j = njv-1;
-                FVVertex vtx = get_vtx(i,j);
-                FluidFVCell A = get_cell(i,j-1);
-                FVInterface B = get_ifj(i,j);
-                FVInterface C = get_ifi(i,j-1);
-                vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos), &(C.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
-            }
-        } else { // Flow quantity derivatives for 3D.
-            // Internal secondary cell geometry information
-            foreach (i; 0 .. niv-2) {
-                foreach (j; 0 .. njv-2) {
-                    foreach (k; 0 .. nkv-2) {
-                        FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                        FluidFVCell c0 = get_cell(i,j,k);
-                        FluidFVCell c1 = get_cell(i+1,j,k);
-                        FluidFVCell c2 = get_cell(i+1,j+1,k);
-                        FluidFVCell c3 = get_cell(i,j+1,k);
-                        FluidFVCell c4 = get_cell(i,j,k+1);
-                        FluidFVCell c5 = get_cell(i+1,j,k+1);
-                        FluidFVCell c6 = get_cell(i+1,j+1,k+1);
-                        FluidFVCell c7 = get_cell(i,j+1,k+1);
-                        vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos[gtl]),
-                                         &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos[gtl])];
-                        vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                    }
-                }
-            }
-            // East boundary secondary cell geometry information
-            foreach (j; 0 .. njv-2) {
-                foreach (k; 0 .. nkv-2) {
-                    size_t i = niv-2;
-                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                    FluidFVCell c0 = get_cell(i,j,k);
-                    FVInterface c1 = get_ifi(i+1,j,k);
-                    FVInterface c2 = get_ifi(i+1,j+1,k);
-                    FluidFVCell c3 = get_cell(i,j+1,k);
-                    FluidFVCell c4 = get_cell(i,j,k+1);
-                    FVInterface c5 = get_ifi(i+1,j,k+1);
-                    FVInterface c6 = get_ifi(i+1,j+1,k+1);
-                    FluidFVCell c7 = get_cell(i,j+1,k+1);
-                    vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos[gtl]),
-                                     &(c4.pos[gtl]), &(c5.pos), &(c6.pos), &(c7.pos[gtl])];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                }
-            }
-            // West boundary secondary cell geometry information
-            foreach (j; 0 .. njv-2) {
-                foreach (k; 0 .. nkv-2) {
-                    int i = -1; // note negative value
-                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                    FVInterface c0 = get_ifi(i+1,j,k);
-                    FluidFVCell c1 = get_cell(i+1,j,k);
-                    FluidFVCell c2 = get_cell(i+1,j+1,k);
-                    FVInterface c3 = get_ifi(i+1,j+1,k);
-                    FVInterface c4 = get_ifi(i+1,j,k+1);
-                    FluidFVCell c5 = get_cell(i+1,j,k+1);
-                    FluidFVCell c6 = get_cell(i+1,j+1,k+1);
-                    FVInterface c7 = get_ifi(i+1,j+1,k+1);
-                    vtx.cloud_pos = [&(c0.pos), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos),
-                                     &(c4.pos), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos)];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                }
-            }
-            // North boundary secondary cell geometry information
-            foreach (i; 0 .. niv-2) {
-                foreach (k; 0 .. nkv-2) {
-                    size_t j = njv-2;
-                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                    FluidFVCell c0 = get_cell(i,j,k);
-                    FluidFVCell c1 = get_cell(i+1,j,k);
-                    FVInterface c2 = get_ifj(i+1,j+1,k);
-                    FVInterface c3 = get_ifj(i,j+1,k);
-                    FluidFVCell c4 = get_cell(i,j,k+1);
-                    FluidFVCell c5 = get_cell(i+1,j,k+1);
-                    FVInterface c6 = get_ifj(i+1,j+1,k+1);
-                    FVInterface c7 = get_ifj(i,j+1,k+1);
-                    vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos), &(c3.pos),
-                                     &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos), &(c7.pos)];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                }
-            }
-            // South boundary secondary cell geometry information
-            foreach (i; 0 .. niv-2) {
-                foreach (k; 0 .. nkv-2) {
-                    int j = -1; // note negative
-                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                    FVInterface c0 = get_ifj(i,j+1,k);
-                    FVInterface c1 = get_ifj(i+1,j+1,k);
-                    FluidFVCell c2 = get_cell(i+1,j+1,k);
-                    FluidFVCell c3 = get_cell(i,j+1,k);
-                    FVInterface c4 = get_ifj(i,j+1,k+1);
-                    FVInterface c5 = get_ifj(i+1,j+1,k+1);
-                    FluidFVCell c6 = get_cell(i+1,j+1,k+1);
-                    FluidFVCell c7 = get_cell(i,j+1,k+1);
-                    vtx.cloud_pos = [&(c0.pos), &(c1.pos), &(c2.pos[gtl]), &(c3.pos[gtl]),
-                                     &(c4.pos), &(c5.pos), &(c6.pos[gtl]), &(c7.pos[gtl])];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                }
-            }
-            // Top boundary secondary cell geometry information
-            foreach (i; 0 .. niv-2) {
-                foreach (j; 0 .. njv-2) {
-                    size_t k = nkv-2;
-                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                    FluidFVCell c0 = get_cell(i,j,k);
-                    FluidFVCell c1 = get_cell(i+1,j,k);
-                    FluidFVCell c2 = get_cell(i+1,j+1,k);
-                    FluidFVCell c3 = get_cell(i,j+1,k);
-                    FVInterface c4 = get_ifk(i,j,k+1);
-                    FVInterface c5 = get_ifk(i+1,j,k+1);
-                    FVInterface c6 = get_ifk(i+1,j+1,k+1);
-                    FVInterface c7 = get_ifk(i,j+1,k+1);
-                    vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos[gtl]),
-                                     &(c4.pos), &(c5.pos), &(c6.pos), &(c7.pos)];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                }
-            }
-            // Bottom boundary secondary cell geometry information
-            foreach (i; 0 .. niv-2) {
-                foreach (j; 0 .. njv-2) {
-                    int k = -1; // note negative
-                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                    FVInterface c0 = get_ifk(i,j,k+1);
-                    FVInterface c1 = get_ifk(i+1,j,k+1);
-                    FVInterface c2 = get_ifk(i+1,j+1,k+1);
-                    FVInterface c3 = get_ifk(i,j+1,k+1);
-                    FluidFVCell c4 = get_cell(i,j,k+1);
-                    FluidFVCell c5 = get_cell(i+1,j,k+1);
-                    FluidFVCell c6 = get_cell(i+1,j+1,k+1);
-                    FluidFVCell c7 = get_cell(i,j+1,k+1);
-                    vtx.cloud_pos = [&(c0.pos), &(c1.pos), &(c2.pos), &(c3.pos),
-                                     &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos[gtl])];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
-                }
-            }
-            // Now, do the 4 edges around the bottom face.
-            // Bottom-South edge [0]-->[1]
-            foreach (i; 1 .. niv-1) {
-                size_t j = 0; size_t k = 0;
-                FVVertex vtx = get_vtx(i,j,k);
-                FluidFVCell c0 = get_cell(i-1,j,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifj(i-1,j,k);
-                FVInterface c3 = get_ifk(i-1,j,k);
-                FVInterface c4 = get_ifj(i,j,k);
-                FVInterface c5 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Bottom-North edge [3]-->[2]
-            foreach (i; 1 .. niv-1) {
-                size_t j = njv-2; size_t k = 0;
-                FVVertex vtx = get_vtx(i,j+1,k);
-                FluidFVCell c0 = get_cell(i-1,j,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifj(i-1,j+1,k);
-                FVInterface c3 = get_ifk(i-1,j,k);
-                FVInterface c4 = get_ifj(i,j+1,k);
-                FVInterface c5 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Bottom-West edge [0]-->[3]
-            foreach (j; 1 .. njv-1) {
-                size_t i = 0; size_t k = 0;
-                FVVertex vtx = get_vtx(i,j,k);
-                FluidFVCell c0 = get_cell(i,j-1,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i,j-1,k);
-                FVInterface c3 = get_ifk(i,j-1,k);
-                FVInterface c4 = get_ifi(i,j,k);
-                FVInterface c5 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Bottom-East edge [1]-->[2]
-            foreach (j; 1 .. njv-1) {
-                size_t i = niv-2; size_t k = 0;
-                FVVertex vtx = get_vtx(i+1,j,k);
-                FluidFVCell c0 = get_cell(i,j-1,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i+1,j-1,k);
-                FVInterface c3 = get_ifk(i,j-1,k);
-                FVInterface c4 = get_ifi(i+1,j,k);
-                FVInterface c5 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // 4 edges around the top face.
-            // Top-South edge [4]-->[5]
-            foreach (i; 1 .. niv-1) {
-                size_t j = 0; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i,j,k+1);
-                FluidFVCell c0 = get_cell(i-1,j,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifj(i-1,j,k);
-                FVInterface c3 = get_ifk(i-1,j,k+1);
-                FVInterface c4 = get_ifj(i,j,k);
-                FVInterface c5 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Top-North edge [7]-->[6]
-            foreach (i; 1 .. niv-1) {
-                size_t j = njv-2; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i,j+1,k+1);
-                FluidFVCell c0 = get_cell(i-1,j,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifj(i-1,j+1,k);
-                FVInterface c3 = get_ifk(i-1,j,k+1);
-                FVInterface c4 = get_ifj(i,j+1,k);
-                FVInterface c5 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Top-West edge [4]-->[7]
-            foreach (j; 1 .. njv-1) {
-                size_t i = 0; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i,j,k+1);
-                FluidFVCell c0 = get_cell(i,j-1,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i,j-1,k);
-                FVInterface c3 = get_ifk(i,j-1,k+1);
-                FVInterface c4 = get_ifi(i,j,k);
-                FVInterface c5 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Top-East edge [5]-->[6]
-            foreach (j; 1 .. njv-1) {
-                size_t i = niv-2; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i+1,j,k+1);
-                FluidFVCell c0 = get_cell(i,j-1,k);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i+1,j-1,k);
-                FVInterface c3 = get_ifk(i,j-1,k+1);
-                FVInterface c4 = get_ifi(i+1,j,k);
-                FVInterface c5 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // 4 edges running from bottom to top.
-            // South-West edge [0]-->[4]
-            foreach (k; 1 .. nkv-1) {
-                size_t i = 0; size_t j = 0;
-                FVVertex vtx = get_vtx(i,j,k);
-                FluidFVCell c0 = get_cell(i,j,k-1);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i,j,k-1);
-                FVInterface c3 = get_ifj(i,j,k-1);
-                FVInterface c4 = get_ifi(i,j,k);
-                FVInterface c5 = get_ifj(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // South-East edge [1]-->[5]
-            foreach (k; 1 .. nkv-1) {
-                size_t i = niv-2; size_t j = 0;
-                FVVertex vtx = get_vtx(i+1,j,k);
-                FluidFVCell c0 = get_cell(i,j,k-1);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i+1,j,k-1);
-                FVInterface c3 = get_ifj(i,j,k-1);
-                FVInterface c4 = get_ifi(i+1,j,k);
-                FVInterface c5 = get_ifj(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // North-East edge [2]-->[6]
-            foreach (k; 1 .. nkv-1) {
-                size_t i = niv-2; size_t j = njv-2;
-                FVVertex vtx = get_vtx(i+1,j+1,k);
-                FluidFVCell c0 = get_cell(i,j,k-1);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i+1,j,k-1);
-                FVInterface c3 = get_ifj(i,j+1,k-1);
-                FVInterface c4 = get_ifi(i+1,j,k);
-                FVInterface c5 = get_ifj(i,j+1,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // North-West edge [3]-->[7]
-            foreach (k; 1 .. nkv-1) {
-                size_t i = 0; size_t j = njv-2;
-                FVVertex vtx = get_vtx(i,j+1,k);
-                FluidFVCell c0 = get_cell(i,j,k-1);
-                FluidFVCell c1 = get_cell(i,j,k);
-                FVInterface c2 = get_ifi(i,j,k-1);
-                FVInterface c3 = get_ifj(i,j+1,k-1);
-                FVInterface c4 = get_ifi(i,j,k);
-                FVInterface c5 = get_ifj(i,j+1,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
-                                 &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
-            }
-            // Finally, the 8 corners.
-            // South-West-Bottom corner [0]
-            {
-                size_t i = 0; size_t j = 0; size_t k = 0;
-                FVVertex vtx = get_vtx(i,j,k);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i,j,k);
-                FVInterface c2 = get_ifj(i,j,k);
-                FVInterface c3 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // South-East-Bottom corner [1]
-            {
-                size_t i = niv-2; size_t j = 0; size_t k = 0;
-                FVVertex vtx = get_vtx(i+1,j,k);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i+1,j,k);
-                FVInterface c2 = get_ifj(i,j,k);
-                FVInterface c3 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // North-East-Bottom corner [2]
-            {
-                size_t i = niv-2; size_t j = njv-2; size_t k = 0;
-                FVVertex vtx = get_vtx(i+1,j+1,k);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i+1,j,k);
-                FVInterface c2 = get_ifj(i,j+1,k);
-                FVInterface c3 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // North-West-Bottom corner [3]
-            {
-                size_t i = 0; size_t j = njv-2; size_t k = 0;
-                FVVertex vtx = get_vtx(i,j+1,k);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i,j,k);
-                FVInterface c2 = get_ifj(i,j+1,k);
-                FVInterface c3 = get_ifk(i,j,k);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // South-West-Top corner [4]
-            {
-                size_t i = 0; size_t j = 0; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i,j,k+1);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i,j,k);
-                FVInterface c2 = get_ifj(i,j,k);
-                FVInterface c3 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // South-East-Top corner [5]
-            {
-                size_t i = niv-2; size_t j = 0; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i+1,j,k+1);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i+1,j,k);
-                FVInterface c2 = get_ifj(i,j,k);
-                FVInterface c3 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // North-East-Top corner [6]
-            {
-                size_t i = niv-2; size_t j = njv-2; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i+1,j+1,k+1);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i+1,j,k);
-                FVInterface c2 = get_ifj(i,j+1,k);
-                FVInterface c3 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-            // North-West-Top corner [7]
-            {
-                size_t i = 0; size_t j = njv-2; size_t k = nkv-2;
-                FVVertex vtx = get_vtx(i,j+1,k+1);
-                FluidFVCell c0 = get_cell(i,j,k);
-                FVInterface c1 = get_ifi(i,j,k);
-                FVInterface c2 = get_ifj(i,j+1,k);
-                FVInterface c3 = get_ifk(i,j,k+1);
-                vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
-            }
-        } // end if (myConfig.dimensions
-        //
-        // Check that we have correctly assembled clouds.
-        foreach (i; 0 .. niv) {
-            foreach (j; 0 .. njv) {
-                foreach (k; 0 .. nkv) {
-                    auto vtx = get_vtx(i,j,k);
-                    auto ncloud = vtx.cloud_pos.length;
-                    if (ncloud < 3) {
-                        string msg = format("Too few points in cloud around vertex[%d,%d,%d] "~
-                                            "ncloud=%d niv=%d njv=%d nkv=%d",
-                                            i, j, k, ncloud, niv, njv, nkv);
-                        throw new FlowSolverException(msg);
-                    }
-                }
-            }
-        }
-    } // end store_references_for_derivative_calc_at_vertices()
+    } // end store_references_for_derivative_calc_at_cells
 
     @nogc
     override void sync_vertices_from_underlying_grid(size_t gtl=0)
@@ -2177,7 +1436,7 @@ public:
         foreach (f; faces) {
             FluidFVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
             FluidFVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-            f.fs.copy_average_values_from(cL0.fs, cR0.fs);
+            f.fs.copy_average_values_from(*(cL0.fs), *(cR0.fs));
         }
     }
 

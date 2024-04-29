@@ -383,7 +383,7 @@ void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FluidFVCell) cell,
     lua_pushnumber(L, cell.iLength); lua_setfield(L, tblIdx, "iLength");
     lua_pushnumber(L, cell.jLength); lua_setfield(L, tblIdx, "jLength");
     lua_pushnumber(L, cell.kLength); lua_setfield(L, tblIdx, "kLength");
-    pushFlowStateToTable(L, tblIdx, cell.fs, myConfig.gmodel);
+    pushFlowStateToTable(L, tblIdx, *(cell.fs), myConfig.gmodel);
     // For Carrie Xie 2022-05-24, we want access to the user-defined energy source term
     // when we sample the Fluid cell during the UDF evaluation for the corresponding solid cell.
     auto cqi = myConfig.cqi;

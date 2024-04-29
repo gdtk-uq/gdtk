@@ -1623,6 +1623,10 @@ public:
                 ghost_cells[i].pos[0].apply_matrix_transform(Rmatrix);
             }
         }
+        // NNG Temporary fix for the double up of cell geometry data caused by densification refactor
+        foreach (i; 0 .. ghost_cells.length) {
+            ghost_cells[i].update_celldata_geometry();
+        }
     } // end exchange_geometry_phase2()
 
     @nogc
@@ -1756,7 +1760,7 @@ public:
                 outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
-                    FlowState* fs = &(c.fs);
+                    FlowState* fs = c.fs;
                     GasState* gs = &(fs.gas);
                     outgoing_flowstate_buf[ii++] = gs.rho.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.rho.im; }
                     outgoing_flowstate_buf[ii++] = gs.p.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.p.im; }
@@ -1843,7 +1847,7 @@ public:
                 }
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
-                    FlowState* fs = &(c.fs);
+                    FlowState* fs = c.fs;
                     GasState* gs = &(fs.gas);
                     gs.rho.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.rho.im = incoming_flowstate_buf[ii++]; }
                     gs.p.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.p.im = incoming_flowstate_buf[ii++]; }

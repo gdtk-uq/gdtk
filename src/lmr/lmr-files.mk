@@ -5,6 +5,7 @@ LMR_LUA_MOD = $(LMR)/lua-modules
 LMR_LUA_WRAP = $(LMR)/luawrap
 
 LMR_CORE_FILES = $(LMR)/block.d \
+	$(LMR)/coredata.d \
 	$(LMR)/blockio.d \
 	$(LMR)/conservedquantities.d \
 	$(LMR)/fileutil.d \

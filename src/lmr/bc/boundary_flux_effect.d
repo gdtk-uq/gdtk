@@ -569,7 +569,7 @@ public:
 
 private:
     @nogc
-    void compute_outflow_flux(ref const(FlowState) fs, int outsign, double omegaz, ref FVInterface face)
+    void compute_outflow_flux(FlowState* fs, int outsign, double omegaz, ref FVInterface face)
     {
         // Flux equations use the local flow state information.
         // For a moving grid we need vel relative to the interface.
@@ -587,7 +587,7 @@ private:
                 foreach (umode; fs.gas.u_modes) { utot += umode; }
             }
             version(turbulence) {
-                utot += blk.myConfig.turb_model.turbulent_kinetic_energy(fs);
+                utot += blk.myConfig.turb_model.turbulent_kinetic_energy(*fs);
             }
             face.F[cqi.totEnergy] = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             if (omegaz != 0.0) {

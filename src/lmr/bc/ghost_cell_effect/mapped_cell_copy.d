@@ -706,12 +706,14 @@ public:
 
                     c.L_min.re = buf[ii++]; version(complex_numbers) { c.L_min.im = buf[ii++]; }
                     c.L_max.re = buf[ii++]; version(complex_numbers) { c.L_max.im = buf[ii++]; }
+                    c.update_celldata_geometry();
                 }
             }
         } else { // not mpi_parallel
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
                 mygc.copy_values_from(mapped_cells[i], CopyDataOption.grid);
+                mygc.update_celldata_geometry();
             }
         }
     } // end exchange_geometry_phase2()
@@ -795,7 +797,7 @@ public:
                 size_t ii = 0;
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
-                    FlowState* fs = &(c.fs);
+                    FlowState* fs = c.fs;
                     GasState* gs = &(fs.gas);
                     buf[ii++] = gs.rho.re; version(complex_numbers) { buf[ii++] = gs.rho.im; }
                     buf[ii++] = gs.p.re; version(complex_numbers) { buf[ii++] = gs.p.im; }
@@ -872,7 +874,7 @@ public:
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
-                    FlowState* fs = &(c.fs);
+                    FlowState* fs = c.fs;
                     GasState* gs = &(fs.gas);
                     gs.rho.re = buf[ii++]; version(complex_numbers) { gs.rho.im = buf[ii++]; }
                     gs.p.re = buf[ii++]; version(complex_numbers) { gs.p.im = buf[ii++]; }
@@ -954,7 +956,7 @@ public:
                 size_t ii = 0;
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
-                    FlowState* fs = &(c.fs);
+                    FlowState* fs = c.fs;
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
                 }
@@ -991,7 +993,7 @@ public:
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
-                    FlowState* fs = &(c.fs);
+                    FlowState* fs = c.fs;
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
                 }

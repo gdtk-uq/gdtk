@@ -53,8 +53,8 @@ public:
 	    ghost0 = f.left_cell;
 	}
 	ghost0.fs.copy_values_from(src_cell.fs);
-	reflect_normal_velocity(ghost0.fs, f);
-	if (blk.myConfig.MHD) { reflect_normal_magnetic_field(ghost0.fs, f); }
+	reflect_normal_velocity(*(ghost0.fs), f);
+	if (blk.myConfig.MHD) { reflect_normal_magnetic_field(*(ghost0.fs), f); }
     } // end apply_for_interface_unstructured_grid()
 
     @nogc
@@ -78,8 +78,8 @@ public:
                 ghost0 = f.left_cell;
             }
             ghost0.fs.copy_values_from(src_cell.fs);
-            reflect_normal_velocity(ghost0.fs, f);
-            if (blk.myConfig.MHD) { reflect_normal_magnetic_field(ghost0.fs, f); }
+            reflect_normal_velocity(*(ghost0.fs), f);
+            if (blk.myConfig.MHD) { reflect_normal_magnetic_field(*(ghost0.fs), f); }
         } // end foreach face
     } // end apply_unstructured_grid()
 
@@ -100,9 +100,9 @@ public:
                 dest_cell = f.left_cells[n];
             }
             dest_cell.copy_values_from(src_cell, copy_opt);
-            reflect_normal_velocity(dest_cell.fs, f);
+            reflect_normal_velocity(*(dest_cell.fs), f);
             if (blk.myConfig.MHD) {
-                reflect_normal_magnetic_field(dest_cell.fs, f);
+                reflect_normal_magnetic_field(*(dest_cell.fs), f);
             }
         }
     } // end apply_for_interface_structured_grid()
@@ -125,9 +125,9 @@ public:
                     dest_cell = f.left_cells[n];
                 }
                 dest_cell.copy_values_from(src_cell, copy_opt);
-                reflect_normal_velocity(dest_cell.fs, f);
+                reflect_normal_velocity(*(dest_cell.fs), f);
                 if (blk.myConfig.MHD) {
-                    reflect_normal_magnetic_field(dest_cell.fs, f);
+                    reflect_normal_magnetic_field(*(dest_cell.fs), f);
                 }
             }
         }

@@ -30,6 +30,7 @@ import flowstate;
 import fvvertex;
 import fvinterface;
 import lmr.fluidfvcell;
+import lmr.coredata;
 import flowgradients;
 import bc;
 import user_defined_source_terms;
@@ -56,6 +57,8 @@ version(mpi_parallel) {
 // knowledge in the calling code.
 class FluidBlock : Block {
 public:
+    size_t ncells;
+    size_t nfaces;
     Grid_t grid_type; // structured or unstructured
     bool may_be_turbulent; // if true, the selected turbulence model is active
                            // within this block.
@@ -76,6 +79,9 @@ public:
     FVInterface[] faces;
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
+    //
+    // Dense core datastructures
+    FluidCellData celldata;
 
     // We need to know the number of cells even if the grid is not read
     // for this block in the local process.
@@ -198,6 +204,68 @@ public:
                                                FluidFVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
+
+    void allocate_dense_celldata(size_t ncells, size_t nghost, size_t neq, size_t nftl)
+    {
+    /*
+        Both kinds of blocks now share a structure of densely packed core flow data. This routine
+        allocates the storage for these structures, attempting to keep related bits of data together
+        on the heap.
+
+        In an older draft of this code, I allocated all of the normal cells in one loop,
+        then added the ghost cells onto the end later. This caused all of the pointers
+        in the FVCell classes to no longer be pointing to the right objects, which was
+        very bad. The solution to this was to use .reserve on the arrays before
+        filling them, which prevented the pointers from being copied. Now however,
+        we do the cells and the ghost cells all at once, but we still do .reserve
+        because it should be faster.
+
+        @author: Nick Gibbons
+    */
+        auto gmodel = myConfig.gmodel;
+        size_t nturb = myConfig.turb_model.nturb;
+
+        celldata.all_cell_idxs.length = ncells;
+        celldata.halo_cell_ids.length = (ncells + nghost);
+        celldata.halo_face_ids.length = (ncells + nghost);
+        foreach(i; 0 .. ncells) celldata.all_cell_idxs[i] = i;
+
+        celldata.nfaces.length = ncells;
+        celldata.dt_local.length = ncells;
+        celldata.areas.length = ncells + nghost;
+        celldata.wall_distances.length = ncells;
+        celldata.data_is_bad.length = ncells;
+        celldata.in_turbulent_zone.length = ncells;
+        celldata.volumes.length = ncells + nghost;
+        celldata.lengths.length = ncells + nghost;
+        celldata.positions.length = ncells + nghost;
+        celldata.U0.length = (ncells + nghost)*neq*nftl;
+        if (nftl>1) celldata.U1.length = (ncells + nghost)*neq*nftl;
+        if (nftl>2) celldata.U2.length = (ncells + nghost)*neq*nftl;
+        if (nftl>3) celldata.U3.length = (ncells + nghost)*neq*nftl;
+        if (nftl>4) celldata.U4.length = (ncells + nghost)*neq*nftl;
+        celldata.dUdt0.length = (ncells + nghost)*neq*nftl;
+        if (nftl>1) celldata.dUdt1.length = (ncells + nghost)*neq*nftl;
+        if (nftl>2) celldata.dUdt2.length = (ncells + nghost)*neq*nftl;
+        if (nftl>3) celldata.dUdt3.length = (ncells + nghost)*neq*nftl;
+        if (nftl>4) celldata.dUdt4.length = (ncells + nghost)*neq*nftl;
+        celldata.source_terms.length = (ncells + nghost)*neq;
+
+        celldata.flowstates.reserve(ncells + nghost);
+        celldata.gradients.reserve(ncells + nghost);
+        celldata.workspaces.reserve(ncells + nghost);
+        foreach (n; 0 .. ncells+nghost) celldata.flowstates ~= FlowState(gmodel, nturb);
+        foreach (n; 0 .. ncells+nghost) celldata.gradients ~= FlowGradients(myConfig);
+        foreach (n; 0 .. ncells+nghost) celldata.workspaces ~= WLSQGradWorkspace();
+
+        version(newton_krylov) {
+            celldata.cell_jacobians.length = (ncells+nghost)*neq*neq;
+            celldata.saved_gradients.reserve(ncells + nghost);
+            foreach (n; 0 .. ncells+nghost) celldata.saved_gradients ~= FlowGradients(myConfig);
+            celldata.saved_source_terms.length = (ncells + nghost)*neq;
+            celldata.doNotPerturb.length = (ncells+nghost);
+        }
+    }
 
     @nogc
     void identify_reaction_zones(int gtl)
@@ -439,8 +507,8 @@ public:
             auto gm = myConfig.gmodel;
             double Mx = -1.0*comp_tol.re;
             foreach (iface; faces) {
-                iface.fs.S = NNG_ShockDetector(gm, iface.left_cell.fs,
-                                                   iface.right_cell.fs,
+                iface.fs.S = NNG_ShockDetector(gm, *(iface.left_cell.fs),
+                                                   *(iface.right_cell.fs),
                                                    iface.n, Mx);
             }
             break;
@@ -579,7 +647,7 @@ public:
                         auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
                         if (other_cell && other_cell.contains_flow_data &&
                             other_cell.fs.check_data(other_cell.pos[gtl], myConfig)) {
-                            neighbour_flows ~= &(other_cell.fs);
+                            neighbour_flows ~= other_cell.fs;
                         }
                     }
                     if (neighbour_flows.length == 0) {
@@ -1341,7 +1409,7 @@ public:
         int ftl = 1; int gtl = 0;
 
         // save a copy of the flowstate and copy conserved quantities
-        fs_save.copy_values_from(pcell.fs);
+        fs_save.copy_values_from(*(pcell.fs));
         pcell.U[ftl].copy_values_from(pcell.U[0]);
 
         // perturb the current cell's conserved quantities
@@ -1448,7 +1516,7 @@ public:
                 // U: interior cell conserved quantities
 
                 // save a copy of the flowstate and copy conserved quantities
-                fs_save.copy_values_from(pcell.fs);
+                fs_save.copy_values_from(*(pcell.fs));
                 pcell.U[ftl].copy_values_from(pcell.U[0]);
                 ghost_cell.encode_conserved(gtl, 0, 0.0);
 
@@ -1484,7 +1552,7 @@ public:
                 // u: ghost cell conserved quantities
 
                 // save a copy of the flowstate and copy conserved quantities
-                fs_save.copy_values_from(ghost_cell.fs);
+                fs_save.copy_values_from(*(ghost_cell.fs));
                 ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
 
                 foreach(idx; 0..nConserved) {

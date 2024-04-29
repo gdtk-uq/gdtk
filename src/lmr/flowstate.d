@@ -212,6 +212,12 @@ public:
     }
 
     @nogc
+    void copy_values_from(in FlowState* other)
+    {
+        this = *other;
+    }
+
+    @nogc
     void copy_average_values_from(in FlowState fs0, in FlowState fs1, double w0=0.5)
     // Avoids memory allocation, it's all in place.
     {
@@ -570,6 +576,12 @@ public:
         default:
             throw new FlowSolverException("Invalid match option.");
         }
+    }
+
+    @nogc
+    void adjust_velocity(FlowState* fs, ref const(Vector3) my_pos)
+    {
+        adjust_velocity(*fs, my_pos);
     }
 } // end class FlowProfile
 

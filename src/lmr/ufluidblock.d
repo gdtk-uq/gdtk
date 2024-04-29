@@ -32,6 +32,7 @@ import flowgradients;
 import fvvertex;
 import fvinterface;
 import lmr.fluidfvcell : FluidFVCell;
+import lmr.coredata;
 import lsqinterp;
 import fluidblock;
 import bc;
@@ -44,9 +45,7 @@ import block;
 
 class UFluidBlock: FluidBlock {
 public:
-    size_t ncells;
     size_t nvertices;
-    size_t nfaces;
     size_t nboundaries;
     UnstructuredGrid grid;
     size_t ninteriorfaces;
@@ -85,6 +84,9 @@ public:
         myConfig = new LocalConfig(-1);
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
+
+        // We don't need the full celldata for the prep stage, just the flowstates
+        celldata.flowstates.reserve(ncells);
         bool lua_fs = false;
         FlowState* myfs;
         // check where our flowstate is coming from
@@ -174,7 +176,8 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            cells[cell_idx] = new FluidFVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
+            celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
+            cells[cell_idx] = new FluidFVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
         }
         if (lua_fs) { lua_settop(L, 0); }
     } // end constructor from Lua state
@@ -293,12 +296,33 @@ public:
         // Assemble array storage for finite-volume cells, etc.
         bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
-        uint nsp = myConfig.n_species;
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
             new_vtx.pos[0] = v;
             vertices ~= new_vtx;
         }
+
+        // Allocate densified face and cell data
+        auto gmodel = myConfig.gmodel;
+        size_t neq    = myConfig.cqi.n;
+        size_t nsp    = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+        size_t nturb  = myConfig.turb_model.nturb;
+        size_t nftl   = myConfig.n_flow_time_levels;
+
+        size_t nghost = 0;
+        foreach (bndry; grid.boundaries) nghost += bndry.face_id_list.length;
+
+        allocate_dense_celldata(ncells, nghost, neq, nftl);
+
+        // We have some unstructured specific stuff that also needs to be allocated
+        celldata.face_distances.length = ncells;
+        celldata.lsqws.length = ncells + nghost;
+        celldata.cell_cloud_indices.length = ncells;
+        celldata.c2v.length = ncells;
+        celldata.lsqgradients.reserve(ncells + nghost);
+        foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
+
         // sync_vertices_from_underlying_grid(0); // redundant, if done just above
         bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
@@ -306,12 +330,12 @@ public:
             auto new_face = new FVInterface(myConfig, IndexDirection.none, lsq_workspace_at_faces, to!int(i));
             faces ~= new_face;
         }
+
+        cells.reserve(ncells + nghost);
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
-            bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-                && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
-            auto new_cell = new FluidFVCell(myConfig, lsq_workspace_at_cells, to!int(i));
+            auto new_cell = new FluidFVCell(myConfig, &celldata, to!int(i));
             new_cell.contains_flow_data = true;
             new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
@@ -323,9 +347,12 @@ public:
                 f.vtx ~= vertices[j];
             }
         }
+        celldata.outsigns.length=cells.length;
+        celldata.c2f.length = cells.length;
         foreach (i, c; cells) {
             foreach (j; grid.cells[i].vtx_id_list) {
                 c.vtx ~= vertices[j];
+                celldata.c2v[i] ~= j;
             }
             auto nf = grid.cells[i].face_id_list.length;
             if (nf != grid.cells[i].outsign_list.length) {
@@ -338,7 +365,9 @@ public:
                 auto my_face = faces[grid.cells[i].face_id_list[j]];
                 int my_outsign = grid.cells[i].outsign_list[j];
                 c.iface ~= my_face;
+                celldata.c2f[i] ~= grid.cells[i].face_id_list[j];
                 c.outsign ~= my_outsign;
+                celldata.outsigns[i] ~= my_outsign;
                 if (my_outsign == 1) {
                     if (my_face.left_cell) {
                         string msg = format("Already have cell %d attached to left-of-face %d. Attempt to add cell %d.",
@@ -357,6 +386,8 @@ public:
                     }
                 }
             }
+            celldata.nfaces[i] = celldata.c2f[i].length;
+            celldata.face_distances[i].length = celldata.nfaces[i];
         } // end foreach cells
         //
         // Set up the lists of indices for look-up of cells and faces
@@ -390,12 +421,11 @@ public:
                 my_face.bc_id = i; // note which boundary this face is on
                 int my_outsign = bndry.outsign_list[j];
                 bc[i].faces ~= my_face;
-		bc[i].outsigns ~= my_outsign;
-		my_face.i_bndry = bc[i].outsigns.length - 1;
-		if (bc[i].ghost_cell_data_available) {
-                    // Make ghost-cell id values distinct from FluidFVCell ids so that
-                    // the warning/error messages are somewhat informative.
-                    FluidFVCell ghost0 = new FluidFVCell(myConfig, false, ghost_cell_id);
+                bc[i].outsigns ~= my_outsign;
+                my_face.i_bndry = bc[i].outsigns.length - 1;
+                if (bc[i].ghost_cell_data_available) {
+                    // We need ghost_cell_id to match the relevant position in the celldata arrays
+                    FluidFVCell ghost0 = new FluidFVCell(myConfig, &celldata, ghost_cell_id);
                     ghost_cell_id++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     ghost0.is_ghost = true;
@@ -466,8 +496,6 @@ public:
         // interpolation/reconstruction of flow quantities at left- and right- sides
         // of cell faces.
         // (Will be used for the convective fluxes).
-        auto nmodes = myConfig.n_modes;
-        auto nturb = myConfig.turb_model.nturb;
         if (myConfig.use_extended_stencil) {
             foreach (c; cells) {
                 // First cell in the cloud is the cell itself.  Differences are taken about it.
@@ -481,11 +509,13 @@ public:
                         if (f.right_cell && f.right_cell.contains_flow_data) {
                             c.cell_cloud ~= f.right_cell;
                             cell_ids ~= f.right_cell.id;
+                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
                         }
                     } else {
                         if (f.left_cell && f.left_cell.contains_flow_data) {
                             c.cell_cloud ~= f.left_cell;
                             cell_ids ~= f.left_cell.id;
+                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
                         }
                     }
                 } // end foreach face
@@ -499,11 +529,13 @@ public:
                             if (f.right_cell && cell_ids.canFind(f.right_cell.id) == false && f.right_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.right_cell;
                                 cell_ids ~= f.right_cell.id;
+                                celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
                             }
                         } else {
                             if (f.left_cell && cell_ids.canFind(f.left_cell.id) == false && f.left_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.left_cell;
                                 cell_ids ~= f.left_cell.id;
+                                celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
                             }
                         }
                     } // end foreach face
@@ -512,11 +544,10 @@ public:
                     foreach(vtx; c.vtx) {
                         foreach(cid; cellIndexListPerVertex[vtx.id])
                             if (cell_ids.canFind(cid) == false && cells[cid].contains_flow_data)
-                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; }
+                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; celldata.cell_cloud_indices[c.id] ~= cid; }
+
                     }
                 }
-                c.ws = new LSQInterpWorkspace();
-                c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
             } // end foreach cell
         } else {
             foreach (c; cells) {
@@ -527,31 +558,17 @@ public:
                     if (c.outsign[i] == 1) {
                         if (f.right_cell && f.right_cell.contains_flow_data) {
                             c.cell_cloud ~= f.right_cell;
+                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
                         }
                     } else {
                         if (f.left_cell && f.left_cell.contains_flow_data) {
                             c.cell_cloud ~= f.left_cell;
+                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
                         }
                     }
                 } // end foreach face
-                c.ws = new LSQInterpWorkspace();
-                c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
             } // end foreach cell
         } // end else
-        // We will also need derivative storage in ghostcells because the
-        // reconstruction functions will expect to be able to access the gradients
-        // either side of each interface.
-        // We will be able to get these gradients from the mapped-cells
-        // in an adjoining block.
-        // [TODO] think about this for the junction of usgrid and sgrid blocks.
-        // The sgrid blocks will not have the gradients stored within the cells.
-        foreach (bci; bc) {
-            if (bci.ghost_cell_data_available) {
-                foreach (c; bci.ghostcells) {
-                    c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
-                }
-            }
-        }
         //
         // We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
         // This is equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
@@ -572,24 +589,12 @@ public:
                 foreach (c; cells) {
                     // First cell in the cloud is the cell itself.  Differences are taken about it.
                     c.cloud_pos ~= &(c.pos[0]);
-                    c.cloud_fs ~= &(c.fs);
+                    c.cloud_fs ~= c.fs;
                     // Subsequent cells are the surrounding cells.
                     foreach (i, f; c.iface) {
                         c.cloud_pos ~= &(f.pos);
                         c.cloud_fs ~= &(f.fs);
                     } // end foreach face
-                }
-                // We will also need derivative storage in ghostcells because the
-                // reconstruction functions will expect to be able to access the gradients
-                // either side of each interface.
-                // We will be able to get these gradients from the mapped-cells
-                // in an adjoining block.
-                foreach (bci; bc) {
-                    if (bci.ghost_cell_data_available) {
-                        foreach (c; bci.ghostcells) {
-                            c.grad = new FlowGradients(myConfig);
-                        }
-                    }
                 }
             } // end switch (myConfig.spatial_deriv_locn)
         } // if myConfig.viscous
@@ -613,6 +618,7 @@ public:
             foreach (c; cells) { c.update_3D_geometric_data(gtl, myConfig.true_centroids); }
             foreach (f; faces) { f.update_3D_geometric_data(gtl); }
         }
+
         //
         // Guess the position ghost-cell centres and copy cross-cell lengths.
         // Copy without linear extrapolation for the moment.
@@ -641,6 +647,7 @@ public:
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                     ghost0.L_max = inside0.L_max;
+                    ghost0.update_celldata_geometry();
                 } else {
                     auto inside0 = my_face.right_cell;
                     Vector3 delta; delta = my_face.pos; delta -= inside0.pos[gtl];
@@ -651,7 +658,9 @@ public:
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                     ghost0.L_max = inside0.L_max;
+                    ghost0.update_celldata_geometry();
                 } // end if my_outsign
+
             } // end foreach j
         } // end foreach bndry
     } // end compute_primary_cell_geometric_data()
@@ -752,7 +761,7 @@ public:
         // which has confused just about everyone at some time in their work on the code.
         foreach (f; faces) {
             if (f.left_cell && f.right_cell) {
-                f.fs.copy_average_values_from(f.left_cell.fs, f.right_cell.fs);
+                f.fs.copy_average_values_from(*(f.left_cell.fs), *(f.right_cell.fs));
             } else if (f.right_cell) {
                 f.fs.copy_values_from(f.right_cell.fs);
             } else if (f.left_cell) {
