@@ -401,7 +401,7 @@ function GridArray:new(o)
                if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
                if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
                local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, fsTag=o.fsTag, bcTags=bcTags,
-                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidPropsTag=o.solidPropsTag, gridArrayId=o.id}
+                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag, gridArrayId=o.id}
                gridCollection[#gridCollection+1] = g
                o.myGrids[ib][jb][kb] = g
             end -- kb loop
