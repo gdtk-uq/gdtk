@@ -24,8 +24,8 @@ flowStates = {initial=gasFillFn}
 initSolidState = {
    initial_solid_field=solidFillFn
 }
-solidProps = {
-   solid_properties = {rho=rho_s, k=k_s, Cp=Cp_s}
+registerSolidModels{
+   solid_properties = ConstantPropertiesModel:new{rho=rho_s, k=k_s, Cp=Cp_s}
 }
 
 pts = {
@@ -52,7 +52,7 @@ registerFluidGrid{
 registerSolidGrid{
    grid=StructuredGrid:new{psurface=solidPatch, niv=nicell+1, njv=njcell1+1},
    ssTag="initial_solid_field",
-   propsTag="solid_properties",
+   modelTag="solid_properties",
    bcTags={west="udf_solid", north="udf_solid", east="udf_solid"}
 }
 --
