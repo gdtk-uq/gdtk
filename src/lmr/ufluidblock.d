@@ -314,6 +314,7 @@ public:
         foreach (bndry; grid.boundaries) nghost += bndry.face_id_list.length;
 
         allocate_dense_celldata(ncells, nghost, neq, nftl);
+        allocate_dense_facedata(nfaces, nghost, neq, nftl); // nghost==nbfaces for unstructured
 
         // We have some unstructured specific stuff that also needs to be allocated
         celldata.face_distances.length = ncells;
@@ -323,11 +324,11 @@ public:
         celldata.lsqgradients.reserve(ncells + nghost);
         foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
 
-        // sync_vertices_from_underlying_grid(0); // redundant, if done just above
-        bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
+        facedata.dL.length = nfaces;
+        facedata.dR.length = nfaces;
+
         foreach (i, f; grid.faces) {
-            auto new_face = new FVInterface(myConfig, IndexDirection.none, lsq_workspace_at_faces, to!int(i));
+            auto new_face = new FVInterface(myConfig, IndexDirection.none, &facedata, to!int(i));
             faces ~= new_face;
         }
 
@@ -375,6 +376,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.left_cell = c;
+                        facedata.f2c[grid.cells[i].face_id_list[j]].left = i;
                     }
                 } else {
                     if (my_face.right_cell) {
@@ -383,6 +385,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.right_cell = c;
+                        facedata.f2c[grid.cells[i].face_id_list[j]].right = i;
                     }
                 }
             }
@@ -438,6 +441,7 @@ public:
                             throw new FlowSolverException(msg);
                         } else {
                             my_face.right_cell = ghost0;
+                            facedata.f2c[bndry.face_id_list[j]].right = ghost0.id;
                         }
                     } else {
                         if (my_face.left_cell) {
@@ -447,11 +451,32 @@ public:
                             throw new FlowSolverException(msg);
                         } else {
                             my_face.left_cell = ghost0;
+                            facedata.f2c[bndry.face_id_list[j]].left = ghost0.id;
                         }
                     }
                 } // end if (bc[i].ghost_cell_data_available
             } // end foreach j
         } // end foreach i
+        // Setup dense arrays for fast checks of left or right data available (NNG)
+        foreach (i, bndry; grid.boundaries) {
+
+            // For any other kind of boundary we need to mark which side the interior cell is
+            auto nf = bndry.face_id_list.length;
+            foreach (j; 0 .. nf) {
+                size_t my_id = faces[bndry.face_id_list[j]].id;
+                size_t bid = faces[bndry.face_id_list[j]].id;
+                int my_outsign = bndry.outsign_list[j];
+
+                // For a shared boundary both sides are okay, so we skip
+                if (startsWith(bc[i].type, "exchange_")) { continue; }
+
+                if (my_outsign == 1) { // The ghost cell is a right cell
+                    facedata.left_interior_only[bid] = true;
+                } else {               // the ghost cell is a left cell
+                    facedata.right_interior_only[bid] = true;
+                }
+            }
+        }
         // At this point, all faces should have either one finite-volume cell
         // or one ghost cell attached to each side -- check that this is true.
         foreach (f; faces) {
@@ -593,7 +618,7 @@ public:
                     // Subsequent cells are the surrounding cells.
                     foreach (i, f; c.iface) {
                         c.cloud_pos ~= &(f.pos);
-                        c.cloud_fs ~= &(f.fs);
+                        c.cloud_fs ~= f.fs;
                     } // end foreach face
                 }
             } // end switch (myConfig.spatial_deriv_locn)
@@ -617,6 +642,12 @@ public:
         } else { // 3D
             foreach (c; cells) { c.update_3D_geometric_data(gtl, myConfig.true_centroids); }
             foreach (f; faces) { f.update_3D_geometric_data(gtl); }
+        }
+
+        foreach(i, ifaces; celldata.c2f){
+            foreach(j, jface; ifaces){
+                celldata.face_distances[i][j] = facedata.positions[jface] - celldata.positions[i];
+            }
         }
 
         //
@@ -664,6 +695,18 @@ public:
             } // end foreach j
         } // end foreach bndry
     } // end compute_primary_cell_geometric_data()
+
+    @nogc
+    override void precompute_stencil_data(size_t gtl) {
+        // Densified lsqgradients needs distances from the face to the left and right cells
+        foreach(idx; 0 .. nfaces){
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+            facedata.dL[idx] = facedata.positions[idx] - celldata.positions[l];
+            facedata.dR[idx] = facedata.positions[idx] - celldata.positions[r];
+        }
+        // TODO: Move convective LSQ setup here
+    }
 
     @nogc
     override void compute_least_squares_setup(size_t gtl)

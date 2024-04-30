@@ -82,6 +82,7 @@ public:
     //
     // Dense core datastructures
     FluidCellData celldata;
+    FVInterfaceData facedata;
 
     // We need to know the number of cells even if the grid is not read
     // for this block in the local process.
@@ -187,6 +188,7 @@ public:
     @nogc abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     @nogc abstract void compute_primary_cell_geometric_data(size_t gtl);
+    @nogc abstract void precompute_stencil_data(size_t gtl);
     @nogc abstract void compute_least_squares_setup(size_t gtl);
     @nogc abstract void sync_vertices_from_underlying_grid(size_t gtl=0);
     @nogc abstract void sync_vertices_to_underlying_grid(size_t gtl=0);
@@ -265,6 +267,43 @@ public:
             celldata.saved_source_terms.length = (ncells + nghost)*neq;
             celldata.doNotPerturb.length = (ncells+nghost);
         }
+    }
+
+    void allocate_dense_facedata(size_t nfaces, size_t nbfaces, size_t neq, size_t nftl)
+    {
+    /*
+        Both kinds of blocks now share a structure of densely packed core flow
+        data. This routine allocates the storage for these structures,
+        attempting to keep related bits of data together on the heap.
+
+        @author: Nick Gibbons
+    */
+        auto gmodel = myConfig.gmodel;
+        size_t nturb = myConfig.turb_model.nturb;
+
+        facedata.all_face_idxs.length = nfaces;
+        foreach(i; 0 .. nfaces) facedata.all_face_idxs[i] = i;
+
+        facedata.positions.length = nfaces;
+        facedata.areas.length = nfaces;
+        facedata.normals.length = nfaces;
+        facedata.tangents1.length = nfaces;
+        facedata.tangents2.length = nfaces;
+        facedata.left_interior_only.length = nfaces;
+        facedata.right_interior_only.length = nfaces;
+        facedata.stencil_idxs.length = nfaces;
+        facedata.fluxes.length = nfaces*neq;
+        facedata.f2c.length = nfaces;
+
+        if (myConfig.interpolation_order>=2) facedata.l2r2_interp_data.length = nfaces;
+        if (myConfig.interpolation_order==3) facedata.l3r3_interp_data.length = nfaces;
+
+        facedata.flowstates.reserve(nfaces);
+        foreach (n; 0 .. nfaces) facedata.flowstates ~= FlowState(gmodel, nturb);
+        facedata.gradients.reserve(nfaces);
+        foreach (n; 0 .. nfaces) facedata.gradients ~= FlowGradients(myConfig);
+        facedata.workspaces.reserve(nfaces);
+        foreach (n; 0 .. nfaces) facedata.workspaces ~= WLSQGradWorkspace();
     }
 
     @nogc

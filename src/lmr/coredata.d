@@ -10,13 +10,11 @@ module lmr.coredata;
 
 import nm.number;
 import geom;
-//import gas;
-//import kinetics;
 import flowstate;
 import flowgradients;
 import conservedquantities;
-//import globalconfig;
 import lsqinterp;
+import onedinterp : L2R2InterpData, L3R3InterpData;
 
 struct FluidCellData{
     size_t[] all_cell_idxs;
@@ -51,4 +49,29 @@ struct FluidCellData{
         ConservedQuantities saved_source_terms;
         bool[] doNotPerturb;
     }
+}
+
+
+struct LR {size_t left,right;}
+struct LLLRRR {size_t L2,L1,L0,R0,R1,R2;}
+
+struct FVInterfaceData{
+    size_t[] all_face_idxs;
+    LR[] f2c;
+    Vector3[] dL;
+    Vector3[] dR;
+    number[] areas;
+    Vector3[] normals;
+    Vector3[] tangents1;
+    Vector3[] tangents2;
+    Vector3[] positions;
+    FlowState[] flowstates;
+    LLLRRR[] stencil_idxs;
+    L2R2InterpData[] l2r2_interp_data;
+    L3R3InterpData[] l3r3_interp_data;
+    FlowGradients[] gradients;
+    WLSQGradWorkspace[] workspaces;
+    ConservedQuantities fluxes;
+    bool[] left_interior_only;
+    bool[] right_interior_only;
 }

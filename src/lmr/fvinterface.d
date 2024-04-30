@@ -30,6 +30,7 @@ import conservedquantities;
 import globalconfig;
 import lsqinterp;
 import mass_diffusion;
+import lmr.coredata;
 
 enum IndexDirection {i=0, j, k, none=666}; // Needed for StructuredGrid interpolation.
 
@@ -69,7 +70,8 @@ public:
     FluidFVCell[] right_cells;
     //
     // Flow
-    FlowState fs;          // Flow properties
+    FVInterfaceData* fvid;
+    FlowState* fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
     number tau_wall_x, tau_wall_y, tau_wall_z; // shear at face (used by wall-function BCs)
     number q;              // heat-flux across face (used by wall-function BCs)
@@ -109,8 +111,8 @@ public:
     
     this(LocalConfig myConfig,
          IndexDirection idir,
-         bool allocate_spatial_deriv_lsq_workspace,
-         int id_init=-1,
+         FVInterfaceData* fvid,
+         int id_init,
          char dir=' ')
     {
         this.myConfig = myConfig;
@@ -121,18 +123,15 @@ public:
         gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
         auto gmodel = myConfig.gmodel;
         uint n_species = myConfig.n_species;
-        uint n_modes = myConfig.n_modes;
-        double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        double[2] turb_init;
-        foreach(i; 0 .. myConfig.turb_model.nturb)
-            turb_init[i] = myConfig.turb_model.turb_limits(i).re;
-        fs = FlowState(gmodel, 100.0e3, 300, T_modes, Vector3(0.0,0.0,0.0), turb_init);
-        F = new_ConservedQuantities(myConfig.cqi.n);
+        size_t neq = myConfig.cqi.n;
+
+        this.fvid = fvid;
+        this.fs = &(fvid.flowstates[id]);
+        this.grad = &(fvid.gradients[id]);
+        this.ws_grad = &(fvid.workspaces[id]);
+        this.F = fvid.fluxes[id*neq .. (id+1)*neq];
         F.clear();
-        grad = new FlowGradients(myConfig);
-        if (allocate_spatial_deriv_lsq_workspace) {
-            ws_grad = new WLSQGradWorkspace();
-        }
+
         version(multi_species_gas) {
             jx.length = n_species;
             jy.length = n_species;
@@ -170,14 +169,16 @@ public:
         n = other.n;
         t1 = other.t1;
         t2 = other.t2;
-        fs = FlowState(other.fs, gm);
-        F = new_ConservedQuantities(other.F.length); F.copy_values_from(other.F);
         tau_wall_x = other.tau_wall_x;
         tau_wall_y = other.tau_wall_y;
         tau_wall_z = other.tau_wall_z;
         q = other.q;
-        grad = new FlowGradients(*(other.grad));
-        if (other.ws_grad) ws_grad = new WLSQGradWorkspace(*(other.ws_grad));
+        size_t neq = myConfig.cqi.n;
+        this.fvid = other.fvid;
+        this.fs = &(fvid.flowstates[id]);
+        this.grad = &(fvid.gradients[id]);
+        this.ws_grad = &(fvid.workspaces[id]);
+        this.F = fvid.fluxes[id*neq .. (id+1)*neq];
         // Because we copy the following pointers and references,
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();
@@ -607,7 +608,7 @@ public:
         // diffusion in areas with a small turbulent viscosity.
         version(multi_species_gas) {
             if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                myConfig.massDiffusion.update_mass_fluxes(fs, *grad, jx, jy, jz);
+                myConfig.massDiffusion.update_mass_fluxes(*fs, *grad, jx, jy, jz);
                 foreach (isp; 0 .. n_species) {
                     jx[isp] *= viscous_factor;
                     jy[isp] *= viscous_factor;
@@ -711,13 +712,13 @@ public:
             if ( myConfig.turb_model.isTurbulent &&
                  !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
                 // Turbulence contribution to the shear stresses.
-                number tke = myConfig.turb_model.turbulent_kinetic_energy(fs);
+                number tke = myConfig.turb_model.turbulent_kinetic_energy(*fs);
                 tau_xx -= 2.0/3.0 * fs.gas.rho * tke;
                 tau_yy -= 2.0/3.0 * fs.gas.rho * tke;
                 if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * tke; }
 
                 // Turbulent transport of turbulent kinetic energy
-                number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, *grad);
+                number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(*fs, *grad);
                 qx += qtke[0];
                 qy += qtke[1];
                 if (myConfig.dimensions == 3) { qz += qtke[2]; }
@@ -799,7 +800,7 @@ public:
                     number tau_ty = 0.0;
                     number tau_tz = 0.0;
                     //
-                    number mu_effective = myConfig.turb_model.viscous_transport_coeff(fs, i);
+                    number mu_effective = myConfig.turb_model.viscous_transport_coeff(*fs, i);
                     // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                     mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                     tau_tx = mu_effective * grad.turb[i][0];

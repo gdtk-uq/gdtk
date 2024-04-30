@@ -410,7 +410,7 @@ void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face,
     lua_pushnumber(L, face.gvel.x); lua_setfield(L, tblIdx, "gvelx");
     lua_pushnumber(L, face.gvel.y); lua_setfield(L, tblIdx, "gvely");
     lua_pushnumber(L, face.gvel.z); lua_setfield(L, tblIdx, "gvelz");
-    pushFlowStateToTable(L, tblIdx, face.fs, gmodel);
+    pushFlowStateToTable(L, tblIdx, *(face.fs), gmodel);
 } // end pushFluidFaceToTable()
 
 // ----------------------------------------------------------------------

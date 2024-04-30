@@ -455,6 +455,7 @@ public:
             if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
 
             allocate_dense_celldata(ncells, nghost, neq, nftl);
+            allocate_dense_facedata(nfaces, nbfaces, neq, nftl);
 
             // Create the interior cell, vertex and interface objects for the block.
             foreach (n; 0 .. nic*njc*nkc) {
@@ -464,17 +465,18 @@ public:
                 vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
             }
             // First, ifi faces.
+            int fid = 0;
             foreach (n; 0 .. niv*njc*nkc) {
-                faces ~= new FVInterface(myConfig, IndexDirection.i, lsq_workspace_at_faces);
+                faces ~= new FVInterface(myConfig, IndexDirection.i, &facedata, fid); fid++;
             }
             // Second, ifj faces.
             foreach (n; 0 .. nic*njv*nkc) {
-                faces ~= new FVInterface(myConfig, IndexDirection.j, lsq_workspace_at_faces);
+                faces ~= new FVInterface(myConfig, IndexDirection.j, &facedata, fid); fid++;
             }
             // Third, maybe, ifk faces.
             if (myConfig.dimensions == 3) {
                 foreach (n; 0 .. nic*njc*nkv) {
-                    faces ~= new FVInterface(myConfig, IndexDirection.k, lsq_workspace_at_faces);
+                    faces ~= new FVInterface(myConfig, IndexDirection.k, &facedata, fid); fid++;
                 }
             }
             // Now, construct the ghost cells, attaching them to the boundary faces.
@@ -562,7 +564,225 @@ public:
             writefln("System message: %s", e.msg);
             throw new FlowSolverException("SFluidBlock.init_grid_and_flow_arrays() failed.");
         }
+        // Setup dense arrays for fast checks of left or right data available (NNG)
+        // North
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                size_t idx = ifj_index(i, njc, k);
+                if (!startsWith(bc[Face.north].type, "exchange_"))
+                    facedata.left_interior_only[idx] = true;
+            }
+        }
+        // South
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                size_t idx = ifj_index(i, 0, k);
+                if (!startsWith(bc[Face.south].type, "exchange_"))
+                    facedata.right_interior_only[idx] = true;
+            }
+        }
+        // East
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                size_t idx = ifi_index(nic, j, k);
+                if (!startsWith(bc[Face.east].type, "exchange_"))
+                    facedata.left_interior_only[idx] = true;
+            }
+        }
+        // West
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                size_t idx = ifi_index(0, j, k);
+                if (!startsWith(bc[Face.west].type, "exchange_"))
+                    facedata.right_interior_only[idx] = true;
+            }
+        }
+        if (myConfig.dimensions == 3) {
+            // Top
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t idx = ifk_index(i, j, nkc);
+                    if (!startsWith(bc[Face.top].type, "exchange_"))
+                        facedata.left_interior_only[idx] = true;
+                }
+            }
+            // Bottom
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t idx = ifk_index(i, j, 0);
+                    if (!startsWith(bc[Face.bottom].type, "exchange_"))
+                        facedata.right_interior_only[idx] = true;
+                }
+            }
+        } // end if (myConfig.dimensions == 3)
         //
+        // Densified structures for the onedinterp routines in the structured formulation
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    size_t fid = ifi_index(i,j,k);
+                    if (i>2)     facedata.stencil_idxs[fid].L2 = cell_index(i-3, j, k);
+                    if (i>1)     facedata.stencil_idxs[fid].L1 = cell_index(i-2, j, k);
+                    if (i>0)     facedata.stencil_idxs[fid].L0 = cell_index(i-1, j, k);
+                    if (i<niv-1) facedata.stencil_idxs[fid].R0 = cell_index(i+0, j, k);
+                    if (i<niv-2) facedata.stencil_idxs[fid].R1 = cell_index(i+1, j, k);
+                    if (i<niv-3) facedata.stencil_idxs[fid].R2 = cell_index(i+2, j, k);
+                } // i loop
+            } // j loop
+        } // k loop
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    size_t fid = ifj_index(i,j,k);
+                    if (j>2)     facedata.stencil_idxs[fid].L2 = cell_index(i, j-3, k);
+                    if (j>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j-2, k);
+                    if (j>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j-1, k);
+                    if (j<njv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j+0, k);
+                    if (j<njv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j+1, k);
+                    if (j<njv-3) facedata.stencil_idxs[fid].R2 = cell_index(i, j+2, k);
+                } // j loop
+            } // i loop
+        } // k loop
+        if (myConfig.dimensions == 3) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    foreach (k; 0 .. nkv) {
+                        size_t fid = ifk_index(i,j,k);
+                        if (k>2)     facedata.stencil_idxs[fid].L2 = cell_index(i, j, k-3);
+                        if (k>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j, k-2);
+                        if (k>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j, k-1);
+                        if (k<nkv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j, k+0);
+                        if (k<nkv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j, k+1);
+                        if (k<nkv-3) facedata.stencil_idxs[fid].R2 = cell_index(i, j, k+2);
+                    } // k loop
+                } // i loop
+            } // j loop
+        } // end 3d
+        //
+        // Now, loop through the ghost cells and attach their indices to the face stencil objects
+        size_t cid = nic*njc*nkc;
+        // North
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                size_t fid0 = ifj_index(i, njc, k);
+                size_t fid1 = ifj_index(i, njc-1, k);
+                size_t fid2 = ifj_index(i, njc-2, k);
+                facedata.stencil_idxs[fid0].R0 = cid;
+                facedata.stencil_idxs[fid1].R1 = cid;
+                facedata.stencil_idxs[fid2].R2 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].R1 = cid;
+                facedata.stencil_idxs[fid1].R2 = cid;
+                cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].R2 = cid;
+                    cid++;
+                }
+            }
+        }
+        // South
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                size_t fid0 = ifj_index(i, 0, k);
+                size_t fid1 = ifj_index(i, 1, k);
+                size_t fid2 = ifj_index(i, 2, k);
+                facedata.stencil_idxs[fid0].L0 = cid;
+                facedata.stencil_idxs[fid1].L1 = cid;
+                facedata.stencil_idxs[fid2].L2 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].L1 = cid;
+                facedata.stencil_idxs[fid1].L2 = cid;
+                cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].L2 = cid;
+                    cid++;
+                }
+            }
+        }
+        // East
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                size_t fid0 = ifi_index(nic, j, k);
+                size_t fid1 = ifi_index(nic-1, j, k);
+                size_t fid2 = ifi_index(nic-2, j, k);
+                facedata.stencil_idxs[fid0].R0 = cid;
+                facedata.stencil_idxs[fid1].R1 = cid;
+                facedata.stencil_idxs[fid2].R2 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].R1 = cid;
+                facedata.stencil_idxs[fid1].R2 = cid;
+                cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].R2 = cid;
+                    cid++;
+                }
+            }
+        }
+        // West
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                size_t fid0 = ifi_index(0, j, k);
+                size_t fid1 = ifi_index(1, j, k);
+                size_t fid2 = ifi_index(2, j, k);
+                facedata.stencil_idxs[fid0].L0 = cid;
+                facedata.stencil_idxs[fid1].L1 = cid;
+                facedata.stencil_idxs[fid2].L2 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].L1 = cid;
+                facedata.stencil_idxs[fid1].L2 = cid;
+                cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].L2 = cid;
+                    cid++;
+                }
+            }
+        }
+        if (myConfig.dimensions == 3) {
+            // Top
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t fid0 = ifk_index(i, j, nkc);
+                    size_t fid1 = ifk_index(i, j, nkc-1);
+                    size_t fid2 = ifk_index(i, j, nkc-2);
+                    facedata.stencil_idxs[fid0].R0 = cid;
+                    facedata.stencil_idxs[fid1].R1 = cid;
+                    facedata.stencil_idxs[fid2].R2 = cid;
+                    cid++;
+                    facedata.stencil_idxs[fid0].R1 = cid;
+                    facedata.stencil_idxs[fid1].R2 = cid;
+                    cid++;
+                    if (n_ghost_cell_layers>2) {
+                        facedata.stencil_idxs[fid0].R2 = cid;
+                        cid++;
+                    }
+                }
+            }
+            // Bottom
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t fid0 = ifk_index(i, j, 0);
+                    size_t fid1 = ifk_index(i, j, 1);
+                    size_t fid2 = ifk_index(i, j, 2);
+                    facedata.stencil_idxs[fid0].L0 = cid;
+                    facedata.stencil_idxs[fid1].L1 = cid;
+                    facedata.stencil_idxs[fid2].L2 = cid;
+                    cid++;
+                    facedata.stencil_idxs[fid0].L1 = cid;
+                    facedata.stencil_idxs[fid1].L2 = cid;
+                    cid++;
+                    if (n_ghost_cell_layers>2) {
+                        facedata.stencil_idxs[fid0].L2 = cid;
+                        cid++;
+                    }
+                }
+            }
+        } // end if (myConfig.dimensions == 3)
+
+        // TODO: Redundant storage. But we use these in some areas of the code that are structure agnostic
+        foreach(idx; 0 .. nfaces){
+            facedata.f2c[idx].left  = facedata.stencil_idxs[idx].L0;
+            facedata.f2c[idx].right = facedata.stencil_idxs[idx].R0;
+        }
         // Now that all of the cells and faces are constructed,
         // We want to store the local structure of the grid
         // in the array of references stored in the faces.
@@ -643,7 +863,6 @@ public:
             c.is_interior_to_domain = true;
         }
         foreach (i, v; vertices) { v.id = to!int(i); }
-        foreach (i, f; faces) { f.id = to!int(i); }
         //
         // Set references to boundary faces in bc objects.
         foreach (k; 0 .. nkc) {
@@ -1175,6 +1394,74 @@ public:
     } // end compute_primary_cell_geometric_data()
 
     @nogc
+    override void precompute_stencil_data(size_t gtl)
+    {
+        bool second_order = myConfig.interpolation_order>=2;
+        bool third_order  = myConfig.interpolation_order==3;
+        // Update stencil information, or set it all for the first time WIP (NNG)
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    size_t fid = ifi_index(i,j,k);
+                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1][0];
+                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0][0];
+                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0][0];
+                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1][0];
+                    if (second_order) {
+                        facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    }
+                    if (third_order) {
+                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2][0];
+                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2][0];
+                        facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
+                    }
+                } // i loop
+            } // j loop
+        } // k loop
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    size_t fid = ifj_index(i,j,k);
+                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1][1];
+                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0][1];
+                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0][1];
+                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1][1];
+                    if (second_order) {
+                        facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    }
+                    if (third_order) {
+                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2][1];
+                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2][1];
+                        facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
+                    }
+                } // j loop
+            } // i loop
+        } // k loop
+        if (myConfig.dimensions == 3) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    foreach (k; 0 .. nkv) {
+                        size_t fid = ifk_index(i,j,k);
+                        number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1][2];
+                        number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0][2];
+                        number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0][2];
+                        number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1][2];
+                        if (second_order) {
+                            facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                        }
+                        if (third_order) {
+                            number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2][2];
+                            number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2][2];
+                            facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
+                        }
+                    } // k loop
+                } // i loop
+            } // j loop
+        } // end 3d
+
+    } // end precompute_stencil_data()
+
+    @nogc
     override void compute_least_squares_setup(size_t gtl)
     {
         // Update the least-squares geometric weights and the workspaces, if appropriate.
@@ -1225,7 +1512,7 @@ public:
             // Subsequent cells are the surrounding interfaces.
             foreach (i, f; c.iface) {
                 c.cloud_pos ~= &(f.pos);
-                c.cloud_fs ~= &(f.fs);
+                c.cloud_fs ~= f.fs;
             } // end foreach face
         }
         // Check that we have correctly assembled clouds.

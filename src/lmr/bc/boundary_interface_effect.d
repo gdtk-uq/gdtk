@@ -350,7 +350,7 @@ private:
         p += deltas[2];
         u += deltas[3];
         // Put into interface FlowState object.
-        auto fs = &(f.fs);
+        FlowState* fs = f.fs;
         fs.gas.p = p; // not really needed because we use rhou
         fs.gas.rho = rho;
         fs.gas.u = u;
@@ -496,7 +496,7 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            sfs.set_flowstate(f.fs, t, f.pos, gmodel);
+            sfs.set_flowstate(*(f.fs), t, f.pos, gmodel);
         }
     }
 
@@ -513,7 +513,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            sfs.set_flowstate(f.fs, t, f.pos, gmodel);
+            sfs.set_flowstate(*(f.fs), t, f.pos, gmodel);
         }
     } // end apply_structured_grid()
 
@@ -896,9 +896,9 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         version(turbulence) {
 	    if (bc.outsigns[f.i_bndry] == 1) {
-                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, *(f.fs));
 	    } else {
-                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, *(f.fs));
             }
         }
     } // end apply_unstructured_grid()
@@ -909,9 +909,9 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         version(turbulence) {
             foreach (i, f; bc.faces) {
                 if (bc.outsigns[i] == 1) {
-                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, *(f.fs));
                 } else {
-                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, *(f.fs));
                 }
             }
         }
@@ -922,9 +922,9 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         version(turbulence) {
 	    if (bc.outsigns[f.i_bndry] == 1) {
-                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, *(f.fs));
 	    } else {
-                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, *(f.fs));
             }
         }
     } // end apply_unstructured_grid()
@@ -937,9 +937,9 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         version(turbulence) {
             foreach (i, f; bc.faces) {
                 if (bc.outsigns[i] == 1) {
-                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, *(f.fs));
                 } else {
-                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, *(f.fs));
                 }
             }
         }
@@ -1772,7 +1772,7 @@ protected:
         // Species diffusion has the opposite sign, for some reason.
         number q_diffusion = to!number(0.0);
         if (catalytic){
-            blk.myConfig.massDiffusion.update_mass_fluxes(IFace.fs, *(cell.grad), jx, jy, jz);
+            blk.myConfig.massDiffusion.update_mass_fluxes(*(IFace.fs), *(cell.grad), jx, jy, jz);
             foreach (isp; 0 .. nsp) {
                 number h = gmodel.enthalpy(IFace.fs.gas, cast(int)isp);
                 q_diffusion += (jx[isp]*h*IFace.n.x + jy[isp]*h*IFace.n.y + jz[isp]*h*IFace.n.z);
