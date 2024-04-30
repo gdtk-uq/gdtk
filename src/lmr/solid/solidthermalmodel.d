@@ -15,10 +15,13 @@ import std.typecons : Tuple;
 import std.algorithm : min, max;
 import std.conv : to;
 import std.json;
+import std.math;
+
 import json_helper;
 import util.lua;
 import util.lua_service;
 import nm.number;
+import ntypes.complex;
 
 import lmr.solid.solidstate : SolidState;
 
@@ -39,12 +42,19 @@ public:
     @nogc
     final void updateTemperature(ref SolidState ss) const
     {
-        ss.T = ss.e/(ss.rho * ss.Cp);
+        _updateTemperature(ss);
         updateProperties(ss);
     }
 
     @nogc
     void updateProperties(ref SolidState ss) const;
+
+protected:
+    // This protected method provides a customisation point
+    // for how temperature is computed from energy.
+    // Subclasses need to implement this.
+    @nogc
+    void _updateTemperature(ref SolidState ss) const;
 }
 
 class ConstantPropertiesSTM : SolidThermalModel
@@ -78,6 +88,13 @@ public:
         ss.rho = m_rho;
         ss.k = m_k;
         ss.Cp = m_Cp;
+    }
+
+protected:
+    @nogc
+    override void _updateTemperature(ref SolidState ss) const
+    {
+        ss.T = ss.e/(ss.rho * ss.Cp);
     }
 
 private:
@@ -126,7 +143,7 @@ public:
     }
 
     @nogc
-    void updateProperties(ref SolidState ss) const
+    override void updateProperties(ref SolidState ss) const
     {
         // Use a constant value (low or high) at edges of range.
         auto T = min(to!number(m_max.T), max(ss.T, to!number(m_min.T)));
@@ -136,7 +153,21 @@ public:
         ss.Cp = (1.0 - w)*m_min.Cp + w*m_max.Cp;
     }
 
-private:
+protected:
+    @nogc
+    override void _updateTemperature(ref SolidState ss) const 
+    {
+        // Need to revisit this implementation if density (rho)
+        // does vary with temperature. Presently, we assume it is constant.
+
+        auto lambda = m_min.rho*(m_max.Cp - m_min.Cp)/(m_max.T - m_min.T);
+        auto sqrtTrm = sqrt((m_min.Cp*m_min.rho - m_min.T*lambda)^^2 + 4.0*lambda*ss.e);
+        auto numer = -m_min.Cp*m_min.rho + m_min.T*lambda + sqrtTrm;
+        auto denom = 2.0*lambda;
+        ss.T = numer/denom;
+    }
+
+private:    
     LVModelParams m_min;
     LVModelParams m_max;
 }
