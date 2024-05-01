@@ -235,11 +235,12 @@ public:
             if (fvcd.saved_lsqgradients) this.gradients_save = &(fvcd.saved_lsqgradients[id]);
             if (fvcd.saved_source_terms) this.Q_save = fvcd.saved_source_terms[id*ncq .. id*ncq + ncq];
 
-            // TODO: This is new.
-            dRdU.length = ncq; // number of conserved variables
-            foreach (i; 0 .. dRdU.length) {
-                size_t idx = id*ncq*ncq + i*ncq;
-                dRdU[i] = fvcd.cell_jacobians[idx .. idx+ncq];
+            if (fvcd.cell_jacobians){
+                dRdU.length = ncq; // number of conserved variables
+                foreach (i; 0 .. dRdU.length) {
+                    size_t idx = id*ncq*ncq + i*ncq;
+                    dRdU[i] = fvcd.cell_jacobians[idx .. idx+ncq];
+                }
             }
         }
 
