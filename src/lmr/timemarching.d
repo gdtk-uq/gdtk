@@ -667,13 +667,16 @@ int integrateInTime(double targetTimeAsRequested)
                 writeln("An exception was caught during the time step.");
             }
             if (SimState.time >= SimState.target_time) {
+                writefln("maximum-time");
                 writefln("Reached target simulation time of %g seconds.", SimState.target_time);
             }
             if (SimState.step >= GlobalConfig.max_step) {
+                writefln("maximum-steps");
                 writefln("Reached maximum number of steps with step=%d.", SimState.step);
             }
             if (GlobalConfig.halt_now == 1) { writeln("Halt set in control file."); }
             if (SimState.maxWallClockSeconds > 0 && (wall_clock_elapsed > SimState.maxWallClockSeconds)) {
+                writefln("maximum-wall-clock");
                 writefln("Reached maximum wall-clock time with elapsed time %s.", to!string(wall_clock_elapsed));
             }
             writefln("FINAL-STEP: %d", SimState.step);
