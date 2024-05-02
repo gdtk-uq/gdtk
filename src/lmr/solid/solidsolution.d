@@ -35,6 +35,7 @@ class SolidSolution {
     // This holds the collection of solid blocks and solid grid blocks
     // that define the solid domain at a particular instant in time.
 public:
+    double simTime;
     size_t nBlocks;
     SolidBlockLite[] solidBlocks;
     StructuredGrid[] gridBlocks;
@@ -88,6 +89,7 @@ public:
             solidBlocks ~= sb;
         }
         this.nBlocks = nBlocks;
+        this.simTime = simTime;
     }
 
     size_t[] find_enclosing_cell(ref const(Vector3) p)

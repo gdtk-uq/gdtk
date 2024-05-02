@@ -86,7 +86,7 @@ string[] determineSnapshotsToProcess(string[] availSnapshots, int[] snapshots,
 auto mapTimesToSnapshots(string[] snaps)
 {
     double[] times;
-    if (snaps.length == 1) {
+    if (snaps.length == 1 && snaps[0] == format(lmrCfg.snapshotIdxFmt, 0)) {
         // This means we only have an initial snapshot
         // and no times file yet.
         times ~= 0.0;

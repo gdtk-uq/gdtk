@@ -173,15 +173,24 @@ int main_(string[] args)
     auto availSnapshots = determineAvailableSnapshots();
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
 
+    /*
+     * When doing time-marching, also add timestep information.
+     */
+    double[] times;
+    if (GlobalConfig.solverMode == SolverMode.transient) {
+        times = mapTimesToSnapshots(snaps2process);
+    }
+
     if (verbosity > 0) {
         writefln("lmr %s: Computing norms.", cmdName);
     }
 
-    foreach (snap; snaps2process) {
+    foreach (isnap, snap; snaps2process) {
         if (verbosity > 1) {
             writefln("lmr %s: Computing norms for fluid snapshot %s.", cmdName, snap);
         }
-        auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+        double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
+        auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks, simTime);
         outfile.writeln("---"); // YAML document opener
         outfile.writefln("snapshot: %s", snap);
         outfile.writeln("field_type: fluid");
@@ -209,11 +218,12 @@ int main_(string[] args)
     }
 
     if (GlobalConfig.nSolidBlocks > 0 && solidNormsVariables.length > 0) {
-        foreach (snap; snaps2process) {
+        foreach (isnap, snap; snaps2process) {
             if (verbosity > 1) {
                 writefln("lmr %s: Computing norms for solid snapshot %s.", cmdName, snap);
             }
-            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+            double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
+            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nFluidBlocks, simTime);
             outfile.writeln("---"); // YAML document opener
             outfile.writefln("snapshot: %s", snap);
             outfile.writeln("field_type: solid");
