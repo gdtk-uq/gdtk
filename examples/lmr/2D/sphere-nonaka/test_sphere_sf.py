@@ -70,7 +70,7 @@ def test_run():
             steps = int(line.split()[1])
         if line.find("FINAL-TIME") != -1:
             t = float(line.split()[1])
-    assert reason.startswith("Reached target simulation time"), \
+    assert reason.startswith("maximum-time"), \
       "Failed to stop for the expected reason."
     assert abs(steps-4745) < 5, "Failed to take correct number of steps."
     assert abs(t - 20.0e-6)/20.0e-6 < 0.01, \
