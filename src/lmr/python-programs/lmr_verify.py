@@ -229,7 +229,7 @@ def checkRun(logfile):
         if line.find("STOP-REASON") != -1:
             reason = line.split()[1]
     fp.close()
-    if reason != "relative-global-residual-target" and reason != "maximum-steps":
+    if reason != "relative-global-residual-target" and reason != "maximum-steps" and reason != "maximum-time":
         return False
     return True
 
