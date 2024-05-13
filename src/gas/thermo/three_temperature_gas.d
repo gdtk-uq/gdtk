@@ -529,7 +529,10 @@ private:
     @nogc 
     number electron_energy_species(number Te, int isp)
     {
-        return (isp == mElectronIdx) ? (3.0/2.0)*(Te-T_REF)*mR[mElectronIdx] : to!number(0.0);
+        if (isp == mElectronIdx) {
+            return (3.0/2.0)*(Te-T_REF)*mR[mElectronIdx] + mHf[mElectronIdx]-mR[mElectronIdx]*T_REF;
+        }
+        return to!number(0.0);
     }
 
     @nogc
@@ -618,7 +621,7 @@ private:
                     return vibration_temperature(gs);
                 }
             case 1:
-                if (mElectronicMode == 0){
+                if (mElectronicMode == 1){
                     return electron_electronic_temperature(gs);
                 }
                 else {
@@ -634,7 +637,11 @@ private:
     {
         if (gs.massf[mElectronIdx] < 1e-30) {return gs.T_modes[FREE_ELECTRON];}
         number e_e = gs.u_modes[FREE_ELECTRON];
-        return e_e / (3.0 / 2.0 * gs.massf[mElectronIdx] * mR[mElectronIdx]) + T_REF;
+        number Re = mR[mElectronIdx];
+        number Xe = gs.massf[mElectronIdx];
+        number Hf = mHf[mElectronIdx];
+        // return e_e / (3.0 / 2.0 * gs.massf[mElectronIdx] * mR[mElectronIdx]) + T_REF;
+        return 2 * e_e / (3 * Re * Xe) - 2 * (Hf - Re * T_REF) / (3 * Re) + T_REF;
     }
 
     @nogc
@@ -711,7 +718,7 @@ private:
             // If our energy is already close, we'll just accept the temperature
             // that was already there. It is probably a pre-shock free stream
             // value, so has been explicitly set by the user.
-            if (fabs(zero_func(Tb)) < 1e-1) {
+            if (gs.massf[mElectronIdx] < 1e-15) {
                 return gs.T_modes[FREE_ELECTRON];
             }
 
