@@ -357,7 +357,63 @@ function GridArray:new(o)
    end -- ib loop
    -- Make the inter-subblock connections
    if #gridCollection > 1 then
-      identifyGridConnections(gridCollection)
+      --identifyGridConnections(gridCollection)
+      --
+      -- Previously we called identifyGridConnections here, which could get slow with large
+      -- gridArrays. However, for a structured grid that we are cutting up, the connections
+      -- are known a priori, starting with the i-ward ones. (NNG)
+      -- FIXME: Calling identifyGridConnections in ones user script will double up
+      -- on these connections. Which is slow but harmless. Think about making
+      -- identifyGridConnections able to tell which blocks are already connected.
+      for ib = 1, o.nib-1 do
+         for jb = 1, o.njb do
+            if config.dimensions == 2 then
+               -- 2D flow
+               local A = o.myGrids[ib][jb]
+               local B = o.myGrids[ib+1][jb]
+	           connectGrids(A.id, "east", B.id, "west", 0)
+            else
+               -- 3D flow, need one more level in the array
+               for kb = 1, o.nkb do
+                  local A = o.myGrids[ib][jb][kb]
+                  local B = o.myGrids[ib+1][jb][kb]
+	              connectGrids(A.id, "east", B.id, "west", 0)
+               end -- kb loop
+            end -- dimensions
+         end -- jb loop
+      end -- ib loop
+      --
+      -- Now we do the jward ones
+      for ib = 1, o.nib do
+         for jb = 1, o.njb-1 do
+            if config.dimensions == 2 then
+               -- 2D flow
+               local A = o.myGrids[ib][jb]
+               local B = o.myGrids[ib][jb+1]
+	           connectGrids(A.id, "north", B.id, "south", 0)
+            else
+               -- 3D flow, need one more level in the array
+               for kb = 1, o.nkb do
+                  local A = o.myGrids[ib][jb][kb]
+                  local B = o.myGrids[ib][jb+1][kb]
+	              connectGrids(A.id, "north", B.id, "south", 0)
+               end -- kb loop
+            end -- dimensions
+         end -- jb loop
+      end -- ib loop
+      --
+      -- In 3D, we also have k-ward connections to worry about.
+      if config.dimensions == 3 then
+         for ib = 1, o.nib do
+            for jb = 1, o.njb do
+               for kb = 1, o.nkb-1 do
+                  local A = o.myGrids[ib][jb][kb]
+                  local B = o.myGrids[ib][jb][kb+1]
+	              connectGrids(A.id, "top", B.id, "bottom", 0)
+               end -- kb loop
+            end -- jb loop
+         end -- ib loop
+      end -- dimensions
    end
    --
    return o

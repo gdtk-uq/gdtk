@@ -184,7 +184,59 @@ function FBArray:new(o)
    end -- ib loop
    -- Make the inter-subblock connections
    if #o.blockCollection > 1 then
-      identifyBlockConnections(o.blockCollection)
+      --identifyBlockConnections(o.blockCollection)
+      -- Previously we called identifyBlockConnections here, which could get slow with large
+      -- FBArrays. However, for a structured grid that we are cutting up, the connections
+      -- are known a priori, starting with the i-ward ones. (NNG)
+      for ib = 1, o.nib-1 do
+         for jb = 1, o.njb do
+            if config.dimensions == 2 then
+               -- 2D flow
+               local A = o.blockArray[ib][jb]
+               local B = o.blockArray[ib+1][jb]
+	           connectBlocks(A, "east", B, "west", 0)
+            else
+               -- 3D flow, need one more level in the array
+               for kb = 1, o.nkb do
+                  local A = o.blockArray[ib][jb][kb]
+                  local B = o.blockArray[ib+1][jb][kb]
+	              connectBlocks(A, "east", B, "west", 0)
+               end -- kb loop
+            end -- dimensions
+         end -- jb loop
+      end -- ib loop
+      --
+      -- Now we do the jward ones
+      for ib = 1, o.nib do
+         for jb = 1, o.njb-1 do
+            if config.dimensions == 2 then
+               -- 2D flow
+               local A = o.blockArray[ib][jb]
+               local B = o.blockArray[ib][jb+1]
+	           connectBlocks(A, "north", B, "south", 0)
+            else
+               -- 3D flow, need one more level in the array
+               for kb = 1, o.nkb do
+                  local A = o.blockArray[ib][jb][kb]
+                  local B = o.blockArray[ib][jb+1][kb]
+	              connectBlocks(A, "north", B, "south", 0)
+               end -- kb loop
+            end -- dimensions
+         end -- jb loop
+      end -- ib loop
+      --
+      -- In 3D, we also have k-ward connections to worry about.
+      if config.dimensions == 3 then
+         for ib = 1, o.nib do
+            for jb = 1, o.njb do
+               for kb = 1, o.nkb-1 do
+                  local A = o.blockArray[ib][jb][kb]
+                  local B = o.blockArray[ib][jb][kb+1]
+	              connectBlocks(A, "top", B, "bottom", 0)
+               end -- kb loop
+            end -- jb loop
+         end -- ib loop
+      end -- dimensions
    end
    --
    -- Retain meta-information about the new FluidBlockArray
