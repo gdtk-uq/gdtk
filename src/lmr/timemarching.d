@@ -180,10 +180,10 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     if (!SimState.is_restart) {
         SimState.time = 0.0;
         SimState.step = 0;
-        // Clean out any existing times file.
-        if (lmrCfg.timesFile.exists) lmrCfg.timesFile.remove;
-        // We can put an initial entry in the times file now.
         if (cfg.is_master_task) {
+            // Clean out any existing times file.
+            if (lmrCfg.timesFile.exists) lmrCfg.timesFile.remove;
+            // We can put an initial entry in the times file now.
             addToTimesFile();
         }
     }
