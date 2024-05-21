@@ -1055,6 +1055,13 @@ public:
     }
 
     @nogc
+    override void averageProperties() {
+        foreach (f; faces) {
+            f.averageProperties();
+        }
+    }
+
+    @nogc
     override void averageTGradients() {
         foreach (f; faces) {
             f.averageTGradient();

@@ -36,7 +36,7 @@ public:
     final void updateEnergy(ref SolidState ss) const
     {
         updateProperties(ss);
-        ss.e = ss.rho * ss.Cp * ss.T;
+        _updateEnergy(ss);
     }
     
     @nogc
@@ -50,9 +50,10 @@ public:
     void updateProperties(ref SolidState ss) const;
 
 protected:
-    // This protected method provides a customisation point
-    // for how temperature is computed from energy.
-    // Subclasses need to implement this.
+    // Subclasses need to implement these.
+    @nogc
+    void _updateEnergy(ref SolidState ss) const;
+
     @nogc
     void _updateTemperature(ref SolidState ss) const;
 }
@@ -91,6 +92,12 @@ public:
     }
 
 protected:
+    @nogc
+    override void _updateEnergy(ref SolidState ss) const
+    {
+        ss.e = ss.rho * ss.Cp * ss.T;
+    }
+
     @nogc
     override void _updateTemperature(ref SolidState ss) const
     {
@@ -155,15 +162,19 @@ public:
 
 protected:
     @nogc
+    override void _updateEnergy(ref SolidState ss) const
+    {
+        auto lambda = (m_max.Cp - m_min.Cp)/(m_max.T - m_min.T);
+        auto calc = (lambda/2) * (ss.T^^2 - m_min.T^^2) + lambda*m_min.T^^2 - lambda*m_min.T*ss.T + m_min.Cp*(ss.T - m_min.T);
+        ss.e = m_min.rho * calc;
+    }
+    @nogc
     override void _updateTemperature(ref SolidState ss) const 
     {
-        // Need to revisit this implementation if density (rho)
-        // does vary with temperature. Presently, we assume it is constant.
-
-        auto lambda = m_min.rho*(m_max.Cp - m_min.Cp)/(m_max.T - m_min.T);
-        auto sqrtTrm = sqrt((m_min.Cp*m_min.rho - m_min.T*lambda)^^2 + 4.0*lambda*ss.e);
-        auto numer = -m_min.Cp*m_min.rho + m_min.T*lambda + sqrtTrm;
-        auto denom = 2.0*lambda;
+        auto lambda = (m_max.Cp - m_min.Cp)/(m_max.T - m_min.T);
+        auto sqrtTrm = sqrt(m_min.Cp^^2 * m_min.rho^^2 + 2 * ss.e * lambda * m_min.rho);
+        auto numer = lambda*m_min.rho*m_min.T - m_min.Cp*m_min.rho + sqrtTrm;
+        auto denom = lambda*m_min.rho;
         ss.T = numer/denom;
     }
 

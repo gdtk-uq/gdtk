@@ -53,6 +53,13 @@ public:
     }
 
     @nogc
+    void averageProperties() {
+        if (!cellLeft.is_ghost && !cellRight.is_ghost) {
+            harmonicAverage(cellLeft.ss, cellRight.ss, ss);
+        }
+    }
+
+    @nogc
     void averageTGradient() {
         // set the interface gradients to the arithmetic average of the two adjoining cells
         SolidFVCell cL0 = cellLeft;

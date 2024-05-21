@@ -17,6 +17,7 @@ struct SolidState {
     number Cp; // specific heat at constant p, J/(kg.K)
 }
 
+@nogc
 void harmonicAverage(ref SolidState lft, ref SolidState rght, ref SolidState iface)
 {
     iface.rho = 2.0/(1.0/lft.rho + 1.0/rght.rho);

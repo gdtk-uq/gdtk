@@ -82,6 +82,7 @@ public:
     abstract void applyPostFluxAction(double t, int tLevel, SolidFVInterface f);
     abstract void computeSpatialDerivatives(int ftl);
     abstract void averageTemperatures();
+    abstract void averageProperties();
     abstract void averageTGradients();
     abstract void computeFluxes();
     abstract void clearSources();

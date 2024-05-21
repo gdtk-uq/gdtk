@@ -518,6 +518,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    if (!sblk.active) continue;
 	    sblk.averageTemperatures();
+	    sblk.averageProperties();
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
         }
@@ -818,6 +819,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
             sblk.averageTemperatures();
+            sblk.averageProperties();
             sblk.clearSources();
             sblk.computeSpatialDerivatives(ftl);
         }
@@ -1375,6 +1377,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
                         if (!sblk.active) continue;
                         sblk.averageTemperatures();
+                        sblk.averageProperties();
                         sblk.clearSources();
                         sblk.computeSpatialDerivatives(ftl);
                     }
@@ -1882,6 +1885,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             foreach (sblk; localSolidBlocks) {
                 if (!sblk.active) continue;
                 sblk.averageTemperatures();
+                sblk.averageProperties();
                 sblk.clearSources();
                 sblk.computeSpatialDerivatives(ftl);
                 sblk.applyPostFluxAction(SimState.time, ftl);
@@ -2243,6 +2247,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 foreach (sblk; localSolidBlocks) {
                     if (!sblk.active) continue;
                     sblk.averageTemperatures();
+                    sblk.averageProperties();
                     sblk.clearSources();
                     sblk.computeSpatialDerivatives(ftl);
                     sblk.applyPostFluxAction(SimState.time, ftl);
@@ -2588,6 +2593,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
                     sblk.averageTemperatures();
+                    sblk.averageProperties();
                     sblk.clearSources();
                     sblk.computeSpatialDerivatives(ftl0);
                 }
@@ -3002,6 +3008,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
                     sblk.averageTemperatures();
+                    sblk.averageProperties();
                     sblk.clearSources();
                     sblk.computeSpatialDerivatives(ftl0);
                 }
