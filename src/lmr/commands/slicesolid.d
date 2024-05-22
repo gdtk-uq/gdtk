@@ -1,11 +1,11 @@
 /**
- * Module for slicing flow-field snapshots, picking out specific data.
+ * Module for slicing solid-domain snapshots, picking out specific data.
  *
  * Authors: RJG, PJ, KAD, NNG
- * Date: 2024-03-01, adapted from probeflow.d and src/eilmer/postprocess.d
+ * Date: 2024-05-22, adapted from slideflow.d
  */
 
-module sliceflow;
+module lmr.commands.slicesolid;
 
 import std.stdio;
 import std.file;
@@ -15,36 +15,35 @@ import std.array;
 import std.format : format;
 import std.getopt;
 import std.conv : to;
-import std.range;
 import std.algorithm;
 
 import globalconfig;
 import fileutil;
-import flowsolution;
+import solidsolution;
 import lmrconfig : lmrCfg;
 import init : initConfiguration;
 import cmdhelper;
 
 import command;
 
-Command sliceFlowCmd;
+Command sliceSolidCmd;
 
-string cmdName = "slice-flow";
+string cmdName = "slice-solid";
 
 static this()
 {
-    sliceFlowCmd.main = &main_;
-    sliceFlowCmd.description = "Slice flow-field snapshots (for structured grids).";
-    sliceFlowCmd.shortDescription = sliceFlowCmd.description;
-    sliceFlowCmd.helpMsg = format(
+    sliceSolidCmd.main = &main_;
+    sliceSolidCmd.description = "Slice solid-field snapshots (for structured grids).";
+    sliceSolidCmd.shortDescription = sliceSolidCmd.description;
+    sliceSolidCmd.helpMsg = format(
 `lmr %s [options]
 
-Slice flow-field snapshots across index-directions,
-for a selection of flow field variables.
+Slice solid-field snapshots across index-directions,
+for a selection of field variables.
 The really only makes sense for structured-grid blocks.
 
 If no selection of variable names is supplied, then the default action is
-to report all flow field variables (--names=all).
+to report all field variables (--names=all).
 
 If no options related to snapshot selection are given,
 then the default is to process the final snapshot.
@@ -54,24 +53,14 @@ options ([+] can be repeated):
  -n, --names
      comma separated list of variable names for reporting
      examples:
-       --names=rho,vel.x,vel.y
-       --names=rho
+       --names=T,e,k
+       --names=T
      default:
        --names=all
      The output will always start with pos.x,pos.y and, for 3D, pos.z.
 
- --add-vars
-     comma separated array of auxiliary variables to add to the flow solution
-     eg. --add-vars=mach,pitot
-     Other variables include:
-         total-h, total-p, total-T,
-         enthalpy, entropy, molef, conc,
-         Tvib (for some gas models)
-         nrf (non-rotating-frame velocities)
-         cyl (cylindrical coordinates: r, theta)
-
  -l, --slice-list
-     slices the flow field in a range of blocks by accepting a string of the form
+     slices the solid field in a range of blocks by accepting a string of the form
      "blk-range,i-range,j-range:k-range;"
 
      examples:
@@ -86,28 +75,23 @@ options ([+] can be repeated):
 
      default: none (report nothing)
 
- -s, --snapshot[s]+
-     comma separated array of snapshots to convert
-     Note that only the last one will be processed.
+ -s, --snapshot
+     an integer of the snapshot to process for slicing
      examples:
-       --snapshots=0,1,5 : processes snapshots 0, 1 and 5
-       --snapshot=2 : processes snapshot 2 only
-       --snapshot 1  --snapshot 4 : processes snapshots 1 and 4
+       --snapshot=2 : processes snapshot 2
+       -s 4 : processes snapshot 4
      default: none (empty array)
 
 
  -f, --final
      process the final snapshot
-     default: false
-
- -a, --all
-     process all snapshots
+     If given, this overrides the "-s" option (above).
      default: false
 
  -o, --output
      write output to a file
      example:
-       --output=norms-data.txt
+       --output=solid-profile-data.txt
      default: none (just write to STDOUT)
 
  -v, --verbose [+]
@@ -120,26 +104,20 @@ options ([+] can be repeated):
 int main_(string[] args)
 {
     int verbosity = 0;
-    int[] snapshots;
+    int snapshot = -1; // -1 signals no selection set
     bool finalSnapshot = false;
-    bool allSnapshots = false;
-    bool binaryFormat = false;
     string namesStr;
     string outFilename;
     string sliceListStr;
-    string luaRefSoln;
-    string addVarsStr;
     try {
         getopt(args,
                config.bundling,
                "v|verbose+", &verbosity,
                "n|names", &namesStr,
-               "s|snapshots|snapshot", &snapshots,
+               "s|snapshot", &snapshot,
                "f|final", &finalSnapshot,
-               "a|all", &allSnapshots,
                "o|output", &outFilename,
-               "l|slice-list", &sliceListStr,
-               "add-vars", &addVarsStr
+               "l|slice-list", &sliceListStr
                );
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
@@ -152,12 +130,6 @@ int main_(string[] args)
         writefln("lmr %s: Begin program.", cmdName);
     }
 
-    string[] addVarsList;
-    addVarsStr = addVarsStr.strip();
-    addVarsStr = addVarsStr.replaceAll(regex("\""), "");
-    if (addVarsStr.length > 0) {
-        addVarsList = addVarsStr.split(",");
-    }
     if (namesStr.empty) {
         // add default, for when nothing supplied
         namesStr ~= "all";
@@ -168,32 +140,35 @@ int main_(string[] args)
     //
     initConfiguration(); // To read in GlobalConfig
     auto availSnapshots = determineAvailableSnapshots();
-    auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
-    auto snap = snaps2process[$-1];
+    // Set to final snapshot if given no other options
+    auto snap = to!int(availSnapshots[$-1]);
+    // Test if a specific snapshot is given
+    if (snapshot >= 0) snap = snapshot;
+    //Override other options if final requested
+    if (finalSnapshot) snap = to!int(availSnapshots[$-1]);
     if (verbosity > 0) {
-        writefln("lmr %s: Slicing flow field for snapshot %s.", cmdName, snap);
+        writefln("lmr %s: Slicing solid field for snapshot %s.", cmdName, snap);
     }
     sliceListStr = sliceListStr.strip();
     sliceListStr = sliceListStr.replaceAll(regex("\""), "");
     //
-    auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
-    bool threeD =  canFind(soln.flowBlocks[0].variableNames, "pos.z");
-    soln.add_aux_variables(addVarsList);
+    auto soln = new SolidSolution(to!int(snap), GlobalConfig.nSolidBlocks);
+    bool threeD =  canFind(soln.solidBlocks[0].variableNames, "pos.z");
     //
     string[] namesList;
     auto namesVariables = namesStr.split(",");
     foreach (var; namesVariables) {
         var = strip(var);
         if (var.toLower() == "all") {
-            foreach (name; soln.flowBlocks[0].variableNames) {
+            foreach (name; soln.solidBlocks[0].variableNames) {
                 if (!canFind(["pos.x","pos.y","pos.z"], name)) { namesList ~= name; }
             }
         } else {
-            if (canFind(soln.flowBlocks[0].variableNames, var)) {
+            if (canFind(soln.solidBlocks[0].variableNames, var)) {
                 namesList ~= var;
             } else {
                 writefln("Ignoring requested variable: %s", var);
-                writeln("This does not appear in list of flow solution variables.");
+                writeln("This does not appear in list of solid solution variables.");
             }
         }
     }
@@ -202,11 +177,14 @@ int main_(string[] args)
     foreach (var; namesList) { headerStr ~= " " ~ var; }
     outfile.writeln(headerStr);
     //
+    size_t nFluidBlocks = GlobalConfig.nFluidBlocks;
+    size_t nSolidBlocks = GlobalConfig.nSolidBlocks;
     foreach (sliceStr; sliceListStr.split(";")) {
         auto rangeStrings = sliceStr.split(",");
-        auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
+        auto blk_range = decode_range_indices(rangeStrings[0], nFluidBlocks, nFluidBlocks+nSolidBlocks);
         foreach (ib; blk_range[0] .. blk_range[1]) {
-            auto blk = soln.flowBlocks[ib];
+            auto sib = ib - nFluidBlocks; // internally in a SolidSolution, solid blocks number from 0
+            auto blk = soln.solidBlocks[sib];
             // We need to do the decode in the context of each block because
             // the upper limits to the indices are specific to the block.
             auto i_range = decode_range_indices(rangeStrings[1], 0, blk.nic);
@@ -215,13 +193,13 @@ int main_(string[] args)
             foreach (k; k_range[0] .. k_range[1]) {
                 foreach (j; j_range[0] .. j_range[1]) {
                     foreach (i; i_range[0] .. i_range[1]) {
-                        outfile.write(format(" %g %g", soln.flowBlocks[ib]["pos.x", i, j, k],
-                                             soln.flowBlocks[ib]["pos.y", i, j, k]));
+                        outfile.write(format(" %g %g", soln.solidBlocks[sib]["pos.x", i, j, k],
+                                             soln.solidBlocks[sib]["pos.y", i, j, k]));
                         if (threeD) {
-                            outfile.write(format(" %g", soln.flowBlocks[ib]["pos.z", i, j, k]));
+                            outfile.write(format(" %g", soln.solidBlocks[sib]["pos.z", i, j, k]));
                         }
                         foreach (var; namesList) {
-                            outfile.write(format(" %g", soln.flowBlocks[ib][var, i, j, k]));
+                            outfile.write(format(" %g", soln.solidBlocks[sib][var, i, j, k]));
                         }
                         outfile.write("\n");
                     }

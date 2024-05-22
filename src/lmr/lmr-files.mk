@@ -103,6 +103,7 @@ LMR_CMD_FILES = $(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/customscript.d \
 	$(LMR_CMD)/probeflow.d \
 	$(LMR_CMD)/sliceflow.d \
+	$(LMR_CMD)/slicesolid.d \
 	$(LMR_CMD)/extractline.d \
 	$(LMR_CMD)/listspecies.d \
 	$(LMR_CMD)/limiter2vtk.d \

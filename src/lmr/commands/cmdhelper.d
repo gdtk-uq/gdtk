@@ -10,6 +10,7 @@ module cmdhelper;
 
 import std.stdio;
 import std.file;
+import std.string;
 import std.format : format;
 import std.algorithm;
 import std.range : array;
@@ -100,4 +101,36 @@ auto mapTimesToSnapshots(string[] snaps)
     return times;
 }
 
-
+/**
+ * For structured block processing, decode user-supplied range indices.
+ *
+ * Author: PAJ
+ * Date: 2024-05-22 (moved into this module)
+ */
+size_t[] decode_range_indices(string rangeStr, size_t first, size_t endplus1)
+// Decode strings such as "0:$", ":", "0:3", "$"
+// On input, first and endplus1 represent the largest, available range.
+// Return the pair of numbers that can be used in a foreach loop range.
+{
+    if (rangeStr == ":") {
+        return [first, endplus1];
+    }
+    if (canFind(rangeStr, ":")) {
+        // We have a range specification to pull apart.
+        auto items = rangeStr.split(":");
+        first = to!size_t(items[0]);
+        if (items.length > 1 && items[1] != "$") {
+            // Presume that we have a second integer.
+            size_t new_endplus1 = to!size_t(items[1]);
+            if (new_endplus1 < endplus1) endplus1 = new_endplus1;
+        }
+    } else if (rangeStr == "$") {
+        // With just a single "$" specified, we want only the last index.
+        first = endplus1 - 1;
+    }else {
+        // Presume that we have a single integer.
+        first = to!size_t(rangeStr);
+        if (first < endplus1) endplus1 = first+1;
+    }
+    return [first, endplus1];
+} // end decode_range_indices()

@@ -15,6 +15,7 @@ import lmr.commands.listspecies;
 import lmr.commands.prepenergyexchange;
 import lmr.commands.prepgas;
 import lmr.commands.prepreactions;
+import lmr.commands.slicesolid;
 import prepgrids;
 import prepsim;
 import prepmappedcells;
@@ -54,8 +55,6 @@ Show help for a given Eilmer command or topic.
     // 1. Add user commands
     commands["compute-norms"] = compNormsCmd;
     commands["custom-script"] = customScriptCmd;
-    commands["probe-flow"] = probeFlowCmd;
-    commands["slice-flow"] = sliceFlowCmd;
     commands["extract-line"] = extractLineCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["list-species"] = listSpeciesCmd;
@@ -74,8 +73,13 @@ Show help for a given Eilmer command or topic.
     commands["prep-sim"] = prepSimCmd;
     commands["prep-flow"] = commands["prep-sim"]; // alias for prep-sim
     commands["prep-mapped-cells"] = prepMappedCellsCmd;
+    commands["probe-flow"] = probeFlowCmd;
     commands["revision-id"] = revisionIdCmd;
     commands["run"] = runCmd;
+    commands["slice-flow"] = sliceFlowCmd;
+    // alias for slice-flow because fluid comes naturally when also working with solids
+    commands["slice-fluid"] = commands["slice-flow"];
+    commands["slice-solid"] = sliceSolidCmd;
     commands["snapshot2vtk"] = snapshot2vtkCmd;
     commands["structured2unstructured"] = structured2unstructuredCmd;
     // add alias for structured2unstructured
