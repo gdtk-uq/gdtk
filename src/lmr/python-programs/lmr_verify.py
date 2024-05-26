@@ -201,9 +201,9 @@ def buildConfigStr(case, grid):
 
 def buildRunStr():
     return (
-        f"lmr prep-grid\n"
-        f"lmr prep-sim\n"
-        f"lmr run\n"
+        f"make prep-grid\n"
+        f"make prep-sim\n"
+        f"make run\n"
         )
 
 def runGridLevels(case, levelsToExec):
