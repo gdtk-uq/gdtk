@@ -160,12 +160,6 @@ public:
         // stage 1 update
         e[1] = e[0] + muj_tilde*dt*dedt[0];
 
-        if (e[1] < 0.0) {
-            string msg = "e[1] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
-
         return;
     } // end stage1RKL1Update()
 
@@ -179,12 +173,6 @@ public:
 
         // stage j update
         e[2] = muj*e[1] + vuj*e[0] + muj_tilde*dt*dedt[1];
-
-        if (e[2] < 0.0) {
-            string msg = "e[2] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
 
         return;
     } // end stage2RKL1Update()
@@ -200,12 +188,6 @@ public:
 
         // make a copy of the initial conserved quantities for the stage j updates
         e[3] = e[0];
-
-        if (e[1] < 0.0) {
-            string msg = "e[1] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
 
         return;
     } // end stage1RKL2Update()
@@ -240,12 +222,6 @@ public:
         // stage j update
         e[2] = muj*e[1] + vuj*e[0] + (1.0-muj-vuj)*e[3] + muj_tilde*dt*dedt[1] + gam_tilde*dt*dedt[0];
 
-        if (e[2] < 0.0) {
-            string msg = "e[2] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
-
         return;
     } // end stage2RKL2Update()
 
@@ -253,11 +229,6 @@ public:
     {
         e[1] = e[0] + dt*dedt[0];
 
-        if (e[1] < 0.0) {
-            string msg = "e[1] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
     }
 
     void stage1Update(double dt)
@@ -279,12 +250,6 @@ public:
         case GasdynamicUpdate.classic_rk4: gamma1 = 0.5; break;
         }
         e[1] = e[0] + dt*gamma1*dedt[0];
-
-        if (e[1] < 0.0) {
-            string msg = "e[1] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
 
     }
 
@@ -310,11 +275,6 @@ public:
         }
         e[2] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1]);
 
-        if (e[2] < 0.0) {
-            string msg = "e[2] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
     }
 
     void stage3Update(double dt)
@@ -342,11 +302,6 @@ public:
         }
         e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2]);
 
-        if (e[3] < 0.0) {
-            string msg = "e[3] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
     }
 
     void stage4Update(double dt)
@@ -372,11 +327,6 @@ public:
         }
         e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2] + gamma4*dedt[3]);
 
-        if (e[3] < 0.0) {
-            string msg = "e[3] is negative in solid cell ";
-            msg ~= format("(id: %d, pos: [%.8f, %.8f, %.8f])", id, pos.x.re, pos.y.re, pos.z.re);
-            throw new FlowSolverException(msg);
-        }
     }
 
     void gather_residual_stencil_lists(int spatial_order_of_jacobian)
