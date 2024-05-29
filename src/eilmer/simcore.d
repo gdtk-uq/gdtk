@@ -777,6 +777,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         writefln("Done init_simulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
+
     return 0; // Successfully initialized simulation.
 } // end init_simulation()
 
