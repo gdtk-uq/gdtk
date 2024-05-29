@@ -3,17 +3,18 @@
 
 test: vector3_test rsla_test spline_test \
 	gas_test flow_test face_test cell_test
-	./vector3_test
-	./rsla_test
-	./spline_test
-	./gas_test
-	./flow_test
-	./face_test
-	./cell_test
+	./vector3_test --numLocales=1
+	./rsla_test --numLocales=1
+	./spline_test --numLocales=1
+	./gas_test --numLocales=1
+	./flow_test --numLocales=1
+	./face_test --numLocales=1
+	./cell_test --numLocales=1
 
 clean:
 	- rm ./vector3_test ./rsla_test ./spline_test
 	- rm ./gas_test ./flow_test ./face_test ./cell_test
+	- rm ./*_test_real
 
 vector3_test: vector3_test.chpl ../vector3.chpl
 	chpl vector3_test.chpl ../vector3.chpl
