@@ -389,11 +389,15 @@ void initFluidBlocksFlowField(int snapshotStart)
 
     fluidBlkIO.readMetadataFromFile(lmrCfg.fluidMetadataFile);
 
+    // Note that we have already just computed the cell centroids based on the vertex
+    // positions, so we won't read them in from the snapshot file upon start-up.
+    string[3] varsToSkip = ["pos.x", "pos.y", "pos.z"];
+
     foreach (blk; localFluidBlocks) {
         FVCell[] cells;
         cells.length = blk.cells.length;
         foreach (i, ref c; cells) c = blk.cells[i];
-        fluidBlkIO.readVariablesFromFile(fluidFilename(snapshotStart, blk.id), cells);
+        fluidBlkIO.readVariablesFromFile(fluidFilename(snapshotStart, blk.id), cells, varsToSkip);
         // Note that, even for grid_motion==none simulations, we use the grid velocities for setting
         // the gas velocities at boundary faces.  These will need to be set to zero for correct viscous simulation.
         foreach (iface; blk.faces) iface.gvel.clear();

@@ -12,6 +12,7 @@ immutable string BLK_IO_VERSION = "1.0";
 import std.stdio;
 import std.conv : to;
 import std.format : format, formattedRead;
+import std.algorithm: canFind;
 
 import gzip : GzipOut, GzipByLine;
 import dyaml;
@@ -83,7 +84,7 @@ public:
 
 abstract:
     void writeVariablesToFile(string fname, FVCell[] cells);
-    void readVariablesFromFile(string fname, FVCell[] cells);
+    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList = []);
 
 private:
     FVCellIO mCIO;
@@ -114,14 +115,15 @@ public:
     }
 
     override
-    void readVariablesFromFile(string fname, FVCell[] cells)
+    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList = [])
     {
 	double[1] dbl1;
 	auto infile = File(fname, "rb");
 	foreach (var; mCIO.variables) {
 	    foreach (cell; cells) {
-		infile.rawRead(dbl1);
-		mCIO[cell,var] = dbl1[0];
+            infile.rawRead(dbl1);
+            if (canFind(skipList, var)) continue;
+            mCIO[cell,var] = dbl1[0];
 	    }
 	}
 	infile.close();
@@ -151,7 +153,7 @@ public:
     }
 
     override
-    void readVariablesFromFile(string fname, FVCell[] cells)
+    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList = [])
     {
         auto byLine = new GzipByLine(fname);
         string line;
@@ -160,6 +162,7 @@ public:
             foreach (cell; cells) {
                 line = byLine.front; byLine.popFront;
                 formattedRead(line, "%e", &dbl);
+                if (canFind(skipList, var)) continue;
                 mCIO[cell,var] = dbl;
             }
         }
