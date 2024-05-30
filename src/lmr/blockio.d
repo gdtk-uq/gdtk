@@ -103,32 +103,32 @@ public:
     override
     void writeVariablesToFile(string fname, FVCell[] cells)
     {
-	double[1] dbl1;
-	auto outfile = File(fname, "wb");
-	foreach (var; mCIO.variables) {
-	    foreach (cell; cells) {
-		dbl1[0] = mCIO[cell,var];
-		outfile.rawWrite(dbl1);
-	    }
-	}
-	outfile.close();
+        double[1] dbl1;
+        auto outfile = File(fname, "wb");
+        foreach (var; mCIO.variables) {
+            foreach (cell; cells) {
+                dbl1[0] = mCIO[cell,var];
+                outfile.rawWrite(dbl1);
+            }
+        }
+        outfile.close();
     }
 
     override
-    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList = [])
+    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList=[])
     {
-	double[1] dbl1;
-	auto infile = File(fname, "rb");
-	foreach (var; mCIO.variables) {
-	    foreach (cell; cells) {
-            infile.rawRead(dbl1);
-            if (canFind(skipList, var)) continue;
-            mCIO[cell,var] = dbl1[0];
-	    }
-	}
-	infile.close();
+        double[1] dbl1;
+        auto infile = File(fname, "rb");
+        foreach (var; mCIO.variables) {
+            bool skip = (canFind(skipList, var)) ? true : false;
+            foreach (cell; cells) {
+                infile.rawRead(dbl1);
+                if (skip) continue;
+                mCIO[cell,var] = dbl1[0];
+            }
+        }
+        infile.close();
     }
-
 }
 
 class GzipBlockIO : BlockIO {
@@ -153,16 +153,20 @@ public:
     }
 
     override
-    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList = [])
+    void readVariablesFromFile(string fname, FVCell[] cells, string[] skipList=[])
     {
         auto byLine = new GzipByLine(fname);
         string line;
         double dbl;
         foreach (var; mCIO.variables) {
+            bool skip = (canFind(skipList, var)) ? true : false;
             foreach (cell; cells) {
+                if (skip) { // pop the line and move on, we don't need to read this data into a cell
+                    byLine.popFront;
+                    continue;
+                }
                 line = byLine.front; byLine.popFront;
                 formattedRead(line, "%e", &dbl);
-                if (canFind(skipList, var)) continue;
                 mCIO[cell,var] = dbl;
             }
         }
