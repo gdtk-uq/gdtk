@@ -168,7 +168,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_unstructured_grid(t, gtl, ftl);
+            apply_structured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
             apply_structured_grid(t, gtl, ftl);
@@ -178,7 +178,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
             apply_for_interface_structured_grid(t, gtl, ftl, f);
@@ -225,8 +225,6 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         auto c = (bc.outsigns[f.i_bndry] == 1) ? f.left_cells[0] : f.right_cells[0];
         f.fs.copy_values_from(c.fs);
@@ -235,8 +233,6 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             auto c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
@@ -289,8 +285,6 @@ public:
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         f.fs.copy_values_from(fstate);
         if (r > 0.0) { compute_source_flow(f); }
@@ -299,8 +293,6 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fstate);
@@ -380,8 +372,6 @@ public:
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
         fprofile.adjust_velocity(f.fs, f.pos);
@@ -390,8 +380,6 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
@@ -441,8 +429,6 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         auto gmodel = blk.myConfig.gmodel;
         fhistory.set_flowstate(fstate, t, gmodel);
         BoundaryCondition bc = blk.bc[which_boundary];
@@ -493,8 +479,6 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
@@ -534,16 +518,12 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         f.fs.vel.set(0.0, 0.0, 0.0);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) { f.fs.vel.set(0.0, 0.0, 0.0); }
     }
@@ -581,16 +561,12 @@ class BIE_ZeroSlipWallVelocity : BoundaryInterfaceEffect {
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         f.fs.vel.set(f.gvel);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.vel.set(f.gvel);
@@ -634,8 +610,6 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.vel.set(v_trans);
@@ -683,8 +657,6 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.vel = cross(r_omega, f.pos-centre);
@@ -742,8 +714,6 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.gas.T = Twall;
@@ -803,8 +773,6 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         uint nsp = blk.myConfig.n_species;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             version(multi_species_gas) {
@@ -854,8 +822,6 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
@@ -916,8 +882,6 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         version(turbulence) {
             foreach (i, f; bc.faces) {
@@ -982,8 +946,6 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         if (_faces_need_to_be_flagged) {
             // Flag faces, just once.
@@ -1640,8 +1602,6 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             int outsign = bc.outsigns[i];
@@ -1821,8 +1781,6 @@ class BIE_EquilibriumComposition : BoundaryInterfaceEffect {
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (f; bc.faces) {
             set_equilibrium_composition(f);

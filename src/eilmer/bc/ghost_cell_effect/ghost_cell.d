@@ -238,7 +238,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_unstructured_grid(t, gtl, ftl);
+            apply_structured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
             apply_structured_grid(t, gtl, ftl);
@@ -248,7 +248,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
             apply_for_interface_structured_grid(t, gtl, ftl, f);

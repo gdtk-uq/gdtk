@@ -75,8 +75,6 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         FVCell inside, ghost;
         bool upwind_is_inside;
@@ -103,8 +101,6 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             apply_for_interface_structured_grid(t, gtl, ftl, f);
@@ -175,8 +171,6 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         FVCell inside, ghost;
         bool upwind_is_inside;
@@ -204,8 +198,6 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             apply_for_interface_structured_grid(t, gtl, ftl, f);

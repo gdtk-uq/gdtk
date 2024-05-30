@@ -110,7 +110,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_unstructured_grid(t, gtl, ftl);
+            apply_structured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
             apply_structured_grid(t, gtl, ftl);
@@ -120,7 +120,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
             apply_for_interface_structured_grid(t, gtl, ftl, f);
@@ -518,8 +518,6 @@ public:
     @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(UFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be a UFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
         //
         BoundaryCondition bc = blk.bc[which_boundary];
@@ -531,8 +529,6 @@ public:
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(UFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be a UFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
         //
         BoundaryCondition bc = blk.bc[which_boundary];
@@ -546,8 +542,6 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
@@ -558,8 +552,6 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
         BoundaryCondition bc = blk.bc[which_boundary];
         //
@@ -696,8 +688,6 @@ public:
     {
         Vector3 nx,ny,nz;
         nx.set(1,0,0); ny.set(0,1,0); nz.set(0,0,1);
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         auto cqi = blk.myConfig.cqi;
         //
@@ -753,8 +743,6 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         auto cqi = blk.myConfig.cqi;
         //

@@ -80,8 +80,6 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         if (xOrder == 0) {
             // Fill ghost cells with data from just inside the boundary
@@ -123,8 +121,6 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         if (xOrder == 0) {
             // Fill ghost cells with data from just inside the boundary

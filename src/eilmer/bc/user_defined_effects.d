@@ -56,6 +56,27 @@ public:
     {
         return "UserDefinedGhostCellEffect(luaFileName=" ~ luaFileName ~ ")";
     }
+    override void apply(double t, int gtl, int ftl)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid:
+            apply_unstructured_grid(t, gtl, ftl);
+            break;
+        case Grid_t.structured_grid:
+            apply_structured_grid(t, gtl, ftl);
+        }
+    }
+    override void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid:
+            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            break;
+        case Grid_t.structured_grid:
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
+            break;
+        }
+    }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
@@ -313,6 +334,27 @@ public:
         return "UserDefined(fname=" ~ luafname ~ ")";
     }
 
+    override void apply(double t, int gtl, int ftl)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid:
+            apply_unstructured_grid(t, gtl, ftl);
+            break;
+        case Grid_t.structured_grid:
+            apply_structured_grid(t, gtl, ftl);
+        }
+    }
+    override void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid:
+            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            break;
+        case Grid_t.structured_grid:
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
+            break;
+        }
+    }
     // not @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
@@ -568,6 +610,27 @@ public:
     override string toString() const
     {
         return "UserDefinedFluxEffect(fname=" ~ luafname ~ ", luaFnName=" ~ luaFnName ~ ")";
+    }
+    override void apply(double t, int gtl, int ftl)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid:
+            apply_unstructured_grid(t, gtl, ftl);
+            break;
+        case Grid_t.structured_grid:
+            apply_structured_grid(t, gtl, ftl);
+        }
+    }
+    override void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid:
+            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            break;
+        case Grid_t.structured_grid:
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
+            break;
+        }
     }
 
     // not @nogc

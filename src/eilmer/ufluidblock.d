@@ -51,6 +51,7 @@ public:
     size_t nboundaries;
     UnstructuredGrid grid;
     size_t ninteriorfaces;
+    FVCell[] ghost_cells;
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
 
@@ -61,6 +62,7 @@ public:
         ncells = getJSONint(json_data, "ncells", 0);
         // For an unstructured-grid, n_ghost_cell_layers=1
         super(id, Grid_t.unstructured_grid, ncells, 1, label);
+        //super(id, Grid_t.unstructured_grid, ncells, 2, label);
         nvertices = getJSONint(json_data, "nvertices", 0);
         nfaces = getJSONint(json_data, "nfaces", 0);
         nboundaries = getJSONint(json_data, "nboundaries", 0);
@@ -327,10 +329,10 @@ public:
         size_t nghost = 0;
         foreach (bndry; grid.boundaries) nghost += bndry.face_id_list.length;
 
-        nghost *= 2;
+        nghost *= n_ghost_cell_layers;
 
         allocate_dense_celldata(ncells, nghost, neq, nftl);
-        allocate_dense_facedata(nfaces, nghost, neq, nftl); // nghost==nbfaces for unstructured
+        allocate_dense_facedata(nfaces, nghost, neq, nftl);
 
         // We have some unstructured specific stuff that also needs to be allocated
         celldata.face_distances.length = ncells;
@@ -353,7 +355,8 @@ public:
             faces ~= new_face;
         }
 
-        cells.reserve(ncells + nghost);
+        cells.reserve(ncells);
+        ghost_cells.reserve(nghost);
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
@@ -365,11 +368,13 @@ public:
         // Bind the interfaces, vertices and cells together,
         // using the indices stored in the unstructured grid.
         foreach (i, f; faces) {
+            f.left_cells.length = n_ghost_cell_layers;
+            f.right_cells.length = n_ghost_cell_layers;
             foreach (j; grid.faces[i].vtx_id_list) {
                 f.vtx ~= vertices[j];
             }
         }
-        celldata.outsigns.length=cells.length;
+        celldata.outsigns.length=cells.length; // FIXME: This shouldn't be here.
         celldata.c2f.length = cells.length;
         foreach (i, c; cells) {
             foreach (j; grid.cells[i].vtx_id_list) {
@@ -397,6 +402,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.left_cell = c;
+                        my_face.left_cells[0] = c;
                         facedata.f2c[grid.cells[i].face_id_list[j]].left = i;
                     }
                 } else {
@@ -406,6 +412,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.right_cell = c;
+                        my_face.right_cells[0] = c;
                         facedata.f2c[grid.cells[i].face_id_list[j]].right = i;
                     }
                 }
@@ -453,6 +460,7 @@ public:
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     ghost0.is_ghost_cell = true;
                     bc[i].ghostcells ~= ghost0;
+                    ghost_cells ~= ghost0;
                     if (my_outsign == 1) {
                         if (my_face.right_cell) {
                             string msg = format("Already have cell %d attached to right-of-face %d."
@@ -461,6 +469,7 @@ public:
                             throw new FlowSolverException(msg);
                         } else {
                             my_face.right_cell = ghost0;
+                            my_face.right_cells[0] = ghost0;
                             facedata.f2c[bndry.face_id_list[j]].right = ghost0.id;
                         }
                     } else {
@@ -471,21 +480,27 @@ public:
                             throw new FlowSolverException(msg);
                         } else {
                             my_face.left_cell = ghost0;
+                            my_face.left_cells[0] = ghost0;
                             facedata.f2c[bndry.face_id_list[j]].left = ghost0.id;
                         }
                     }
                     // For nick's experimental pseudo-structured stencils, we need a second layer of
                     // ghost cells. Put them in the stencils here, for now.
-                    FVCell ghost1 = new FVCell(myConfig, &celldata, ghost_cell_id);
-                    ghost_cell_id++;
-                    ghost1.contains_flow_data = bc[i].ghost_cell_data_available;
-                    ghost1.is_ghost_cell = true;
-                    bc[i].ghostcells ~= ghost1;
-                    size_t fid = bndry.face_id_list[j];
-                    if (my_outsign == 1) {
-                        facedata.stencil_idxs[fid].R1 = ghost1.id;
-                    } else {
-                        facedata.stencil_idxs[fid].L1 = ghost1.id;
+                    if (n_ghost_cell_layers>1) {
+                        FVCell ghost1 = new FVCell(myConfig, &celldata, ghost_cell_id);
+                        ghost_cell_id++;
+                        ghost1.contains_flow_data = bc[i].ghost_cell_data_available;
+                        ghost1.is_ghost_cell = true;
+                        bc[i].ghostcells ~= ghost1;
+                        ghost_cells ~= ghost1;
+                        size_t fid = bndry.face_id_list[j];
+                        if (my_outsign == 1) {
+                            facedata.stencil_idxs[fid].R1 = ghost1.id;
+                            my_face.right_cells[1] = ghost1;
+                        } else {
+                            facedata.stencil_idxs[fid].L1 = ghost1.id;
+                            my_face.left_cells[1] = ghost1;
+                        }
                     }
                 } // end if (bc[i].ghost_cell_data_available
             } // end foreach j
@@ -682,6 +697,8 @@ public:
     /*
         Used in the experimental quasi-structured reconstruction mode.
     */
+        if (n_ghost_cell_layers<2) return;
+
         setup_quasistructured_stencil(gtl);
         fix_second_layer_of_ghostcells(gtl);
 
@@ -753,6 +770,12 @@ public:
                 }
                 // Assuming we found on correctly, that should be our faces R1
                 facedata.stencil_idxs[fid].R1 = max_cell_id;
+                if (max_cell_id<ncells){
+                    faces[fid].right_cells[1] = cells[max_cell_id];
+                } else {
+                    faces[fid].right_cells[1] = ghost_cells[max_cell_id-ncells];
+
+                }
             }
 
             // Just like above, we do the same procedure using a leftward vector to get L1
@@ -771,6 +794,11 @@ public:
                     }
                 }
                 facedata.stencil_idxs[fid].L1 = max_cell_id;
+                if (max_cell_id<ncells){
+                    faces[fid].left_cells[1] = cells[max_cell_id];
+                } else {
+                    faces[fid].left_cells[1] = ghost_cells[max_cell_id-ncells];
+                }
             }
         }
     }
@@ -864,16 +892,18 @@ public:
                     ghost0.L_max = inside0.L_max;
                     ghost0.update_celldata_geometry();
 
-                    auto inside1 = cells[facedata.stencil_idxs[my_face.id].L1];
-                    delta = my_face.pos; delta -= inside1.pos[gtl];
-                    auto ghost1 = bc[i].ghostcells[j*2 + 1];
-                    ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
-                    ghost1.iLength = inside1.iLength;
-                    ghost1.jLength = inside1.jLength;
-                    ghost1.kLength = inside1.kLength;
-                    ghost1.L_min = inside1.L_min;
-                    ghost1.L_max = inside1.L_max;
-                    ghost1.update_celldata_geometry();
+                    if (n_ghost_cell_layers>1){
+                        auto inside1 = cells[facedata.stencil_idxs[my_face.id].L1];
+                        delta = my_face.pos; delta -= inside1.pos[gtl];
+                        auto ghost1 = bc[i].ghostcells[j*2 + 1];
+                        ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
+                        ghost1.iLength = inside1.iLength;
+                        ghost1.jLength = inside1.jLength;
+                        ghost1.kLength = inside1.kLength;
+                        ghost1.L_min = inside1.L_min;
+                        ghost1.L_max = inside1.L_max;
+                        ghost1.update_celldata_geometry();
+                    }
                 } else {
                     auto inside0 = my_face.right_cell;
                     Vector3 delta; delta = my_face.pos; delta -= inside0.pos[gtl];
@@ -886,16 +916,18 @@ public:
                     ghost0.L_max = inside0.L_max;
                     ghost0.update_celldata_geometry();
 
-                    auto inside1 = cells[facedata.stencil_idxs[my_face.id].R1];
-                    delta = my_face.pos; delta -= inside1.pos[gtl];
-                    auto ghost1 = bc[i].ghostcells[j*2 + 1];
-                    ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
-                    ghost1.iLength = inside1.iLength;
-                    ghost1.jLength = inside1.jLength;
-                    ghost1.kLength = inside1.kLength;
-                    ghost1.L_min = inside1.L_min;
-                    ghost1.L_max = inside1.L_max;
-                    ghost1.update_celldata_geometry();
+                    if (n_ghost_cell_layers>1){
+                        auto inside1 = cells[facedata.stencil_idxs[my_face.id].R1];
+                        delta = my_face.pos; delta -= inside1.pos[gtl];
+                        auto ghost1 = bc[i].ghostcells[j*2 + 1];
+                        ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
+                        ghost1.iLength = inside1.iLength;
+                        ghost1.jLength = inside1.jLength;
+                        ghost1.kLength = inside1.kLength;
+                        ghost1.L_min = inside1.L_min;
+                        ghost1.L_max = inside1.L_max;
+                        ghost1.update_celldata_geometry();
+                    }
                 } // end if my_outsign
             } // end foreach j
         } // end foreach bndry

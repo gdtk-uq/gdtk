@@ -82,8 +82,6 @@ public:
     {
         FVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (n; 0 .. blk.n_ghost_cell_layers) {
             if (bc.outsigns[f.i_bndry] == 1) {
@@ -106,8 +104,6 @@ public:
     {
         FVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {

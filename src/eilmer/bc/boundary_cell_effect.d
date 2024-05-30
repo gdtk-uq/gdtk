@@ -63,7 +63,7 @@ public:
     {
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid:
-            apply_unstructured_grid(t, gtl, ftl);
+            apply_structured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
             apply_structured_grid(t, gtl, ftl);
@@ -103,8 +103,6 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         // Apply the cell flags, just once.
         if (_cells_need_to_be_flagged) {
