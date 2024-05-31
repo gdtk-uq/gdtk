@@ -170,7 +170,7 @@ ifeq ($(DMD), dmd)
 	# For note on "-Wl,-E", see: https://web.tecgraf.puc-rio.br/~lhf/ftp/lua/install.html#adding
 	DLINKFLAGS := $(DLINKFLAGS) -L-Wl,-E -L-ldl
     ifeq ($(PLATFORM), macosx)
-		DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+        DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
 endif
 ifeq ($(DMD), ldc2)
@@ -179,7 +179,11 @@ ifeq ($(DMD), ldc2)
     # llvm-profdata show -text -topn=10 <profraw-file>
     DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug
     PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_profile
-    FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_fast -flto=full
+    FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
+    ifeq ($(PLATFORM), linux)
+	# Full link-time optimization does not play nicely on macOS
+	FAST_DFLAGS += -flto=full
+    endif
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DFLAGS := $(DFLAGS) -fsanitize=thread
     endif

@@ -115,7 +115,11 @@ ifeq ($(DMD), ldc2)
         DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
+        DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast
+        ifeq ($(PLATFORM), linux)
+	    # Full link-time optimization does not play nicely on macOS
+	    DFLAGS += -flto=full
+        endif
     endif
     OF := -of=
     DVERSION := -d-version=
