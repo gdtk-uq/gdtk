@@ -672,6 +672,89 @@ public:
             } // end switch (myConfig.spatial_deriv_locn)
         } // if myConfig.viscous
 
+        // Experimental extra stencil size for using the structured style reconstruction
+        if (n_ghost_cell_layers>1) {
+            foreach (fid; 0 .. nfaces) {
+                auto face = faces[fid];
+                auto left = face.left_cells[0];
+                auto right= face.right_cells[0];
+                // Even in an unstructured grid, we know that the vertices in a cell
+                // have a required order. This means we can find the opposite face
+                // by checking its vertices.
+                size_t[] face_vtx_list; foreach(vtx; face.vtx) face_vtx_list ~= vtx.id; face_vtx_list.sort();
+
+                if (left.id<ncells){
+
+                    size_t[] south = [left.vtx[0].id, left.vtx[1].id]; south.sort();
+                    size_t[] west  = [left.vtx[1].id, left.vtx[2].id]; west.sort();
+                    size_t[] north = [left.vtx[2].id, left.vtx[3].id]; north.sort();
+                    size_t[] east  = [left.vtx[3].id, left.vtx[0].id]; east.sort();
+
+                    size_t jj0=99; size_t jj1=99;
+                    if (face_vtx_list==south) { jj0=2; jj1=3; }
+                    if (face_vtx_list==west)  { jj0=3; jj1=0; }
+                    if (face_vtx_list==north) { jj0=0; jj1=1; }
+                    if (face_vtx_list==east)  { jj0=1; jj1=2; }
+                    if (jj0==99||jj1==99) throw new Error("Can't find opposite face indexes for left cell.");
+                    size_t[] oface_vtx_list = [left.vtx[jj0].id, left.vtx[jj1].id]; oface_vtx_list.sort();
+
+                    size_t oface_idx = 99;
+                    foreach(i, tface; left.iface){
+                        size_t[] tface_vtx_list; foreach(vtx; tface.vtx) tface_vtx_list ~= vtx.id; tface_vtx_list.sort();
+                        if (tface_vtx_list == oface_vtx_list) oface_idx = i;
+                    }
+                    if (oface_idx==99) throw new Error("Can't find correct opposite face");
+                    auto oface = left.iface[oface_idx];
+                    size_t oface_id = oface.id;
+
+                    if (oface.right_cells[0].id == left.id) {
+                        face.left_cells[1]            = oface.left_cells[0];
+                    } else if (oface.left_cells[0].id == left.id ){
+                        face.left_cells[1]            = oface.right_cells[0];
+                    } else {
+                        throw new Error("Error fixing second left cell for face.");
+                    }
+                }
+
+                if (right.id<ncells){ 
+                    size_t[] south = [right.vtx[0].id, right.vtx[1].id]; south.sort();
+                    size_t[] west  = [right.vtx[1].id, right.vtx[2].id]; west.sort();
+                    size_t[] north = [right.vtx[2].id, right.vtx[3].id]; north.sort();
+                    size_t[] east  = [right.vtx[3].id, right.vtx[0].id]; east.sort();
+
+                    size_t jj0=99; size_t jj1=99;
+                    if (face_vtx_list==south) { jj0=2; jj1=3; }
+                    if (face_vtx_list==west)  { jj0=3; jj1=0; }
+                    if (face_vtx_list==north) { jj0=0; jj1=1; }
+                    if (face_vtx_list==east)  { jj0=1; jj1=2; }
+                    if (jj0==99||jj1==99) throw new Error("Can't find opposite face indexes for right cell.");
+                    size_t[] oface_vtx_list = [right.vtx[jj0].id, right.vtx[jj1].id]; oface_vtx_list.sort();
+
+                    size_t oface_idx = 99;
+                    foreach(i, tface; right.iface){
+                        size_t[] tface_vtx_list; foreach(vtx; tface.vtx) tface_vtx_list ~= vtx.id; tface_vtx_list.sort();
+                        if (tface_vtx_list == oface_vtx_list) oface_idx = i;
+                    }
+                    if (oface_idx==99) throw new Error("Can't find correct opposite face");
+                    auto oface = right.iface[oface_idx];
+                    size_t oface_id = oface.id;
+
+                    if (oface.left_cells[0].id == right.id) {
+                        face.right_cells[1]           = oface.right_cells[0];
+                    } else if (oface.right_cells[0].id == right.id ){
+                        face.right_cells[1]           = oface.left_cells[0];
+                    } else {
+                        throw new Error("Error fixing second right cell for face.");
+                    }
+                }
+            }
+            foreach (fid; 0 .. nfaces) {
+                facedata.stencil_idxs[fid].L1 = faces[fid].left_cells[1].id;
+                facedata.stencil_idxs[fid].L0 = faces[fid].left_cells[0].id;
+                facedata.stencil_idxs[fid].R0 = faces[fid].right_cells[0].id;
+                facedata.stencil_idxs[fid].R1 = faces[fid].right_cells[1].id;
+            }
+        } // End n_ghost_cell_layers>1 special init code.
     } // end init_grid_and_flow_arrays()
 
     void build_cloud_of_cell_references_at_each_vertex()
@@ -689,8 +772,6 @@ public:
         }
     }
 
-
-
     @nogc
     override void precompute_stencil_data(size_t gtl)
     {
@@ -698,9 +779,6 @@ public:
         Used in the experimental quasi-structured reconstruction mode.
     */
         if (n_ghost_cell_layers<2) return;
-
-        setup_quasistructured_stencil(gtl);
-        fix_second_layer_of_ghostcells(gtl);
 
         // Having completed the LLRR stencil indices, we can now precompute the stencil
         // coefficients, using the cell sizes, kind of like how the structured code does it.
@@ -735,115 +813,6 @@ public:
             facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
 
         }
-    }
-
-    @nogc
-    void setup_quasistructured_stencil(size_t gtl)
-    {
-    /*
-        When using a hexahedral grid partitioned in an unstructured manner,
-        sometimes we want to be able to use the L1L0R0R1 stencils to compute
-        the inviscid fluxes, just like how the structured code does it.
-    */
-        foreach (fid; 0 .. nfaces) {
-            size_t l = facedata.f2c[fid].left;
-            size_t r = facedata.f2c[fid].right;
-            facedata.stencil_idxs[fid].L0 = l;
-            facedata.stencil_idxs[fid].R0 = r;
-
-            // if true, the right cell is a real cell, so go ahead and pull up its cloud indices.
-            if (r<ncells){
-                // This is a normal vector pointing rightward, whatever direction that may be
-                Vector3 LRnorm = celldata.positions[r] - celldata.positions[l];
-                LRnorm.normalize();
-
-                // Find r's neighbour that is the most rightward cell.
-                double max_signed_distance = -1e99;
-                size_t max_cell_id;
-                foreach(cid; celldata.cell_cloud_indices[r]){
-                    Vector3 RN = celldata.positions[cid] - celldata.positions[r];
-                    double signed_distance = RN.dot(LRnorm).re;
-                    if (signed_distance > max_signed_distance) {
-                        max_signed_distance = signed_distance;
-                        max_cell_id = cid;
-                    }
-                }
-                // Assuming we found on correctly, that should be our faces R1
-                facedata.stencil_idxs[fid].R1 = max_cell_id;
-                if (max_cell_id<ncells){
-                    faces[fid].right_cells[1] = cells[max_cell_id];
-                } else {
-                    faces[fid].right_cells[1] = ghost_cells[max_cell_id-ncells];
-
-                }
-            }
-
-            // Just like above, we do the same procedure using a leftward vector to get L1
-            if (l<ncells){
-                Vector3 RLnorm = celldata.positions[l] - celldata.positions[r];
-                RLnorm.normalize();
-
-                double max_signed_distance = -1e99;
-                size_t max_cell_id;
-                foreach(cid; celldata.cell_cloud_indices[l]){
-                    Vector3 LN = celldata.positions[cid] - celldata.positions[l];
-                    double signed_distance = LN.dot(RLnorm).re;
-                    if (signed_distance > max_signed_distance) {
-                        max_signed_distance = signed_distance;
-                        max_cell_id = cid;
-                    }
-                }
-                facedata.stencil_idxs[fid].L1 = max_cell_id;
-                if (max_cell_id<ncells){
-                    faces[fid].left_cells[1] = cells[max_cell_id];
-                } else {
-                    faces[fid].left_cells[1] = ghost_cells[max_cell_id-ncells];
-                }
-            }
-        }
-    }
-
-    @nogc
-    void fix_second_layer_of_ghostcells(size_t gtl)
-    {
-    /*
-        For Nick's experimental ghost cels, we need the cell center positions to compute
-        the connectivity data, but we also need the connectivity data to compute the 
-        ghost cell positions... For now, we just let compute_primary_cell_geometric_data
-        do the second ones incorrectly, and then fix them here.
-    */
-
-        foreach (i, bndry; grid.boundaries) {
-            if (bc[i].ghost_cell_data_available == false) { continue; }
-            auto nf = bndry.face_id_list.length;
-            foreach (j; 0 .. nf) {
-                auto my_face = faces[bndry.face_id_list[j]];
-                auto my_outsign = bndry.outsign_list[j];
-                if (my_outsign == 1) {
-                    auto inside1 = cells[facedata.stencil_idxs[my_face.id].L1];
-                    Vector3 delta = my_face.pos; delta -= inside1.pos[gtl];
-                    auto ghost1 = bc[i].ghostcells[j*2 + 1];
-                    ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
-                    ghost1.iLength = inside1.iLength;
-                    ghost1.jLength = inside1.jLength;
-                    ghost1.kLength = inside1.kLength;
-                    ghost1.L_min = inside1.L_min;
-                    ghost1.L_max = inside1.L_max;
-                    ghost1.update_celldata_geometry();
-                } else {
-                    auto inside1 = cells[facedata.stencil_idxs[my_face.id].R1];
-                    Vector3 delta = my_face.pos; delta -= inside1.pos[gtl];
-                    auto ghost1 = bc[i].ghostcells[j*2 + 1];
-                    ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
-                    ghost1.iLength = inside1.iLength;
-                    ghost1.jLength = inside1.jLength;
-                    ghost1.kLength = inside1.kLength;
-                    ghost1.L_min = inside1.L_min;
-                    ghost1.L_max = inside1.L_max;
-                    ghost1.update_celldata_geometry();
-                } // end if my_outsign
-            } // end foreach j
-        } // end foreach bndry
     }
 
     @nogc
