@@ -359,7 +359,7 @@ ifeq ($(DMD), dmd)
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
@@ -379,7 +379,7 @@ ifeq ($(DMD), ldmd2)
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
@@ -409,7 +409,7 @@ ifeq ($(DMD), ldc2)
     DVERSION := -d-version=
     DLINKFLAGS :=
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DLINKFLAGS := $(DLINKFLAGS) -fsanitize=thread

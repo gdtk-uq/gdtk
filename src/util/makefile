@@ -7,7 +7,7 @@ $(info PLATFORM=$(PLATFORM))
 
 DLINKFLAGS := -L-ldl
 ifeq ($(PLATFORM), macosx)
-    DLINKFLAGS += -L-ld_classic
+    DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
 endif
 
 LUA := ../../extern/lua-5.4.3

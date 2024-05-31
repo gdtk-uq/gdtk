@@ -87,7 +87,7 @@ ifeq ($(DMD), dmd)
     DVERSION := -version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
 endif
 ifeq ($(DMD), ldmd2)
@@ -105,7 +105,7 @@ ifeq ($(DMD), ldmd2)
     DLINKFLAGS :=
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
 endif
 ifeq ($(DMD), ldc2)
@@ -125,7 +125,7 @@ ifeq ($(DMD), ldc2)
     DVERSION := -d-version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
     endif
 endif
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.

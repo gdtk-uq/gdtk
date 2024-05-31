@@ -52,7 +52,7 @@ LIBLUAPATH := ${LUA_DIR}/lib
 
 DLINKFLAGS :=  -w -L-ldl
 ifeq ($(PLATFORM), macosx)
-    DLINKFLAGS += -L-ld_classic
+    DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
 endif
 
 ifeq ($(WITH_DVODE),1)
