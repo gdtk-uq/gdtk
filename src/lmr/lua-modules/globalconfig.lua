@@ -46,6 +46,7 @@ configOptionsHidden = { -- hidden from user
    residual_smoothing_iterations = 2,
    with_local_time_stepping = false,
    local_time_stepping_limit_factor = 10000,
+   with_super_time_stepping = false,
    with_super_time_stepping_flexible_stages = false,
    max_attempts_for_step = 3,
    perturbation_for_real_differences = 1.0e-6,
