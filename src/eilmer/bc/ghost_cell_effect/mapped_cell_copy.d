@@ -350,6 +350,52 @@ public:
                             throw new FlowSolverException(msg);
                         }
                     } // end foreach face
+                    // Experimental second layer of unstructured cells by NNG
+                    if (blk.n_ghost_cell_layers>1) {
+                        foreach (i, face; bc.faces) {
+                            size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
+                            string faceTag =  makeFaceTag(my_vtx_list);
+                            auto src_blk_id = mapped_cells_list[blk.id][faceTag].blkId;
+                            auto src_cell_id = mapped_cells_list[blk.id][faceTag].cellId;
+                            auto oblk = cast(FluidBlock) globalBlocks[src_blk_id];
+                            assert(oblk !is null, "Oops, this should be a FluidBlock object.");
+
+                            // We can get some relevant cells in this block using the full stencils
+                            auto real0 = (bc.outsigns[i] == 1) ?  face.left_cells[0] : face.right_cells[0];
+                            auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
+
+                            // In shared memory, it's easy to just grab the other block cell that maps to
+                            // out ghost zero. We need to figure out which of its faces is the shared boundary.
+                            auto other_real0 = oblk.cells[src_cell_id];
+                            assert(other_real0.id==mapped_cells[i].id);
+
+                            // The best thing I could think of, for now, is to scan the other block's mapping
+                            // until we come across OUR real0. THat will give us the target face's faceTag.
+                            string ofaceTag;
+                            foreach(tag, bi; mapped_cells_list[oblk.id]) {
+                                if ((bi.blkId==blk.id)&&(bi.cellId==real0.id)) ofaceTag = tag;
+                            }
+                            if (ofaceTag=="") throw new Error("Failed to find ofaceTag.");
+
+                            // With the face tag found, let's loop over other_real0's faces to find the
+                            // actual face object on the boundary we share with that block.
+                            size_t oface_idx=99;
+                            foreach (j, oface; other_real0.iface){
+                                size_t[] their_vtx_list; foreach(vtx; oface.vtx) { their_vtx_list ~= vtx.id; }
+                                string prospectiveFaceTag = makeFaceTag(their_vtx_list);
+                                if (prospectiveFaceTag==ofaceTag) oface_idx=j;
+                            }
+                            if (oface_idx==99) throw new Error("Failed to find oface object");
+                            auto oface = other_real0.iface[oface_idx];
+
+                            // At this point we're basically done; we just use the otherface's stencils
+                            // to grab the other_real1 cell. This is the "source" for our ghost1 cell.
+                            auto other_real1 = (other_real0.outsign[oface_idx] == 1) ? oface.left_cells[1] : oface.right_cells[1];
+
+                            ghost_cells ~= ghost1;
+                            mapped_cells ~= other_real1;
+                        }
+                    }
                     break;
                 case Grid_t.structured_grid:
                     throw new Error("cell mapping from file not implemented for structured grids");
