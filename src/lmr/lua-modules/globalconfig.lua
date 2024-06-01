@@ -143,6 +143,7 @@ configOptionsHidden = { -- hidden from user
    nic_write = 1,
    njc_write = 1,
    nkc_write = 1,
+   viscous_factor = 1.0,
    viscous_factor_increment = 0.01,
    viscous_delay = 0.0,
    shear_stress_relative_limit = 1.0,

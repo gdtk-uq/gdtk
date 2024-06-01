@@ -1859,7 +1859,6 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("allow_interpolation_for_sensitivity_matrix", "allow_interpolation_for_sensitivity_matrix"));
     mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(update_bool("suppress_reconstruction_at_shocks", "suppress_reconstruction_at_shocks"));
-    mixin(update_bool("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_shocks")); // old name
     mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_species", "allow_reconstruction_for_species"));
