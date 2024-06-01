@@ -473,12 +473,14 @@ public:
     this(size_t blkID, JSONValue jsonData, Grid_t gridType, string flow_format) {
         this.gridType = gridType;
         this.flow_format = flow_format;
-        // Fill boundary group list
         JSONValue jsonDataForBlk = jsonData["block_" ~ to!string(blkID)];
-        size_t nboundaries = getJSONint(jsonDataForBlk, "nboundaries", 0);
-        for (size_t i=0; i < nboundaries; i++) {
-            auto myGroup = getJSONstring(jsonDataForBlk["boundary_" ~ to!string(i)], "group", "");
-            bcGroups ~= myGroup;
+        // Fill boundary group list if unstructured
+        if (gridType == Grid_t.unstructured_grid) {
+            size_t nboundaries = getJSONint(jsonDataForBlk, "nboundaries", 0);
+            for (size_t i=0; i < nboundaries; i++) {
+                auto myGroup = getJSONstring(jsonDataForBlk["boundary_" ~ to!string(i)], "group", "");
+                bcGroups ~= myGroup;
+            }
         }
         // rotating-frame angular velocity
         omegaz = getJSONdouble(jsonDataForBlk, "omegaz", 0.0);
