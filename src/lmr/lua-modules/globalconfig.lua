@@ -54,7 +54,6 @@ configOptionsHidden = { -- hidden from user
    solid_domain_cfl = 0.85,
    coupling_with_solid_domains = "tight",
    solid_has_isotropic_properties = true,
-   solid_has_homogeneous_properties = true,
    solid_domain_augmented_deriv_avg = true,
    fluid_solid_bc_use_heat_transfer_coeff = false,
    --

@@ -112,6 +112,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"coupling_with_solid_domains": "%s",\n', config.coupling_with_solid_domains))
    f:write(string.format('"solid_domain_augmented_deriv_avg": %s,\n', tostring(config.solid_domain_augmented_deriv_avg)))
    f:write(string.format('"fluid_solid_bc_use_heat_transfer_coeff": %s,\n', tostring(config.fluid_solid_bc_use_heat_transfer_coeff)))
+   f:write(string.format('"solid_has_isotropic_properties": %s,\n', tostring(config.solid_has_isotropic_properties)))
    f:write('"solid_thermal_models": {\n')
    for k,v in pairs(_solidModels) do
       f:write(string.format(' "%s": \n', k))

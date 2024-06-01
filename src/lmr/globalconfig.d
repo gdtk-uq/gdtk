@@ -897,7 +897,6 @@ final class GlobalConfig {
     shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
     shared static SolidDomainLooseUpdateOptions sdluOptions;
     shared static bool solid_has_isotropic_properties = true;
-    shared static bool solid_has_homogeneous_properties = true;
     shared static bool solid_domain_augmented_deriv_avg = true;
     shared static bool fluid_solid_bc_use_heat_transfer_coeff = false;
     shared static double solid_domain_cfl = 0.85;
@@ -1335,7 +1334,6 @@ public:
     double shock_fitting_scale_factor;
     //
     bool solid_has_isotropic_properties;
-    bool solid_has_homogeneous_properties;
     bool solid_domain_augmented_deriv_avg;
     bool fluid_solid_bc_use_heat_transfer_coeff;
     //
@@ -1508,7 +1506,6 @@ public:
         shock_fitting_scale_factor = cfg.shock_fitting_scale_factor;
         //
         solid_has_isotropic_properties = cfg.solid_has_isotropic_properties;
-        solid_has_homogeneous_properties = cfg.solid_has_homogeneous_properties;
         solid_domain_augmented_deriv_avg = cfg.solid_domain_augmented_deriv_avg;
         fluid_solid_bc_use_heat_transfer_coeff = cfg.fluid_solid_bc_use_heat_transfer_coeff;
         //
@@ -1835,7 +1832,6 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("solid_domain_cfl", "solid_domain_cfl"));
     mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
     mixin(update_bool("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
-    mixin(update_bool("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
     mixin(update_bool("solid_domain_augmented_deriv_avg", "solid_domain_augmented_deriv_avg"));
     mixin(update_bool("fluid_solid_bc_use_heat_transfer_coeff", "fluid_solid_bc_use_heat_transfer_coeff"));
 
@@ -1935,7 +1931,6 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  solid_domain_cfl: ", cfg.solid_domain_cfl);
         writeln("  coupling_with_solid_domains: ", cfg.coupling_with_solid_domains);
         writeln("  solid_has_isotropic_properties: ", cfg.solid_has_isotropic_properties);
-        writeln("  solid_has_homogeneous_properties: ", cfg.solid_has_homogeneous_properties);
         writeln("  solid_domain_augmented_deriv_avg: ", cfg.solid_domain_augmented_deriv_avg);
         writeln("  fluid_solid_bc_use_heat_transfer_coeff: ", cfg.fluid_solid_bc_use_heat_transfer_coeff);
         writeln("  apply_bcs_in_parallel: ", cfg.apply_bcs_in_parallel);
