@@ -223,7 +223,7 @@ int main_(string[] args)
                 writefln("lmr %s: Computing norms for solid snapshot %s.", cmdName, snap);
             }
             double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
-            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nFluidBlocks, simTime);
+            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nSolidBlocks, simTime);
             outfile.writeln("---"); // YAML document opener
             outfile.writefln("snapshot: %s", snap);
             outfile.writeln("field_type: solid");

@@ -75,13 +75,13 @@ public:
         auto variables = readVariablesFromMetadata(solidMetadataFile);
 
         foreach (ib; 0 .. nBlocks) {
-            size_t id = ib + nFluidBlocks;
-            string gName = dir ~ "/" ~ gridFilename(lmrCfg.initialFieldDir, to!int(id));
+            auto bid = ib + nFluidBlocks;
+            string gName = dir ~ "/" ~ gridFilename(lmrCfg.initialFieldDir, to!int(bid));
             gridBlocks ~= new StructuredGrid(gName, gridFmt);
             auto g = gridBlocks[$-1];
             g.sort_cells_into_bins();
             int ncells = to!int(g.ncells);
-            string sName = dir ~ "/" ~ solidFilename(snapshot, to!int(id));
+            string sName = dir ~ "/" ~ solidFilename(snapshot, to!int(bid));
             auto sb = new SolidBlockLite(sName, simTime, fieldFmt, variables, ncells);
             sb.nic = g.niv - 1;
             sb.njc = g.njv - 1;
