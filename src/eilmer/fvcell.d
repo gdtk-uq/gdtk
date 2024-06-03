@@ -1597,6 +1597,99 @@ public:
         fvcd.lengths[id][2] = lengths[2];
     }
 
+    FVInterface get_opposite_face(const FVInterface face) {
+    /*
+        For the quasi-structured stencils, we sometimes want to know
+        what the opposite of a given face is. This operation only
+        makes sense for quad (in 2D) and hex (in 3D) situations.
+    */
+        if ((vtx.length==4) && (myConfig.dimensions==2)) {
+            return quad_opposite_face(face);
+        } else if ((vtx.length==8) && (myConfig.dimensions==3)) {
+            return hex_opposite_face(face);
+        } else {
+            throw new Error("Opposite face only makes sense for quad or hex cells.");
+        }
+    }
+
+    FVInterface quad_opposite_face(const FVInterface face){
+    /*
+        For this we assume that the vertices are ordered like this
+        3-----2
+        |     |    j
+        |  c  |    ^
+        |     |    |
+        0-----1    O-->i
+        Note that the labels aren't actually important. All that actually
+        matters is that the points are consistently clockwise or
+        anti-clockwise, and aren't randomly scrambled around.
+        @author: NNG
+    */
+        size_t[] face_vtx_list; foreach(vtx; face.vtx) face_vtx_list ~= vtx.id; face_vtx_list.sort();
+
+        size_t[] south = [vtx[0].id, vtx[1].id]; south.sort();
+        size_t[] west  = [vtx[1].id, vtx[2].id]; west.sort();
+        size_t[] north = [vtx[2].id, vtx[3].id]; north.sort();
+        size_t[] east  = [vtx[3].id, vtx[0].id]; east.sort();
+
+        size_t jj0=99; size_t jj1=99;
+        if (face_vtx_list==south) { jj0=2; jj1=3; }
+        if (face_vtx_list==west)  { jj0=3; jj1=0; }
+        if (face_vtx_list==north) { jj0=0; jj1=1; }
+        if (face_vtx_list==east)  { jj0=1; jj1=2; }
+        if (jj0==99||jj1==99) throw new Error("Can't find opposite face indexes for cell.");
+        size_t[] oface_vtx_list = [vtx[jj0].id, vtx[jj1].id]; oface_vtx_list.sort();
+
+        size_t oface_idx = 99;
+        foreach(i, tface; iface){
+            size_t[] tface_vtx_list; foreach(vtx; tface.vtx) tface_vtx_list ~= vtx.id; tface_vtx_list.sort();
+            if (tface_vtx_list == oface_vtx_list) oface_idx = i;
+        }
+        if (oface_idx==99) throw new Error("Can't find correct opposite face");
+        return iface[oface_idx];
+    }
+
+    FVInterface hex_opposite_face(const FVInterface face){
+    /*
+        For this we assume that the vertices are ordered like this
+          7-----6
+         /|    /|
+        3-----2 |
+        | |   | |  j
+        | 4---|-5   ^
+        |/    |/   |
+        0-----1    O-->i
+        Once again, as long as both layers are consistently ordered this should work.
+        @author: NNG (03/06/24)
+    */
+        size_t[] face_vtx_list; foreach(vtx; face.vtx) face_vtx_list ~= vtx.id; face_vtx_list.sort();
+
+        size_t[] south = [vtx[0].id, vtx[1].id, vtx[5].id, vtx[4].id]; south.sort();
+        size_t[] north = [vtx[3].id, vtx[2].id, vtx[6].id, vtx[7].id]; north.sort();
+        size_t[] east  = [vtx[1].id, vtx[2].id, vtx[6].id, vtx[5].id]; east.sort();
+        size_t[] west  = [vtx[0].id, vtx[3].id, vtx[7].id, vtx[4].id]; west.sort();
+        size_t[] bot   = [vtx[0].id, vtx[1].id, vtx[2].id, vtx[3].id]; bot.sort();
+        size_t[] top   = [vtx[4].id, vtx[5].id, vtx[6].id, vtx[7].id]; top.sort();
+
+        size_t jj0=99; size_t jj1=99; size_t jj2=99; size_t jj3=99;
+        if (face_vtx_list==south) { jj0=3; jj1=2; jj2=6; jj3=7; }
+        if (face_vtx_list==north) { jj0=0; jj1=1; jj2=5; jj3=4; }
+        if (face_vtx_list==east)  { jj0=0; jj1=3; jj2=7; jj3=4; }
+        if (face_vtx_list==west)  { jj0=1; jj1=2; jj2=6; jj3=5; }
+        if (face_vtx_list==bot)   { jj0=4; jj1=5; jj2=6; jj3=7; }
+        if (face_vtx_list==top)   { jj0=0; jj1=1; jj2=2; jj3=3; }
+        if (jj0==99||jj1==99||jj2==99||jj3==99) throw new Error("Can't find opposite face indexes for cell.");
+        size_t[] oface_vtx_list = [vtx[jj0].id, vtx[jj1].id, vtx[jj2].id, vtx[jj3].id]; oface_vtx_list.sort();
+
+        size_t oface_idx = 99;
+        foreach(i, tface; iface){
+            size_t[] tface_vtx_list; foreach(vtx; tface.vtx) tface_vtx_list ~= vtx.id; tface_vtx_list.sort();
+            if (tface_vtx_list == oface_vtx_list) oface_idx = i;
+        }
+        if (oface_idx==99) throw new Error("Can't find correct opposite face");
+        return iface[oface_idx];
+    }
+
 } // end class FVCell
 
 // FIXME: The caller has responsibility for data_is_bad

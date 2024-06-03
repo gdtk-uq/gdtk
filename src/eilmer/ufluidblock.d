@@ -681,31 +681,9 @@ public:
                 // Even in an unstructured grid, we know that the vertices in a cell
                 // have a required order. This means we can find the opposite face
                 // by checking its vertices.
-                size_t[] face_vtx_list; foreach(vtx; face.vtx) face_vtx_list ~= vtx.id; face_vtx_list.sort();
 
                 if (left.id<ncells){
-
-                    size_t[] south = [left.vtx[0].id, left.vtx[1].id]; south.sort();
-                    size_t[] west  = [left.vtx[1].id, left.vtx[2].id]; west.sort();
-                    size_t[] north = [left.vtx[2].id, left.vtx[3].id]; north.sort();
-                    size_t[] east  = [left.vtx[3].id, left.vtx[0].id]; east.sort();
-
-                    size_t jj0=99; size_t jj1=99;
-                    if (face_vtx_list==south) { jj0=2; jj1=3; }
-                    if (face_vtx_list==west)  { jj0=3; jj1=0; }
-                    if (face_vtx_list==north) { jj0=0; jj1=1; }
-                    if (face_vtx_list==east)  { jj0=1; jj1=2; }
-                    if (jj0==99||jj1==99) throw new Error("Can't find opposite face indexes for left cell.");
-                    size_t[] oface_vtx_list = [left.vtx[jj0].id, left.vtx[jj1].id]; oface_vtx_list.sort();
-
-                    size_t oface_idx = 99;
-                    foreach(i, tface; left.iface){
-                        size_t[] tface_vtx_list; foreach(vtx; tface.vtx) tface_vtx_list ~= vtx.id; tface_vtx_list.sort();
-                        if (tface_vtx_list == oface_vtx_list) oface_idx = i;
-                    }
-                    if (oface_idx==99) throw new Error("Can't find correct opposite face");
-                    auto oface = left.iface[oface_idx];
-                    size_t oface_id = oface.id;
+                    FVInterface oface = left.get_opposite_face(face);
 
                     if (oface.right_cells[0].id == left.id) {
                         face.left_cells[1]            = oface.left_cells[0];
@@ -717,28 +695,7 @@ public:
                 }
 
                 if (right.id<ncells){ 
-                    size_t[] south = [right.vtx[0].id, right.vtx[1].id]; south.sort();
-                    size_t[] west  = [right.vtx[1].id, right.vtx[2].id]; west.sort();
-                    size_t[] north = [right.vtx[2].id, right.vtx[3].id]; north.sort();
-                    size_t[] east  = [right.vtx[3].id, right.vtx[0].id]; east.sort();
-
-                    size_t jj0=99; size_t jj1=99;
-                    if (face_vtx_list==south) { jj0=2; jj1=3; }
-                    if (face_vtx_list==west)  { jj0=3; jj1=0; }
-                    if (face_vtx_list==north) { jj0=0; jj1=1; }
-                    if (face_vtx_list==east)  { jj0=1; jj1=2; }
-                    if (jj0==99||jj1==99) throw new Error("Can't find opposite face indexes for right cell.");
-                    size_t[] oface_vtx_list = [right.vtx[jj0].id, right.vtx[jj1].id]; oface_vtx_list.sort();
-
-                    size_t oface_idx = 99;
-                    foreach(i, tface; right.iface){
-                        size_t[] tface_vtx_list; foreach(vtx; tface.vtx) tface_vtx_list ~= vtx.id; tface_vtx_list.sort();
-                        if (tface_vtx_list == oface_vtx_list) oface_idx = i;
-                    }
-                    if (oface_idx==99) throw new Error("Can't find correct opposite face");
-                    auto oface = right.iface[oface_idx];
-                    size_t oface_id = oface.id;
-
+                    FVInterface oface = right.get_opposite_face(face);
                     if (oface.left_cells[0].id == right.id) {
                         face.right_cells[1]           = oface.right_cells[0];
                     } else if (oface.right_cells[0].id == right.id ){
@@ -748,6 +705,7 @@ public:
                     }
                 }
             }
+            // The structured-style reconstruction requires this array to define its stencil.
             foreach (fid; 0 .. nfaces) {
                 facedata.stencil_idxs[fid].L1 = faces[fid].left_cells[1].id;
                 facedata.stencil_idxs[fid].L0 = faces[fid].left_cells[0].id;

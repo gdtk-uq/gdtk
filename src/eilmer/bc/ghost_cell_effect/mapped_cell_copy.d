@@ -369,22 +369,20 @@ public:
                             auto other_real0 = oblk.cells[src_cell_id];
                             assert(other_real0.id==mapped_cells[i].id);
 
-                            // The best thing I could think of, for now, is to scan the other block's mapping
-                            // until we come across OUR real0. THat will give us the target face's faceTag.
-                            string ofaceTag;
-                            foreach(tag, bi; mapped_cells_list[oblk.id]) {
-                                if ((bi.blkId==blk.id)&&(bi.cellId==real0.id)) ofaceTag = tag;
-                            }
-                            if (ofaceTag=="") throw new Error("Failed to find ofaceTag.");
-
-                            // With the face tag found, let's loop over other_real0's faces to find the
-                            // actual face object on the boundary we share with that block.
+                            // One of the faces of other_real0 maps to real0
                             size_t oface_idx=99;
                             foreach (j, oface; other_real0.iface){
                                 size_t[] their_vtx_list; foreach(vtx; oface.vtx) { their_vtx_list ~= vtx.id; }
                                 string prospectiveFaceTag = makeFaceTag(their_vtx_list);
-                                if (prospectiveFaceTag==ofaceTag) oface_idx=j;
+
+                                // here we check if the face tag is in the mapped_cells_list for the
+                                // other block, and if it is, check which cell and blk it maps too.
+                                if (auto bi = prospectiveFaceTag in mapped_cells_list[oblk.id]){
+                                    // If this expression is true, the current face is the one we want.
+                                    if ((bi.blkId==blk.id)&&(bi.cellId==real0.id)) oface_idx = j;
+                                }
                             }
+
                             if (oface_idx==99) throw new Error("Failed to find oface object");
                             auto oface = other_real0.iface[oface_idx];
 
