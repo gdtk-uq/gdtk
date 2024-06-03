@@ -982,9 +982,7 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
-    // Compute gradients of flow quantities for higher-order reconstruction, if required.
-    // To be used, later, in the convective flux calculation.
+    void prepare_unstructured_gradients(bool allow_high_order_interpolation, size_t[] cell_idxs, size_t[] face_idxs)
     {
         if (!allow_high_order_interpolation) return;
         if (myConfig.interpolation_order == 1) return;
@@ -1026,6 +1024,29 @@ public:
                                                           celldata.flowstates, celldata.cell_cloud_indices[cid],
                                                           myConfig, nsp, nmodes, nturb, is3d, needs_pressure_gradient);
         }
+        return;
+    }
+
+    @nogc
+    override void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
+    {
+        if (n_ghost_cell_layers > 1) {
+            // Use the structured stencils to do the inviscid fluxes
+            if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+
+            bool second_order = allow_high_order_interpolation && (myConfig.interpolation_order == 2);
+            if (second_order) {
+                second_order_flux_calc(0, face_idxs);
+            } else {
+                first_order_flux_calc(0, face_idxs);
+            }
+        } else {
+            // Compute gradients of flow quantities for higher-order reconstruction, if required.
+            // To be used, later, in the convective flux calculation.
+            prepare_unstructured_gradients(allow_high_order_interpolation, cell_idxs, face_idxs);
+        }
+        return;
+
     } // end convective_flux-phase0()
 
     @nogc
@@ -1058,6 +1079,7 @@ public:
         if (!allow_high_order_interpolation) return;
         if (myConfig.interpolation_order == 1) return;
         if (GlobalConfig.frozen_limiter) return;
+        if (n_ghost_cell_layers > 1) return;
 
         if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
 
@@ -1207,6 +1229,7 @@ public:
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
+        if (n_ghost_cell_layers > 1) return;
 
         immutable size_t neq = myConfig.cqi.n;
         immutable bool allow_reconstruction_anywhere = allow_high_order_interpolation && (myConfig.interpolation_order > 1);

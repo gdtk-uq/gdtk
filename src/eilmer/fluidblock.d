@@ -32,6 +32,7 @@ import fvinterface;
 import fvcell;
 import flowgradients;
 import bc;
+import fluxcalc;
 import user_defined_source_terms;
 import conservedquantities;
 import lua_helper;
@@ -45,6 +46,7 @@ import jacobian;
 import fluidblockio;
 import fluidblockio_new;
 import mass_diffusion;
+import onedinterp;
 version(mpi_parallel) {
     import mpi;
 }
@@ -2323,6 +2325,78 @@ public:
             }
         } // end main face loop
     } // end average_lsq_cell_derivs_to_faces routine
+
+    @nogc
+    void first_order_flux_calc(size_t gtl, size_t[] face_idxs)
+    {
+        immutable size_t neq = myConfig.cqi.n;
+        Vector3 gvel;
+        gvel.clear();
+        foreach(idx; face_idxs){
+            size_t l = facedata.stencil_idxs[idx].L0;
+            size_t r = facedata.stencil_idxs[idx].R0;
+
+            Lft.copy_values_from(celldata.flowstates[l]);
+            Rght.copy_values_from(celldata.flowstates[r]);
+
+            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
+    }
+
+    @nogc
+    void second_order_flux_calc(size_t gtl, size_t[] face_idxs)
+    {
+    /*
+        Eilmer's classic second-order piece-wise parabolic reconstruction, using a
+        4 cell symmetric stencil.
+    */
+        immutable bool hpl = myConfig.apply_heuristic_pressure_based_limiting;
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable bool is3D = (myConfig.dimensions == 3);
+        immutable bool MHD = myConfig.MHD;
+        immutable bool apply_limiter = myConfig.apply_limiter;
+        immutable bool extrema_clipping = myConfig.extrema_clipping;
+        immutable InterpolateOption ti = myConfig.thermo_interpolator;
+
+        number beta = 1.0;
+        Vector3 gvel;
+        gvel.clear();
+
+        foreach(idx; face_idxs){
+            size_t L1 = facedata.stencil_idxs[idx].L1;
+            size_t L0 = facedata.stencil_idxs[idx].L0;
+            size_t R0 = facedata.stencil_idxs[idx].R0;
+            size_t R1 = facedata.stencil_idxs[idx].R1;
+            if (hpl) beta =
+                compute_heuristic_pressure_limiter(celldata.flowstates[L1].gas.p,
+                                                   celldata.flowstates[L0].gas.p,
+                                                   celldata.flowstates[R0].gas.p,
+                                                   celldata.flowstates[R1].gas.p);
+
+            Lft.copy_values_from(celldata.flowstates[L0]);
+            Rght.copy_values_from(celldata.flowstates[R0]);
+
+            interp_l2r2(celldata.flowstates[L1], celldata.flowstates[L0],
+                        celldata.flowstates[R0], celldata.flowstates[R1],
+                        facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                        facedata.l2r2_interp_data[idx], nsp, nmodes, nturb,
+                        ti, MHD, apply_limiter, extrema_clipping,
+                        myConfig, *Lft, *Rght, beta);
+            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
+        return;
+    }
 } // end class FluidBlock
 
 @nogc void apply_haschelbacher_averaging(Vector3 lpos, Vector3 rpos, Vector3 n,
