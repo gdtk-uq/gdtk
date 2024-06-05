@@ -60,6 +60,7 @@ public:
     bool cell_mapping_from_file;
     string mapped_cells_filename;
     BlockAndCellId[string][size_t] mapped_cells_list;
+    BlockAndCellId[string][size_t] secondary_mapped_cells_list;
     version(mpi_parallel) {
         // In the MPI-parallel code, we do not have such direct access and so
         // we store the integral ids of the source cell and block and send requests
@@ -233,6 +234,10 @@ public:
                     size_t src_blk_id = to!size_t(tokens[1]);
                     size_t src_cell_id = to!size_t(tokens[2]);
                     mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
+                    if ((tokens.length>3)&&(blk.n_ghost_cell_layers>1)){
+                        size_t src_cell_id_2 = to!size_t(tokens[3]);
+                        secondary_mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id_2);
+                    }
                     version(mpi_parallel) {
                         // These lists will be used to direct data when packing and unpacking
                         // the buffers used to send data between the MPI tasks.
@@ -355,40 +360,13 @@ public:
                         foreach (i, face; bc.faces) {
                             size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
                             string faceTag =  makeFaceTag(my_vtx_list);
-                            auto src_blk_id = mapped_cells_list[blk.id][faceTag].blkId;
-                            auto src_cell_id = mapped_cells_list[blk.id][faceTag].cellId;
+                            auto src_blk_id = secondary_mapped_cells_list[blk.id][faceTag].blkId;
+                            auto src_cell_id = secondary_mapped_cells_list[blk.id][faceTag].cellId;
                             auto oblk = cast(FluidBlock) globalBlocks[src_blk_id];
                             assert(oblk !is null, "Oops, this should be a FluidBlock object.");
 
-                            // We can get some relevant cells in this block using the full stencils
-                            auto real0 = (bc.outsigns[i] == 1) ?  face.left_cells[0] : face.right_cells[0];
                             auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
-
-                            // In shared memory, it's easy to just grab the other block cell that maps to
-                            // out ghost zero. We need to figure out which of its faces is the shared boundary.
-                            auto other_real0 = oblk.cells[src_cell_id];
-                            assert(other_real0.id==mapped_cells[i].id);
-
-                            // One of the faces of other_real0 maps to real0
-                            size_t oface_idx=99;
-                            foreach (j, oface; other_real0.iface){
-                                size_t[] their_vtx_list; foreach(vtx; oface.vtx) { their_vtx_list ~= vtx.id; }
-                                string prospectiveFaceTag = makeFaceTag(their_vtx_list);
-
-                                // here we check if the face tag is in the mapped_cells_list for the
-                                // other block, and if it is, check which cell and blk it maps too.
-                                if (auto bi = prospectiveFaceTag in mapped_cells_list[oblk.id]){
-                                    // If this expression is true, the current face is the one we want.
-                                    if ((bi.blkId==blk.id)&&(bi.cellId==real0.id)) oface_idx = j;
-                                }
-                            }
-
-                            if (oface_idx==99) throw new Error("Failed to find oface object");
-                            auto oface = other_real0.iface[oface_idx];
-
-                            // At this point we're basically done; we just use the otherface's stencils
-                            // to grab the other_real1 cell. This is the "source" for our ghost1 cell.
-                            auto other_real1 = (other_real0.outsign[oface_idx] == 1) ? oface.left_cells[1] : oface.right_cells[1];
+                            auto other_real1 = oblk.cells[src_cell_id];
 
                             ghost_cells ~= ghost1;
                             mapped_cells ~= other_real1;

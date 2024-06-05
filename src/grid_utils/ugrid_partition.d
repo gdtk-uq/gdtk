@@ -113,14 +113,15 @@ class MappedCells {
 
 public:
 
-    size_t global_cell_id;            // the primary cells global identifier
-    size_t global_neighbour_cell_id;  // the neighbour cells global cell identifier
-    size_t block_id;                  // cell's block identifier
-    size_t neighbour_block_id;        // neighbour cells's block identifier
-    string faceTag;                   // the unique identifier for the shared face
-                                      // constructed with the boundary face's
-                                      // local (to the primary cell) node ids
-                                      // in ascending order
+    size_t global_cell_id;                    // the primary cells global identifier
+    size_t global_neighbour_cell_id;          // the neighbour cells global cell identifier
+    size_t global_second_neighbour_cell_id;   // possibly, the next neighbour over
+    size_t block_id;                          // cell's block identifier
+    size_t neighbour_block_id;                // neighbour cells's block identifier
+    string faceTag;                           // the unique identifier for the shared face
+                                              // constructed with the boundary face's
+                                              // local (to the primary cell) node ids
+                                              // in ascending order
 
     this (size_t global_cell_id,
           size_t global_neighbour_cell_id,
@@ -268,6 +269,35 @@ public:
         }
         return nfaces;
     } // end get_nfaces()
+
+    string get_opposite_face_tag(string faceTag){
+        switch(type) {
+        case 5: // triangle
+            throw new Error("Cannot get opposite face for elementType triangle");
+        case 9: // quad
+            if      (faceTag==face_tag_list[0]) { return face_tag_list[2]; } // N->S
+            else if (faceTag==face_tag_list[1]) { return face_tag_list[3]; } // E->W
+            else if (faceTag==face_tag_list[2]) { return face_tag_list[0]; } // S->N
+            else if (faceTag==face_tag_list[3]) { return face_tag_list[1]; } // W->E
+            else { throw new Error(format("facetag %s not found in cell %d", faceTag, id)); }
+        case 10: // tetra
+            throw new Error("Cannot get opposite face for elementType tetra");
+        case 12: // hexa
+            if      (faceTag==face_tag_list[0]) { return face_tag_list[2]; } // N->S
+            else if (faceTag==face_tag_list[1]) { return face_tag_list[3]; } // E->W
+            else if (faceTag==face_tag_list[2]) { return face_tag_list[0]; } // S->N
+            else if (faceTag==face_tag_list[3]) { return face_tag_list[1]; } // W->E
+            else if (faceTag==face_tag_list[4]) { return face_tag_list[5]; } // T->B
+            else if (faceTag==face_tag_list[5]) { return face_tag_list[4]; } // B->T
+            else { throw new Error(format("facetag %s not found in cell %d", faceTag, id)); }
+        case 13: // wedge
+            throw new Error("Cannot get opposite face for elementType wedge");
+        case 14: // pyramid
+            throw new Error("Cannot get opposite face for elementType pyramid");
+        default:
+            throw new Exception("invalid cell type");
+        }
+    }
 
 } // end class Cell
 
@@ -566,7 +596,7 @@ void readSU2grid(string meshFile, ref Domain grid) {
     return;
 }
 
-void constructGridBlocks(bool reorder, string meshFile, string mappedCellsFilename, string partitionFile, string dualFile, ref Domain grid, ref Block[] gridBlocks) {
+void constructGridBlocks(bool reorder, bool connectSecondGhostCell, string meshFile, string mappedCellsFilename, string partitionFile, string dualFile, ref Domain grid, ref Block[] gridBlocks) {
     // Construct the partitioned grid blocks
     // input: Domain grid, Metis output files, empty grid blocks
     // output: grid block data filled
@@ -710,14 +740,15 @@ void constructGridBlocks(bool reorder, string meshFile, string mappedCellsFilena
 
     // continue contructing the blocks...
     foreach(cid, ref cell; grid.cells) {
+        // populate face_node_ids for each cell (ONLY if it hasn't already been done)
+        if (cell.face_node_ids.length < 1) { cell.construct_faces(grid.dimensions); }
+    }
+    foreach(cid, ref cell; grid.cells) {
         size_t blk_id = cell.block_id;
         // Attach the cell faces to the METIS_INTERIOR boundary if applicable
         foreach(adj_cid; cell.cell_cloud_ids) {
             Cell adj_cell = grid.cells[adj_cid]; // adjacent cell
             if (adj_cell.block_id != cell.block_id) {
-                // populate face_node_ids for each cell (ONLY if it hasn't already been done)
-                if (adj_cell.face_node_ids.length < 1) { adj_cell.construct_faces(grid.dimensions); }
-                if (cell.face_node_ids.length < 1) { cell.construct_faces(grid.dimensions); }
                 foreach(i, cell_face_tag; cell.face_tag_list) {
                     if (adj_cell.face_tag_list.canFind(cell_face_tag)) {
                         gridBlocks[blk_id].boundary[0].nfaces += 1; // METIS_INTERIOR is in pos 0
@@ -728,6 +759,21 @@ void constructGridBlocks(bool reorder, string meshFile, string mappedCellsFilena
                         // store mapped cell information
                         gridBlocks[blk_id].mapped_cells ~= new MappedCells(cell.id, adj_cell.id, cell.block_id, adj_cell.block_id, face_tag);
                         gridBlocks[blk_id].boundary[0].face_node_ids ~= cell.face_node_ids[i];
+
+                        if (connectSecondGhostCell) {
+                            string opposite_face_tag = adj_cell.get_opposite_face_tag(cell_face_tag);
+
+                            bool found = false;
+                            foreach(ter_cell_idx; adj_cell.cell_cloud_ids){
+                                Cell ter_cell = grid.cells[ter_cell_idx];
+                                if (ter_cell.face_tag_list.canFind(opposite_face_tag)) {
+                                    gridBlocks[blk_id].mapped_cells[$-1].global_second_neighbour_cell_id = ter_cell_idx;
+                                    found = true;
+                                    assert(ter_cell.block_id==adj_cell.block_id);
+                                }
+                            }
+                            if (!found) throw new Error("Failed to find tertiary cell with the right facetag");
+                        }
                     }
                 }
             }
@@ -754,7 +800,7 @@ void constructGridBlocks(bool reorder, string meshFile, string mappedCellsFilena
     }
 } // end metis2su2Format
 
-void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gridBlocks, size_t dimensions) {
+void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gridBlocks, size_t dimensions, bool connectSecondGhostCell) {
     // Write out the grid blocks in separate .su2 files
     // note that cells and nodes should write out  their local ids
 
@@ -807,7 +853,12 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
             auto secondary_cell_local_id = gridBlocks[mapped_cell.neighbour_block_id].global2local_cell_transform[mapped_cell.global_neighbour_cell_id];
             outFile_mappedcells.writef("%s \t", mapped_cell.faceTag);
             outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id+nCurrentBlocks);
-            outFile_mappedcells.writef("%d \n", secondary_cell_local_id);
+            outFile_mappedcells.writef("%d ", secondary_cell_local_id);
+            if (connectSecondGhostCell) {
+                auto tertiary_cell_local_id = gridBlocks[mapped_cell.neighbour_block_id].global2local_cell_transform[mapped_cell.global_second_neighbour_cell_id];
+                outFile_mappedcells.writef("\t%d ", tertiary_cell_local_id);
+            }
+            outFile_mappedcells.writef("\n");
         }
 
         string outputFileName = "block_" ~ to!string(i+nCurrentBlocks) ~ "_" ~ meshFileName;
@@ -882,17 +933,12 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
 
 int main(string[] args){
 
-    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon; bool reorder;
+    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon; bool reorder; bool connectSecondGhostCell;
     // we will accept either 5 or 6 command line arguments
-    if (args.length != 6) {
-        if (args.length != 5) {
-            writeln("Wrong number of command line arguments.");
-            printHelp();
-            return 1;
-        } else {
-            // we assume the user does not want the grid reordered if they didn't specify a 6th argument
-            args ~= "false";
-        }
+    if ((args.length < 4) || (args.length>7)) {
+        writeln("Wrong number of command line arguments.");
+        printHelp();
+        return 1;
     }
 
     // assign command line arguments to variable names
@@ -900,7 +946,8 @@ int main(string[] args){
     mappedCellsFilename = args[2];
     nparts = to!int(args[3]);
     ncommon = to!int(args[4]);
-    reorder = to!bool(args[5]);
+    if (args.length>5) reorder = to!bool(args[5]);
+    if (args.length>6) connectSecondGhostCell = to!bool(args[6]);
 
     writeln("Begin partitioning................");
     // import entire SU2 grid file
@@ -938,10 +985,10 @@ int main(string[] args){
 
     // divide grid into N grid blocks
     Block[] gridBlocks;
-    constructGridBlocks(reorder, inputMeshFile, mappedCellsFilename, partitionFile, dualFormatFile, grid, gridBlocks);
+    constructGridBlocks(reorder, connectSecondGhostCell, inputMeshFile, mappedCellsFilename, partitionFile, dualFormatFile, grid, gridBlocks);
 
     // write the grid blocks out to file in SU2 format
-    writeGridBlockFiles(inputMeshFile, mappedCellsFilename, gridBlocks, grid.dimensions);
+    writeGridBlockFiles(inputMeshFile, mappedCellsFilename, gridBlocks, grid.dimensions, connectSecondGhostCell);
 
     // clean up the temporary Metis files
     cleanDir(dualFormatFile, partitionFile, metisFormatFile);
