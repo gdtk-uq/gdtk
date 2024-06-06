@@ -233,9 +233,11 @@ public:
                     string faceTag = tokens[0];
                     size_t src_blk_id = to!size_t(tokens[1]);
                     size_t src_cell_id = to!size_t(tokens[2]);
+                    size_t src_cell_id_2;
                     mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
-                    if ((tokens.length>3)&&(blk.n_ghost_cell_layers>1)){
-                        size_t src_cell_id_2 = to!size_t(tokens[3]);
+                    if (blk.n_ghost_cell_layers>1){
+                        if (tokens.length==3) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
+                        src_cell_id_2 = to!size_t(tokens[3]);
                         secondary_mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id_2);
                     }
                     version(mpi_parallel) {
@@ -260,11 +262,24 @@ public:
                                 throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d", faceTag, blk.id));
                             }
                         }
+                        if (blk.n_ghost_cell_layers>1){ // TODO: If someone forget to add the argument to partitioner, src_cell_id_2 will be 0;
+                            src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id_2;
+                            ghost_cell_indices[src_blk_id][dest_blk_id] ~= i+nfaces;
+                        }
+
                     }
                 }
             } // end foreach dest_blk_id
             //
             version(mpi_parallel) {
+                // Experimental double layer of ghost cells, mpi vers.
+                BoundaryCondition bc = blk.bc[which_boundary];
+                if (blk.n_ghost_cell_layers>1){
+                    foreach (i, face; bc.faces) {
+                        auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
+                        ghost_cells ~= ghost1;
+                    }
+                }
                 //
                 // No communication needed just now because all MPI tasks have the full mapping,
                 // however, we can prepare buffers and the like for communication of the geometry
