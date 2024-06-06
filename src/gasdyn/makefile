@@ -93,10 +93,10 @@ luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(NTYPES_FILES) $(LIBLU
 		$(NM_FILES) $(NTYPES_FILES) $(LIBLUA) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(NTYPES_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES)
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
 	ldmd2 $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
-		$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
+		$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)  $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)\
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
