@@ -694,7 +694,7 @@ public:
                     }
                 }
 
-                if (right.id<ncells){ 
+                if (right.id<ncells){
                     FVInterface oface = right.get_opposite_face(face);
                     if (oface.left_cells[0].id == right.id) {
                         face.right_cells[1]           = oface.right_cells[0];
@@ -820,15 +820,16 @@ public:
                     ghost0.update_celldata_geometry();
 
                     if (n_ghost_cell_layers>1){
-                        auto inside1 = cells[facedata.stencil_idxs[my_face.id].L1];
-                        delta = my_face.pos; delta -= inside1.pos[gtl];
-                        auto ghost1 = bc[i].ghostcells[j*2 + 1];
-                        ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
-                        ghost1.iLength = inside1.iLength;
-                        ghost1.jLength = inside1.jLength;
-                        ghost1.kLength = inside1.kLength;
-                        ghost1.L_min = inside1.L_min;
-                        ghost1.L_max = inside1.L_max;
+                        // Sometimes we get situations where inside1 is actually a
+                        // ghost cell, which might not have been init'd yet.
+                        // To keep things simple, let's just keep constant spacing.
+                        auto ghost1 = my_face.right_cells[1];
+                        ghost1.pos[gtl] = ghost0.pos[gtl]; ghost1.pos[gtl] += delta;
+                        ghost1.iLength = ghost0.iLength;
+                        ghost1.jLength = ghost0.jLength;
+                        ghost1.kLength = ghost0.kLength;
+                        ghost1.L_min = ghost0.L_min;
+                        ghost1.L_max = ghost0.L_max;
                         ghost1.update_celldata_geometry();
                     }
                 } else {
@@ -844,15 +845,13 @@ public:
                     ghost0.update_celldata_geometry();
 
                     if (n_ghost_cell_layers>1){
-                        auto inside1 = cells[facedata.stencil_idxs[my_face.id].R1];
-                        delta = my_face.pos; delta -= inside1.pos[gtl];
-                        auto ghost1 = bc[i].ghostcells[j*2 + 1];
-                        ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
-                        ghost1.iLength = inside1.iLength;
-                        ghost1.jLength = inside1.jLength;
-                        ghost1.kLength = inside1.kLength;
-                        ghost1.L_min = inside1.L_min;
-                        ghost1.L_max = inside1.L_max;
+                        auto ghost1 = my_face.left_cells[1];
+                        ghost1.pos[gtl] = ghost0.pos[gtl]; ghost1.pos[gtl] += delta;
+                        ghost1.iLength = ghost0.iLength;
+                        ghost1.jLength = ghost0.jLength;
+                        ghost1.kLength = ghost0.kLength;
+                        ghost1.L_min = ghost0.L_min;
+                        ghost1.L_max = ghost0.L_max;
                         ghost1.update_celldata_geometry();
                     }
                 } // end if my_outsign

@@ -15,6 +15,7 @@ ifeq ($(DMD), ldmd2)
 endif
 ifeq ($(DMD), ldc2)
     DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -flto=full -dip1008
+    #DFLAGS := -w -g -link-defaultlib-debug -L-export-dynamic -d-debug -d-version=flavour_debug
 endif
 PROGRAMS := ugrid_partition
 

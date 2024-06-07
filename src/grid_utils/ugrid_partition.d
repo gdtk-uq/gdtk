@@ -118,6 +118,7 @@ public:
     size_t global_second_neighbour_cell_id;   // possibly, the next neighbour over
     size_t block_id;                          // cell's block identifier
     size_t neighbour_block_id;                // neighbour cells's block identifier
+    size_t second_neighbour_block_id;         // possibly, the next neighbour block identifier
     string faceTag;                           // the unique identifier for the shared face
                                               // constructed with the boundary face's
                                               // local (to the primary cell) node ids
@@ -768,8 +769,8 @@ void constructGridBlocks(bool reorder, bool connectSecondGhostCell, string meshF
                                 Cell ter_cell = grid.cells[ter_cell_idx];
                                 if (ter_cell.face_tag_list.canFind(opposite_face_tag)) {
                                     gridBlocks[blk_id].mapped_cells[$-1].global_second_neighbour_cell_id = ter_cell_idx;
+                                    gridBlocks[blk_id].mapped_cells[$-1].second_neighbour_block_id = ter_cell.block_id;
                                     found = true;
-                                    assert(ter_cell.block_id==adj_cell.block_id);
                                 }
                             }
                             if (!found) throw new Error("Failed to find tertiary cell with the right facetag");
@@ -855,7 +856,9 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
             outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id+nCurrentBlocks);
             outFile_mappedcells.writef("%d ", secondary_cell_local_id);
             if (connectSecondGhostCell) {
-                auto tertiary_cell_local_id = gridBlocks[mapped_cell.neighbour_block_id].global2local_cell_transform[mapped_cell.global_second_neighbour_cell_id];
+                auto tertiary_cell_block_id = mapped_cell.second_neighbour_block_id+nCurrentBlocks;
+                auto tertiary_cell_local_id = gridBlocks[mapped_cell.second_neighbour_block_id].global2local_cell_transform[mapped_cell.global_second_neighbour_cell_id];
+                outFile_mappedcells.writef("\t%d ", tertiary_cell_block_id);
                 outFile_mappedcells.writef("\t%d ", tertiary_cell_local_id);
             }
             outFile_mappedcells.writef("\n");
