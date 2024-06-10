@@ -429,6 +429,12 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // neighbour blocks.
     exchange_ghost_cell_geometry_data();
     //
+    // These fixed up ghost cells might have counterparts on the actual domain boundaries.
+    // For viscous walls in particular, it is important that these ghost cells mirror their
+    // interior counterparts precisely. So, here we do a second pass on all of the non-shared
+    // boundaries, in case they need to be updated.
+    foreach (myblk; localFluidBlocks) { myblk.update_nonshared_ghost_cell_positions(0); }
+    //
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
     // 1. reconstruction prior to convective flux calculation for the unstructured-grid blocks
     // 2. calculation of flow gradients for the viscous fluxes with least-squares gradients.

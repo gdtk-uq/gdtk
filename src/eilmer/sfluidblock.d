@@ -1403,6 +1403,9 @@ public:
     } // end compute_primary_cell_geometric_data()
 
     @nogc
+    override void update_nonshared_ghost_cell_positions(size_t gtl) {}
+
+    @nogc
     override void precompute_stencil_data(size_t gtl)
     {
         bool second_order = myConfig.interpolation_order>=2;

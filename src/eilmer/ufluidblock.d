@@ -822,10 +822,9 @@ public:
                     if (n_ghost_cell_layers>1){
                         // Sometimes we get situations where inside1 is actually a
                         // ghost cell, which might not have been init'd yet.
-                        // FIXME with some bootstrapping
+                        // These should get fixed below in update_nonshared_ghost_cell_positions
                         auto ghost1  = my_face.right_cells[1];
                         auto inside1 = my_face.left_cells[1];
-                        if (inside1.id>ncells) throw new Error("Can't find interior cell L1!");
                         delta = my_face.pos; delta -= inside1.pos[gtl];
                         ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
                         ghost1.iLength = ghost0.iLength;
@@ -850,7 +849,6 @@ public:
                     if (n_ghost_cell_layers>1){
                         auto ghost1  = my_face.left_cells[1];
                         auto inside1 = my_face.right_cells[1];
-                        if (inside1.id>ncells) throw new Error("Can't find interior cell R1!");
                         delta = my_face.pos; delta -= inside1.pos[gtl];
                         ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
                         ghost1.iLength = ghost0.iLength;
@@ -860,6 +858,51 @@ public:
                         ghost1.L_max = ghost0.L_max;
                         ghost1.update_celldata_geometry();
                     }
+                } // end if my_outsign
+            } // end foreach j
+        } // end foreach bndry
+    } // end compute_primary_cell_geometric_data()
+
+    @nogc
+    override void update_nonshared_ghost_cell_positions(size_t gtl)
+    {
+        // Jason Qin and Paul Petrie-Repar have identified the lack of exact symmetry in
+        // the reconstruction process at the wall as being a cause of the leaky wall
+        // boundary conditions.
+        if (n_ghost_cell_layers<2) return;
+
+        foreach (i, bndry; grid.boundaries) {
+            if (bc[i].ghost_cell_data_available == false) { continue; }
+            if (startsWith(bc[i].type, "exchange_")) { continue; }
+
+            auto nf = bndry.face_id_list.length;
+            foreach (j; 0 .. nf) {
+                auto my_face = faces[bndry.face_id_list[j]];
+                auto my_outsign = bndry.outsign_list[j];
+                if (my_outsign == 1) {
+                    auto ghost1  = my_face.right_cells[1];
+                    auto inside1 = my_face.left_cells[1];
+
+                    Vector3 delta; delta = my_face.pos; delta -= inside1.pos[gtl];
+                    ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
+                    ghost1.iLength = inside1.iLength;
+                    ghost1.jLength = inside1.jLength;
+                    ghost1.kLength = inside1.kLength;
+                    ghost1.L_min = inside1.L_min;
+                    ghost1.L_max = inside1.L_max;
+                    ghost1.update_celldata_geometry();
+                } else {
+                    auto ghost1  = my_face.left_cells[1];
+                    auto inside1 = my_face.right_cells[1];
+
+                    Vector3 delta; delta = my_face.pos; delta -= inside1.pos[gtl];
+                    ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
+                    ghost1.iLength = inside1.iLength;
+                    ghost1.jLength = inside1.jLength;
+                    ghost1.kLength = inside1.kLength;
+                    ghost1.L_min = inside1.L_min;
+                    ghost1.L_max = inside1.L_max;
+                    ghost1.update_celldata_geometry();
                 } // end if my_outsign
             } // end foreach j
         } // end foreach bndry
