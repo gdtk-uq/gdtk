@@ -237,8 +237,8 @@ public:
                     mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
                     if (blk.n_ghost_cell_layers>1){
                         if (tokens.length!=5) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
-                        src_cell_id_2 = to!size_t(tokens[3]);
-                        src_blk_id_2 = to!size_t(tokens[4]);
+                        src_blk_id_2 = to!size_t(tokens[3]);
+                        src_cell_id_2 = to!size_t(tokens[4]);
                         secondary_mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id_2, src_cell_id_2);
                     }
                     version(mpi_parallel) {
