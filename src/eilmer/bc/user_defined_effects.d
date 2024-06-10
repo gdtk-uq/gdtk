@@ -81,29 +81,25 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         size_t j = 0, k = 0;
-        FVCell[1] ghostCells;
         BoundaryCondition bc = blk.bc[which_boundary];
-	if (bc.outsigns[f.i_bndry] == 1) {
-	    ghostCells[0] = f.right_cell;
-	} else {
-	    ghostCells[0] = f.left_cell;
-	}
-	callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, ghostCells);
-	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
+        if (bc.outsigns[f.i_bndry] == 1) {
+            callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, f.right_cells);
+        } else {
+            callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, f.left_cells);
+        }
+        lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_for_interface_unstructured_grid()
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
-        FVCell[1] ghostCells;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
-                ghostCells[0] = f.right_cell;
+                callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
             } else {
-                ghostCells[0] = f.left_cell;
+                callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.left_cells);
             }
-            callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghostCells);
         } // end foreach face
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
@@ -241,7 +237,7 @@ private:
         version(turbulence) {
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
                 string tname = blk.myConfig.turb_model.primitive_variable_name(it);
-                ghostCell.fs.turb[it] = getNumberFromTable(L, -1, tname, false, 0.0);
+                ghostCell.fs.turb[it] = getNumberFromTable(L, tblIdx, tname, false, 0.0);
             }
         }
     }
