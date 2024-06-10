@@ -657,15 +657,6 @@ pseudo_species_gas_test: $(GAS_FILES) $(GAS_LUA_FILES) $(CEQ_SRC_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
-# Seems that the source code for the following test has not been maintained.
-# electronically_specific_gas_test: $(GAS_FILES) $(GAS_LUA_FILES) $(CEQ_SRC_FILES) \
-#	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-#	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-#	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
-#		$(GAS_FILES) $(GAS_LUA_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-#		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-#		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
-
 two_temperature_gasgiant_test: $(GAS_FILES) $(GAS_LUA_FILES) $(CEQ_SRC_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
