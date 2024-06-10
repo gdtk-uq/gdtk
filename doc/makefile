@@ -85,6 +85,10 @@ geometry-reference-manual.html: geometry-reference-manual.adoc $(GEOM_DOC_FILES)
 nm-reference-manual.html: nm-reference-manual.adoc
 	asciidoctor nm-reference-manual.adoc
 
+lmr-reference-manual.html : lmr-reference-manual.adoc
+	cd lmr/commands; make
+	asciidoctor lmr-reference-manual.adoc
+
 clean:
 	- rm eilmer-reference-manual.html \
 		eilmer-catalog-of-examples.html \
