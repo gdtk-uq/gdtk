@@ -822,9 +822,12 @@ public:
                     if (n_ghost_cell_layers>1){
                         // Sometimes we get situations where inside1 is actually a
                         // ghost cell, which might not have been init'd yet.
-                        // To keep things simple, let's just keep constant spacing.
-                        auto ghost1 = my_face.right_cells[1];
-                        ghost1.pos[gtl] = ghost0.pos[gtl]; ghost1.pos[gtl] += delta;
+                        // FIXME with some bootstrapping
+                        auto ghost1  = my_face.right_cells[1];
+                        auto inside1 = my_face.left_cells[1];
+                        if (inside1.id>ncells) throw new Error("Can't find interior cell L1!");
+                        delta = my_face.pos; delta -= inside1.pos[gtl];
+                        ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
                         ghost1.iLength = ghost0.iLength;
                         ghost1.jLength = ghost0.jLength;
                         ghost1.kLength = ghost0.kLength;
@@ -845,8 +848,11 @@ public:
                     ghost0.update_celldata_geometry();
 
                     if (n_ghost_cell_layers>1){
-                        auto ghost1 = my_face.left_cells[1];
-                        ghost1.pos[gtl] = ghost0.pos[gtl]; ghost1.pos[gtl] += delta;
+                        auto ghost1  = my_face.left_cells[1];
+                        auto inside1 = my_face.right_cells[1];
+                        if (inside1.id>ncells) throw new Error("Can't find interior cell R1!");
+                        delta = my_face.pos; delta -= inside1.pos[gtl];
+                        ghost1.pos[gtl] = my_face.pos; ghost1.pos[gtl] += delta;
                         ghost1.iLength = ghost0.iLength;
                         ghost1.jLength = ghost0.jLength;
                         ghost1.kLength = ghost0.kLength;
