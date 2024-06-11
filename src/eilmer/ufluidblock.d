@@ -60,9 +60,8 @@ public:
     {
         label = getJSONstring(json_data, "label", "");
         ncells = getJSONint(json_data, "ncells", 0);
-        // For an unstructured-grid, n_ghost_cell_layers=1
-        super(id, Grid_t.unstructured_grid, ncells, 1, label);
-        //super(id, Grid_t.unstructured_grid, ncells, 2, label);
+        size_t nghost = GlobalConfig.use_structured_reconstruction ? 2 : 1;
+        super(id, Grid_t.unstructured_grid, ncells, nghost, label);
         nvertices = getJSONint(json_data, "nvertices", 0);
         nfaces = getJSONint(json_data, "nfaces", 0);
         nboundaries = getJSONint(json_data, "nboundaries", 0);

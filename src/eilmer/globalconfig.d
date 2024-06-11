@@ -912,7 +912,10 @@ final class GlobalConfig {
     // 2 is the classic number of layers (since 1991), allowing piece-wise-parabolic reconstruction.
     // 3 will allow higher-order reconstruction for Lachlan's work.
     shared static int n_ghost_cell_layers = 2;
-    // The number of ghost-cell layers for unstructured-grid blocks is always assumed to be 1.
+    // The number of ghost-cell layers for unstructured-grid blocks is assumed to be 1.
+    // The following parameter can be set by the user to request structured-style
+    // reconstruction in unstructured mode.
+    shared static bool use_structured_reconstruction = false;
     //
     // Shock-fitting
     //
@@ -1883,6 +1886,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
     //
     mixin(update_int("n_ghost_cell_layers", "n_ghost_cell_layers"));
+    mixin(update_bool("use_structured_reconstruction", "use_structured_reconstruction"));
     mixin(update_bool("high_order_flux_calculator", "high_order_flux_calculator"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
@@ -1975,6 +1979,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  max_invalid_cells: ", cfg.max_invalid_cells);
         //
         writeln("  n_ghost_cell_layers: ", cfg.n_ghost_cell_layers);
+        writeln("  use_structured_reconstruction: ", cfg.use_structured_reconstruction);
         writeln("  high_order_flux_calculator: ", cfg.high_order_flux_calculator);
         writeln("  flux_calculator: ", flux_calculator_name(cfg.flux_calculator));
         writeln("  interpolation_order: ", cfg.interpolation_order);

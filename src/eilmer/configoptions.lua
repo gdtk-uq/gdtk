@@ -73,6 +73,7 @@ configOptionsHidden = { -- hidden from user
    max_invalid_cells = 0,
    --
    n_ghost_cell_layers = 2,
+   use_structured_reconstruction = false,
    high_order_flux_calculator = false,
    flux_calculator = "adaptive_hanel_ausmdv",
    interpolation_order = 2,

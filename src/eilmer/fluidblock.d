@@ -2354,6 +2354,7 @@ public:
     /*
         Eilmer's classic second-order piece-wise parabolic reconstruction, using a
         4 cell symmetric stencil.
+        Notes: This routine currently ignores the supress_reconstruction face parameter.
     */
         immutable bool hpl = myConfig.apply_heuristic_pressure_based_limiting;
         immutable size_t neq = myConfig.cqi.n;
