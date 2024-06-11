@@ -11,7 +11,6 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
 
@@ -51,12 +50,7 @@ LIBLUAPATH := ${LUA_DIR}/lib
 
 DLINKFLAGS :=  -w -L-ldl
 ifeq ($(PLATFORM), macosx)
-    DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
-endif
-
-ifeq ($(WITH_DVODE),1)
-    DFLAGS += -version=with_dvode
-    DLINKFLAGS += -L-lgfortran
+    DLINKFLAGS += -L-ld_classic
 endif
 
 build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
@@ -87,103 +81,89 @@ clean:
 	- rm -rf $(BUILD_DIR)/*
 	- cd $(LUA_DIR); make clean
 	- cd $(CEQ_DIR); make clean
-	- rm -f $(GAS_DIR)/ideal_air_fortran.mod \
-		$(GAS_DIR)/ideal_air_fortran.o \
-		$(GAS_DIR)/libgasf.a
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
-
-$(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
 chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 equilibrium_update_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 vib_specific_co_kinetics_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 vib_specific_co_mixture_kinetics_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 two_temperature_argon_with_ideal_gas_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
-
-pseudo_species_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 two_temperature_gasgiant_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(LIBCEQ) $(LIBLUA)
 	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)

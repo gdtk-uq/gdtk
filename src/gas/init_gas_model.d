@@ -23,9 +23,7 @@ import gas.very_viscous_air;
 import gas.uniform_lut;
 import gas.uniform_lut_plus_ideal;
 import gas.adaptive_lut_CEA;
-import gas.ideal_air_proxy;
 import gas.ideal_gas_ab;
-import gas.pseudo_species_gas;
 import gas.two_temperature_reacting_argon;
 import gas.two_temperature_argon_plus_ideal;
 import gas.ideal_dissociating_gas;
@@ -116,14 +114,8 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "CEA adaptive look-up table":
             gm = new AdaptiveLUT(L);
             break;
-        case "IdealAirProxy":
-            gm = new IdealAirProxy(); // no further config in the Lua file
-            break;
         case "IdealGasAB":
             gm = new IdealGasAB(L);
-            break;
-        case "PseudoSpeciesGas":
-            gm = new PseudoSpeciesGas(L);
             break;
         case "TwoTemperatureReactingArgon":
             gm = new TwoTemperatureReactingArgon(L);
@@ -158,12 +150,6 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "EquilibriumGas":
             gm = new EquilibriumGas(L);
             break;
-        // RJG, disabled while I figure out the cyclic dependency in static constructors
-        /*
-        case "ElectronicallySpecificGas":
-            gm = new ElectronicallySpecificGas(L);
-            break;
-        */
         case "TwoTemperatureGasGiant":
             gm = new TwoTemperatureGasGiant();
             break;

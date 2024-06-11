@@ -16,7 +16,6 @@ public import gas.very_viscous_air;
 public import gas.uniform_lut;
 public import gas.uniform_lut_plus_ideal;
 public import gas.adaptive_lut_CEA;
-public import gas.ideal_air_proxy;
 public import gas.ideal_gas_ab;
 public import gas.two_temperature_reacting_argon;
 public import gas.two_temperature_argon_plus_ideal;
@@ -28,8 +27,6 @@ public import gas.vib_specific_nitrogen;
 public import gas.vib_specific_co;
 public import gas.fuel_air_mix;
 public import gas.equilibrium_gas;
-public import gas.pseudo_species_gas;
-public import gas.pseudo_species;
 public import gas.two_temperature_gasgiant;
 public import gas.luagas_model;
 

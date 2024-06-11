@@ -83,10 +83,6 @@ test uniform-lut-plus-ideal-test {Testing uniform_lut_plus_ideal.d} -body {
     exec ./uniform_lut_plus_ideal_test > LOGFILE_UNIFORM_LUT_PLUS_IDEAL_TEST
 } -result {} -returnCodes {0}
 
-test ideal-air-proxy-test {Testing ideal_air_proxy.d} -body {
-    exec ./ideal_air_proxy_test
-} -result {} -returnCodes {0}
-
 test ideal-gas-ab-test {Testing ideal_gas_ab.d} -body {
     exec ./ideal_gas_ab_test
 } -result {} -returnCodes {0}
@@ -126,14 +122,6 @@ test two-temperature-argon-plus-ideal-test {Testing two_temperature_argon_plus_i
 test equilibrium-gas-test {Testing equilibrium_gas.d} -body {
     exec ./equilibrium_gas_test
 } -result {} -returnCodes {0}
-
-test pseudo-species-gas-test {Testing pseudo_species_gas.d} -body {
-    exec ./pseudo_species_gas_test
-} -result {} -returnCodes {0}
-
-#test electronically-specific-gas-test {Testing electronically_specific_gas.d} -body {
-#    exec ./electronically_specific_gas_test
-#} -result {} -returnCodes {0}
 
 test two-temperature-gasgiant-test {Testing Daisy's two-T H2-He gas model} -body {
     exec ./two_temperature_gasgiant_test

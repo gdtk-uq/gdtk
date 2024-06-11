@@ -34,7 +34,6 @@ include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
-LIBGASF := $(GAS_DIR)/libgasf.a
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
@@ -87,7 +86,7 @@ ifeq ($(DMD), dmd)
     DVERSION := -version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 ifeq ($(DMD), ldmd2)
@@ -105,7 +104,7 @@ ifeq ($(DMD), ldmd2)
     DLINKFLAGS :=
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 ifeq ($(DMD), ldc2)
@@ -129,7 +128,7 @@ ifeq ($(DMD), ldc2)
     DVERSION := -d-version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
@@ -176,15 +175,12 @@ clean:
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
-$(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
-
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
 puffin: puffin_main.d $(PUFFIN_FILES) \
 	$(GEOM_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
@@ -199,7 +195,7 @@ puffin: puffin_main.d $(PUFFIN_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 puffin-prep: puffin_prep.py
@@ -212,7 +208,7 @@ puffin-post: puffin_post.py
 
 lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
 	$(GEOM_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
@@ -227,7 +223,7 @@ lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 lrkt-prep: lorikeet_prep.py

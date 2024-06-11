@@ -56,7 +56,7 @@ ifeq ($(DMD), dmd)
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 ifeq ($(DMD), ldmd2)
@@ -64,7 +64,7 @@ ifeq ($(DMD), ldmd2)
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 

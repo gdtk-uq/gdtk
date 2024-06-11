@@ -95,7 +95,7 @@ ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
 endif
 DLINKFLAGS := $(DLINKFLAGS) -L-ldl
 ifeq ($(PLATFORM), macosx)
-    DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+    DLINKFLAGS += -L-ld_classic
 endif
 
 DFLAGS_LUA := -w -dip1008 -g -I..
@@ -363,7 +363,7 @@ cubepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL
 cubepatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -dip1008 -debug -g -w -version=cubepatch_test -version=complex_numbers \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-		
+
 nurbs_utils_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)

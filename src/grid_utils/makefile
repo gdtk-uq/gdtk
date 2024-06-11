@@ -24,7 +24,7 @@ ifeq ($(DMD), ldc2)
     DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -dip1008
 endif
 ifeq ($(PLATFORM), macosx)
-    DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+    DLINKFLAGS += -L-ld_classic
 endif
 PROGRAMS := ugrid_partition
 

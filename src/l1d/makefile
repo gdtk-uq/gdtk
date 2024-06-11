@@ -31,7 +31,6 @@ include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
-LIBGASF := $(GAS_DIR)/libgasf.a
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
@@ -84,7 +83,7 @@ ifeq ($(DMD), dmd)
     DVERSION := -version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 ifeq ($(DMD), ldmd2)
@@ -101,7 +100,7 @@ ifeq ($(DMD), ldmd2)
     DVERSION := -version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 ifeq ($(DMD), ldc2)
@@ -125,7 +124,7 @@ ifeq ($(DMD), ldc2)
     DVERSION := -d-version=
     DLINKFLAGS := -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic -L-no_compact_unwind
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
@@ -135,11 +134,6 @@ DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DI
 
 ifeq ($(WITH_FPE),1)
     DFLAGS += $(DVERSION)enable_fp_exceptions
-endif
-
-ifeq ($(WITH_DVODE),1)
-    DFLAGS += $(DVERSION)with_dvode
-    DLINKFLAGS += -L-lgfortran
 endif
 
 default: $(PROGRAMS)
@@ -180,7 +174,7 @@ $(LIBCEQ):
 
 l1d4: main.d $(L1D_FILES) \
 	$(GEOM_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
@@ -195,7 +189,7 @@ l1d4: main.d $(L1D_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 l1d4-prep: l1d4-prep.py

@@ -29,9 +29,6 @@ import gas.two_temperature_dissociating_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.vib_specific_co;
 import gas.two_temperature_air;
-import gas.pseudo_species_gas;
-// RJG, disabled while I figure out the cyclic dependency in static constructors
-// import gas.electronically_specific_gas;
 import gas.two_temperature_gasgiant;
 
 import kinetics.chemistry_update;
@@ -48,12 +45,6 @@ import kinetics.two_temperature_argon_with_ideal_gas;
 import kinetics.vib_specific_nitrogen_kinetics;
 import kinetics.vib_specific_co_kinetics;
 import kinetics.two_temperature_air_kinetics;
-// RJG, disabled while I figure out the cyclic dependency in static constructors
-// import kinetics.electronically_specific_kinetics;
-version (with_dvode)
-{
-    import kinetics.pseudo_species_kinetics;
-}
 import kinetics.two_temperature_gasgiant_kinetics;
 
 
@@ -135,18 +126,6 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
-    }
-    // RJG, disabled while I figure out the cyclic dependency in static constructors
-    /*
-    if ((cast(ElectronicallySpecificGas) gmodel) !is null) {
-        reactor = new ElectronicallySpecificKinetics(fileName1, gmodel);
-    }
-    */
-    version (with_dvode)
-    {
-        if ((cast(PseudoSpeciesGas) gmodel) !is null) {
-            reactor = new PseudoSpeciesKinetics(gmodel);
-        }
     }
     if ((cast(TwoTemperatureGasGiant) gmodel) !is null) {
         reactor = new UpdateGasGiant(gmodel);
