@@ -220,6 +220,8 @@ void exchange_ghost_cell_boundary_convective_gradient_data(double t, int gtl, in
 // p.s. The data for that coordination is still buried in the FullFaceCopy class.
 // No need to have all its guts hanging out.
 {
+    if (GlobalConfig.use_structured_reconstruction) return;
+
     foreach (blk; localFluidBlocks) {
         foreach(bc; blk.bc) {
             foreach (gce; bc.preReconAction) {

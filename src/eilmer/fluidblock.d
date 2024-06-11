@@ -321,6 +321,8 @@ public:
         celldata.halo_face_ids.length = (ncells + nghost);
         foreach(i; 0 .. ncells) celldata.all_cell_idxs[i] = i;
 
+        celldata.c2f.length = ncells;
+        celldata.outsigns.length=ncells;
         celldata.nfaces.length = ncells;
         celldata.dt_local.length = ncells;
         celldata.areas.length = ncells + nghost;
@@ -331,6 +333,7 @@ public:
         celldata.lengths.length = ncells + nghost;
         celldata.positions.length = ncells + nghost;
         celldata.U0.length = (ncells + nghost)*neq*nftl;
+        celldata.cell_cloud_indices.length = ncells;
         if (nftl>1) celldata.U1.length = (ncells + nghost)*neq*nftl;
         if (nftl>2) celldata.U2.length = (ncells + nghost)*neq*nftl;
         if (nftl>3) celldata.U3.length = (ncells + nghost)*neq*nftl;
@@ -1403,7 +1406,6 @@ public:
           since we need to know the number of expected entries in the Jacobian matrix to pre-size the
           sparse matrix arrays.
          */
-
         size_t nentry = 0;
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }

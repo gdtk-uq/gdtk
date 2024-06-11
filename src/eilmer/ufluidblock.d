@@ -333,16 +333,17 @@ public:
         allocate_dense_celldata(ncells, nghost, neq, nftl);
         allocate_dense_facedata(nfaces, nghost, neq, nftl);
 
-        // We have some unstructured specific stuff that also needs to be allocated
-        celldata.face_distances.length = ncells;
-        celldata.lsqws.length = ncells + nghost;
-        celldata.cell_cloud_indices.length = ncells;
-        celldata.c2v.length = ncells;
-        celldata.lsqgradients.reserve(ncells + nghost);
-        foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
-
-        facedata.dL.length = nfaces;
-        facedata.dR.length = nfaces;
+        // We have some unstructured specific stuff that also needs to be allocated,
+        // though only when using the fully unstructured convective gradients
+        if (n_ghost_cell_layers<2){
+            celldata.face_distances.length = ncells;
+            celldata.lsqws.length = ncells + nghost;
+            celldata.lsqgradients.reserve(ncells + nghost);
+            foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if first order
+            facedata.dL.length = nfaces;
+            facedata.dR.length = nfaces;
+            celldata.c2v.length = ncells;
+        }
 
         if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
             vertexdata.n_indices.length = grid.vertices.length;
@@ -373,12 +374,9 @@ public:
                 f.vtx ~= vertices[j];
             }
         }
-        celldata.outsigns.length=cells.length; // FIXME: This shouldn't be here.
-        celldata.c2f.length = cells.length;
         foreach (i, c; cells) {
             foreach (j; grid.cells[i].vtx_id_list) {
                 c.vtx ~= vertices[j];
-                celldata.c2v[i] ~= j;
             }
             auto nf = grid.cells[i].face_id_list.length;
             if (nf != grid.cells[i].outsign_list.length) {
@@ -417,8 +415,16 @@ public:
                 }
             }
             celldata.nfaces[i] = celldata.c2f[i].length;
-            celldata.face_distances[i].length = celldata.nfaces[i];
         } // end foreach cells
+        // If we are doing fully unstructured reconstruction, we need to set up some dense data
+        if (n_ghost_cell_layers<2) {
+            foreach (i, c; cells) {
+                foreach (j; grid.cells[i].vtx_id_list) {
+                    celldata.c2v[i] ~= j;
+                }
+                celldata.face_distances[i].length = celldata.nfaces[i];
+            }
+        }
         //
         // Set up the lists of indices for look-up of cells and faces
         // from a given vertex.
@@ -571,76 +577,9 @@ public:
         // of cell faces.
         // (Will be used for the convective fluxes).
         if (myConfig.use_extended_stencil) {
-            foreach (c; cells) {
-                // First cell in the cloud is the cell itself.  Differences are taken about it.
-                c.cell_cloud ~= c;
-                size_t[] cell_ids;
-                cell_ids ~= c.id;
-                // next we add the nearest neighbour cells
-                // Note that we assume these cells are next in the array when creating the low order Jacobian
-                foreach (i, f; c.iface) {
-                    if (c.outsign[i] == 1) {
-                        if (f.right_cell && f.right_cell.contains_flow_data) {
-                            c.cell_cloud ~= f.right_cell;
-                            cell_ids ~= f.right_cell.id;
-                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
-                        }
-                    } else {
-                        if (f.left_cell && f.left_cell.contains_flow_data) {
-                            c.cell_cloud ~= f.left_cell;
-                            cell_ids ~= f.left_cell.id;
-                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
-                        }
-                    }
-                } // end foreach face
-                // finally we add the remaining cells that share a node with the central cell
-                bool is_on_boundary = false;
-                foreach(face; c.iface) if (face.is_on_boundary) is_on_boundary = true;
-                if (is_on_boundary) {
-                    // apply nearest-face neighbour
-                    foreach (i, f; c.iface) {
-                        if (c.outsign[i] == 1) {
-                            if (f.right_cell && cell_ids.canFind(f.right_cell.id) == false && f.right_cell.contains_flow_data) {
-                                c.cell_cloud ~= f.right_cell;
-                                cell_ids ~= f.right_cell.id;
-                                celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
-                            }
-                        } else {
-                            if (f.left_cell && cell_ids.canFind(f.left_cell.id) == false && f.left_cell.contains_flow_data) {
-                                c.cell_cloud ~= f.left_cell;
-                                cell_ids ~= f.left_cell.id;
-                                celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
-                            }
-                        }
-                    } // end foreach face
-                } else {
-                    // apply nearest-node neighbour
-                    foreach(vtx; c.vtx) {
-                        foreach(cid; cellIndexListPerVertex[vtx.id])
-                            if (cell_ids.canFind(cid) == false && cells[cid].contains_flow_data)
-                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; celldata.cell_cloud_indices[c.id] ~= cid; }
-                    }
-                }
-            } // end foreach cell
+            allocate_extended_cell_cloud_references();
         } else {
-            foreach (c; cells) {
-                // First cell in the cloud is the cell itself.  Differences are taken about it.
-                c.cell_cloud ~= c;
-                // Subsequent cells are the surrounding cells.
-                foreach (i, f; c.iface) {
-                    if (c.outsign[i] == 1) {
-                        if (f.right_cell && f.right_cell.contains_flow_data) {
-                            c.cell_cloud ~= f.right_cell;
-                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
-                        }
-                    } else {
-                        if (f.left_cell && f.left_cell.contains_flow_data) {
-                            c.cell_cloud ~= f.left_cell;
-                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
-                        }
-                    }
-                } // end foreach face
-            } // end foreach cell
+            allocate_regular_cell_cloud_references();
         } // end else
         // We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
         // This is equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
@@ -714,6 +653,83 @@ public:
         } // End n_ghost_cell_layers>1 special init code.
     } // end init_grid_and_flow_arrays()
 
+    void allocate_extended_cell_cloud_references()
+    {
+        foreach (c; cells) {
+            // First cell in the cloud is the cell itself.  Differences are taken about it.
+            c.cell_cloud ~= c;
+            size_t[] cell_ids;
+            cell_ids ~= c.id;
+            // next we add the nearest neighbour cells
+            // Note that we assume these cells are next in the array when creating the low order Jacobian
+            foreach (i, f; c.iface) {
+                if (c.outsign[i] == 1) {
+                    if (f.right_cell && f.right_cell.contains_flow_data) {
+                        c.cell_cloud ~= f.right_cell;
+                        cell_ids ~= f.right_cell.id;
+                        celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
+                    }
+                } else {
+                    if (f.left_cell && f.left_cell.contains_flow_data) {
+                        c.cell_cloud ~= f.left_cell;
+                        cell_ids ~= f.left_cell.id;
+                        celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
+                    }
+                }
+            } // end foreach face
+            // finally we add the remaining cells that share a node with the central cell
+            bool is_on_boundary = false;
+            foreach(face; c.iface) if (face.is_on_boundary) is_on_boundary = true;
+            if (is_on_boundary) {
+                // apply nearest-face neighbour
+                foreach (i, f; c.iface) {
+                    if (c.outsign[i] == 1) {
+                        if (f.right_cell && cell_ids.canFind(f.right_cell.id) == false && f.right_cell.contains_flow_data) {
+                            c.cell_cloud ~= f.right_cell;
+                            cell_ids ~= f.right_cell.id;
+                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
+                        }
+                    } else {
+                        if (f.left_cell && cell_ids.canFind(f.left_cell.id) == false && f.left_cell.contains_flow_data) {
+                            c.cell_cloud ~= f.left_cell;
+                            cell_ids ~= f.left_cell.id;
+                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
+                        }
+                    }
+                } // end foreach face
+            } else {
+                // apply nearest-node neighbour
+                foreach(vtx; c.vtx) {
+                    foreach(cid; cellIndexListPerVertex[vtx.id])
+                        if (cell_ids.canFind(cid) == false && cells[cid].contains_flow_data)
+                            { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; celldata.cell_cloud_indices[c.id] ~= cid; }
+                }
+            }
+        } // end foreach cell
+    }
+
+    void allocate_regular_cell_cloud_references()
+    {
+        foreach (c; cells) {
+            // First cell in the cloud is the cell itself.  Differences are taken about it.
+            c.cell_cloud ~= c;
+            // Subsequent cells are the surrounding cells.
+            foreach (i, f; c.iface) {
+                if (c.outsign[i] == 1) {
+                    if (f.right_cell && f.right_cell.contains_flow_data) {
+                        c.cell_cloud ~= f.right_cell;
+                        celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
+                    }
+                } else {
+                    if (f.left_cell && f.left_cell.contains_flow_data) {
+                        c.cell_cloud ~= f.left_cell;
+                        celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
+                    }
+                }
+            } // end foreach face
+        } // end foreach cell
+    }
+
     void build_cloud_of_cell_references_at_each_vertex()
     {
         // For the MLP limiter, we need access to the gradients stored in the cells.
@@ -783,9 +799,11 @@ public:
             foreach (f; faces) { f.update_3D_geometric_data(gtl); }
         }
 
-        foreach(i, ifaces; celldata.c2f){
-            foreach(j, jface; ifaces){ 
-                celldata.face_distances[i][j] = facedata.positions[jface] - celldata.positions[i];
+        if (celldata.face_distances) {
+            foreach(i, ifaces; celldata.c2f){
+                foreach(j, jface; ifaces){
+                    celldata.face_distances[i][j] = facedata.positions[jface] - celldata.positions[i];
+                }
             }
         }
         //
@@ -932,7 +950,7 @@ public:
         // The LSQ linear model for the flow field reconstruction is fitted using information
         // on the locations of the points.
         // This model is used later, as part of the convective flux calculation.
-        if (myConfig.interpolation_order > 1) {
+        if ((myConfig.interpolation_order > 1) && (n_ghost_cell_layers<2)) {
             foreach (c; cells) {
                 try {
                     c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
