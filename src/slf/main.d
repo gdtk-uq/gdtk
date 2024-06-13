@@ -37,7 +37,7 @@ double erfc_inv(double q) {
 }
 
 @nogc
-void second_derivs_from_cent_diffs(ref const Parameters pm, double[] U0, double[] U1, number[] U, number[] U2nd){
+void second_derivs_from_cent_diffs(ref const Parameters pm, number[] U, number[] U2nd){
 /*
     Use a central difference stencil to get second order derivatives,
     assuming fixed value end conditions
@@ -49,7 +49,7 @@ void second_derivs_from_cent_diffs(ref const Parameters pm, double[] U0, double[
     size_t lft, ctr, rgt;
     ctr = 0*neq;
     rgt = 1*neq;
-    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U[rgt + ii] - 2.0*U[ctr + ii] + U0[ii])/pm.dZ/pm.dZ;
+    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U[rgt + ii] - 2.0*U[ctr + ii] + pm.U0[ii])/pm.dZ/pm.dZ;
 
     foreach(i; 1 .. N-1) {
         lft = (i-1)*neq;
@@ -62,7 +62,7 @@ void second_derivs_from_cent_diffs(ref const Parameters pm, double[] U0, double[
     
     lft = (N-2)*neq;
     ctr = (N-1)*neq;
-    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U1[ii] - 2.0*U[ctr + ii] + U[lft + ii])/pm.dZ/pm.dZ;
+    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (pm.U1[ii] - 2.0*U[ctr + ii] + U[lft + ii])/pm.dZ/pm.dZ;
     return;
 }
 
@@ -212,6 +212,8 @@ struct Parameters {
     double[] Z;
     double[] Y0;
     double[] Y1;
+    double[] U0;
+    double[] U1;
 }
 
 void write_solution_to_file(ref const Parameters pm, double[] U, string filename){
@@ -262,6 +264,17 @@ void read_solution_from_file(ref const Parameters pm, double[] U, string filenam
     return;
 }
 
+void gaussian_initial_condition(ref const Parameters pm, number[] U){
+    double sigma = 0.1;
+
+    foreach(i; 0 .. pm.N){
+        size_t idx = i*pm.neq;
+        double factor = 0.5*tanh(2*6.0*pm.Z[i] - 6.0) + 0.5;
+        foreach(isp; 0 .. pm.nsp) U[idx+isp] = (1.0 - factor)*pm.Y0[isp] + factor*pm.Y1[isp];
+        U[idx+pm.nsp] = 1500.0*exp(-(pm.Z[i]-0.5)*(pm.Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
+    }
+}
+
 
 int main(string[] args)
 {
@@ -295,19 +308,19 @@ int main(string[] args)
     pm.Y1[gm.species_index("N2")] = 0.88;
     pm.Y1[gm.species_index("H2")] = 0.12;
 
+    pm.U0.length = pm.neq; foreach(isp; 0 .. pm.nsp) pm.U0[isp] = pm.Y0[isp]; pm.U0[pm.nsp] = pm.T0;
+    pm.U1.length = pm.neq; foreach(isp; 0 .. pm.nsp) pm.U1[isp] = pm.Y1[isp]; pm.U1[pm.nsp] = pm.T1;
+
     size_t neq = pm.neq;
     size_t N = pm.N;
     size_t n = pm.n;
     size_t nsp = pm.nsp;
-    double[] U0; U0.length = neq; foreach(isp; 0 .. nsp) U0[isp] = pm.Y0[isp]; U0[nsp] = pm.T0;
-    double[] U1; U1.length = neq; foreach(isp; 0 .. nsp) U1[isp] = pm.Y1[isp]; U1[nsp] = pm.T1;
 
     // Initial Guess
     number[] U,Up;
     number[] Ua,Ub,Uc,Ra,Rb,Rc;
     number[] R,Rp;
     number[] U2nd;
-    double sigma = 0.1;
 
     U.length = neq*N;
     Up.length = neq*N;
@@ -350,15 +363,10 @@ int main(string[] args)
     //size_t extent = neq*N;
     //auto J = new Matrix!double(extent, extent);
 
-    foreach(i; 0 .. N){
-        size_t idx = i*neq;
-        double factor = 0.5*tanh(2*6.0*pm.Z[i] - 6.0) + 0.5;
-        foreach(isp; 0 .. nsp) U[idx+isp] = (1.0 - factor)*pm.Y0[isp] + factor*pm.Y1[isp];
-        U[idx+nsp] = 1500.0*exp(-(pm.Z[i]-0.5)*(pm.Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
-    }
 
+    gaussian_initial_condition(pm, U);
 
-    second_derivs_from_cent_diffs(pm, U0, U1, U, U2nd);
+    second_derivs_from_cent_diffs(pm, U, U2nd);
     compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
 
     double GR0 = 0.0; foreach(Ri; R) GR0 += Ri.re*Ri.re;
@@ -406,19 +414,19 @@ int main(string[] args)
             GR0 = sqrt(GR0);
         }
 
-        second_derivs_from_cent_diffs(pm, U0, U1, U, U2nd);
+        second_derivs_from_cent_diffs(pm, U, U2nd);
         compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
 
         foreach(i; 0 .. n) Ua[i] = U[i] + dt/2.0*R[i];
-        second_derivs_from_cent_diffs(pm, U0, U1, Ua, U2nd);
+        second_derivs_from_cent_diffs(pm, Ua, U2nd);
         compute_residual(gm, reactor, gs, omegaMi, pm, Ua, U2nd, Ra, false);
 
         foreach(i; 0 .. n) Ub[i] = U[i] + dt/2.0*Ra[i];
-        second_derivs_from_cent_diffs(pm, U0, U1, Ub, U2nd);
+        second_derivs_from_cent_diffs(pm, Ub, U2nd);
         compute_residual(gm, reactor, gs, omegaMi, pm, Ub, U2nd, Rb, false);
 
         foreach(i; 0 .. n) Uc[i] = U[i] + dt*Rb[i];
-        second_derivs_from_cent_diffs(pm, U0, U1, Uc, U2nd);
+        second_derivs_from_cent_diffs(pm, Uc, U2nd);
         compute_residual(gm, reactor, gs, omegaMi, pm, Uc, U2nd, Rc, false);
 
         foreach(i; 0 .. n) U[i] = U[i] + dt/6.0*(R[i] + 2.0*Ra[i] + 2.0*Rb[i] + Rc[i]);
