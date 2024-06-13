@@ -36,47 +36,53 @@ double erfc_inv(double q) {
 }
 
 @nogc
-void second_derivs_from_cent_diffs(double dZ, size_t N, size_t neq, size_t nsp, double[] U0, double[] U1, number[] U, number[] U2nd){
+void second_derivs_from_cent_diffs(ref const Parameters pm, double[] U0, double[] U1, number[] U, number[] U2nd){
 /*
     Use a central difference stencil to get second order derivatives,
     assuming fixed value end conditions
 
 */
+    size_t N = pm.N;
+    size_t neq = pm.neq;
+
     size_t lft, ctr, rgt;
     ctr = 0*neq;
     rgt = 1*neq;
-    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U[rgt + ii] - 2.0*U[ctr + ii] + U0[ii])/dZ/dZ;
+    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U[rgt + ii] - 2.0*U[ctr + ii] + U0[ii])/pm.dZ/pm.dZ;
 
     foreach(i; 1 .. N-1) {
         lft = (i-1)*neq;
         ctr = i*neq;
         rgt = (i+1)*neq;
 
-        foreach(ii; 0 .. neq) U2nd[ctr+ii] = (U[rgt + ii] - 2.0*U[ctr+ii] + U[lft + ii])/dZ/dZ;
+        foreach(ii; 0 .. neq) U2nd[ctr+ii] = (U[rgt + ii] - 2.0*U[ctr+ii] + U[lft + ii])/pm.dZ/pm.dZ;
     }
 
     
     lft = (N-2)*neq;
     ctr = (N-1)*neq;
-    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U1[ii] - 2.0*U[ctr + ii] + U[lft + ii])/dZ/dZ;
+    foreach(ii; 0 .. neq) U2nd[ctr + ii] = (U1[ii] - 2.0*U[ctr + ii] + U[lft + ii])/pm.dZ/pm.dZ;
     return;
 }
 
 @nogc
-void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, number[] omegaMi, double p, size_t N, size_t neq, size_t nsp, double[] Z, number[] U, number[] U2nd, number[] R, bool v=false){
+void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, number[] omegaMi, ref const Parameters pm, number[] U, number[] U2nd, number[] R, bool v=false){
 /*
     The residual or right hand side is the time derivatives of the equations.
     See Lapointe et al. equations (1) and (2)
 */
+    size_t N = pm.N;
+    size_t neq = pm.neq;
+    size_t nsp = pm.nsp;
 
     foreach(i; 0 .. N){
-        double arg = erfc_inv(2.0*Z[i]);
+        double arg = erfc_inv(2.0*pm.Z[i]);
         double chi = 0.5*exp(-2.0*arg*arg);
         size_t idx = i*neq;
         bool verbose = v &&(i==15);
 
         gs.T = U[idx+nsp];
-        gs.p = p;
+        gs.p = pm.p;
         foreach(j, Yj; U[idx .. idx+nsp]) gs.massf[j] = Yj;
         gm.update_thermo_from_pT(gs);
         //if (isNaN(gs.rho) || (gs.rho <= 0.0)) {
@@ -98,7 +104,7 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
         }
         debug{
             if (verbose) writefln("   T= chi/2.0*U2nd[idx+nsp] %e chi %e U2nd %e", chi/2.0*U2nd[idx+nsp], chi, U2nd[idx+nsp]);
-            if (verbose) writefln("Computing residual for cell %d Z %e T %e", i, Z[i], gs.T);
+            if (verbose) writefln("Computing residual for cell %d Z %e T %e", i, pm.Z[i], gs.T);
             if (verbose) writefln(" Y: %s ", gs.massf);
             if (verbose) writefln("   asdf= %e", asdf);
         }
@@ -191,6 +197,23 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
 //    return;
 //}
 
+struct Parameters {
+    uint nsp;
+    uint neq;
+
+    double p;// = 75e3;
+    size_t N;// = 32;
+    size_t n;//= N*neq;
+    double[] Z;
+    double dZ;// = 1.0/(N+1.0);
+
+    // Boundary Conditions
+    double T0; double T1;// = 300.0;
+    double[] Y0;
+    double[] Y1;
+}
+
+
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
@@ -198,31 +221,35 @@ int main(string[] args)
     GasModel gm = init_gas_model("gm.lua");
     ThermochemicalReactor reactor = init_thermochemical_reactor(gm, "rr.lua", "");
     GasState gs = GasState(gm);
+    Parameters pm = Parameters();
 
-    uint nsp = gm.n_species;
-    uint neq = nsp+1;
+    pm.nsp = gm.n_species;
+    pm.neq = pm.nsp+1;
 
-    double p = 75e3;
-    size_t N = 32;
-    size_t n = N*neq;
-    double[] Z;
-    Z.length = N;
-    foreach(i; 1 .. N+1) Z[i-1] = i/(N+1.0);
-    double dZ = 1.0/(N+1.0);
+    pm.p = 75e3;
+    pm.N = 32;
+    pm.n = pm.N*pm.neq;
+    pm.Z.length = pm.N;
+    foreach(i; 1 .. pm.N+1) pm.Z[i-1] = i/(pm.N+1.0);
+    pm.dZ = 1.0/(pm.N+1.0);
 
     // Boundary Conditions
-    double T0 = 300.0; double T1 = 300.0;
-    double[] Y0; Y0.length = nsp; foreach(isp; 0 .. nsp) Y0[isp] = 0.0;
-    double[] Y1; Y1.length = nsp; foreach(isp; 0 .. nsp) Y1[isp] = 0.0;
+    pm.T0 = 300.0; pm.T1 = 300.0;
+    pm.Y0.length = pm.nsp; foreach(isp; 0 .. pm.nsp) pm.Y0[isp] = 0.0;
+    pm.Y1.length = pm.nsp; foreach(isp; 0 .. pm.nsp) pm.Y1[isp] = 0.0;
     
-    Y0[gm.species_index("N2")] = 0.767;
-    Y0[gm.species_index("O2")] = 0.233;
+    pm.Y0[gm.species_index("N2")] = 0.767;
+    pm.Y0[gm.species_index("O2")] = 0.233;
 
-    Y1[gm.species_index("N2")] = 0.88;
-    Y1[gm.species_index("H2")] = 0.12;
+    pm.Y1[gm.species_index("N2")] = 0.88;
+    pm.Y1[gm.species_index("H2")] = 0.12;
 
-    double[] U0; U0.length = neq; foreach(isp; 0 .. nsp) U0[isp] = Y0[isp]; U0[nsp] = T0;
-    double[] U1; U1.length = neq; foreach(isp; 0 .. nsp) U1[isp] = Y1[isp]; U1[nsp] = T1;
+    size_t neq = pm.neq;
+    size_t N = pm.N;
+    size_t n = pm.n;
+    size_t nsp = pm.nsp;
+    double[] U0; U0.length = neq; foreach(isp; 0 .. nsp) U0[isp] = pm.Y0[isp]; U0[nsp] = pm.T0;
+    double[] U1; U1.length = neq; foreach(isp; 0 .. nsp) U1[isp] = pm.Y1[isp]; U1[nsp] = pm.T1;
 
     // Initial Guess
     number[] U,Up;
@@ -242,7 +269,7 @@ int main(string[] args)
     Ra.length = (neq)*N;
     Rb.length = (neq)*N;
     Rc.length = (neq)*N;
-    number[] omegaMi; omegaMi.length = nsp; // FIXME: GC called here
+    number[] omegaMi; omegaMi.length = pm.nsp;
 
     // Set up Jacobian. We have a tridiagonal block matrix
     //auto J = new SMatrix!double();
@@ -274,45 +301,19 @@ int main(string[] args)
 
     foreach(i; 0 .. N){
         size_t idx = i*neq;
-        double factor = 0.5*tanh(2*6.0*Z[i] - 6.0) + 0.5;
-        foreach(isp; 0 .. nsp) U[idx+isp] = (1.0 - factor)*Y0[isp] + factor*Y1[isp];
-        U[idx+nsp] = 1500.0*exp(-(Z[i]-0.5)*(Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
-    }
-    writefln("Initial condition: ");
-    foreach(i; 0 .. N){
-        size_t idx = neq*i;
-        writefln("i =%d T=%e Y=%s", i, U[idx+nsp].re, U[idx .. idx+nsp]);
+        double factor = 0.5*tanh(2*6.0*pm.Z[i] - 6.0) + 0.5;
+        foreach(isp; 0 .. nsp) U[idx+isp] = (1.0 - factor)*pm.Y0[isp] + factor*pm.Y1[isp];
+        U[idx+nsp] = 1500.0*exp(-(pm.Z[i]-0.5)*(pm.Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
     }
 
 
-    second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, U, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, p, N, neq, nsp, Z, U, U2nd, R, true);
+    second_derivs_from_cent_diffs(pm, U0, U1, U, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
 
-    writefln("Initial residual: ");
-    foreach(i; 0 .. N){
-        size_t idx = i*neq;
-        writefln("i =%d T=%e Y=%s", i, R[idx+nsp].re, R[idx .. idx+nsp]);
-    }
     double GR0 = 0.0; foreach(Ri; R) GR0 += Ri.re*Ri.re;
     GR0 = sqrt(GR0);
 
 
-    // TODO: How do we check this is right?
-    writef("T=[");
-    foreach(cell; 0 .. N){
-        writef("%- 5.1f,", U[cell*neq+nsp].re);
-    }
-    writefln("]");
-    writef("YH2 =[");
-    foreach(cell; 0 .. N){
-        writef("%- 4.1e,", U[cell*neq+2].re);
-    }
-    writefln("]");
-    writef("YH2O=[");
-    foreach(cell; 0 .. N){
-        writef("%- 4.1e,", U[cell*neq+7].re);
-    }
-    writefln("]");
     immutable int maxiters = 400000;
     double dt = 1e-8;
     foreach(iter; 0 .. maxiters) {
@@ -354,72 +355,27 @@ int main(string[] args)
             GR0 = sqrt(GR0);
         }
 
-        second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, U, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, p, N, neq, nsp, Z, U, U2nd, R, verbose);
+        second_derivs_from_cent_diffs(pm, U0, U1, U, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
 
         foreach(i; 0 .. n) Ua[i] = U[i] + dt/2.0*R[i];
-        second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, Ua, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, p, N, neq, nsp, Z, Ua, U2nd, Ra, false);
+        second_derivs_from_cent_diffs(pm, U0, U1, Ua, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Ua, U2nd, Ra, false);
 
         foreach(i; 0 .. n) Ub[i] = U[i] + dt/2.0*Ra[i];
-        second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, Ub, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, p, N, neq, nsp, Z, Ub, U2nd, Rb, false);
+        second_derivs_from_cent_diffs(pm, U0, U1, Ub, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Ub, U2nd, Rb, false);
 
         foreach(i; 0 .. n) Uc[i] = U[i] + dt*Rb[i];
-        second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, Uc, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, p, N, neq, nsp, Z, Uc, U2nd, Rc, false);
+        second_derivs_from_cent_diffs(pm, U0, U1, Uc, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Uc, U2nd, Rc, false);
 
         foreach(i; 0 .. n) U[i] = U[i] + dt/6.0*(R[i] + 2.0*Ra[i] + 2.0*Rb[i] + Rc[i]);
-
-        //foreach(cell; 0 .. N){
-        //    foreach(j; 0 .. nsp){
-        //        size_t idx = cell*neq;
-        //        U[idx+j] = fmin(fmax(U[idx+j], 0.0), 1.0);
-        //    }
-        //}
-
-        //foreach(cell; 0 .. N){
-        //    double Ytotal = 0.0;
-        //    foreach(j; 0 .. nsp) Ytotal += U[cell*neq+j];
-        //    foreach(j; 0 .. nsp) U[cell*neq+j]/=Ytotal;
-        //}
 
         double GR = 0.0; foreach(Ri; R) GR += Ri.re*Ri.re;
         GR = sqrt(GR);
         double GRR = GR/GR0;
         if (iter%1000==0){ 
-            //writef("T=[");
-            //foreach(cell; 0 .. N){
-            //    writef("%- 5.1f,", U[cell*neq+nsp].re);
-            //}
-            //writefln("]");
-            //writef("YH2 =[");
-            //foreach(cell; 0 .. N){
-            //    writef("%- 4.1e,", U[cell*neq+2].re);
-            //}
-            //writefln("]");
-            //writef("YH2O=[");
-            //foreach(cell; 0 .. N){
-            //    writef("%- 4.1e,", U[cell*neq+7].re);
-            //}
-            //writefln("]");
-            //writefln("------");
-            //writef("RT=[");
-            //foreach(cell; 0 .. N){
-            //    writef("%- 5.1f,", R[cell*neq+nsp].re);
-            //}
-            //writefln("]");
-            //writef("RH2 =[");
-            //foreach(cell; 0 .. N){
-            //    writef("%- 4.1e,", R[cell*neq+2].re);
-            //}
-            //writefln("]");
-            //writef("RH2O=[");
-            //foreach(cell; 0 .. N){
-            //    writef("%- 4.1e,", R[cell*neq+7].re);
-            //}
-            //writefln("]");
-
             writefln("iter %d GR0 %e GR %e GRR %e", iter, GR0, GR, GRR);
         }
         if (GRR<1e-6) break;
