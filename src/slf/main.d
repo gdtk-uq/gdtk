@@ -7,6 +7,7 @@ import std.math;
 import std.mathspecial;
 import std.format;
 import std.algorithm;
+import std.string;
 import gas;
 import gas.physical_constants;
 import kinetics;
@@ -198,25 +199,75 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
 //}
 
 struct Parameters {
-    uint nsp;
-    uint neq;
+    size_t nsp;
+    size_t neq;
+    size_t N;
+    size_t n;
 
-    double p;// = 75e3;
-    size_t N;// = 32;
-    size_t n;//= N*neq;
+    double p;
+    double dZ;
+    double T0;
+    double T1;
+
     double[] Z;
-    double dZ;// = 1.0/(N+1.0);
-
-    // Boundary Conditions
-    double T0; double T1;// = 300.0;
     double[] Y0;
     double[] Y1;
+}
+
+void write_solution_to_file(ref const Parameters pm, double[] U, string filename){
+
+    File outfile = File(filename, "wb");
+    size_t[1] ibuff; double[1] dbuff; // buffer arrays
+
+    ibuff[0] = pm.nsp;  outfile.rawWrite(ibuff);
+    ibuff[0] = pm.neq;  outfile.rawWrite(ibuff);
+    ibuff[0] = pm.N;    outfile.rawWrite(ibuff);
+    ibuff[0] = pm.n;    outfile.rawWrite(ibuff);
+
+    dbuff[0] = pm.p;    outfile.rawWrite(dbuff);
+    dbuff[0] = pm.dZ;   outfile.rawWrite(dbuff);
+    dbuff[0] = pm.T0;   outfile.rawWrite(dbuff);
+    dbuff[0] = pm.T1;   outfile.rawWrite(dbuff);
+
+    foreach(i; 0 .. pm.N)  { dbuff[0] = pm.Z[i];  outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.nsp){ dbuff[0] = pm.Y0[i]; outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.nsp){ dbuff[0] = pm.Y1[i]; outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.n)  { dbuff[0] = U[i];     outfile.rawWrite(dbuff); }
+    outfile.close();
+    return;
+}
+
+void read_solution_from_file(ref const Parameters pm, double[] U, string filename){
+
+    File infile = File(filename, "rb");
+    size_t[1] ibuff; double[1] dbuff; // buffer arrays
+
+    infile.rawRead(ibuff); if (pm.nsp != ibuff[0]) throw new Error(format("Sim nsp %d does not match file %d", pm.nsp, ibuff[0]));
+    infile.rawRead(ibuff); if (pm.neq != ibuff[0]) throw new Error(format("Sim neq %d does not match file %d", pm.neq, ibuff[0]));
+    infile.rawRead(ibuff); if (pm.N   != ibuff[0]) throw new Error(format("Sim N   %d does not match file %d", pm.N,   ibuff[0]));
+    infile.rawRead(ibuff); if (pm.n   != ibuff[0]) throw new Error(format("Sim n   %d does not match file %d", pm.n,   ibuff[0]));
+
+    // Let's not bother checking these. It's kind of whatever.
+    infile.rawRead(dbuff); //if (pm.p   != dbuff[0]) throw new Error(format("Sim p   %e does not match file %e", pm.p,   dbuff[0]));
+    infile.rawRead(dbuff); //if (pm.dZ  != dbuff[0]) throw new Error(format("Sim dZ  %e does not match file %e", pm.dZ,  dbuff[0]));
+    infile.rawRead(dbuff); //if (pm.T0  != dbuff[0]) throw new Error(format("Sim T0  %e does not match file %e", pm.T0,  dbuff[0]));
+    infile.rawRead(dbuff); //if (pm.T1  != dbuff[0]) throw new Error(format("Sim T1  %e does not match file %e", pm.T1,  dbuff[0]));
+
+    // At this stage we actually don't want to override the Parameters struct
+    foreach(i; 0 .. pm.N)  { infile.rawRead(dbuff); /* pm.Z[i]  = dbuff[0]; */}
+    foreach(i; 0 .. pm.nsp){ infile.rawRead(dbuff); /* pm.Y0[i] = dbuff[0]; */}
+    foreach(i; 0 .. pm.nsp){ infile.rawRead(dbuff); /* pm.Y1[i] = dbuff[0]; */}
+    foreach(i; 0 .. pm.n)  { infile.rawRead(dbuff); U[i] = dbuff[0]; }
+    infile.close();
+    return;
 }
 
 
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
+    string name = "flame";
+    if (args.length>1) name = args[1];
     
     GasModel gm = init_gas_model("gm.lua");
     ThermochemicalReactor reactor = init_thermochemical_reactor(gm, "rr.lua", "");
@@ -314,7 +365,7 @@ int main(string[] args)
     GR0 = sqrt(GR0);
 
 
-    immutable int maxiters = 400000;
+    immutable int maxiters = 10000;
     double dt = 1e-8;
     foreach(iter; 0 .. maxiters) {
         // Let's try computing some derivatives
@@ -379,8 +430,11 @@ int main(string[] args)
             writefln("iter %d GR0 %e GR %e GRR %e", iter, GR0, GR, GRR);
         }
         if (GRR<1e-6) break;
-        if (iter==maxiters-1) throw new Error(format("Convergence failed after %s iterations, GRR was %e", maxiters, GRR));
+        //if (iter==maxiters-1) throw new Error(format("Convergence failed after %s iterations, GRR was %e", maxiters, GRR));
+        if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
     }
+    write_solution_to_file(pm, U, format("%s.sol", name));
+    //read_solution_from_file(pm, Ua, format("%s.sol", name));
     writefln("Done!");
 
 
