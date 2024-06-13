@@ -216,7 +216,7 @@ struct Parameters {
     double[] U1;
 }
 
-void write_solution_to_file(ref const Parameters pm, double[] U, string filename){
+void write_solution_to_file(ref const Parameters pm, number[] U, string filename){
 
     File outfile = File(filename, "wb");
     size_t[1] ibuff; double[1] dbuff; // buffer arrays
@@ -234,12 +234,12 @@ void write_solution_to_file(ref const Parameters pm, double[] U, string filename
     foreach(i; 0 .. pm.N)  { dbuff[0] = pm.Z[i];  outfile.rawWrite(dbuff); }
     foreach(i; 0 .. pm.nsp){ dbuff[0] = pm.Y0[i]; outfile.rawWrite(dbuff); }
     foreach(i; 0 .. pm.nsp){ dbuff[0] = pm.Y1[i]; outfile.rawWrite(dbuff); }
-    foreach(i; 0 .. pm.n)  { dbuff[0] = U[i];     outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.n)  { dbuff[0] = U[i].re;     outfile.rawWrite(dbuff); }
     outfile.close();
     return;
 }
 
-void read_solution_from_file(ref const Parameters pm, double[] U, string filename){
+void read_solution_from_file(ref const Parameters pm, number[] U, string filename){
 
     File infile = File(filename, "rb");
     size_t[1] ibuff; double[1] dbuff; // buffer arrays
@@ -259,7 +259,7 @@ void read_solution_from_file(ref const Parameters pm, double[] U, string filenam
     foreach(i; 0 .. pm.N)  { infile.rawRead(dbuff); /* pm.Z[i]  = dbuff[0]; */}
     foreach(i; 0 .. pm.nsp){ infile.rawRead(dbuff); /* pm.Y0[i] = dbuff[0]; */}
     foreach(i; 0 .. pm.nsp){ infile.rawRead(dbuff); /* pm.Y1[i] = dbuff[0]; */}
-    foreach(i; 0 .. pm.n)  { infile.rawRead(dbuff); U[i] = dbuff[0]; }
+    foreach(i; 0 .. pm.n)  { infile.rawRead(dbuff); U[i].re = dbuff[0]; }
     infile.close();
     return;
 }
@@ -271,8 +271,35 @@ void gaussian_initial_condition(ref const Parameters pm, number[] U){
         size_t idx = i*pm.neq;
         double factor = 0.5*tanh(2*6.0*pm.Z[i] - 6.0) + 0.5;
         foreach(isp; 0 .. pm.nsp) U[idx+isp] = (1.0 - factor)*pm.Y0[isp] + factor*pm.Y1[isp];
-        U[idx+pm.nsp] = 1500.0*exp(-(pm.Z[i]-0.5)*(pm.Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
+        U[idx+pm.nsp].re = 1500.0*exp(-(pm.Z[i]-0.5)*(pm.Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
     }
+}
+
+void RK4_explicit_time_increment(number[] U, number[] U2nd, number[] R,
+                                 number[] Ua, number[] Ub, number[] Uc,
+                                 number[] Ra, number[] Rb, number[] Rc,
+                                 number[] omegaMi, GasState gs,
+                                 number[] dU,
+                                 double dt, GasModel gm, ThermochemicalReactor reactor, Parameters pm, bool verbose){
+
+    size_t n = pm.n;
+    second_derivs_from_cent_diffs(pm, U, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
+
+    foreach(i; 0 .. n) Ua[i] = U[i] + dt/2.0*R[i];
+    second_derivs_from_cent_diffs(pm, Ua, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, Ua, U2nd, Ra, false);
+
+    foreach(i; 0 .. n) Ub[i] = U[i] + dt/2.0*Ra[i];
+    second_derivs_from_cent_diffs(pm, Ub, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, Ub, U2nd, Rb, false);
+
+    foreach(i; 0 .. n) Uc[i] = U[i] + dt*Rb[i];
+    second_derivs_from_cent_diffs(pm, Uc, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, Uc, U2nd, Rc, false);
+
+    foreach(i; 0 .. n) dU[i] = dt/6.0*(R[i] + 2.0*Ra[i] + 2.0*Rb[i] + Rc[i]);
+    return;
 }
 
 
@@ -317,13 +344,14 @@ int main(string[] args)
     size_t nsp = pm.nsp;
 
     // Initial Guess
-    number[] U,Up;
+    number[] U,Up,dU;
     number[] Ua,Ub,Uc,Ra,Rb,Rc;
     number[] R,Rp;
     number[] U2nd;
 
     U.length = neq*N;
     Up.length = neq*N;
+    dU.length = neq*N;
     U2nd.length = neq*N;
     R.length = (neq)*N;
     Rp.length = (neq)*N;
@@ -413,27 +441,14 @@ int main(string[] args)
             GR0 = 0.0; foreach(Ri; R) GR0 += Ri.re*Ri.re;
             GR0 = sqrt(GR0);
         }
+        RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
 
-        second_derivs_from_cent_diffs(pm, U, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
-
-        foreach(i; 0 .. n) Ua[i] = U[i] + dt/2.0*R[i];
-        second_derivs_from_cent_diffs(pm, Ua, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, pm, Ua, U2nd, Ra, false);
-
-        foreach(i; 0 .. n) Ub[i] = U[i] + dt/2.0*Ra[i];
-        second_derivs_from_cent_diffs(pm, Ub, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, pm, Ub, U2nd, Rb, false);
-
-        foreach(i; 0 .. n) Uc[i] = U[i] + dt*Rb[i];
-        second_derivs_from_cent_diffs(pm, Uc, U2nd);
-        compute_residual(gm, reactor, gs, omegaMi, pm, Uc, U2nd, Rc, false);
-
-        foreach(i; 0 .. n) U[i] = U[i] + dt/6.0*(R[i] + 2.0*Ra[i] + 2.0*Rb[i] + Rc[i]);
+        foreach(i; 0 .. n) U[i] += dU[i];
 
         double GR = 0.0; foreach(Ri; R) GR += Ri.re*Ri.re;
         GR = sqrt(GR);
         double GRR = GR/GR0;
+
         if (iter%1000==0){ 
             writefln("iter %d GR0 %e GR %e GRR %e", iter, GR0, GR, GRR);
         }
