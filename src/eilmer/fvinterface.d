@@ -186,6 +186,7 @@ public:
             jx = other.jx.dup();
             jy = other.jy.dup();
             jz = other.jz.dup();
+            hs = other.hs.dup();
         }
         // FIX-ME - KYLE -- there's a typo here. Not sure the intent.
         version(steadystate) {
