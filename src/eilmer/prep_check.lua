@@ -107,7 +107,7 @@ function prep_check.warn_if_blocks_not_connected()
       local n = 0
       for _,blk in ipairs(fluidBlocks) do
          for bndry,bc in pairs(blk.bcList) do
-            if string.find(bc.type, "exchange_") then
+            if bc.type and string.find(bc.type, "exchange_") then
                n = n + 1
             end
          end
