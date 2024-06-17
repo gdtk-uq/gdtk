@@ -68,6 +68,9 @@ function FBArray:new(o)
       if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
          error("You need to supply a structured_grid to FBArray constructor.", 2)
       end
+      if config.dimensions == 2 and o.grid:get_nkv() > 1 then
+         error("Oops, config.dimensions==2 and you have supplied a 3D grid to FBArray constructor.", 2)
+      end
       -- Numbers of subblocks in each coordinate direction
       o.nib = o.nib or 1
       o.njb = o.njb or 1
