@@ -172,31 +172,33 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
 //    return;
 //}
 
-//void compute_jacobian2(GasModel gm, ThermochemicalReactor reactor, double[] U0, double[] U1, double dZ, double p, size_t N, size_t neq, size_t nsp, number[] Up, double[] Z, number[] U, number[] U2nd, number[] R, number[] Rp, Matrix!double J){
-///*
-//    Fill out a dense matrix with the derivatives of the governing equations
-//    computed using real-valued finite differences.
-//*/
-//    J._data[] = 0.0;
-//    foreach(i; 0 .. neq*N) Up[i] = U[i];
-//    double eps = 1e-16;
-//
-//    // we're computing dRi/dUj, with j being the column and i the row index
-//    foreach(j; 0 .. neq*N){
-//        Up[j].im = eps;
-//
-//        second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, Up, U2nd);
-//        compute_residual(gm, reactor, p, N, neq, nsp, Z, Up, U2nd, Rp);
-//
-//        foreach(i; 0 .. neq*N){
-//           double dRdU = (Rp[i].im)/eps;
-//           J[i, j] = dRdU;
-//        }
-//        Up[j].im = 0.0;
-//        foreach(i; 0 .. neq*N) Rp[i].im = 0.0;
-//    }
-//    return;
-//}
+void compute_jacobian2(GasModel gm, ThermochemicalReactor reactor, GasState gs, ref const Parameters pm, number[] omegaMi, number[] Up, number[] U, number[] U2nd, number[] R, number[] Rp, Matrix!double J){
+/*
+    Fill out a dense matrix with the derivatives of the governing equations
+    computed using real-valued finite differences.
+*/
+    size_t n = pm.n;
+
+    J._data[] = 0.0;
+    foreach(i; 0 .. n) Up[i] = U[i];
+    double eps = 1e-16;
+
+    // we're computing dRi/dUj, with j being the column and i the row index
+    foreach(j; 0 .. n){
+        Up[j].im = eps;
+
+        second_derivs_from_cent_diffs(pm, Up, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Up, U2nd, Rp);
+
+        foreach(i; 0 .. n){
+           double dRdU = (Rp[i].im)/eps;
+           J[i, j] = dRdU;
+        }
+        Up[j].im = 0.0;
+        foreach(i; 0 .. n) Rp[i].im = 0.0;
+    }
+    return;
+}
 
 struct Parameters {
     size_t nsp;
@@ -272,6 +274,7 @@ void gaussian_initial_condition(ref const Parameters pm, number[] U){
         double factor = 0.5*tanh(2*6.0*pm.Z[i] - 6.0) + 0.5;
         foreach(isp; 0 .. pm.nsp) U[idx+isp] = (1.0 - factor)*pm.Y0[isp] + factor*pm.Y1[isp];
         U[idx+pm.nsp].re = 1500.0*exp(-(pm.Z[i]-0.5)*(pm.Z[i]-0.5)/2.0/sigma/sigma) + 300.0;
+        version(complex_numbers) { U[idx+pm.nsp].im = 0.0; }
     }
 }
 
@@ -302,6 +305,33 @@ void RK4_explicit_time_increment(number[] U, number[] U2nd, number[] R,
     return;
 }
 
+void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number[] Up, number[] Rp, double[] Rr,
+                                   Matrix!double LHS, Matrix!double J, 
+                                   number[] omegaMi, GasState gs,
+                                   number[] dU,
+                                   double dt, GasModel gm, ThermochemicalReactor reactor, Parameters pm, bool verbose){
+
+    second_derivs_from_cent_diffs(pm, U, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
+
+    size_t n = pm.n;
+    compute_jacobian2(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J);
+    foreach(i; 0 .. n){
+        foreach(j; 0 .. n){
+            LHS[i,j] = (i==j) ? 1.0/dt : 0.0;
+            LHS[i,j] -= J[i,j];
+        }
+    }
+
+    foreach(i, Ri; R) Rr[i] = Ri.re;
+    auto perm = decomp!double(LHS);
+    auto x = new Matrix!double(Rr);
+    solve!double(LHS, x, perm);
+
+    // x is solved in place to be delta U
+    foreach(i; 0 .. n) dU[i] = x[i,0];
+    return;
+}
 
 int main(string[] args)
 {
@@ -345,6 +375,7 @@ int main(string[] args)
 
     // Initial Guess
     number[] U,Up,dU;
+    double[] Rr;
     number[] Ua,Ub,Uc,Ra,Rb,Rc;
     number[] R,Rp;
     number[] U2nd;
@@ -361,6 +392,7 @@ int main(string[] args)
     Ra.length = (neq)*N;
     Rb.length = (neq)*N;
     Rc.length = (neq)*N;
+    Rr.length = (neq)*N;
     number[] omegaMi; omegaMi.length = pm.nsp;
 
     // Set up Jacobian. We have a tridiagonal block matrix
@@ -388,9 +420,10 @@ int main(string[] args)
     //}
     //writefln("Gotta add one more element to the array: J.ja.length %d J.aa.length %d", J.ja.length, J.aa.length);
     //J.ia ~= J.ja.length;
-    //size_t extent = neq*N;
-    //auto J = new Matrix!double(extent, extent);
 
+    size_t extent = neq*N;
+    auto J = new Matrix!double(extent, extent);
+    auto LHS = new Matrix!double(extent, extent);
 
     gaussian_initial_condition(pm, U);
 
@@ -402,7 +435,7 @@ int main(string[] args)
 
 
     immutable int maxiters = 10000;
-    double dt = 1e-8;
+    double dt = 1e-6;
     foreach(iter; 0 .. maxiters) {
         // Let's try computing some derivatives
         //compute_jacobian2(gm, reactor,  U0, U1, dZ, p, N, neq, nsp, Up, Z, U, U2nd, R,  Rp, J);
@@ -437,11 +470,12 @@ int main(string[] args)
         bool verbose = false;
         //if (iter%1000==0) verbose=true;
 
-        if (iter==1000){
+        if (iter==20){
             GR0 = 0.0; foreach(Ri; R) GR0 += Ri.re*Ri.re;
             GR0 = sqrt(GR0);
         }
-        RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+        //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+        Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, Rr, LHS, J, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
 
         foreach(i; 0 .. n) U[i] += dU[i];
 
@@ -449,7 +483,7 @@ int main(string[] args)
         GR = sqrt(GR);
         double GRR = GR/GR0;
 
-        if (iter%1000==0){ 
+        if (iter%10==0){ 
             writefln("iter %d GR0 %e GR %e GRR %e", iter, GR0, GR, GRR);
         }
         if (GRR<1e-6) break;

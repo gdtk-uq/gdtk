@@ -174,6 +174,7 @@ slf: main.d $(SLF_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	$(DMD) $(DFLAGS) $(OF)slf \
+		$(DVERSION)complex_numbers \
 		main.d \
 		$(NENZF1D_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
