@@ -16,7 +16,7 @@ import nm.bbla;
 import nm.number;
 import nm.complex;
 
-/* Code borrowed from zero_rk:
+/* This function borrowed from zero_rk:
    Approximate inverse error function implemented from:
    "A handy approximation for the error function and its inverse"
    by Sergei Winitzki
@@ -59,7 +59,7 @@ void second_derivs_from_cent_diffs(ref const Parameters pm, number[] U, number[]
         foreach(ii; 0 .. neq) U2nd[ctr+ii] = (U[rgt + ii] - 2.0*U[ctr+ii] + U[lft + ii])/pm.dZ/pm.dZ;
     }
 
-    
+
     lft = (N-2)*neq;
     ctr = (N-1)*neq;
     foreach(ii; 0 .. neq) U2nd[ctr + ii] = (pm.U1[ii] - 2.0*U[ctr + ii] + U[lft + ii])/pm.dZ/pm.dZ;
@@ -112,70 +112,74 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
     }
 }
 
-//void compute_jacobian(GasModel gm, ThermochemicalReactor reactor, double[] U0, double[] U1, double dZ, double p, size_t N, size_t neq, size_t nsp, number[] Up, double[] Z, number[] U, number[] U2nd, number[] R, number[] Rp, Matrix!double J){
-///*
-//    Fill out a sparse matrix with the derivatives of the governing equations
-//    computed using real-valued finite differences.
-//*/
-//    J._data[] = 0.0;
-//    foreach(i; 0 .. neq*N) Up[i] = U[i];
-//    double eps = 1e-9;
-//
-//    // we're computing dRi/dUj, with j being the column and i the row index
-//    foreach(j; 0 .. neq){
-//        // We can perturb every every third cell and compute the residuals in one go.
-//        // This is different to how Eilmer does it, where we can compute the residuals
-//        // on a subset of cells which are known to be affected by a given perturbation.
-//        foreach(loop; 0 .. 3){
-//            for (size_t cell=loop; cell<N; cell+=3){
-//                size_t idx = cell*neq + j;
-//                Up[idx] += eps;
-//            }
-//
-//            second_derivs_from_cent_diffs(dZ, N, neq, nsp, U0, U1, Up, U2nd);
-//            compute_residual(gm, reactor, p, N, neq, nsp, Z, Up, U2nd, Rp);
-//
-//            for (size_t cell=loop; cell<N; cell+=3){
-//                size_t lft = (cell-1)*neq;
-//                size_t ctr = cell*neq;
-//                size_t rgt = (cell+1)*neq;
-//                size_t col = ctr + j; 
-//
-//                if (cell>0){ // Do left cell
-//                    foreach(i; 0 .. neq){
-//                        double dRdU = (Rp[lft+i] - R[lft+i])/eps;
-//                        size_t row = lft + i;
-//                        J[row, col] = dRdU;
-//                    }
-//                }
-//
-//                // do the centre cell
-//                foreach(i; 0 .. neq){
-//                    double dRdU = (Rp[ctr+i] - R[ctr+i])/eps;
-//                    size_t row = ctr + i;
-//                    J[row, col] = dRdU;
-//                }
-//
-//                if (cell<N-1) { // Do right cell
-//                    foreach(i; 0 .. neq){
-//                        double dRdU = (Rp[rgt+i] - R[rgt+i])/eps;
-//                        size_t row = rgt + i;
-//                        J[row, col] = dRdU;
-//                    }
-//                }
-//                // finally, undo the perturbation
-//                size_t idx = cell*neq + j;
-//                Up[idx] -= eps;
-//            }
-//        }
-//    }
-//    return;
-//}
+void compute_jacobian(GasModel gm, ThermochemicalReactor reactor, GasState gs, ref const Parameters pm, number[] omegaMi, number[] Up, number[] U, number[] U2nd, number[] R, number[] Rp, Matrix!double J){
+/*
+    Fill out a dense matrix with the derivatives of the governing equations
+    computed using complex-valued finite differences.
+*/
+    size_t N = pm.N;
+    size_t n = pm.n;
+    size_t neq = pm.neq;
+
+    J._data[] = 0.0;
+    foreach(i; 0 .. n) Up[i] = U[i];
+    double eps = 1e-16;
+
+    // we're computing dRi/dUj, with j being the column and i the row index
+    foreach(j; 0 .. neq){
+        // We can perturb every every third cell and compute the residuals in one go.
+        // This is different to how Eilmer does it, where we can compute the residuals
+        // on a subset of cells which are known to be affected by a given perturbation.
+        foreach(loop; 0 .. 3){
+            for (size_t cell=loop; cell<N; cell+=3){
+                size_t idx = cell*neq + j;
+                Up[idx].im = eps;
+            }
+
+            second_derivs_from_cent_diffs(pm, Up, U2nd);
+            compute_residual(gm, reactor, gs, omegaMi, pm, Up, U2nd, Rp);
+
+            for (size_t cell=loop; cell<N; cell+=3){
+                size_t lft = (cell-1)*neq;
+                size_t ctr = cell*neq;
+                size_t rgt = (cell+1)*neq;
+                size_t col = ctr + j;
+
+                if (cell>0){ // Do left cell
+                    foreach(i; 0 .. neq){
+                        double dRdU = (Rp[lft+i].im)/eps;
+                        size_t row = lft + i;
+                        J[row, col] = dRdU;
+                    }
+                }
+
+                // do the centre cell
+                foreach(i; 0 .. neq){
+                    double dRdU = (Rp[ctr+i].im)/eps;
+                    size_t row = ctr + i;
+                    J[row, col] = dRdU;
+                }
+
+                if (cell<N-1) { // Do right cell
+                    foreach(i; 0 .. neq){
+                        double dRdU = (Rp[rgt+i].im)/eps;
+                        size_t row = rgt + i;
+                        J[row, col] = dRdU;
+                    }
+                }
+                // finally, undo the perturbation
+                size_t idx = cell*neq + j;
+                Up[idx].im = 0.0;
+            }
+        }
+    }
+    return;
+}
 
 void compute_jacobian2(GasModel gm, ThermochemicalReactor reactor, GasState gs, ref const Parameters pm, number[] omegaMi, number[] Up, number[] U, number[] U2nd, number[] R, number[] Rp, Matrix!double J){
 /*
     Fill out a dense matrix with the derivatives of the governing equations
-    computed using real-valued finite differences.
+    computed using complex finite differences.
 */
     size_t n = pm.n;
 
@@ -306,16 +310,18 @@ void RK4_explicit_time_increment(number[] U, number[] U2nd, number[] R,
 }
 
 void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number[] Up, number[] Rp, double[] Rr,
-                                   Matrix!double LHS, Matrix!double J, 
+                                   Matrix!double LHS, Matrix!double J,
                                    number[] omegaMi, GasState gs,
                                    number[] dU,
                                    double dt, GasModel gm, ThermochemicalReactor reactor, Parameters pm, bool verbose){
 
+
     second_derivs_from_cent_diffs(pm, U, U2nd);
     compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
 
+    compute_jacobian(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J);
+
     size_t n = pm.n;
-    compute_jacobian2(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J);
     foreach(i; 0 .. n){
         foreach(j; 0 .. n){
             LHS[i,j] = (i==j) ? 1.0/dt : 0.0;
@@ -338,7 +344,7 @@ int main(string[] args)
     int exitFlag = 0; // Presume OK in the beginning.
     string name = "flame";
     if (args.length>1) name = args[1];
-    
+
     GasModel gm = init_gas_model("gm.lua");
     ThermochemicalReactor reactor = init_thermochemical_reactor(gm, "rr.lua", "");
     GasState gs = GasState(gm);
@@ -358,7 +364,7 @@ int main(string[] args)
     pm.T0 = 300.0; pm.T1 = 300.0;
     pm.Y0.length = pm.nsp; foreach(isp; 0 .. pm.nsp) pm.Y0[isp] = 0.0;
     pm.Y1.length = pm.nsp; foreach(isp; 0 .. pm.nsp) pm.Y1[isp] = 0.0;
-    
+
     pm.Y0[gm.species_index("N2")] = 0.767;
     pm.Y0[gm.species_index("O2")] = 0.233;
 
@@ -401,7 +407,7 @@ int main(string[] args)
     //foreach(i; 0 .. N){
     //    foreach(jj; 0 .. neq){
     //        // The ia array holds where in ja a certain row starts
-    //        J.ia ~= J.ja.length; 
+    //        J.ia ~= J.ja.length;
 
     //        // ia holds which column each entry would be in in a real matrix
     //        // we start with the left side block matrix, assuming this isn't
@@ -434,7 +440,7 @@ int main(string[] args)
     GR0 = sqrt(GR0);
 
 
-    immutable int maxiters = 10000;
+    immutable int maxiters = 500;
     double dt = 1e-6;
     foreach(iter; 0 .. maxiters) {
         // Let's try computing some derivatives
@@ -483,7 +489,7 @@ int main(string[] args)
         GR = sqrt(GR);
         double GRR = GR/GR0;
 
-        if (iter%10==0){ 
+        if (iter%10==0){
             writefln("iter %d GR0 %e GR %e GRR %e", iter, GR0, GR, GRR);
         }
         if (GRR<1e-6) break;
