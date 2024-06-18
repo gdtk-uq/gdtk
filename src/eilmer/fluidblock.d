@@ -959,10 +959,10 @@ public:
         immutable bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
 
         if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
-        foreach(id; cell_idxs){
-            celldata.gradients[id].gradients_at_cells_leastsq(
-                celldata.flowstates[id], facedata.flowstates, celldata.c2f[id],
-                celldata.workspaces[id], celldata.nfaces[id],
+        foreach(idx; cell_idxs){
+            celldata.gradients[idx].gradients_at_cells_leastsq(
+                celldata.flowstates[idx], facedata.flowstates, celldata.c2f[idx],
+                celldata.workspaces[idx], celldata.nfaces[idx],
                 is3D, nsp, nmodes, nturb, doSpecies);
         }
     }

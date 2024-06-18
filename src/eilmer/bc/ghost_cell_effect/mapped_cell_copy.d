@@ -71,6 +71,8 @@ public:
         // into the matrix being the source and destination block ids.
         size_t[][size_t][size_t] src_cell_ids;
         size_t[][size_t][size_t] ghost_cell_indices;
+        size_t[][size_t][size_t] src_cell_ids_2;
+        size_t[][size_t][size_t] ghost_cell_indices_2;
         //
         size_t n_incoming, n_outgoing;
         size_t[] outgoing_ncells_list, incoming_ncells_list;
@@ -242,43 +244,57 @@ public:
                         secondary_mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id_2, src_cell_id_2);
                     }
                     version(mpi_parallel) {
-                        // These lists will be used to direct data when packing and unpacking
-                        // the buffers used to send data between the MPI tasks.
-                        src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
-                        ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
-                        // If we are presently reading the section for the current block,
-                        // we check that the listed faces are in the same order as the
-                        // underlying grid.
-                        if (blk.id == dest_blk_id) {
-                            if (canFind(ghost_cell_index_from_faceTag.keys(), faceTag)) {
-                                if (i != ghost_cell_index_from_faceTag[faceTag]) {
-                                    throw new Error(format("Oops, ghost-cell indices do not match: %d %d",
-                                                           i, ghost_cell_index_from_faceTag[faceTag]));
+                        if ((src_blk_id==blk.id)||(dest_blk_id==blk.id)) {
+                            // These lists will be used to direct data when packing and unpacking
+                            // the buffers used to send data between the MPI tasks.
+                            // TODO: Make two assoc arrays, one for sending and recving...
+                            src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
+                            ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
+                            // If we are presently reading the section for the current block,
+                            // we check that the listed faces are in the same order as the
+                            // underlying grid.
+                            if (blk.id == dest_blk_id) {
+                                if (canFind(ghost_cell_index_from_faceTag.keys(), faceTag)) {
+                                    if (i != ghost_cell_index_from_faceTag[faceTag]) {
+                                        throw new Error(format("Oops, ghost-cell indices do not match: %d %d",
+                                                               i, ghost_cell_index_from_faceTag[faceTag]));
+                                    }
+                                } else {
+                                    foreach (ft; ghost_cell_index_from_faceTag.keys()) {
+                                        writefln("ghost_cell_index_from_faceTag[\"%s\"] = %d",
+                                                 ft, ghost_cell_index_from_faceTag[ft]);
+                                    }
+                                    throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d", faceTag, blk.id));
                                 }
-                            } else {
-                                foreach (ft; ghost_cell_index_from_faceTag.keys()) {
-                                    writefln("ghost_cell_index_from_faceTag[\"%s\"] = %d",
-                                             ft, ghost_cell_index_from_faceTag[ft]);
-                                }
-                                throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d", faceTag, blk.id));
                             }
                         }
                         if (blk.n_ghost_cell_layers>1){ // TODO: If someone forget to add the argument to partitioner, src_cell_id_2 will be 0;
-                            src_cell_ids[src_blk_id_2][dest_blk_id] ~= src_cell_id_2;
-                            ghost_cell_indices[src_blk_id_2][dest_blk_id] ~= i+nfaces;
+                            if ((src_blk_id_2==blk.id)||(dest_blk_id==blk.id)) {
+                                src_cell_ids_2[src_blk_id_2][dest_blk_id] ~= src_cell_id_2;
+                                ghost_cell_indices_2[src_blk_id_2][dest_blk_id] ~= i+nfaces;
+                            }
                         }
-
                     }
                 }
             } // end foreach dest_blk_id
             //
             version(mpi_parallel) {
                 // Experimental double layer of ghost cells, mpi vers.
+                // TODO: Move this
                 BoundaryCondition bc = blk.bc[which_boundary];
                 if (blk.n_ghost_cell_layers>1){
+                    foreach(sblk, destblks; src_cell_ids_2){
+                        foreach(dblk, srccells; destblks){
+                            foreach(i; 0 .. srccells.length){
+                                src_cell_ids[sblk][dblk]       ~= src_cell_ids_2[sblk][dblk][i];
+                                ghost_cell_indices[sblk][dblk] ~= ghost_cell_indices_2[sblk][dblk][i];
+                            }
+                        }
+                    }
                     foreach (i, face; bc.faces) {
                         auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
                         ghost_cells ~= ghost1;
+                        ghost_cells[$-1].is_interior_to_domain = true;
                     }
                 }
                 //
@@ -297,7 +313,7 @@ public:
                 incoming_convective_gradient_tag_list.length = 0;
                 incoming_viscous_gradient_tag_list.length = 0;
                 foreach (src_blk_id; neighbour_block_id_list) {
-                    if (src_blk_id == blk.id) {continue;}
+                    if (blk.id !in src_cell_ids[src_blk_id]) continue;
                     size_t nc = src_cell_ids[src_blk_id][blk.id].length;
                     if (nc > 0) {
                         incoming_ncells_list ~= nc;
@@ -333,7 +349,7 @@ public:
                 outgoing_convective_gradient_tag_list.length = 0;
                 outgoing_viscous_gradient_tag_list.length = 0;
                 foreach (dest_blk_id; neighbour_block_id_list) {
-                    if (dest_blk_id == blk.id) {continue;}
+                    if (dest_blk_id !in src_cell_ids[blk.id]) continue;
                     size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
                     if (nc > 0) {
                         outgoing_ncells_list ~= nc;

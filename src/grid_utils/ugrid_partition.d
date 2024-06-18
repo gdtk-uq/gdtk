@@ -830,9 +830,19 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
         foreach(mapped_cell; gridBlocks[i].mapped_cells){
             size_t neighbour_block_id = mapped_cell.neighbour_block_id+nCurrentBlocks;
             if (!added_block_id_list.canFind(neighbour_block_id)) {
-                outFile_mappedcells.writef("%s ", to!string(neighbour_block_id));
                 added_block_id_list ~= neighbour_block_id;
             }
+            if (connectSecondGhostCell){
+                size_t second_neighbour_block_id = mapped_cell.second_neighbour_block_id+nCurrentBlocks;
+                if (second_neighbour_block_id == i) continue;
+                if (!added_block_id_list.canFind(second_neighbour_block_id)) {
+                    added_block_id_list ~= second_neighbour_block_id;
+                }
+            }
+        }
+        added_block_id_list.sort();
+        foreach(blkid; added_block_id_list){
+            outFile_mappedcells.writef("%s ", to!string(blkid));
         }
         outFile_mappedcells.writef(" \n");
     }
