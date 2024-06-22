@@ -345,6 +345,9 @@ public:
                 dUdt[i].copy_values_from(other.dUdt[i]);
             }
             heat_transfer_into_solid = other.heat_transfer_into_solid;
+            dwall = other.dwall;
+            in_turbulent_zone = other.in_turbulent_zone;
+            fr_reactions_allowed = other.fr_reactions_allowed;
         } // end switch
     }
 

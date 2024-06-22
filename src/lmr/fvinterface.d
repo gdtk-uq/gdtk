@@ -197,6 +197,7 @@ public:
             foreach (ref a; dFdU_R) a.length = 5;
         }
         q_diffusion = other.q_diffusion;
+        q_conduction = other.q_conduction;
     }
 
     @nogc
