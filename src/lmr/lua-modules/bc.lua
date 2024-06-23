@@ -366,10 +366,12 @@ function FixedComposition:tojson()
 end
 
 
-UpdateThermoTransCoeffs = BoundaryInterfaceEffect:new()
+UpdateThermoTransCoeffs = BoundaryInterfaceEffect:new{thermoUpdate="pT"}
 UpdateThermoTransCoeffs.type = "update_thermo_trans_coeffs"
 function UpdateThermoTransCoeffs:tojson()
-   local str = string.format('          {"type" : "%s"}', self.type)
+   local str = string.format('          {"type" : "%s",', self.type)
+   str = str .. string.format(' "thermo_update": "%s" ', self.thermoUpdate)
+   str = str .. '}'
    return str
 end
 
@@ -1600,7 +1602,7 @@ function ExchangeBC_FullFace:new(o)
                                          orientation=o.orientation,
                                          reorient_vector_quantities=o.reorient_vector_quantities,
                                          Rmatrix=o.Rmatrix} }
-   o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new{thermoUpdate="global"} }
    o.is_configured = true
    return o
 end
@@ -1631,7 +1633,7 @@ function ExchangeBC_FullFacePlusUDF:new(o)
    }
    o.preSpatialDerivActionAtBndryFaces = {
       UserDefinedInterface:new{fileName=o.fileName},
-      UpdateThermoTransCoeffs:new()
+      UpdateThermoTransCoeffs:new{thermoUpdate="pT"}
    }
    o.is_configured = true
    return o
@@ -1665,7 +1667,7 @@ function ExchangeBC_MappedCell:new(o)
                                            list_mapped_cells=o.list_mapped_cells,
                                            reorient_vector_quantities=o.reorient_vector_quantities,
                                            Rmatrix=o.Rmatrix} }
-   o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new{thermoUpdate="global"} }
    o.is_configured = true
    return o
 end

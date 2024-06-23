@@ -92,7 +92,15 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         newBIE = new BIE_FixedComposition(blk_id, boundary, massfAtWall);
         break;
     case "update_thermo_trans_coeffs":
-        newBIE = new BIE_UpdateThermoTransCoeffs(blk_id, boundary);
+        string thermoUpdate = getJSONstring(jsonData, "thermoUpdate", "pT");
+        InterpolateOption thermoInterpOpt;
+        if (thermoUpdate == "global") {
+            thermoInterpOpt = GlobalConfig.thermo_interpolator;
+        }
+        else {
+            thermoInterpOpt = thermo_interpolator_from_name(thermoUpdate);
+        }
+        newBIE = new BIE_UpdateThermoTransCoeffs(blk_id, boundary, thermoInterpOpt);
         break;
     case "wall_turbulent":
         newBIE = new BIE_WallTurbulent(blk_id, boundary);
@@ -831,9 +839,10 @@ public:
 
 
 class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
-    this(int id, int boundary)
+    this(int id, int boundary, InterpolateOption thermoInterpOpt)
     {
         super(id, boundary, "UpdateThermoTransCoeffs");
+        mInterpOpt = thermoInterpOpt;
     }
 
     override string toString() const
@@ -845,8 +854,21 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-	gmodel.update_thermo_from_pT(f.fs.gas);
-	gmodel.update_trans_coeffs(f.fs.gas);
+        final switch (mInterpOpt) {
+        case InterpolateOption.pt:
+            gmodel.update_thermo_from_pT(f.fs.gas);
+            break;
+        case InterpolateOption.rhou:
+            gmodel.update_thermo_from_rhou(f.fs.gas);
+            break;
+        case InterpolateOption.rhop:
+            gmodel.update_thermo_from_rhop(f.fs.gas);
+            break;
+        case InterpolateOption.rhot:
+            gmodel.update_thermo_from_rhoT(f.fs.gas);
+            break;
+        }
+        gmodel.update_trans_coeffs(f.fs.gas);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -854,7 +876,20 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            gmodel.update_thermo_from_pT(f.fs.gas);
+            final switch (mInterpOpt) {
+            case InterpolateOption.pt:
+                gmodel.update_thermo_from_pT(f.fs.gas);
+                break;
+            case InterpolateOption.rhou:
+                gmodel.update_thermo_from_rhou(f.fs.gas);
+                break;
+            case InterpolateOption.rhop:
+                gmodel.update_thermo_from_rhop(f.fs.gas);
+                break;
+            case InterpolateOption.rhot:
+                gmodel.update_thermo_from_rhoT(f.fs.gas);
+                break;
+            }
             gmodel.update_trans_coeffs(f.fs.gas);
         }
     } // end apply_unstructured_grid()
@@ -863,8 +898,21 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-	gmodel.update_thermo_from_pT(f.fs.gas);
-	gmodel.update_trans_coeffs(f.fs.gas);
+        final switch (mInterpOpt) {
+        case InterpolateOption.pt:
+            gmodel.update_thermo_from_pT(f.fs.gas);
+            break;
+        case InterpolateOption.rhou:
+            gmodel.update_thermo_from_rhou(f.fs.gas);
+            break;
+        case InterpolateOption.rhop:
+            gmodel.update_thermo_from_rhop(f.fs.gas);
+            break;
+        case InterpolateOption.rhot:
+            gmodel.update_thermo_from_rhoT(f.fs.gas);
+            break;
+        }
+        gmodel.update_trans_coeffs(f.fs.gas);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -874,10 +922,26 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            gmodel.update_thermo_from_pT(f.fs.gas);
+            final switch (mInterpOpt) {
+            case InterpolateOption.pt:
+                gmodel.update_thermo_from_pT(f.fs.gas);
+                break;
+            case InterpolateOption.rhou:
+                gmodel.update_thermo_from_rhou(f.fs.gas);
+                break;
+            case InterpolateOption.rhop:
+                gmodel.update_thermo_from_rhop(f.fs.gas);
+                break;
+            case InterpolateOption.rhot:
+                gmodel.update_thermo_from_rhoT(f.fs.gas);
+                break;
+            }
             gmodel.update_trans_coeffs(f.fs.gas);
         }
     } // end apply_structured_grid()
+
+    private:
+    InterpolateOption mInterpOpt;
 } // end class BIE_UpdateThermoTransCoeffs
 
 class BIE_WallTurbulent : BoundaryInterfaceEffect {
