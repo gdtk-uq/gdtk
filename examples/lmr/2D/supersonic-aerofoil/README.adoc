@@ -1,0 +1,12 @@
+//tag::description[]
+= Supersonic turbulent flow over a diamond shaped aerofoil flat plate
+`gdtk/examples/lmr/2D/supersonic-aerofoil
+
+Nick N. Gibbons and Brittny Dunn
+2024-06-25
+
+This example is a turbulent, supersonic flow over a diamond shaped aerofoil
+with a small tail flap. It may be useful for developing surrogate models 
+for aerodynamic database calcualtion.
+
+//end::description[]
