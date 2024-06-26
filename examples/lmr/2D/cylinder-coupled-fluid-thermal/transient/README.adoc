@@ -1,0 +1,36 @@
+//tag::description[]
+= Tightly-coupled conjugate heat transfer over a hollow cylinder
+`gdtk/examples/lmr/2D/cylinder-coupled-fluid-thermal`
+
+Saxon A. James, Rowan J. Gollan, Kyle A. Damm
+2024-04-29
+
+This examples simulates the induced heat transfer into a hollow cylinder placed in a supersonic flow,
+an experiment performed by Wieting (1987).
+This is an example of conjugate heat transfer (CHT) with a tightly coupled fluid and solid domain.
+A tightly-coupled approach means that both the fluid and solid are simulated in a transient manner.
+This example was first developed by Kyle Damm for use in Eilmer 4 and updated for Eilmer 5.
+More details on the development of the CHT solver can be found in the paper by Veeraragavan et al. (2016).
+and Damm et al. (2023).
+
+[TIP]
+====
+This example shows how to configure fluid AND solid domains, and the use of grid arrays.
+====
+
+//end::description[]
+
+== Reference
+
+1.  *Wieting, A. R.* (1987), +
+    _Experimental Study of Shock Wave Interference Heating on a Cylindrical Leading Edge_, +
+    NASA Technical Memorandum, *TM-100484*.
+
+2.  *Veeraragavan, A., Beri, J. and Gollan, R. J.* (2016), +
+    _Use of the Method of Manufactured Solutions for the Verification of Conjugate Heat Transfer Solvers_, +
+    Journal of Computational Physics, *307*(308-320).
+
+3.  *Damm, K. A., Curran, D. R., Gollan, R. K and Veeraragavan, A.* (2023), +
+	 _Trajectory-based Conjugate Heat Transfer Simulation of the BoLT-2 Fligh Experiment_, +
+	 AIAA SCITECH 2023 Forum, AIAA 2023-0292.
+
