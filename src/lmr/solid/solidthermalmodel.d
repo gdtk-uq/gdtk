@@ -10,12 +10,13 @@
 
 module lmr.solid.solidthermalmodel;
 
-import std.stdio : File;
+import std.stdio : File, writefln;
 import std.format : format;
 import std.typecons : Tuple;
 import std.algorithm : min, max;
 import std.conv : to;
 import std.array : split;
+import std.string : strip;
 import std.json;
 import std.math;
 
@@ -174,13 +175,13 @@ protected:
         auto e_min = m_e_ref;
         auto e_max = m_min.rho * ((lambda/2) * (ss.T^^2 - m_min.T^^2) + lambda*m_min.T^^2 - lambda*m_min.T*ss.T + m_min.Cp*(m_max.T - m_min.T)) + m_e_ref;
         if (ss.T < m_min.T) {
-			   ss.e = e_min + m_min.rho * m_min.Cp * (ss.T - m_min.T);
-    	  } else if (m_min.T <= ss.T && ss.T <= m_max.T) {
-			   ss.e = energy;
-		  } else {
-			   ss.e = e_max + m_min.rho * m_max.Cp * (ss.T - m_max.T);
-		  }
-	 }
+            ss.e = e_min + m_min.rho * m_min.Cp * (ss.T - m_min.T);
+        } else if (m_min.T <= ss.T && ss.T <= m_max.T) {
+            ss.e = energy;
+        } else {
+            ss.e = e_max + m_min.rho * m_max.Cp * (ss.T - m_max.T);
+        }
+    }
     @nogc
     override void _updateTemperature(ref SolidState ss) const 
     {
@@ -196,6 +197,7 @@ private:
     LVModelParams m_min;
     LVModelParams m_max;
 }
+
 alias TableEntry = Tuple!(double, "T", double, "k", double, "Cp", double, "e");
 
 class TabulatedPropertiesModelSTM : SolidThermalModel {
@@ -217,17 +219,17 @@ public:
         while ((line = f.readln()) != null) {
             auto tokens = line.split(",");
             mTab ~= TableEntry();
-            mTab[$-1].T = to!float(tokens[0]);
-            mTab[$-1].k = to!float(tokens[1]);
-            mTab[$-1].Cp = to!float(tokens[2]);
-            mTab[$-1].e = to!float(tokens[3]);
+            mTab[$-1].T = to!float(strip(tokens[0]));
+            mTab[$-1].k = to!float(strip(tokens[1]));
+            mTab[$-1].Cp = to!float(strip(tokens[2]));
+            mTab[$-1].e = to!float(strip(tokens[3]));
         }
         f.close();
 
         // Construct a linear variation model for each part of the table
         foreach (i; 1 .. mTab.length) {
             auto min = LVModelParams(mTab[i-1].T, rho, mTab[i-1].k, mTab[i-1].Cp);
-            auto max = LVModelParams(mTab[i].T, rho, mTab[i-1].k, mTab[i-1].Cp);
+            auto max = LVModelParams(mTab[i].T, rho, mTab[i].k, mTab[i].Cp);
             mLvms ~= new LinearVariationSTM(mTab[i-1].e, min, max);
         }
     }
@@ -249,8 +251,11 @@ public:
     @nogc
     override void updateProperties(ref SolidState ss) const
     {
-        auto tidx = findTableEntry(ss.T.re);
-        mLvms[tidx].updateProperties(ss);
+        if (isNaN(ss.T.re)) {
+            _updateTemperature(ss);
+        }
+        auto idx = findTemperatureInTable(ss.T.re);
+        mLvms[idx].updateProperties(ss);
     }
 
 protected:
@@ -266,7 +271,7 @@ protected:
      * For T = 1235.0, returns 1. 
      */
     @nogc
-    size_t findTableEntry(double T) const
+    size_t findTemperatureInTable(double T) const
     {
         if (T > mTab[$-1].T) return mLvms.length-1;
 
@@ -279,17 +284,29 @@ protected:
     }
 
     @nogc
+    size_t findEnergyInTable(double e) const
+    {
+        if (e > mTab[$-1].e) return mLvms.length - 1;
+
+        foreach (i; 1 .. mTab.length) {
+            if (e < mTab[i].e) return i-1;
+        }
+
+        return 0;
+    }
+
+    @nogc
     override void _updateEnergy(ref SolidState ss) const
     {
-        auto tidx = findTableEntry(ss.T.re);
-        mLvms[tidx]._updateEnergy(ss);
+        auto idx = findTemperatureInTable(ss.T.re);
+        mLvms[idx]._updateEnergy(ss);
     }
 
     @nogc
     override void _updateTemperature(ref SolidState ss) const
     {
-        auto tidx = findTableEntry(ss.T.re);
-        mLvms[tidx]._updateTemperature(ss);
+        auto idx = findEnergyInTable(ss.e.re);
+        mLvms[idx]._updateTemperature(ss);
     }
     
 
