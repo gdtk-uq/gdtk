@@ -115,14 +115,16 @@ alias LVModelParams = Tuple!(double, "T", double, "rho", double, "k", double, "C
 class LinearVariationSTM : SolidThermalModel
 {
 public:
-    this(LVModelParams min, LVModelParams max)
+    this(double e_ref, LVModelParams min, LVModelParams max)
     {
+        m_e_ref = e_ref;
         m_min = min;
         m_max = max;
     }
 
     this(JSONValue jsonData)
     {
+        m_e_ref = getJSONdouble(jsonData, "e_ref", 0.0);
         m_min.T = getJSONdouble(jsonData["min"], "T", -1.0);
         m_min.rho = getJSONdouble(jsonData["min"], "rho", -1.0);
         m_min.k = getJSONdouble(jsonData["min"], "k", -1.0);
@@ -135,6 +137,7 @@ public:
 
     this(lua_State* L, int tblIdx)
     {
+        m_e_ref = getDouble(L, tblIdx, "e_ref");
         lua_getfield(L, tblIdx, "min");
         m_min.T = getDouble(L, -1, "T");
         m_min.rho = getDouble(L, -1, "rho");
@@ -165,20 +168,29 @@ protected:
     override void _updateEnergy(ref SolidState ss) const
     {
         auto lambda = (m_max.Cp - m_min.Cp)/(m_max.T - m_min.T);
-        auto calc = (lambda/2) * (ss.T^^2 - m_min.T^^2) + lambda*m_min.T^^2 - lambda*m_min.T*ss.T + m_min.Cp*(ss.T - m_min.T);
-        ss.e = m_min.rho * calc;
-    }
+        auto energy = m_min.rho * ((lambda/2) * (ss.T^^2 - m_min.T^^2) + lambda*m_min.T^^2 - lambda*m_min.T*ss.T + m_min.Cp*(ss.T - m_min.T)) + m_e_ref;
+        auto e_min = m_e_ref;
+        auto e_max = m_min.rho * ((lambda/2) * (ss.T^^2 - m_min.T^^2) + lambda*m_min.T^^2 - lambda*m_min.T*ss.T + m_min.Cp*(m_max.T - m_min.T)) + m_e_ref;
+        if (ss.T < m_min.T) {
+			   ss.e = e_min + m_min.rho * m_min.Cp * (ss.T - m_min.T);
+    	  } else if (m_min.T <= ss.T && ss.T <= m_max.T) {
+			   ss.e = energy;
+		  } else {
+			   ss.e = e_max + m_min.rho * m_max.Cp * (ss.T - m_max.T);
+		  }
+	 }
     @nogc
     override void _updateTemperature(ref SolidState ss) const 
     {
         auto lambda = (m_max.Cp - m_min.Cp)/(m_max.T - m_min.T);
-        auto sqrtTrm = sqrt(m_min.Cp^^2 * m_min.rho^^2 + 2 * ss.e * lambda * m_min.rho);
+        auto sqrtTrm = sqrt(m_min.Cp^^2 * m_min.rho^^2 + 2 * ss.e * lambda * m_min.rho + 2 * lambda * m_min.rho * m_e_ref);
         auto numer = lambda*m_min.rho*m_min.T - m_min.Cp*m_min.rho + sqrtTrm;
         auto denom = lambda*m_min.rho;
         ss.T = numer/denom;
     }
 
-private:    
+private:
+    double m_e_ref;
     LVModelParams m_min;
     LVModelParams m_max;
 }
