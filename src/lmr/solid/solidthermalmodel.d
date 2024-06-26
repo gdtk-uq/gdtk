@@ -10,10 +10,12 @@
 
 module lmr.solid.solidthermalmodel;
 
+import std.stdio : File;
 import std.format : format;
 import std.typecons : Tuple;
 import std.algorithm : min, max;
 import std.conv : to;
+import std.array : split;
 import std.json;
 import std.math;
 
@@ -194,6 +196,108 @@ private:
     LVModelParams m_min;
     LVModelParams m_max;
 }
+alias TableEntry = Tuple!(double, "T", double, "k", double, "Cp", double, "e");
+
+class TabulatedPropertiesModelSTM : SolidThermalModel {
+public:
+    this(double rho, string filename)
+    {
+        File f;
+        try {
+            f = File(filename, "r");
+        }
+        catch (Exception e) {
+            string errMsg = "Error while initialising the TabulatedPropertiesModel\n";
+            errMsg ~= format("Unable to open file: %s\n", filename);
+            lmrErrorExit(LmrError.initialisation, errMsg);
+        }
+        // Throw away first line header.
+        f.readln();
+        string line;
+        while ((line = f.readln()) != null) {
+            auto tokens = line.split(",");
+            mTab ~= TableEntry();
+            mTab[$-1].T = to!float(tokens[0]);
+            mTab[$-1].k = to!float(tokens[1]);
+            mTab[$-1].Cp = to!float(tokens[2]);
+            mTab[$-1].e = to!float(tokens[3]);
+        }
+        f.close();
+
+        // Construct a linear variation model for each part of the table
+        foreach (i; 1 .. mTab.length) {
+            auto min = LVModelParams(mTab[i-1].T, rho, mTab[i-1].k, mTab[i-1].Cp);
+            auto max = LVModelParams(mTab[i].T, rho, mTab[i-1].k, mTab[i-1].Cp);
+            mLvms ~= new LinearVariationSTM(mTab[i-1].e, min, max);
+        }
+    }
+
+    this(JSONValue jsonData)
+    {
+        auto rho = getJSONdouble(jsonData, "rho", 0.0);
+        auto fname = getJSONstring(jsonData, "filename", "");
+        this(rho, fname);     
+    }
+
+    this(lua_State *L, int tblIdx)
+    {
+        auto rho = getDouble(L, tblIdx, "rho");
+        auto fname = getString(L, tblIdx, "filename");
+        this(rho, fname);
+    }
+
+    @nogc
+    override void updateProperties(ref SolidState ss) const
+    {
+        auto tidx = findTableEntry(ss.T.re);
+        mLvms[tidx].updateProperties(ss);
+    }
+
+protected:
+    /**
+     * Return lower index of table entry.
+     *
+     * For example:
+     *
+     *  0:  500.0
+     *  1: 1000.0
+     *  2: 1500.0
+     *
+     * For T = 1235.0, returns 1. 
+     */
+    @nogc
+    size_t findTableEntry(double T) const
+    {
+        if (T > mTab[$-1].T) return mLvms.length-1;
+
+        foreach (i; 1 .. mTab.length) {
+            if (T < mTab[i].T) return i-1;
+        }
+
+        // We shouldn't get here, but we return 0 if we do.
+        return 0;
+    }
+
+    @nogc
+    override void _updateEnergy(ref SolidState ss) const
+    {
+        auto tidx = findTableEntry(ss.T.re);
+        mLvms[tidx]._updateEnergy(ss);
+    }
+
+    @nogc
+    override void _updateTemperature(ref SolidState ss) const
+    {
+        auto tidx = findTableEntry(ss.T.re);
+        mLvms[tidx]._updateTemperature(ss);
+    }
+    
+
+private:
+    TableEntry[] mTab;
+    LinearVariationSTM[] mLvms;
+        
+}
 
 SolidThermalModel initSolidThermalModel(JSONValue jsonData)
 {
@@ -207,6 +311,9 @@ SolidThermalModel initSolidThermalModel(JSONValue jsonData)
             break;
         case "linear_variation":
             stm = new LinearVariationSTM(jsonData);
+            break;
+        case "tabulated_properties":
+            stm = new TabulatedPropertiesModelSTM(jsonData);
             break;
         default:
             string errMsg = format("The solid thermal model '%s' is not available.", modelType);
@@ -234,6 +341,9 @@ SolidThermalModel initSolidThermalModel(lua_State* L, int tblIdx)
             break;
         case "linear_variation":
             stm = new LinearVariationSTM(L, tblIdx);
+            break;
+        case "tabulated_properties":
+            stm = new TabulatedPropertiesModelSTM(L, tblIdx);
             break;
         default:
             string errMsg = format("The solid thermal model '%s' is not available.", modelType);

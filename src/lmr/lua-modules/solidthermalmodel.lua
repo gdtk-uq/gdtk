@@ -39,6 +39,17 @@ function LinearVariationModel:tojson()
    return str
 end
 
+TabulatedPropertiesModel = SolidThermalModel:new{rho=nil, filename=''}
+TabulatedPropertiesModel.type = "tabulated_properties"
+function TabulatedPropertiesModel:tojson()
+   local str = '  {\n'
+   str = str .. string.format('   "type": "%s",\n', self.type)
+   str = str .. string.format('   "rho": %.18e,\n', self.rho)
+   str = str .. string.format('   "filename": "%s"\n', self.filename)
+   str = str .. '   }'
+   return str
+end
+
 function registerSolidModels(t)
    for k,v in pairs(t) do
       _solidModels[k] = v
