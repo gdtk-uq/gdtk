@@ -1,0 +1,134 @@
+== SolidBlock objects
+
+We decompose the solid simulation domain into blocks.
+We call these units of decomposition `SolidBlocks`.
+The configuration includes setting the solid properties, boundary conditions and the initial temperature.
+The full list of options are described here.
+
+ SolidBlock:new{grid, initTemperature,
+                bcList, active, label, modelTag}
+
+`grid` ::
+  `StructuredGrid` object, no default +
+  A structured grid object must be supplied. The grid dimensions
+  should also be compatible with the global setting for dimenions.
+  (See: <<config-dimensions,`config.dimensions`>>)
+
+`initTemperature` ::
+    _float_, no default +
+  The solid simulation domain requires an initial temperature throughout the domain.
+  The temperature is set block-by-block using this `initTemperature` parameter.
+  There is no default: the user must supply something for this parameter. +
+
+`bcList` ::
+  _table_: `{north=BCObject, east=BCObject, south=BCObject, west=BCObject, [top=BCObject, bottom=BCObject]}` +
+  The `bcList` is used to set boundary conditions on the faces of blocks with an underlying structured grid.
+  Each table key accepts a boundary condition object.
+  If any table entry is missing, the default-supplied boundary condition
+  is an adiabatic wall, `SolidAdiabaticBC`.
+  In 3D, the `top` and `bottom` faces can also be set.
+  If a boundary is a connection, this can be explicitly set or you
+  can rely on the `identifyBlockConnections()` helper function to
+  make that connection for you.
+  That helper function is called _after_ the blocks have been configured.
+  An example to set a fixed temperature on a west boundary, and
+  a constant flux on the north boundary is:
+
+   bcList={west=SolidFixedTBC:new{Twall=300.0},
+           north=SolidConstantFluxBC:new{}}
+
+`active` ::
+  _bool_, default: `true` +
+  By default, blocks are marked as _active_ for inclusion in the simulation.
+  You could disable a block's participation in the simulation domain,
+  setting this parameter to false.
+  Be careful of how this block is connected to others if setting it
+  to _inactive_;
+  the flow state will not be updated in an _inactive_ block.
+
+`label` ::
+  _string_, default: `SolidBlock-<id>` +
+  Set this parameter to give the block a label.
+  This is a convenience for the user and might be useful for some
+  custom post-processing to work with blocks that have a
+  specific label.
+
+`modelTag` ::
+  _float_, no default +
+  The `modelTag` is used to call the material properties set with the `registerSolidModels` function.
+
+== SolidBlock arrays
+
+To generate more than one SolidBlock on a single, structured grid, use 
+
+ SolidBlockArray:new{grid, nib, njb, nkb,
+                     initTemperature,
+                     bcList,
+                     active, label, modelTag}
+
+The entries to the table are mostly the same as for the construction of a single
+SolidBlock object.
+The extra arguments are:
+
+`nib` ::
+  _int_, default 1 +
+  The number of blocks in the i-index direction.
+
+`njb` ::
+  _int_, default 1 +
+  The number of blocks in the j-index direction.
+
+`nkb` ::
+  _int_, default 1 +
+  The number of blocks in the k-index direction.
+
+The table that is returned contains an arrays of all of the SolidBlock objects defined
+over the partitioned grid:
+
+`blockArray` ::
+  will be a multi-dimensional array, indexed as `[ib][jb][kb]`,
+  with `1<=ib<=nib`, `1<=jb<=njb`, `1<=kb<=nkb`.
+
+
+`blockCollection` ::
+  will be a single-dimensional array, also starting at 1.
+  Note that the index of the blocks within this array follow the Lua convention
+  and will be different to the `id` assigned to the blocks, which will start at `0`,
+  and thus align with the D-language indexing.
+
+== Registering solid models
+
+We call the `registerSolidModels` function so that we can set information about the material models.
+
+ registerSolidModels{modelTag}
+
+To define the material properties of the solid domain, different models can be used as the `modelTag`,
+
+ ConstantPropertiesModel:new{rho=rho, k=k, Cp=Cp}
+
+This model is used to define constant material properties where rho is the density, k is the thermal conductivity, and Cp is the specific heat capacity.
+
+
+ LinearVariationModel:new{e_ref=0.0,
+                          min={T=T_min, rho=rho, k=k_min, Cp=Cp_min},
+                          max={T=T_max, rho=rho, k=k_max, Cp=Cp_max}}
+
+This model is used to define linearly varying temperautre-dependent thermal properties,
+where T is the temperature range, rho is the density, k is the thermal conductivity,
+Cp is the specific heat capacity, and T is the temperature. e_ref is a user defined
+reference energy that is defined as e_ref=e(T_min).
+
+ TabulatedPropertiesModel:new{rho=rho, filename="properties.txt"}
+
+This model allows for tabulated data to be used as input for the specific heat and conductivity.
+The tabulated properties model works on doing a linear variation
+of properties between table entries. The table is specified as a plain
+text file with comma separated values as:
+
+ T,     k,      Cp,     e
+ <T0>,  <k0>,   <Cp0>,  <e0>
+ <T1>,  <k1>,   <Cp1>,  <e1>
+ etc....
+
+where actual (float) values replace symbols in < >.
+
