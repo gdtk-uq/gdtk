@@ -1,0 +1,32 @@
+
+= Cluster Functions
+
+Cluster Functions are ways of deforming a grid to concentrate the cells in a given area. The most common use for a cluster function is to resolve the boundary layer near a viscous wall, though in hypersonic flow we sometimes cluster near shockwaves as well. Eilmer's native gridding tool has several cluster functions, a selection of which are documented as follows.
+
+== Roberts Function
+
+The Roberts function implmenents a gentle stretching toward a boundary that is controlled by a single parameter `beta`, which is always greater than one. Closer values to one result in tighter clustering. The two arguments `end0` and `end1` can be used to indicate which end the clustering should be applied, which can both if required.
+
+This example clusters toward the beginning of a block boundary, with a relatively tight clustering of 1.01:
+
+----
+cf = RobertsFunction:new{end0=true, end1=false, beta=1.01}
+----
+
+== Geometric Function
+
+The geometric function uses a geometric series to grow the cell sizes, starting from a small cell of size `a` and increasing to a second cell of size `ar`, then to a third size of `ar^2`, etc. Eventually, when the cluster function detects that the cells have grown large enough, it switches to a constant cell spacing for the rest of the block. The following example begins with a spacing of one-thousandth the block edge length, and grows by a factor of 1.2 with each step.
+
+----
+cf = GeometricFunction:new{a=0.001, r=1.2, N=60, reverse=false}
+----
+
+Note that the function needs the `N` argument, which is the number of nodes along the block boundary that is to be clustered, in this case 60. The function also takes a boolean parameter `reverse`, which can be used to start clustering on the other side of the block.
+
+== Gaussian Function
+
+The gaussian function applies a bell-curve shaped compression that can be useful for clustering in the middle of a block, perhaps to resolve a shockwave or other feature of interest. The function takes a nondimensional parameter `m` which can range from 0.0 to 1.0, defining the position of the clustered band; a nondimensional parameter `s` which defines the width of the band, and a parameter `ratio` which controls the tightness of the clustering, where smaller numbers are tighter. In the following example, the clustering is positioned at the 80% mark of the block boundary, using a narrow width of 0.2 and a fairly tight ratio of 0.1:
+
+----
+cf = GaussianFunction:new{m=0.8, s=0.1, ratio=0.1}
+----

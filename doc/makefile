@@ -12,7 +12,8 @@ EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/run-time-utilities.adoc \
 	$(LMR_DIR)/restarting-from-a-snapshot.adoc \
 	$(LMR_DIR)/extract-boundary-loads.adoc \
-	$(GEOM_DIR)/surfaces/surfaces.adoc
+	$(GEOM_DIR)/surfaces/surfaces.adoc     \
+	$(GEOM_DIR)/cluster_functions/cluster_functions.adoc
 
 
 GEOM_DOC_FILES := $(GEOM_DIR)/elements.adoc \
