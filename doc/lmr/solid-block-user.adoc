@@ -57,45 +57,6 @@ The full list of options are described here.
   _float_, no default +
   The `modelTag` is used to call the material properties set with the `registerSolidModels` function.
 
-== SolidBlock arrays
-
-To generate more than one SolidBlock on a single, structured grid, use 
-
- SolidBlockArray:new{grid, nib, njb, nkb,
-                     initTemperature,
-                     bcList,
-                     active, label, modelTag}
-
-The entries to the table are mostly the same as for the construction of a single
-SolidBlock object.
-The extra arguments are:
-
-`nib` ::
-  _int_, default 1 +
-  The number of blocks in the i-index direction.
-
-`njb` ::
-  _int_, default 1 +
-  The number of blocks in the j-index direction.
-
-`nkb` ::
-  _int_, default 1 +
-  The number of blocks in the k-index direction.
-
-The table that is returned contains an arrays of all of the SolidBlock objects defined
-over the partitioned grid:
-
-`blockArray` ::
-  will be a multi-dimensional array, indexed as `[ib][jb][kb]`,
-  with `1<=ib<=nib`, `1<=jb<=njb`, `1<=kb<=nkb`.
-
-
-`blockCollection` ::
-  will be a single-dimensional array, also starting at 1.
-  Note that the index of the blocks within this array follow the Lua convention
-  and will be different to the `id` assigned to the blocks, which will start at `0`,
-  and thus align with the D-language indexing.
-
 == Registering solid models
 
 We call the `registerSolidModels` function so that we can set information about the material models.
