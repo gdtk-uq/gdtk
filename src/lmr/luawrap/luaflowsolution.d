@@ -102,12 +102,12 @@ extern(C) int newFlowSolution(lua_State* L)
 	}
     } else if ( lua_isstring(L, -1) ) {
         string snapStr = to!string(luaL_checkstring(L, -1));
-        if ( snapStr == "last" ) {
+        if ( snapStr == "last" || snapStr == "final" ) {
             snapshot = to!int(availSnapshots[$-1]);
         } else {
             string errMsg = "Error in call to FlowSolution:new.\n";
             errMsg ~= " A string value was passed to the field 'snapshot', but the content was not valid.\n";
-            errMsg ~= " The only valid string field is 'last'.\n";
+            errMsg ~= " The only valid strings are 'last' and 'final'.\n";
             luaL_error(L, errMsg.toStringz);
         }
     } else {
