@@ -39,7 +39,7 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
         auto ghost0 = (bc.outsigns[f.i_bndry] == 1) ? f.right_cell : f.left_cell;
         ghost0.fs.copy_values_from(fprofile.get_flowstate(ghost0.id, ghost0.pos[0]));
-        fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0]);
+        fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0], blk.omegaz);
     }
 
     // not @nogc
@@ -49,7 +49,7 @@ public:
         foreach (i, f; bc.faces) {
             auto ghost0 = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
             ghost0.fs.copy_values_from(fprofile.get_flowstate(ghost0.id, ghost0.pos[0]));
-            fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0]);
+            fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0], blk.omegaz);
         }
     } // end apply_unstructured_grid()
 
@@ -62,7 +62,7 @@ public:
         foreach (n; 0 .. blk.n_ghost_cell_layers) {
             auto ghost = (bc.outsigns[f.i_bndry] == 1) ? f.right_cells[n] : f.left_cells[n];
             ghost.fs.copy_values_from(fprofile.get_flowstate(ghost.id, ghost.pos[0]));
-            fprofile.adjust_velocity(ghost.fs, ghost.pos[0]);
+            fprofile.adjust_velocity(ghost.fs, ghost.pos[0], blk.omegaz);
         }
     } // end apply_for_interface_structured_grid()
 
@@ -76,7 +76,7 @@ public:
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
                 auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
                 ghost.fs.copy_values_from(fprofile.get_flowstate(ghost.id, ghost.pos[0]));
-                fprofile.adjust_velocity(ghost.fs, ghost.pos[0]);
+                fprofile.adjust_velocity(ghost.fs, ghost.pos[0], blk.omegaz);
             }
         }
     } // end apply_structured_grid()

@@ -566,7 +566,7 @@ public:
     } // end get_flowstate()
 
     @nogc
-    void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos)
+    void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos, double omegaz)
     {
         switch (posMatch) {
         case "xyz-to-xyz": /* 3D, do nothing. */ break;
@@ -593,6 +593,7 @@ public:
             fs.vel.x = cyl_vel_x;
             fs.vel.y = cyl_vel_y;
             fs.vel.z = cyl_vel_z;
+            if (omegaz != 0.0) { into_rotating_frame(fs.vel, my_pos, omegaz); }
             break;
         default:
             throw new FlowSolverException("Invalid match option.");
@@ -600,9 +601,9 @@ public:
     }
 
     @nogc
-    void adjust_velocity(FlowState* fs, ref const(Vector3) my_pos)
+    void adjust_velocity(FlowState* fs, ref const(Vector3) my_pos, double omegaz)
     {
-        adjust_velocity(*fs, my_pos);
+        adjust_velocity(*fs, my_pos, omegaz);
     }
 } // end class FlowProfile
 
