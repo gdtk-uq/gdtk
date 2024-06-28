@@ -1640,7 +1640,7 @@ public:
             limit_factor = min(1.0, S);
         }
         foreach (i, cell; cell_list) {
-            cell.add_inviscid_source_vector(gtl, 0.0);
+            cell.add_inviscid_source_vector(gtl, omegaz);
             if (myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
