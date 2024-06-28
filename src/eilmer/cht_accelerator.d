@@ -429,8 +429,8 @@ void set_initial_condition(FlowState initial) {
         foreach (cell; blk.cells) {
             cell.fs.copy_values_from(initial);
             blk.myConfig.gmodel.update_thermo_from_pT(cell.fs.gas);
-            cell.encode_conserved(0, 0, 0.0);
-            cell.decode_conserved(0, 0, 0.0);
+            cell.encode_conserved(0, 0, blk.omegaz);
+            cell.decode_conserved(0, 0, blk.omegaz);
         }
     }
 
