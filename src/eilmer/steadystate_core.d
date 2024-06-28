@@ -795,14 +795,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                                 cell.U[ftl][j] = cell.U[0][j] + omega*blk.dU[cellCount+j];
                             }
                             try {
-                                cell.decode_conserved(0, ftl, 0.0);
+                                cell.decode_conserved(0, ftl, blk.omegaz);
                             }
                             catch (FlowSolverException e) {
                                 failed_decode = true;
                             }
 
                             // return cell to original state
-                            cell.decode_conserved(0, 0, 0.0);
+                            cell.decode_conserved(0, 0, blk.omegaz);
 
                             if (failed_decode) {
                                 omega *= omega_reduction_factor;
@@ -861,7 +861,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                             foreach (j; 0 .. nConserved) {
                                 cell.U[ftl][j] = cell.U[0][j] + omega*blk.dU[cellCount+j].re;
                             }
-                            cell.decode_conserved(0, ftl, 0.0);
+                            cell.decode_conserved(0, ftl, blk.omegaz);
                             cellCount += nConserved;
                         }
                     }
@@ -873,7 +873,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                                 blk.FU[cellCount+j] += cell.dUdt[ftl][j].re;
                             }
                             // return cell to original state
-                            cell.decode_conserved(0, 0, 0.0);
+                            cell.decode_conserved(0, 0, blk.omegaz);
                             cellCount += nConserved;
                         }
                     }
@@ -956,7 +956,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     version(multi_T_gas){
                         foreach(imode; 0 .. nmodes) { cell.U[ftl][cqi.modes+imode] = cell.U[0][cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
                     }
-                    cell.decode_conserved(0, ftl, 0.0);
+                    cell.decode_conserved(0, ftl, blk.omegaz);
                     cellCount += nConserved;
                 }
             }
@@ -1840,7 +1840,7 @@ void evalRHS(double pseudoSimTime, int ftl)
             limit_factor = min(1.0, S);
         }
         foreach (i, cell; blk.cells) {
-            cell.add_inviscid_source_vector(0, 0.0);
+            cell.add_inviscid_source_vector(0, blk.omegaz);
             if (blk.myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
@@ -1930,7 +1930,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
             version(multi_T_gas){
             foreach(imode; 0 .. nmodes) { cell.U[perturbed_ftl][cqi.modes+imode] += sigma*blk.zed[cellCount+MODES+imode]; }
             }
-            cell.decode_conserved(0, perturbed_ftl, 0.0);
+            cell.decode_conserved(0, perturbed_ftl, blk.omegaz);
             cellCount += nConserved;
         }
     }
@@ -1959,7 +1959,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
             version(multi_T_gas){
             foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[perturbed_ftl][cqi.modes+imode].re - cell.dUdt[unperturbed_ftl][cqi.modes+imode].re)/(sigma); }
             }
-            cell.decode_conserved(0, 0, 0.0);
+            cell.decode_conserved(0, 0, blk.omegaz);
             cellCount += nConserved;
         }
     }
@@ -2023,7 +2023,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
                 version(multi_T_gas){
                 foreach(imode; 0 .. nmodes){ cell.U[perturbed_ftl][cqi.modes+imode] += complex(0.0, sigma*blk.zed[cellCount+MODES+imode].re); }
                 }
-                cell.decode_conserved(0, perturbed_ftl, 0.0);
+                cell.decode_conserved(0, perturbed_ftl, blk.omegaz);
                 cellCount += nConserved;
             }
         }
