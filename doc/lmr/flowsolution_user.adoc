@@ -4,23 +4,19 @@ In a preparation script, the `FlowSolution` object is used
 to initialise the domain with a flow field from another
 (completed) job.
 
- FlowSolution:new{jobName, dir, tindx, nBlocks, gindx, make_kdtree}
-
-`jobName` ::
-    _string_, no default +
-    base file name for completed simulation
+ FlowSolution:new{dir=<string>, snapshot=<int|string>, nBlocks=<int>, make_kdtree=<bool>}
 
 `dir` ::
     _string_, no default +
     directory containing completed simulation +
     It is often easy to use relative paths if the simulation is nearby.
 
-`tindx` ::
+`snapshot` ::
     _int_ or _string_, no default +
-    time index at which to read flow field from completed simulation +
-    provide an integer for the time index,
+    read flow field from `snapshot` of completed simulation +
+    provide an integer for the snapshot index,
     or to get the last flow field, one can supply the special
-    string `"last"`.
+    string `"last"` or `"final"`.
 
 `nBlocks` ::
     _int_, no default +
@@ -32,28 +28,17 @@ to initialise the domain with a flow field from another
     if one only want to use some inflow portion of the
     domain when intialising a new simulation.
 
-`gindx` ::
-    _int_ or _string_, default = -1 +
-    grid time index at which to read the grid associated with the flow field +
-    For the default value of -1, the grid time index is synced with the `tindx`
-    choice. This is likely what you want for moving grids, and for non-moving
-    grids this will just pick up the grid at grid time index 0. +
-    A special use for this `gindx` parameter is when attempting to initialise
-    a moving grid simulation from a non-moving grid simulation. You can set the grid time
-    index explicitly to 0 so that the non-moving flow solution is read in with
-    its initial grid at grid time index 0.
 
 `make_kdtree` ::
-    _int_, default = 0 +
-    when make_kdtree is selected (=1) the search speed for locating cells
-    is considerably improved. It does this by using a kd tree filtering
-    and sorting approach.
+    _bool_, default = false +
+    when make_kdtree is selected (=true) the search speed for locating cells
+    is considerably improved.
+    It does this by using a kd tree filtering and sorting approach.
     There is, however, a startup cost for building the kd tree.
 
 Example of use:
 
- initial = FlowSolution:new{jobName='sphere', dir='../inviscid',
-                            tindx=10, nBlocks=4, make_kdtree=1}
+ initial = FlowSolution:new{dir='../inviscid', snapshot='last', nBlocks=4, make_kdtree=true}
 
 
 
