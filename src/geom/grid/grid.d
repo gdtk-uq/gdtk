@@ -432,4 +432,59 @@ class Grid {
         f.close();
     } // end write_to_STL_file()
 
+    /**
+     * Rotate the vertices of a grid given a unit quaternion and centre of rotation.
+     *
+     * The quaternion should be a unit quaternion of the form:
+     * q = q0 + q1 \hat{i} + q2 \hat{j} + q3 \hat{k}
+     *
+     * Authors: Flynn Hack and RJG
+     */
+    void rotate(Quaternion q, Vector3 rotation_ctr=Vector3(0.0, 0.0, 0.0))
+    {
+        auto norm = q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3];
+        if (fabs(norm - 1.0) > 1.0e-8) {
+            throw new Exception("grid.rotate: Invalid quaternion provided. Should be unit quaternion with norm = 1");
+        }
+
+        double[] Rmat;
+        Rmat.length = 9;
+        Rmat[0] = q[0]*q[0] + q[1]*q[1] - q[2]*q[2] - q[3]*q[3];
+        Rmat[1] = 2*q[1]*q[2] - 2*q[0]*q[3];
+        Rmat[2] = 2*q[1]*q[3] + 2*q[0]*q[2];
+        Rmat[3] = 2*q[1]*q[2] + 2*q[0]*q[3];
+        Rmat[4] = q[0]*q[0] - q[1]*q[1] + q[2]*q[2] - q[3]*q[3];
+        Rmat[5] = 2*q[2]*q[3] - 2*q[0]*q[1];
+        Rmat[6] = 2*q[1]*q[3] - 2*q[0]*q[2];
+        Rmat[7] = 2*q[2]*q[3] + 2*q[0]*q[1];
+        Rmat[8] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3]; // Implementation checked against
+                                                                 // scipy rotation package.
+
+        foreach (ref v; vertices) {
+            // Translate all points so that centre is at origin.
+            v = v - rotation_ctr;
+            // Apply rotation
+            v.apply_matrix_transform(Rmat);
+            // Translate all points so that centre is where we started.
+            v = v + rotation_ctr;
+        }
+    }
+
+    /**
+     * Rotate the vertices of a grid given a rotation angle, an axis of rotation and a centre of rotation.
+     *
+     * This method converts to quaternion representation and then delegates to the method
+     * that accepts a quaternion.
+     *
+     * Authors: Flynn Hack and RJG
+     */
+    void rotate(double theta, Vector3 rotation_axis, Vector3 rotation_ctr=Vector3(0.0, 0.0, 0.0))
+    {
+        auto C = cos(theta/2.0);
+        auto S = sin(theta/2.0);
+        rotation_axis.normalize();
+        Quaternion q = [C, S*rotation_axis.x.re, S*rotation_axis.y.re, S*rotation_axis.z.re];
+        rotate(q, rotation_ctr);
+    }
+
 } // end class grid

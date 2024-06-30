@@ -1,3 +1,47 @@
 [#grid-user]
 = Grid objects, methods and functions
 
+== General (for both structured and unstructured grids) 
+
+  Grid:rotate{rotation_angle=..., rotation_axis=..., [rotation_centre=...]}
+
+This method can be used to rotate the vertices of a grid through
+an angle about an axis with a specified centre of rotation.
+If no centre of rotation is provided, the origin is assumed.
+
+`rotatation_angle` :: float in radians
+`rotation_axis` :: vector given as `Vector3` object
+`rotation_centre` :: point given as `Vector3` object [default: `Vector3(0.0, 0.0, 0.0)` ]
+
+*Example:* Rotate a structured grid 90 degrees around the y axis.
+
+  sg = StructuredGrid:new{...}
+  theta = math.rad(90)
+  axis = Vector3:new{x=0.0, y=1.0, z=0.0}
+  sg:rotate{rotation_angle=theta, rotatation_axis=axis}
+
+
+
+
+  Grid:rotate{q=..., [rotation_centre=...]}
+
+This method can be used to rotate vertices of a grid by an
+amount specified by a unit quaternion with a specified centre of rotation.
+If no centre of rotation is provided, the origin is assumed.
+
+`q` :: unit quaternion values as array `{q0, q1, q2, q3}` where the unit quaternion is
+latexmath:[q = q_0 + q_1 \hat{i} + q_2 \hat{j} + q_3 \hat{k}]
+`rotation_centre` :: point given as `Vector3` object [default: `Vector3(0.0, 0.0, 0.0)` ]
+
+*Example:* Rotate an unstructured grid 30 degrees around the x-axis direction, with centre of
+rotation at (0.5, 0.5, 0.5).
+
+  usg = UnstructuredGrid:new{...}
+  theta = math.rad(30)
+  C = math.cos(theta/2.0)
+  S = math.sin(theta/2.0)
+  q = {C, S*1.0, 0.0, 0.0}
+  usg:rotate{q=q, rotation_centre=Vector3:new{x=0.5, y=0.5, z=0.5}}
+
+
+

@@ -5,6 +5,7 @@ Rowan J. Gollan; Peter A. Jacobs
 :stylesheet: readthedocs.css
 :sectnums:
 :imagesdir: images
+:stem: latexmath
 
 :leveloffset: +1
 

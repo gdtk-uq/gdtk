@@ -54,3 +54,15 @@ enum VTKElement {
 }
 
 double radians(double degrees) { return PI*degrees/180.0; }
+
+/**
+ * Quaternion represented as four scalars.
+ *
+ * Mathematical notation --> D implementation:
+ *
+ * q = q0 + q1 \hat{i} + q2 \hat{j} + q2 \hat{k}
+ *
+ * Quaternion q = (q0, q1, q2, q3);
+ * double rot_scalar = q[0];
+ */
+alias Quaternion = double[4];

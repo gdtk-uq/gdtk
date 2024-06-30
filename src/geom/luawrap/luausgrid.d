@@ -410,6 +410,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "write_to_stl_file");
     lua_pushcfunction(L, &write_to_su2_file!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "write_to_su2_file");
+    lua_pushcfunction(L, &rotate!(UnstructuredGrid, UnstructuredGridMT));
+    lua_setfield(L, -2, "rotate");
     lua_pushcfunction(L, &find_nearest_cell_centre_usg);
     lua_setfield(L, -2, "find_nearest_cell_centre");
     lua_pushcfunction(L, &splitTriangleCell);
