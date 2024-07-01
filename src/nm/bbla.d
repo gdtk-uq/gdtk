@@ -181,6 +181,23 @@ class Matrix(T) {
         }
     }
 
+    void opOpAssign(string op)(in Matrix rhs)
+        if ( op == "+" || op == "-" )
+    {
+        enforce(_nrows == rhs._nrows && _ncols == rhs._ncols,
+                "incompatible matrices");
+        foreach(row; 0 .. _nrows) {
+            foreach(col; 0 .. _ncols) {
+                static if ( op == "+" ) {
+                    _data[row*_ncols + col] += rhs._data[row*_ncols + col];
+                } else if ( op == "-" ) {
+                    _data[row*_ncols + col] -= rhs._data[row*_ncols + col];
+                }
+            }
+        }
+        return;
+    }
+
     Matrix!T opBinaryRight(string op)(double lhs)
         if ( op == "+" || op == "-" || op == "*" )
     {
