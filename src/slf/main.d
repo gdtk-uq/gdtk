@@ -126,22 +126,23 @@ void multiply_tridigonal_block_matrix(ref const Parameters pm, Matrix!(double)[3
 
 }
 
-void solve_tridigonal_block_matrix(ref const Parameters pm, Matrix!(double)[3][] LHS, Matrix!(double)[] U, Matrix!(double)[] R){
+void solve_tridigonal_block_matrix(ref const Parameters pm, ref TridiagonalSolveWorkspace tdws, Matrix!(double)[3][] LHS, Matrix!(double)[] U, Matrix!(double)[] R){
 /*
     Solve a sparse tridiagonal block matrix problem. We assume the data is packed as follows:
     [[##, B0, C0],
      [A1, B1, C1],
          ...
      [AN-1, BN-1, ##]]
+
 */
 
     size_t neq = pm.neq;
     size_t N   = pm.N;
-    auto Ai = new Matrix!double(neq, neq);
-    auto Bi = new Matrix!double(neq, neq);
-    auto Ci = new Matrix!double(neq, neq);
-    auto Ui  = new Matrix!double(neq);
-    auto Ri  = new Matrix!double(neq);
+    auto Ai = tdws.Ai;
+    auto Bi = tdws.Bi;
+    auto Ci = tdws.Ci;
+    auto Ui = tdws.Ui;
+    auto Ri = tdws.Ri;
 
     // First eliminate the A blocks using block row multiply and adds
     foreach(step; 0 .. N-1){
@@ -159,7 +160,6 @@ void solve_tridigonal_block_matrix(ref const Parameters pm, Matrix!(double)[3][]
         Ai._data[] = LHS[step+1][0]._data[];
         LHS[step+1][0].zeros();
         LHS[step+1][1] -= Ai.dot(Ci);
-        //LHS[step+1][1] = LHS[step+1][1] - Ai.dot(Ci);
         R[step+1]      -= Ai.dot(Ri);
     }
 
@@ -361,6 +361,22 @@ struct Parameters {
     double[] U1;
 }
 
+struct TridiagonalSolveWorkspace{
+    Matrix!double Ai;
+    Matrix!double Bi;
+    Matrix!double Ci;
+    Matrix!double Ui;
+    Matrix!double Ri;
+
+    this(size_t neq){
+        Ai = new Matrix!double(neq, neq);
+        Bi = new Matrix!double(neq, neq);
+        Ci = new Matrix!double(neq, neq);
+        Ui  = new Matrix!double(neq);
+        Ri  = new Matrix!double(neq);
+    }
+}
+
 void write_solution_to_file(ref const Parameters pm, number[] U, string filename){
 
     File outfile = File(filename, "wb");
@@ -448,9 +464,9 @@ void RK4_explicit_time_increment(number[] U, number[] U2nd, number[] R,
     return;
 }
 
-void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number[] Up, number[] Rp, double[] Rr,
-                                   Matrix!double LHS, Matrix!double J,
+void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number[] Up, number[] Rp,
                                    Matrix!(double)[3][] J2, Matrix!(double)[] U2, Matrix!(double)[] R2,
+                                   ref TridiagonalSolveWorkspace tdws,
                                    number[] omegaMi, GasState gs,
                                    number[] dU,
                                    double dt, GasModel gm, ThermochemicalReactor reactor, Parameters pm, bool verbose){
@@ -464,142 +480,21 @@ void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number
     second_derivs_from_cent_diffs(pm, U, U2nd);
     compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
 
-    compute_jacobian(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J);
     compute_sparse_jacobian(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J2);
 
-    //TODO: Now that I think about it these Jacobians should be EXACTLY the same.
-    // Why aren't they?
-    //if (verbose) {
-    //    double error=0.0;
-    //    foreach(cell; 0 .. N){
-    //        foreach(i; 0 .. neq){
-    //            writefln("Cell %d i %d", cell, i);
-    //            writef(" J=[");
-    //            foreach(j; 0 .. neq) writef("%e, ", J[cell*neq + i, cell*neq + j]);
-    //            writeln("]");
-    //            writef("J2=[");
-    //            foreach(j; 0 .. neq) writef("%e, ", J2[cell][1][i,j]);
-    //            writeln("]");
-    //            writef("  diff=[");
-    //            foreach(j; 0 .. neq) writef("%e, ", J[cell*neq + i, cell*neq + j] - J2[cell][1][i,j]);
-    //            writeln("]");
-    //            foreach(j; 0 .. neq) error += fabs(J[cell*neq + i, cell*neq + j] - J2[cell][1][i,j]);
-    //        }
-    //    }
-    //    writefln("Total error is %e", error);
-    //}
-
-    foreach(i; 0 .. n){
-        foreach(j; 0 .. n){
-            LHS[i,j] = (i==j) ? 1.0/dt : 0.0;
-            LHS[i,j] -= J[i,j];
-        }
-    }
-
-
+    // Get put into [I/dt - J] U = R form, for the Euler/Newton update
     foreach(cell; 0 .. N){
-        foreach(i; 0 .. neq){
-            foreach(j; 0 .. neq){
-                if (i==j) {
-                    J2[cell][0][i, j] =         -J2[cell][0][i, j];
-                    J2[cell][1][i, j] = 1.0/dt - J2[cell][1][i, j];
-                    J2[cell][2][i, j] =         -J2[cell][2][i, j];
-                } else {
-                    J2[cell][0][i, j] =         -J2[cell][0][i, j];
-                    J2[cell][1][i, j] =         -J2[cell][1][i, j];
-                    J2[cell][2][i, j] =         -J2[cell][2][i, j];
-                }
-            }
-            R2[cell][i, 0] = R[cell*neq + i].re;
-        }
+        J2[cell][0]._data[] *= -1.0; 
+        J2[cell][1]._data[] *= -1.0; 
+        J2[cell][2]._data[] *= -1.0; 
+        foreach(i; 0 .. neq) J2[cell][1][i, i] += 1.0/dt;
+        foreach(i; 0 .. neq) R2[cell][i, 0] = R[cell*neq + i].re;
     }
 
-    //TODO: Now that I think about it these Jacobians should be EXACTLY the same.
-    // Why aren't they?
-    //if (verbose) {
-    //    double error=0.0;
-    //    foreach(cell; 1 .. N){
-    //        foreach(i; 0 .. neq){
-    //            writefln("Cell %d i %d", cell, i);
-    //            writef(" J=[");
-    //            foreach(j; 0 .. neq) writef("%e, ", LHS[cell*neq + i, (cell-1)*neq + j]);
-    //            writeln("]");
-    //            writef("J2=[");
-    //            foreach(j; 0 .. neq) writef("%e, ", J2[cell][0][i,j]);
-    //            writeln("]");
-    //            writef("  diff=[");
-    //            foreach(j; 0 .. neq) writef("%e, ", LHS[cell*neq + i, (cell-1)*neq + j] - J2[cell][0][i,j]);
-    //            writeln("]");
-    //            foreach(j; 0 .. neq) error += fabs(LHS[cell*neq + i, (cell-1)*neq + j] - J2[cell][0][i,j]);
-    //        }
-    //    }
-    //    writefln("Total error is %e", error);
-    //}
-
-    foreach(i, Ri; R) Rr[i] = Ri.re;
-    auto r0= new Matrix!double(Rr);
-    auto LHS0 = new Matrix!double(LHS);
-
-    auto perm = decomp!double(LHS);
-    auto x = new Matrix!double(Rr);
-    solve!double(LHS, x, perm);
-
-    auto test = LHS0.dot(x);
-    double dms_error = 0.0;
-    foreach(i; 0 .. pm.n) dms_error += fabs(test[i, 0] - r0[i, 0]);
-    if (verbose) writefln("Dense matrix solve error %e", dms_error);
-
-    // x is solved in place to be delta U
-    foreach(i; 0 .. n) dU[i] = x[i,0];
-
-
-    Matrix!(double)[3][] J3;
-    Matrix!(double)[] U3;
-    Matrix!(double)[] R3;
-    Matrix!(double)[] R2copy;
-
-    foreach(cell; 0 .. N) {
-        auto Jc0 = new Matrix!double(neq, neq);
-        auto Jc1 = new Matrix!double(neq, neq);
-        auto Jc2 = new Matrix!double(neq, neq);
-        J3 ~= [Jc0, Jc1, Jc2];
-        auto Unew = new Matrix!double(neq);
-        U3 ~= Unew;
-        auto Rnew = new Matrix!double(neq);
-        R3 ~= Rnew;
-        auto Rnew2 = new Matrix!double(neq);
-        R2copy ~= Rnew2;
-    }
-
-    foreach(cell; 0 .. N) {
-        J3[cell][0]._data[] = J2[cell][0]._data[];
-        J3[cell][1]._data[] = J2[cell][1]._data[];
-        J3[cell][2]._data[] = J2[cell][2]._data[];
-    }
-    
-    foreach(cell; 0 .. N) R2copy[cell]._data[] = R2[cell]._data[];
-    solve_tridigonal_block_matrix(pm, J2, U2, R2);
-
-    foreach(cell; 0 .. N) U3[cell]._data[] = U2[cell]._data[];
-    multiply_tridigonal_block_matrix(pm, J3, U3, R3);
-
-    //foreach(cell; 0 .. N){
-    //    foreach(j; 0 .. neq){
-    //        if (verbose) writefln(" R3[%d][%d] % e", cell, j, R3[cell][j,0]);
-    //        if (verbose) writefln(" R2[%d][%d] % e    (%e)", cell, j, R2copy[cell][j, 0], R2copy[cell][j, 0]-R3[cell][j,0]);
-    //        if (verbose) writefln("");
-    //    }
-    //}
-
-    double sms_error = 0.0;
-    foreach(cell; 0 .. N) { foreach(i; 0 .. neq) { sms_error += fabs(R3[cell][i, 0] - R2copy[cell][i, 0]); } }
-    if (verbose) writefln("Sparsse matrix solve error %e", sms_error);
+    solve_tridigonal_block_matrix(pm, tdws, J2, U2, R2);
 
     foreach(cell; 0 .. N){
         foreach(j; 0 .. neq){
-            //if (verbose) writefln(" dU[%d][%d] from normal % e", cell, j, dU[cell*neq + j].re);
-            //if (verbose) writefln(" dU[%d][%d] from new    % e    (%e)", cell, j, U2[cell][j, 0], (U2[cell][j, 0]-dU[cell*neq + j].re)/U2[cell][j, 0]);
-            //if (verbose) writefln("");
             dU[cell*neq +  j] = U2[cell][j, 0];
         }
     }
@@ -649,7 +544,6 @@ int main(string[] args)
 
     // Initial Guess
     number[] U,Up,dU;
-    double[] Rr;
     number[] Ua,Ub,Uc,Ra,Rb,Rc;
     number[] R,Rp;
     number[] U2nd;
@@ -666,39 +560,9 @@ int main(string[] args)
     Ra.length = (neq)*N;
     Rb.length = (neq)*N;
     Rc.length = (neq)*N;
-    Rr.length = (neq)*N;
     number[] omegaMi; omegaMi.length = pm.nsp;
 
     // Set up Jacobian. We have a tridiagonal block matrix
-    //auto J = new SMatrix!double();
-    //J.aa.length = (neq*neq)*3*N - 2*(neq*neq);
-    //foreach(i; 0 .. N){
-    //    foreach(jj; 0 .. neq){
-    //        // The ia array holds where in ja a certain row starts
-    //        J.ia ~= J.ja.length;
-
-    //        // ia holds which column each entry would be in in a real matrix
-    //        // we start with the left side block matrix, assuming this isn't
-    //        // i==0, which has no neighbour on that side.
-    //        if (i>0) {
-    //            foreach(ii; 0 .. neq) J.ja ~= (i-1)*neq + ii;
-    //        }
-    //        // this cell block matrix entries
-    //        foreach(ii; 0 .. neq) J.ja ~= i*neq + ii;
-    //        // right cell block matrix entries
-    //        if (i<N-1) {
-    //            foreach(ii; 0 .. neq) J.ja ~= (i+1)*neq + ii;
-    //        }
-    //        // Then we do all that again for the next row down.
-    //    }
-    //}
-    //writefln("Gotta add one more element to the array: J.ja.length %d J.aa.length %d", J.ja.length, J.aa.length);
-    //J.ia ~= J.ja.length;
-
-    size_t extent = neq*N;
-    auto J = new Matrix!double(extent, extent);
-    auto LHS = new Matrix!double(extent, extent);
-
     Matrix!(double)[3][] J2;
     Matrix!(double)[] U2;
     Matrix!(double)[] R2;
@@ -714,8 +578,9 @@ int main(string[] args)
         R2 ~= Rnew;
     }
 
-    gaussian_initial_condition(pm, U);
+    TridiagonalSolveWorkspace tdws = TridiagonalSolveWorkspace(neq);
 
+    gaussian_initial_condition(pm, U);
     second_derivs_from_cent_diffs(pm, U, U2nd);
     compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
 
@@ -723,39 +588,9 @@ int main(string[] args)
     GR0 = sqrt(GR0);
 
 
-    immutable int maxiters = 200;
+    immutable int maxiters = 101;
     double dt = 1e-6;
     foreach(iter; 0 .. maxiters) {
-        // Let's try computing some derivatives
-        //compute_jacobian2(gm, reactor,  U0, U1, dZ, p, N, neq, nsp, Up, Z, U, U2nd, R,  Rp, J);
-
-        // This might not be the best way of doing this but who knows.
-        //decompILU0(J);
-        //solve(J, R);
-        //foreach(i, Ri; R) Rc[i] = Ri.re;
-        //auto perm = decomp!double(J);
-        //auto x = new Matrix!double(Rc);
-        //solve!double(J, x, perm);
-
-        //double global_relaxation_factor = 1.0;
-        //double maxdY = -1.0;
-        //foreach(cell; 0 .. N){
-        //    foreach(j; 0 .. nsp){
-        //        double dY = x[neq*cell+j,0].re;
-        //        maxdY = fmax(maxdY, fabs(dY));
-        //        double relaxation_factor = fmin(1.0, 1e-1/(fabs(dY)+1e-16));
-        //        global_relaxation_factor = fmin(global_relaxation_factor, relaxation_factor);
-        //    }
-        //}
-        //writefln("relax factor is %e from dYmax %e", global_relaxation_factor, maxdY);
-
-        //// R is solved in place to be -delta U
-        //foreach(i; 0 .. n) U[i] -= global_relaxation_factor*x[i,0];
-        //foreach(cell; 0 .. N){
-        //    foreach(j; 0 .. nsp){
-        //        U[cell*neq + j] = fmin(fmax(U[cell*neq + j], 0.0), 1.0) ;
-        //    }
-        //}
         bool verbose = false;
         if (iter==100) verbose=true;
 
@@ -764,7 +599,7 @@ int main(string[] args)
             GR0 = sqrt(GR0);
         }
         //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
-        Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, Rr, LHS, J, J2, U2, R2, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+        Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
 
         foreach(i; 0 .. n) U[i] += dU[i];
 
