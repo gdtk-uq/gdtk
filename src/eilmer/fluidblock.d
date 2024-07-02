@@ -1647,7 +1647,7 @@ public:
             version(complex_numbers) { eps = complex(0.0, eps0.re); }
             else { eps = eps0*fabs(celldata.U1[idx + j]) + eps0; }
             celldata.U1[idx + j] += eps;
-            decode_conserved(celldata.positions[pid], celldata.U1[idx .. idx+nConserved], celldata.flowstates[pid], 0.0, pid, myConfig);
+            decode_conserved(celldata.positions[pid], celldata.U1[idx .. idx+nConserved], celldata.flowstates[pid], omegaz, pid, myConfig);
 
             // evaluate perturbed residuals in local stencil
             evalRHS2(gtl, ftl, celldata.halo_cell_ids[pid], celldata.halo_face_ids[pid], pid);
@@ -1724,7 +1724,7 @@ public:
                 // save a copy of the flowstate and copy conserved quantities
                 fs_save.copy_values_from(celldata.flowstates[pcell_id]);
                 foreach(j; 0..nConserved) celldata.U1[pidx + j] = celldata.U0[pidx + j];
-                encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], 0.0, myConfig, celldata.U0[gidx .. gidx+nConserved]);
+                encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], omegaz, myConfig, celldata.U0[gidx .. gidx+nConserved]);
 
                 foreach(idx; 0..nConserved) {
 
@@ -1732,11 +1732,11 @@ public:
                     version(complex_numbers) { eps = complex(0.0, eps0.re); }
                     else { eps = eps0*fabs(celldata.U1[pidx + idx]) + eps0; }
                     celldata.U1[pidx + idx] += eps;
-                    decode_conserved(celldata.positions[pcell_id], celldata.U1[pidx .. pidx+nConserved], celldata.flowstates[pcell_id], 0.0, pcell_id, myConfig);
+                    decode_conserved(celldata.positions[pcell_id], celldata.U1[pidx .. pidx+nConserved], celldata.flowstates[pcell_id], omegaz, pcell_id, myConfig);
 
                     // update (ghost cell) boundary conditions
                     if (bndary.preReconAction.length > 0) { bndary.applyPreReconAction(0.0, 0, 0, bface); }
-                    encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], 0.0, myConfig, celldata.U1[gidx .. gidx+nConserved]);
+                    encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], omegaz, myConfig, celldata.U1[gidx .. gidx+nConserved]);
 
                     // fill local Jacobian
                     foreach(jdx; 0..nConserved) {
@@ -1750,7 +1750,7 @@ public:
 
                     // update (ghost cell) boundary conditions
                     if (bndary.preReconAction.length > 0) { bndary.applyPreReconAction(0.0, 0, 0, bface); }
-                    encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], 0.0, myConfig, celldata.U1[gidx .. gidx+nConserved]);
+                    encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], omegaz, myConfig, celldata.U1[gidx .. gidx+nConserved]);
                 }
 
                 // Step 2. Calculate dR/du
@@ -1767,7 +1767,7 @@ public:
                     version(complex_numbers) { eps = complex(0.0, eps0.re); }
                     else { eps = eps0*fabs(celldata.U1[gidx + idx]) + eps0; }
                     celldata.U1[gidx + idx] += eps;
-                    decode_conserved(celldata.positions[ghost_cell_id], celldata.U1[gidx .. gidx+nConserved], celldata.flowstates[ghost_cell_id], 0.0, pidx, myConfig);
+                    decode_conserved(celldata.positions[ghost_cell_id], celldata.U1[gidx .. gidx+nConserved], celldata.flowstates[ghost_cell_id], omegaz, pidx, myConfig);
 
                     // evaluate perturbed residuals in local stencil
                     evalRHS2(gtl, ftl, celldata.halo_cell_ids[ghost_cell_id], celldata.halo_face_ids[ghost_cell_id], ghost_cell_id);
@@ -1925,7 +1925,7 @@ public:
             limit_factor = min(1.0, S);
         }
         foreach (i, cell; cell_list) {
-            cell.add_inviscid_source_vector(gtl, 0.0);
+            cell.add_inviscid_source_vector(gtl, omegaz);
             if (myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
@@ -2030,7 +2030,7 @@ public:
         }
         foreach(id; 0 .. ncells) {
             size_t idx = id*nConserved;
-            decode_conserved(celldata.positions[id], celldata.U1[idx .. idx+nConserved], celldata.flowstates[id], 0.0, id, myConfig);
+            decode_conserved(celldata.positions[id], celldata.U1[idx .. idx+nConserved], celldata.flowstates[id], omegaz, id, myConfig);
         }
 
         import steadystate_core;

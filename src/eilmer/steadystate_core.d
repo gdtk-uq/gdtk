@@ -724,7 +724,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         }
                         try {
                             decode_conserved(blk.celldata.positions[i], blk.celldata.U1[cellCount .. cellCount+nConserved],
-                                             blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+                                             blk.celldata.flowstates[i], blk.omegaz, i, blk.myConfig);
                         }
                         catch (FlowSolverException e) {
                             failed_decode = true;
@@ -732,7 +732,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
                         // return cell to original state
                         decode_conserved(blk.celldata.positions[i], blk.celldata.U0[cellCount .. cellCount+nConserved],
-                                         blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+                                         blk.celldata.flowstates[i], blk.omegaz, i, blk.myConfig);
 
                         if (failed_decode) {
                             omega *= omega_reduction_factor;
@@ -788,7 +788,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         foreach (j; 0 .. nConserved) {
                             cell.U[1][j] = cell.U[0][j] + omega*blk.dU[cellCount+j];
                         }
-                        cell.decode_conserved(0, 1, 0.0);
+                        cell.decode_conserved(0, 1, blk.omegaz);
                         cellCount += nConserved;
                     }
                 }
@@ -800,7 +800,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                             blk.FU[cellCount+j] += cell.dUdt[1][j].re;
                         }
                         // return cell to original state
-                        cell.decode_conserved(0, 0, 0.0);
+                        cell.decode_conserved(0, 0, blk.omegaz);
                         cellCount += nConserved;
                     }
                 }
@@ -860,7 +860,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
             foreach (cidx; 0 .. blk.ncells) {
                 size_t idx = cidx*ncq;
-                decode_conserved(blk.celldata.positions[cidx], blk.celldata.U1[idx .. idx+ncq], blk.celldata.flowstates[cidx], 0.0, cidx, blk.myConfig);
+                decode_conserved(blk.celldata.positions[cidx], blk.celldata.U1[idx .. idx+ncq], blk.celldata.flowstates[cidx], blk.omegaz, cidx, blk.myConfig);
             }
             // Put flow state into U[0] ready for next iteration.
             foreach (i; 0 .. blk.ncells*ncq) {
@@ -1522,7 +1522,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         }
         foreach (i; 0 .. blk.ncells) {
             size_t idx = i*ncq;
-            decode_conserved(blk.celldata.positions[i], blk.celldata.U1[idx .. idx+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+            decode_conserved(blk.celldata.positions[i], blk.celldata.U1[idx .. idx+ncq], blk.celldata.flowstates[i], blk.omegaz, i, blk.myConfig);
         }
     }
     evalRHS(pseudoSimTime, 1);
@@ -1532,7 +1532,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         }
         foreach (i; 0 .. blk.ncells) {
             size_t idx = i*ncq;
-            decode_conserved(blk.celldata.positions[i], blk.celldata.U0[idx .. idx+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+            decode_conserved(blk.celldata.positions[i], blk.celldata.U0[idx .. idx+ncq], blk.celldata.flowstates[i], blk.omegaz, i, blk.myConfig);
         }
     }
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
@@ -1567,7 +1567,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
 
             foreach (i; 0 .. blk.ncells) {
                 size_t s1 = i*ncq;
-                decode_conserved(blk.celldata.positions[i], blk.celldata.U1[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+                decode_conserved(blk.celldata.positions[i], blk.celldata.U1[s1 .. s1+ncq], blk.celldata.flowstates[i], blk.omegaz, i, blk.myConfig);
             }
         }
         evalRHS(pseudoSimTime, 1);
