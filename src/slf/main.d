@@ -502,6 +502,33 @@ void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number
     return;
 }
 
+double compute_line_search(GasModel gm, ThermochemicalReactor reactor, GasState gs, ref const Parameters pm, number[] omegaMi, number[] dU, number[] Up, number[] U, number[] U2nd, number[] R, number[] Rp, double GRold){
+/*
+    Limit the size of the update to ensure that we get a reduction in the residual.
+
+*/
+    
+    size_t n = pm.n;
+    double lambda = 1.0;
+
+    while (lambda>1e-6){
+        foreach(i; 0 .. n) Up[i] = U[i] + lambda*dU[i];
+        second_derivs_from_cent_diffs(pm, Up, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Up, U2nd, Rp, false);
+
+        double GR = 0.0; foreach(Ri; Rp) GR += Ri.re*Ri.re;
+        GR = sqrt(GR);
+
+        if (GR>GRold) {
+            lambda *= 0.5;
+        } else {
+            return lambda;
+        }
+    }
+    throw new Error("Line search failed to find an acceptable relaxation factor");
+}
+
+
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
@@ -517,7 +544,7 @@ int main(string[] args)
     pm.neq = pm.nsp+1;
 
     pm.p = 75e3;
-    pm.N = 32;
+    pm.N = 48;
     pm.n = pm.N*pm.neq;
     pm.Z.length = pm.N;
     foreach(i; 1 .. pm.N+1) pm.Z[i-1] = i/(pm.N+1.0);
@@ -584,20 +611,17 @@ int main(string[] args)
     second_derivs_from_cent_diffs(pm, U, U2nd);
     compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
 
-    double GR0 = 0.0; foreach(Ri; R) GR0 += Ri.re*Ri.re;
-    GR0 = sqrt(GR0);
+    double GRmax = 0.0; foreach(Ri; R) GRmax += Ri.re*Ri.re;
+    GRmax = sqrt(GRmax);
 
 
-    immutable int maxiters = 101;
-    double dt = 1e-6;
+    immutable int maxiters = 4000;
+    double dt = 5e-7;
+    bool verbose = false;
+    double GRRold = 1.0;
+    double tau = 4e-2;
     foreach(iter; 0 .. maxiters) {
-        bool verbose = false;
-        if (iter==100) verbose=true;
 
-        if (iter==20){
-            GR0 = 0.0; foreach(Ri; R) GR0 += Ri.re*Ri.re;
-            GR0 = sqrt(GR0);
-        }
         //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
         Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
 
@@ -605,13 +629,22 @@ int main(string[] args)
 
         double GR = 0.0; foreach(Ri; R) GR += Ri.re*Ri.re;
         GR = sqrt(GR);
-        double GRR = GR/GR0;
+        if (iter<200) GRmax = fmax(GR, GRmax);
+        double GRR = GR/GRmax;
 
         if (iter%10==0){
-            writefln("iter %d GR0 %e GR %e GRR %e", iter, GR0, GR, GRR);
+            writefln("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
         }
+        if (GRR<tau){
+            double dtnew = dt*pow(GRRold/GRR, 1.6);
+            dtnew = fmin(dtnew, 1.2*dt);
+            dtnew = fmax(dtnew, 0.5*dt);
+            dtnew = fmin(dtnew, 1.0);
+            dt = dtnew;
+        }
+        GRRold = GRR;
+
         if (GRR<1e-6) break;
-        //if (iter==maxiters-1) throw new Error(format("Convergence failed after %s iterations, GRR was %e", maxiters, GRR));
         if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
     }
     write_solution_to_file(pm, U, format("%s.sol", name));
