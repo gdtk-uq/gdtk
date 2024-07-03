@@ -425,6 +425,15 @@ void read_solution_from_file(ref const Parameters pm, number[] U, string filenam
     return;
 }
 
+void write_log_to_file(string[] log, string filename){
+    File file = File(filename, "w");
+    foreach(line; log){
+        file.write(line);
+        file.write("\n");
+    }
+    file.close();
+}
+
 void gaussian_initial_condition(ref const Parameters pm, number[] U){
     double sigma = 0.1;
 
@@ -528,6 +537,25 @@ double compute_line_search(GasModel gm, ThermochemicalReactor reactor, GasState 
     throw new Error("Line search failed to find an acceptable relaxation factor");
 }
 
+pure @nogc
+double compute_global_residual(in number[] R) {
+    double GR = 0.0;
+    foreach(Ri; R) {
+        GR += Ri.re*Ri.re;
+    }
+    GR = sqrt(GR);
+    return GR;
+}
+
+pure @nogc
+double update_dt(double GRRold, double GRR, double dt){
+    double dtnew = dt*pow(GRRold/GRR, 1.6);
+    dtnew = fmin(dtnew, 1.2*dt);
+    dtnew = fmax(dtnew, 0.5*dt);
+    dtnew = fmin(dtnew, 1.0);
+    return dtnew;
+}
+
 
 int main(string[] args)
 {
@@ -614,12 +642,12 @@ int main(string[] args)
     double GRmax = 0.0; foreach(Ri; R) GRmax += Ri.re*Ri.re;
     GRmax = sqrt(GRmax);
 
-
     immutable int maxiters = 4000;
     double dt = 5e-7;
     bool verbose = false;
     double GRRold = 1.0;
     double tau = 4e-2;
+    string[] log;
     foreach(iter; 0 .. maxiters) {
 
         //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
@@ -627,20 +655,17 @@ int main(string[] args)
 
         foreach(i; 0 .. n) U[i] += dU[i];
 
-        double GR = 0.0; foreach(Ri; R) GR += Ri.re*Ri.re;
-        GR = sqrt(GR);
-        if (iter<200) GRmax = fmax(GR, GRmax);
+        double GR = compute_global_residual(R);
+        if (iter<40) GRmax = fmax(GR, GRmax);
         double GRR = GR/GRmax;
 
-        if (iter%10==0){
-            writefln("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
+        string output = format("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
+        log ~= output;
+        if (iter%50==0){
+            writeln(output);
         }
         if (GRR<tau){
-            double dtnew = dt*pow(GRRold/GRR, 1.6);
-            dtnew = fmin(dtnew, 1.2*dt);
-            dtnew = fmax(dtnew, 0.5*dt);
-            dtnew = fmin(dtnew, 1.0);
-            dt = dtnew;
+            dt = update_dt(GRRold, GRR, dt);
         }
         GRRold = GRR;
 
@@ -648,7 +673,7 @@ int main(string[] args)
         if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
     }
     write_solution_to_file(pm, U, format("%s.sol", name));
-    //read_solution_from_file(pm, Ua, format("%s.sol", name));
+    write_log_to_file(log, "log.txt");
     writefln("Done!");
 
 
