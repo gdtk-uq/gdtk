@@ -377,6 +377,29 @@ struct TridiagonalSolveWorkspace{
     }
 }
 
+void write_solution_to_file(ref const Parameters pm, double[] U, string filename){
+
+    File outfile = File(filename, "wb");
+    size_t[1] ibuff; double[1] dbuff; // buffer arrays
+
+    ibuff[0] = pm.nsp;  outfile.rawWrite(ibuff);
+    ibuff[0] = pm.neq;  outfile.rawWrite(ibuff);
+    ibuff[0] = pm.N;    outfile.rawWrite(ibuff);
+    ibuff[0] = pm.n;    outfile.rawWrite(ibuff);
+
+    dbuff[0] = pm.p;    outfile.rawWrite(dbuff);
+    dbuff[0] = pm.dZ;   outfile.rawWrite(dbuff);
+    dbuff[0] = pm.T0;   outfile.rawWrite(dbuff);
+    dbuff[0] = pm.T1;   outfile.rawWrite(dbuff);
+
+    foreach(i; 0 .. pm.N)  { dbuff[0] = pm.Z[i];  outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.nsp){ dbuff[0] = pm.Y0[i]; outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.nsp){ dbuff[0] = pm.Y1[i]; outfile.rawWrite(dbuff); }
+    foreach(i; 0 .. pm.n)  { dbuff[0] = U[i].re;     outfile.rawWrite(dbuff); }
+    outfile.close();
+    return;
+}
+
 void write_solution_to_file(ref const Parameters pm, number[] U, string filename){
 
     File outfile = File(filename, "wb");
@@ -478,7 +501,7 @@ void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number
                                    ref TridiagonalSolveWorkspace tdws,
                                    number[] omegaMi, GasState gs,
                                    number[] dU,
-                                   double dt, GasModel gm, ThermochemicalReactor reactor, Parameters pm, bool verbose){
+                                   double dt, GasModel gm, ThermochemicalReactor reactor, ref const Parameters pm, bool verbose){
 
 
     size_t neq = pm.neq;
@@ -554,6 +577,47 @@ double update_dt(double GRRold, double GRR, double dt){
     dtnew = fmax(dtnew, 0.5*dt);
     dtnew = fmin(dtnew, 1.0);
     return dtnew;
+}
+
+double[] get_derivatives_from_adjoint(number[] U, number[] U2nd, number[] R, number[] Up, number[] Rp,
+                                   Matrix!(double)[3][] J2, Matrix!(double)[] U2, Matrix!(double)[] R2,
+                                   ref TridiagonalSolveWorkspace tdws,
+                                   number[] omegaMi, GasState gs,
+                                   number[] dU,
+                                   double dt, GasModel gm, ThermochemicalReactor reactor, ref Parameters pm, bool verbose){
+
+    size_t neq = pm.neq;
+    size_t N = pm.N;
+    size_t n = pm.n;
+
+    second_derivs_from_cent_diffs(pm, U, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
+
+    compute_sparse_jacobian(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J2);
+
+    // compute the RHS vector, which is the partial derivate of R with x constant
+    // and p changed
+    pm.p += 1e-3;
+    second_derivs_from_cent_diffs(pm, U, U2nd);
+    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, Rp, false);
+
+
+    foreach(cell; 0 .. N){
+        J2[cell][0]._data[] *= -1.0; 
+        J2[cell][1]._data[] *= -1.0; 
+        J2[cell][2]._data[] *= -1.0; 
+        foreach(i; 0 .. neq) R2[cell][i, 0] = (Rp[cell*neq + i].re - R[cell*neq + i].re)/(1e-3);
+    }
+    solve_tridigonal_block_matrix(pm, tdws, J2, U2, R2);
+
+    double[] dUdp; dUdp.length = pm.n;
+    foreach(cell; 0 .. N){
+        foreach(j; 0 .. neq){
+            dUdp[cell*neq +  j] = U2[cell][j, 0];
+        }
+    }
+    pm.p -= 1e-3;
+    return dUdp;
 }
 
 
@@ -643,9 +707,11 @@ int main(string[] args)
     GRmax = sqrt(GRmax);
 
     immutable int maxiters = 4000;
+    immutable double targetGRR = 1e-9;
     double dt = 5e-7;
     bool verbose = false;
     double GRRold = 1.0;
+    double GRold = 1e99;
     double tau = 4e-2;
     string[] log;
     foreach(iter; 0 .. maxiters) {
@@ -668,12 +734,21 @@ int main(string[] args)
             dt = update_dt(GRRold, GRR, dt);
         }
         GRRold = GRR;
+        GRold = GR;
 
-        if (GRR<1e-6) break;
+        if (GRR<targetGRR) {
+            writefln("Reached target residual %e (%e), stopping...", targetGRR, GRR);
+            break;
+        }
         if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
     }
+
     write_solution_to_file(pm, U, format("%s.sol", name));
     write_log_to_file(log, "log.txt");
+
+    double[] dUdp;
+    dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+    write_solution_to_file(pm, dUdp, format("%s-derivatives.sol", name));
     writefln("Done!");
 
 
