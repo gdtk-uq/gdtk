@@ -3378,6 +3378,8 @@ class Tube(object):
 
         if hasattr(self, 'shocked_state') and hasattr(self, 'unsteadily_expanded_state'):
 
+            print("Performing reflected shock to calculate reflected shock tunnel stagnation conditions.")
+
             # do the stagnated fill state, which is the main gas state which we want
             shocked_gas_gas_state = self.get_shocked_state().get_gas_state()
             shocked_gas_v = self.get_shocked_state().get_v()
@@ -3396,35 +3398,49 @@ class Tube(object):
                                                      species_MW_dict=self.get_shocked_state().species_MW_dict,
                                                      )
 
-            # then do the same thing for the unsteadily expanded driver gas as this is important for RSTs as well...
+            print(f"The reflected shock speed in the lab frame (vr) is {self.vr:.2f} m/s, Mr = {self.Mr:.2f} ")
+
+            print("The calculated stagnation condition is:")
+            self.stagnated_fill_gas.detailed_print()
+
+            #--------------------------------------------------------------------------------------
+
+            # now we apply the same speed shock to the unsteadily expanded gas to check tailoring
+
+            print('-'*60)
+            print("We also need to shock the unsteadily expanded driver gas (state 3) by the same shock speed to assess tailoring.")
 
             unsteadily_expanded_gas_state = self.get_unsteadily_expanded_state().get_gas_state()
             unsteadily_expanded_state_v = self.get_unsteadily_expanded_state().get_v()
             unsteadily_expanded_state_gmodel = unsteadily_expanded_gas_state.gmodel
 
             unsteadily_expanded_state_gas_flow = GasFlow(unsteadily_expanded_state_gmodel)
-            stagnated_unsteadily_expanded_gas_state = GasState(unsteadily_expanded_state_gmodel)
+            twice_shocked_unsteadily_expanded_gas_state = GasState(unsteadily_expanded_state_gmodel)
 
-            self.vrd = unsteadily_expanded_state_gas_flow.reflected_shock(unsteadily_expanded_gas_state, unsteadily_expanded_state_v,
-                                                                          stagnated_unsteadily_expanded_gas_state)
+            v3_plus_vr = unsteadily_expanded_state_v + self.vr
 
-            self.Mrd = (unsteadily_expanded_state_v + self.vrd) / unsteadily_expanded_gas_state.a  # normally this would be V3 - Vr, but it's plus here as Vr has been left positive
+            print("This shock speed is v3 (in the lab frame) + Vr (also in the lab frame, but moving in the opposite direction:")
+            print(f"v3 + vr = {unsteadily_expanded_state_v:.2f} m/s + {self.vr:.2f} m/s = {v3_plus_vr:.2f} m/s")
+
+            vrd, vrdg = unsteadily_expanded_state_gas_flow.normal_shock(unsteadily_expanded_gas_state,
+                                                                             v3_plus_vr,
+                                                                             twice_shocked_unsteadily_expanded_gas_state)
+
+            self.Mrd = (unsteadily_expanded_state_v - vrdg) / unsteadily_expanded_gas_state.a
 
             if self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions():
                 make_gmodel_without_ions = True
             else:
                 make_gmodel_without_ions = None
 
-            self.stagnated_unsteadily_expanding_gas = Facility_State('s5d', stagnated_unsteadily_expanded_gas_state, 0.0,
-                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state(),
-                                                                     outputUnits=self.get_unsteadily_expanded_state().outputUnits,
-                                                                     species_MW_dict=self.get_unsteadily_expanded_state().species_MW_dict,
-                                                                     make_gmodel_without_ions=make_gmodel_without_ions)
+            self.twice_shocked_unsteadily_expanding_gas = Facility_State('s5d',
+                                                                         twice_shocked_unsteadily_expanded_gas_state, unsteadily_expanded_state_v - vrdg,
+                                                                         reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state(),
+                                                                         outputUnits=self.get_unsteadily_expanded_state().outputUnits,
+                                                                         species_MW_dict=self.get_unsteadily_expanded_state().species_MW_dict,
+                                                                         make_gmodel_without_ions=make_gmodel_without_ions)
 
-            for facility_state in [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]:
-                print('-'*60)
-
-                facility_state.detailed_print()
+            self.twice_shocked_unsteadily_expanding_gas.detailed_print()
 
         else:
             print("Shocked and unsteadily expanded states must have been calculated for this function to be used.")
@@ -3458,6 +3474,26 @@ class Tube(object):
             return self.Ms
         else:
             print("Shock speed has not yet been calculated.")
+
+    def get_reflected_shock_speed(self):
+        """
+        Return the shock speed
+        """
+
+        if hasattr(self, 'vr'):
+            return self.vr
+        else:
+            print("Variable does not exist. Either stagnation conditions have not been calculated yet or this facility is not a reflected shock tunnel.")
+
+    def get_reflected_shock_Mach_number(self):
+        """
+        Return the shock Mach number
+        """
+
+        if hasattr(self, 'Mr'):
+            return self.Mr
+        else:
+            print("Variable does not exist. Either stagnation conditions have not been calculated yet or this facility is not a reflected shock tunnel.")
 
     def get_fill_gas_model(self):
         """
@@ -3584,8 +3620,8 @@ class Tube(object):
 
         # then add the reflected shock states if we have them...
 
-        if hasattr(self, 'stagnated_fill_gas') and hasattr(self, 'stagnated_unsteadily_expanding_gas'):
-            facility_states += [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]
+        if hasattr(self, 'stagnated_fill_gas') and hasattr(self, 'twice_shocked_unsteadily_expanding_gas'):
+            facility_states += [self.stagnated_fill_gas, self.twice_shocked_unsteadily_expanding_gas]
 
         return facility_states
 
@@ -4430,6 +4466,9 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
                   file=output_stream)
 
         shock_speed_output = f'vs1 = {shock_tube.get_shock_speed():.2f} m/s, Ms1 = {shock_tube.get_shock_Mach_number():.2f}'
+
+        if hasattr(shock_tube, 'vr'):
+            shock_speed_output += f', vr = {shock_tube.get_reflected_shock_speed():.2f} m/s, Mr = {shock_tube.get_reflected_shock_Mach_number():.2f}'
 
         if 'acceleration_tube' in locals():
 
