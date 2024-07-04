@@ -609,6 +609,14 @@ void initMasterLuaState()
     lua_pushboolean(L, GlobalConfig.is_master_task);
     lua_setglobal(L, "is_master_task");
     push_array_to_Lua(L, GlobalConfig.localFluidBlockIds, "localFluidBlockIds");
+    lua_pushnumber(L, GlobalConfig.nBlocks);
+    lua_setglobal(L, "nBlocks");
+    lua_pushnumber(L, GlobalConfig.nFluidBlocks);
+    lua_setglobal(L, "nFluidBlocks");
+    lua_pushnumber(L, GlobalConfig.nSolidBlocks);
+    lua_setglobal(L, "nSolidBlocks");
+    lua_pushnumber(L, GlobalConfig.dimensions);
+    lua_setglobal(L, "dimensions");
     // [TODO] think about user_pad -- does it have a use case in steady-state?
 }
 
