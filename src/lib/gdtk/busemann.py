@@ -147,7 +147,7 @@ class BusemannDiffuser():
         n_sample_spaces = (number_points - 2) + 1 # remove end points (-2); count spaces (+1)
         step = ceil(n_total_spaces/n_sample_spaces)
         idxs = [0] + list(range(step, total_points, step)) + [total_points-1]
-        return idxs
+        return idxs[::-1] # reversed
     
     
                 
