@@ -34,7 +34,7 @@ void do_catalyst_initialization()
   conduit_node_set_path_char8_str(catalyst_init_params, "catalyst/scripts/script0", "catalyst_pipeline.py");
   conduit_node_set_path_char8_str(catalyst_init_params, "catalyst_load/implementation", "paraview");
   conduit_node_set_path_char8_str(
-    catalyst_init_params, "catalyst_load/search_paths/paraview", "/home/uqngibbo/source/ParaView/build/lib/catalyst");
+    catalyst_init_params, "catalyst_load/search_paths/paraview", "/home/uqngibbo/programs/paraview/lib/catalyst");
   enum catalyst_status err = catalyst_initialize(catalyst_init_params);
   conduit_node_destroy(catalyst_init_params);
   if (err != catalyst_status_ok)
