@@ -185,6 +185,16 @@ extern(C) int pathClosestDistance(T, string MTname)(lua_State *L)
     return 2;
 }
 
+extern(C) int length(T, string MTname)(lua_State *L)
+{
+    auto path = checkObj!(T, MTname)(L, 1);
+
+    auto length = path.length();
+    lua_settop(L, 0); // clear stack
+    lua_pushnumber(L, length.re);
+    return 1;
+}
+
 /* ----------------- Specific constructors --------------- */
 
 /**
@@ -1803,6 +1813,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Line, LineMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Line, LineMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, LineMT.toStringz);
 
@@ -1827,6 +1839,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Arc, ArcMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Arc, ArcMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, ArcMT.toStringz);
 
@@ -1851,6 +1865,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Arc3, Arc3MT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Arc3, Arc3MT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, Arc3MT.toStringz);
 
@@ -1873,6 +1889,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "copy");
     lua_pushcfunction(L, &pathClosestDistance!(Helix, HelixMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Helix, HelixMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, HelixMT.toStringz);
 
@@ -1897,6 +1915,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Bezier, BezierMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Bezier, BezierMT));
+    lua_setfield(L, -2, "length");
     lua_pushcfunction(L, &numberBezierCtrlPoints);
     lua_setfield(L, -2, "numberCtrlPts");
     lua_pushcfunction(L, &bezierCtrlPoint);
@@ -1927,6 +1947,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(NURBS, NURBSMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(NURBS, NURBSMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, NURBSMT.toStringz);
 
@@ -1951,6 +1973,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Polyline, PolylineMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Polyline, PolylineMT));
+    lua_setfield(L, -2, "length");
     lua_pushcfunction(L, &polyline_toGmshString);
     lua_setfield(L, -2, "toGmshString");
 
@@ -1977,6 +2001,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Polyline, SplineMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Polyline, SplineMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, SplineMT.toStringz);
 
@@ -2001,6 +2027,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(Polyline, Spline2MT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(Polyline, Spline2MT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, Spline2MT.toStringz);
 
@@ -2025,6 +2053,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(XSpline, XSplineMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(XSpline, XSplineMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, XSplineMT.toStringz);
 
@@ -2049,6 +2079,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(XSpline, XSpline2MT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(XSpline, XSpline2MT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, XSpline2MT.toStringz);
 
@@ -2074,6 +2106,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(XSplineLsq, XSplineLsqMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(XSplineLsq, XSplineLsqMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, XSplineLsqMT.toStringz);
 
@@ -2098,6 +2132,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(XSplineLsq, XSplineLsq2MT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(XSplineLsq, XSplineLsq2MT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, XSplineLsq2MT.toStringz);
 
@@ -2122,6 +2158,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(SVGPath, SVGPathMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(SVGPath, SVGPathMT));
+    lua_setfield(L, -2, "length");
     lua_pushcfunction(L, &svgpath_toGmshString);
     lua_setfield(L, -2, "toGmshString");
 
@@ -2148,6 +2186,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(LuaFnPath, LuaFnPathMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(LuaFnPath, LuaFnPathMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, LuaFnPathMT.toStringz);
 
@@ -2178,6 +2218,9 @@ void registerPaths(lua_State* L)
     lua_pushcfunction(L, &pathClosestDistance!(ArcLengthParameterizedPath,
                                                ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(ArcLengthParameterizedPath,
+                                  ArcLengthParameterizedPathMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, ArcLengthParameterizedPathMT.toStringz);
 
@@ -2234,6 +2277,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(ReversedPath, ReversedPathMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(ReversedPath, ReversedPathMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, ReversedPathMT.toStringz);
 
@@ -2258,6 +2303,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(TranslatedPath, TranslatedPathMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(TranslatedPath, TranslatedPathMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, TranslatedPathMT.toStringz);
 
@@ -2282,6 +2329,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
     lua_pushcfunction(L, &pathClosestDistance!(MirrorImagePath, MirrorImagePathMT));
     lua_setfield(L, -2, "closestDistance");
+    lua_pushcfunction(L, &length!(MirrorImagePath, MirrorImagePathMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, MirrorImagePathMT.toStringz);
 
@@ -2302,6 +2351,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &length!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT));
+    lua_setfield(L, -2, "length");
 
     lua_setglobal(L, RotatedAboutZAxisPathMT.toStringz);
 } // end registerPaths()
