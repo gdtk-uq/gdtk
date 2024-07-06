@@ -13,13 +13,15 @@ include::2D/convex-corner/README.adoc[tag=description]
 
 include::2D/wedge/README.adoc[tag=description]
 
-include::2D/manufactured-solutions/README.adoc[tag=description]
+include::2D/diffuser-busemann/README.adoc[tag=description]
 
 include::2D/turbulent-flat-plate/README.adoc[tag=description]
 
 include::2D/reacting-ramp/README.adoc[tag=description]
 
 include::2D/cylinder-coupled-fluid-thermal/transient/README.adoc[tag=description]
+
+include::2D/manufactured-solutions/README.adoc[tag=description]
 
 include::3D/manufactured-solutions/README.adoc[tag=description]
 

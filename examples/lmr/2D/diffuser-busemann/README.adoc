@@ -1,0 +1,40 @@
+//tag::description[]
+= Supersonic flow through a Busemann diffuser
+`gdtk/examples/lmr/2D/diffuser-busemann`
+
+Rowan J. Gollan
+2024-07-06
+
+This example is of supersonic flow ithrough a Busemann diffuser.
+The particular example comes from the paper by Moelder (2003).
+The total pressure recovery is a measure of efficiency for the
+diffuser.
+Here, that value is: latexmath:[\Pi = p_{t3}/p_{t1} = 0.9582].
+A Busemann diffuser can be characterised by the Mach numbers at:
+inflow (M1),
+just before the conical/terminating shock (M2),
+and just after this shock (M3).
+For this example, those values are:
+[stem]
+++++
+M_1 = 5.77; \quad M_2 = 3.00; \quad M_3 = 2.48
+++++
+
+[TIP]
+====
+This example:
+
+. Uses the `busemann.py` module from the Python `gdtk` package to generate the diffuser contour.
+. Has coarse-grid to fine-grid sequencing; it shows how to warm-start the fine-grid from coarse-grid solution.
+. Shows the use of the `ControlPointPatch` with a "channel" guide patch.
+====
+//end::description[]
+
+== Reference
+
+    Moelder, S. (2003)
+    A Benchmark for Internal Flow CFD Codes
+    Computational Fluid Dynamics Journal, 12(2):47, pp.408--414
+
+
+
