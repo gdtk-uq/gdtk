@@ -53,82 +53,82 @@ public:
     }
 
     this(in Path south, in Path north, in Path west, in Path east,
-	 int ncpi, int ncpj, string guidePatch)
+         int ncpi, int ncpj, string guidePatch)
     {
-	// Let's construct, then alter
-	Vector3[][] C;
-	C.length = ncpi;
-	foreach (ref CC; C) CC.length = ncpj;
+        // Let's construct, then alter
+        Vector3[][] C;
+        C.length = ncpi;
+        foreach (ref CC; C) CC.length = ncpj;
 
-	this(south, north, west, east, C);
+	    this(south, north, west, east, C);
 
-	double dr = 1.0/(ncpi - 2);
-	double ds = 1.0/(ncpj - 2);
-	double[] rPos; rPos.length = ncpi;
-	double[] sPos; sPos.length = ncpj;
+        double dr = 1.0/(ncpi - 2);
+        double ds = 1.0/(ncpj - 2);
+        double[] rPos; rPos.length = ncpi;
+        double[] sPos; sPos.length = ncpj;
 
-	rPos[0] = 0.0;
-	foreach (i; 1 .. ncpi-1) rPos[i] = dr/2.0 + (i-1)*dr;
-	rPos[$-1] = 1.0;
+        rPos[0] = 0.0;
+        foreach (i; 1 .. ncpi-1) rPos[i] = dr/2.0 + (i-1)*dr;
+        rPos[$-1] = 1.0;
 
-	sPos[0] = 0.0;
-	foreach (i; 1 .. ncpj-1) sPos[i] = ds/2.0 + (i-1)*ds;
-	sPos[$-1] = 1.0;
+        sPos[0] = 0.0;
+        foreach (i; 1 .. ncpj-1) sPos[i] = ds/2.0 + (i-1)*ds;
+        sPos[$-1] = 1.0;
 
-	ParametricSurface gpatch;
-	bool usingChannelAsGuide = false;
-	bool channelBoundedOnEW = false;
-	switch (guidePatch) {
-	case "coons", "Coons", "COONS", "tfi", "TFI":
-	    gpatch = new CoonsPatch(south, north, west, east);
-	    break;
-	case "channel", "Channel", "CHANNEL":
-	    gpatch = new ChannelPatch(south, north, false, true);
-	    usingChannelAsGuide = true;
-	    break;
-	case "channel-e2w", "Channel-e2w", "CHANNEL-E2W", "channel_e2w":
-	    gpatch = new ChannelPatch(west, east, false, true);
-	    usingChannelAsGuide = true;
-	    channelBoundedOnEW = true;
-	    break;
-	case "aopatch", "AOPatch", "AOPATCH", "area-orthogonal", "area_orthogonal":
-	    gpatch = new AOPatch(south, north, west, east);
-	    break;
-	default:
-	    string errMsg = "Error in constructor to ControlPointPatch.\n";
-	    errMsg ~= format("The guide patch type '%s' is not supported.\n", guidePatch);
-	    errMsg ~= "Check the spelling or what you are requesting.";
-	    errMsg ~= "Supported guide patches are: 'coons', 'channel', 'channel-e2w' and 'aopatch'";
-	    throw new Error(errMsg);
-	}
+        ParametricSurface gpatch;
+        bool usingChannelAsGuide = false;
+        bool channelBoundedOnEW = false;
+        switch (guidePatch) {
+        case "coons", "Coons", "COONS", "tfi", "TFI":
+            gpatch = new CoonsPatch(south, north, west, east);
+            break;
+        case "channel", "Channel", "CHANNEL":
+            gpatch = new ChannelPatch(south, north, false, true);
+            usingChannelAsGuide = true;
+            break;
+        case "channel-e2w", "Channel-e2w", "CHANNEL-E2W", "channel_e2w":
+            gpatch = new ChannelPatch(west, east, false, true);
+            usingChannelAsGuide = true;
+            channelBoundedOnEW = true;
+            break;
+        case "aopatch", "AOPatch", "AOPATCH", "area-orthogonal", "area_orthogonal":
+            gpatch = new AOPatch(south, north, west, east);
+            break;
+        default:
+            string errMsg = "Error in constructor to ControlPointPatch.\n";
+            errMsg ~= format("The guide patch type '%s' is not supported.\n", guidePatch);
+            errMsg ~= "Check the spelling or what you are requesting.";
+            errMsg ~= "Supported guide patches are: 'coons', 'channel', 'channel-e2w' and 'aopatch'";
+            throw new Error(errMsg);
+        }
 
-	if (!channelBoundedOnEW) {
-	    foreach (i; 0 .. ncpi) {
-		foreach (j; 0 .. ncpj) {
-		    mC[i][j] = gpatch(rPos[i], sPos[j]);
-		}
-	    }
-	    if (usingChannelAsGuide) {
-		// correct the boundaries: east and west
-		foreach (j; 0 .. ncpj) {
-		    mC[0][j] = east(sPos[j]);
-		    mC[$-1][j] = west(sPos[j]);
-		}
-	    }
-	}
-	else {
-	    // This case must be with a channel patch bounded on east-west
-	    foreach (i; 0 .. ncpi) {
-		foreach (j; 0 .. ncpj) {
-		    mC[i][j] = gpatch(sPos[j], rPos[i]);
-		}
-	    }
-	    // Correct the boundaries: south and north
-	    foreach (i; 0 .. ncpi) {
-		mC[i][0] = south(rPos[i]);
-		mC[i][$-1] = north(rPos[i]);
-	    }
-	}
+        if (!channelBoundedOnEW) {
+            foreach (i; 0 .. ncpi) {
+                foreach (j; 0 .. ncpj) {
+                    mC[i][j] = gpatch(rPos[i], sPos[j]);
+                }
+            }
+            if (usingChannelAsGuide) {
+                // correct the boundaries: east and west
+                foreach (j; 0 .. ncpj) {
+                    mC[0][j] = west(sPos[j]);
+                    mC[$-1][j] = east(sPos[j]);
+                }
+            }
+        }
+        else {
+            // This case must be with a channel patch bounded on east-west
+            foreach (i; 0 .. ncpi) {
+                foreach (j; 0 .. ncpj) {
+                    mC[i][j] = gpatch(sPos[j], rPos[i]);
+                }
+            }
+            // Correct the boundaries: south and north
+            foreach (i; 0 .. ncpi) {
+                mC[i][0] = south(rPos[i]);
+                mC[i][$-1] = north(rPos[i]);
+            }
+        }
     }
 
     this(ref const(ControlPointPatch) other)
