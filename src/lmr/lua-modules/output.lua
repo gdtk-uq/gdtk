@@ -458,27 +458,4 @@ function output.write_mpimap_file(fileName)
    f:close()
 end
 
-function output.write_fluidBlockArrays_file(fileName)
-   -- This fluidBlockArrays file is intended to hold Lua code that the user's
-   -- Lua scripts can read in and make use of at run time.
-   --
-   -- 2024-02-27: In the transition to Eilmer 5 code, this function has been gutted.
-   -- When we want to restore some of its former glory, the fluidBlockArrays file
-   -- in the Eilmer 4 code base is the place to look for suitable bits.
-   --
-   local f = assert(io.open(fileName, "w"))
-   f:write("-- A description of the fluidBlockArrays/gridArrays in Lua code.\n")
-   f:write("-- Use dofile() to get the content into your interpreter.\n")
-   f:write("fluidBlockArrays = {\n")
-   for i = 1, #(fluidBlockArrays) do
-      local fba = fluidBlockArrays[i]
-      local blkId = 0
-      -- [FIX-ME] Guts go here.  Need to pick data elements out of the reloaded metadata.
-      f:write("  },\n")
-   end
-   f:write("} -- end fluidBlockArrays\n")
-   --
-   f:close()
-end -- function write_fluidBlockArrays_file
-
 return output
