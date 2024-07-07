@@ -575,7 +575,7 @@ public:
         foreach (isp; 0 .. gmodel.n_species) {
             auto name = cast(char[]) gmodel.species_name(to!int(isp));
             name = tr(name, " \t", "--", "s");
-            massf_names ~= "massf[" ~ to!string(isp) ~ "]-" ~ to!string(name);
+            massf_names ~= "massf-" ~ to!string(name);
         }
         number[] molef; // mole-fractions may be needed
         number[] conc; // concentrations or number-densities may be needed
