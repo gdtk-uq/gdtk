@@ -1,0 +1,36 @@
+if (ARG1 eq "live") {
+     set term x11 font "Courier,25" noraise size 1000,700
+}
+else {
+     if (ARG1 eq "png") {
+          set term pngcairo enhanced font "Courier,15"
+     }
+     else {
+          set term pdfcairo enhanced font "Courier,15"
+     }
+     set output ARG2
+}
+if (ARG1 eq "live") {
+     set title "[Press 'x' to exit]"
+}
+set logscale y
+set ylabel 'residuals, mass balance'
+set xlabel 'step'
+set y2tics
+set y2label 'no. inner iterations'
+set key font ",15"
+if (ARG1 eq "live") {
+     while (1) {
+          plot 'lmrsim/diagnostics/nk-diagnostics' u "step":"global-residual-rel" t 'global' w lines lw 2.5, \
+               '' u "step":"mass-balance" t 'mass' w lines lw 2.5, \
+               '' u "step":"n-iters" axes x1y2 t 'linear iterations' w lines lw 2.5
+          pause 5
+          bind "x" "exit gnuplot"
+          replot
+     }
+}
+else {
+     plot 'lmrsim/diagnostics/nk-diagnostics' u "step":"global-residual-rel" t 'global' w lines lw 2.5, \
+     '' u "step":"mass-balance" t 'mass' w lines lw 2.5, \
+     '' u "step":"n-iters" axes x1y2 t 'linear iterations' w lines lw 2.5
+}

@@ -277,6 +277,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	cp gdtk-module $(INSTALL_DIR)/share
+	cp share/* $(INSTALL_DIR)/share
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:

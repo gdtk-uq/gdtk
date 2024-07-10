@@ -12,6 +12,7 @@ import extractline;
 import limiter2vtk;
 import residual2vtk;
 import lmr.commands.listspecies;
+import lmr.commands.plotdiagnostics;
 import lmr.commands.prepenergyexchange;
 import lmr.commands.prepgas;
 import lmr.commands.prepreactions;
@@ -61,6 +62,7 @@ Show help for a given Eilmer command or topic.
     // alias for list-species, provided for consistency with prep-gas tool
     commands["list-available-species"] = commands["list-species"];
     commands["residual2vtk"] = residual2vtkCmd;
+    commands["plot-diagnostics"] = plotDiagnosticsCmd;
     commands["prep-energy-exchange"] = prepExchCmd;
     // alias for 'prep-energy-exchange' provided for consistency with prep-kinetics tool
     commands["prep-kinetics"] = commands["prep-energy-exchange"];

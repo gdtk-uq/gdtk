@@ -1,0 +1,21 @@
+set terminal dumb 120 45
+set logscale y
+set ylabel 'resid., blnc'
+set xlabel 'step'
+set y2tics
+set y2label 'no. inner iterations'
+if (ARG1 eq "live") {
+     while (1) {
+          plot 'lmrsim/diagnostics/nk-diagnostics' u "step":"global-residual-rel" t 'glbl' w lines lw 2.5, \
+          '' u "step":"mass-balance" t 'm. b.' w lines lw 2.5, \
+     '' u "step":"n-iters" axes x1y2 t 'no iters' w lines lw 2.5
+     pause 5
+     replot
+     }
+}
+else {
+     plot 'lmrsim/diagnostics/nk-diagnostics' u "step":"global-residual-rel" t 'glbl' w lines lw 2.5, \
+     '' u "step":"mass-balance" t 'm. b.' w lines lw 2.5, \
+     '' u "step":"n-iters" axes x1y2 t 'no iters' w lines lw 2.5
+}
+
