@@ -36,18 +36,57 @@ or output to file for a snaphot on how convergence has progressed thus far.
 `;
     plotDiagnosticsCmd.shortDescription = "Plot diagnostics on convergence for a steady-state simulation.";
     plotDiagnosticsCmd.helpMsg = format(
-`lmr %s
+`lmr %s [options]
 
 %s
 
-options:
+This command only makes sense when config.solver_mode = "steady".
+It will look for the presence of the file lmrsim/diagnostics/nk-diagnostics.
+If no options are provided, the command will write a Gnuplot-type graph
+to disk as file: "lmr-ss-diagnostics.pdf".
 
-HELP is TODO... very soon.
+options ([+] can be repeated):
 
+ -m, --mode=live|file
+     sets the mode of operation, options are:
+     + live : plot to screen and keep plot alive with a periodic refresh (Ctrl+C to exit)
+     + file : write to file based on progress thus far
+     examples:
+       --mode=live
+       -m file
+     default: file
 
+ -s, --style=rjg|kad|nng|term
+     sets the style of diagnostics display, options are:
+     + rjg : a Gnuplot-type graph
+     + kad : a matplotlib-type figure on single graph
+     + nng : a matplotlib-type figure split on two graphs
+     + term : an ASCII rendering of the plot in the terminal
+              (if used with -m file no file is written, but a 
+              single plot is displayed and returns)
+     examples:
+       --style=kad
+       -s nng
+     default: rjg
 
-  
+ -o, --output=filename.pdf
+     sets the name for the output file.
+     For --style=rjg, the only allowable extensions are: png and pdf.
+     These will be used to control the Gnuplot output.
+     For --style=kad|nng, the allowable extension are whatever can
+     be handled by matplotlib's savefig() function.
+     examples:
+       -o diag-plot.png
+       --output=diagnostics-fig.pdf
+     default: lmr-ss-diagnostics.pdf
 
+ -c, --copy-script
+     gets a copy of the plotting script placed in the local directory.
+     This is useful if one wants to tweak or tune the output aesthetics
+     for their purposes.
+
+  -v, --verbose [+]
+     Increase verbosity.
 `, cmdName, plotDiagnosticsCmd.shortDescription);
  
 }
@@ -69,7 +108,7 @@ int main_(string[] args)
                "m|mode", &mode,
                "s|style", &style,
                "o|output", &outputFile,
-               "copy-script", &copyScript
+               "c|copy-script", &copyScript
                );
     }
     catch (Exception e) {
