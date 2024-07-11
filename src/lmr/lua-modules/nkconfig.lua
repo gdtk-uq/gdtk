@@ -231,7 +231,9 @@ function NewtonKrylovPhase:new(o)
    end
    for k,v in pairs(defaultsForThisPhase) do
       -- Take values as set or use default value.
-      o[k] = o[k] or v
+      if o[k] == nil then
+         o[k] = v
+      end
    end
    return o
 end -- end NewtonKrylovPhase:new(o)
