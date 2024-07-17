@@ -81,6 +81,11 @@ class BusemannDiffuser():
             dr_dtheta = r*u/v
             return np.array([du_dtheta, dv_dtheta, dr_dtheta])
 
+        def dydx(theta, u, v):
+            numer = (u/v)*sin(theta) + cos(theta)
+            denom = (u/v)*cos(theta) - sin(theta)
+            return numer/denom
+
         # Initialise storage for the integration values and derived values
         self._us = [self._u2]
         self._vs = [self._v2]
@@ -90,6 +95,7 @@ class BusemannDiffuser():
         x, y = self._xy_from_rtheta(r2, self._theta2)
         self._xs = [x]
         self._ys = [y]
+        self._dydxs = [dydx(self._theta2, self._u2, self._v2)]
 
         # Set initial conditions
         n = 3
@@ -106,6 +112,7 @@ class BusemannDiffuser():
             x, y = self._xy_from_rtheta(self._rs[-1], self._thetas[-1])
             self._xs.append(x)
             self._ys.append(y)
+            self._dydxs.append(dydx(theta, Y[0], Y[1]))
 
         # Remove final point.
         self._thetas.pop()
@@ -115,6 +122,7 @@ class BusemannDiffuser():
         self._Ms.pop()
         self._xs.pop()
         self._ys.pop()
+        self._dydxs.pop()
 
         # Set M1 now that we've completed integration
         self._M1 = self._Ms[-1]
@@ -129,6 +137,21 @@ class BusemannDiffuser():
             for i in idxs:
                 f.write(f"{scale*self._xs[i]}\t{scale*self._ys[i]}\n")
 
+        return
+
+    def write_wall_properties(self, filename, number_points, scale=1.0):
+        assert self._xs, "Busemann contour not yet computed."
+        idxs = self._collect_sample_indices(number_points)
+        with open(filename, "w") as f:
+            f.write("x\ty\tdydx\ttheta\tr\tu\tM\n")
+            for i in idxs:
+                f.write(f"{scale*self._xs[i]}\t"
+                        f"{scale*self._ys[i]}\t"
+                        f"{self._dydxs[i]}\t"
+                        f"{self._thetas[i]}\t"
+                        f"{scale*self._rs[i]}\t"
+                        f"{self._us[i]}\t"
+                        f"{self._Ms[i]}\n")
         return
 
     def contour_as_spline(self, number_points, scale=1.0):
