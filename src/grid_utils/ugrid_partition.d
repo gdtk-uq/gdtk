@@ -444,7 +444,7 @@ string partitionDual(string fileName, int nparts) {
     writeln("-- Partitioning dual format");
     string outputFile = fileName ~ ".part." ~ to!string(nparts);
     string nparts_arg = to!string(nparts);
-    string command = "gpmetis " ~ " " ~ fileName ~ " " ~ nparts_arg;
+    string command = "gpmetis -niter=40" ~ " " ~ fileName ~ " " ~ nparts_arg;
     executeShell(command);
     return outputFile;
 
