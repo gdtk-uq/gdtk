@@ -50,6 +50,8 @@ include::geom/grid/sgrid-user.adoc[]
 
 include::lmr/running-a-simulation.adoc[]
 
+include::lmr/warnings.adoc[]
+
 :leveloffset: -1
 
 

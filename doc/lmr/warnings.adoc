@@ -1,0 +1,34 @@
+= Warnings
+
+Eilmer may emit various warnings at preparation stage or at run time.
+These warnings will usually say what it thinks is awry and a suggested fix.
+The warnings don't really explain the reasoning behind it due to
+screen real estate and avoiding overloading the user.
+The explanations might be nuanced.
+Here in the reference manual, we attempt to give more information.
+
+`Warning 00: use-of-extrema-clipping`::
++
+If aiming for deep convergence with a steady-state simulation,
+the use of `extrema_clipping` is often an interference.
+We can state this more generally: the use of clips and switches
+are a hindrance to deep convergence.
++
+At the local level of a cell, the flow conditions might sit just on
+the edge of a clip or switch value.
+If on the next iteration, that value falls on the other side, then
+a clip or switch is engaged.
+When far from convergence, this is not an issue.
+When close to convergence, the switching/clipping behaviour
+is "shifting the rug" so to speak on the flow field state.
+This will often result in a ringing for the residual.
++
+The `extrema_clipping` flag falls into this category of clips.
+The recommendation for steady-state simulations is:
+`config.extrema_clipping = false`
+
+
+
+
+
+
