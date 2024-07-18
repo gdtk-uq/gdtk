@@ -30,6 +30,7 @@ LMR_CORE_FILES = $(LMR)/block.d \
 	$(LMR)/jacobian.d \
 	$(LMR)/lmrerrors.d \
 	$(LMR)/lmrexceptions.d \
+	$(LMR)/lmrwarnings.d \
 	$(LMR)/loads.d \
 	$(LMR)/lsqinterp.d \
 	$(LMR)/lua_helper.d \

@@ -63,6 +63,7 @@ import lmr.loads : init_current_loads_indx_dir,
                    writeLoadsToFile,
                    count_written_loads,
                    update_loads_metadata_file;
+import lmr.lmrwarnings;
 
 version(mpi_parallel) {
     import mpi;
@@ -568,6 +569,11 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     // Initialise baseline configuration
     initConfiguration();
+    // After loading configuration, we can check if there are any settings
+    // that are not particularly appropriate for the steady-state solver.
+    if (cfg.extrema_clipping) {
+        writeln(warningMessage(LmrWarning.useOfExtremaClipping));
+    }
     if (cfg.nFluidBlocks == 0 && cfg.is_master_task) {
         throw new NewtonKrylovException("No FluidBlocks; no point in continuing with simulation initialisation.");
     }
