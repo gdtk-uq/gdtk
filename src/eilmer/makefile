@@ -187,6 +187,7 @@ BC_FILES := bc/package.d \
 	bc/ghost_cell_effect/full_face_copy.d \
 	bc/ghost_cell_effect/mapped_cell_copy.d \
 	bc/ghost_cell_effect/gas_solid_full_face_copy.d \
+	bc/ghost_cell_effect/porous_wall.d \
 	bc/user_defined_effects.d \
 	bc/boundary_flux_effect.d \
 	bc/boundary_cell_effect.d \
