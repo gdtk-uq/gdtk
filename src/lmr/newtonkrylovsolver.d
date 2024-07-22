@@ -2658,6 +2658,7 @@ double determineRelaxationFactor()
     //----
 
     foreach (blk; parallel(localFluidBlocks, 1)) {
+        blk.omegaLocal = omega;
         size_t startIdx = 0;
         foreach (cell; blk.cells) {
             bool failedDecode = false;
