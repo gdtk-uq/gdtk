@@ -551,6 +551,14 @@ public:
                                                    iface.n, Mx);
             }
             break;
+        case ShockDetector.KAD:
+            double weight = comp_tol.re;
+            foreach (iface; faces) {
+                iface.fs.S = KAD_ShockDetector(*(iface.left_cell.fs),
+                                               *(iface.right_cell.fs),
+                                               weight);
+            }
+            break;
         }
 
         // Set the outflow interfaces to be shocked for high-order simulations with boundary layers

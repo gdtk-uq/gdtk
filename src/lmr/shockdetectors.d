@@ -141,3 +141,24 @@ import std.algorithm;
 
     return S;
 }
+
+@nogc number KAD_ShockDetector(in FlowState L, in FlowState R, const double g){
+/*
+    This is a simple pressure-based shock detector.
+
+    It is a modification of the blending function from Nompelis et al. (2006).
+
+    A Parallel Unstructured Implicit Solver for Hypersonic Reacting Flow Simulation
+    I. Nompelis, T. W. Drayna, and G. V. Candler,
+    Parallel Computational Fluid Dynamics - Theory and Applications, 2006
+
+    @author Kyle A. Damm (2024-07-18)
+*/
+    // pressure-based weighting
+    number pL = L.gas.p;
+    number pR = R.gas.p;
+    number dp = (pL-pR)/fmin(pL,pR);
+    number S  = 1.0 - 1.0/(1.0+pow(g*dp, 4));
+
+    return S;
+}
