@@ -2,6 +2,9 @@ module dyaml.testsuite;
 
 import dyaml;
 import dyaml.event;
+import dyaml.parser;
+import dyaml.reader;
+import dyaml.scanner;
 
 import std.algorithm;
 import std.conv;
@@ -21,108 +24,10 @@ auto dumpEventString(string str) @safe
     string[] output;
     try
     {
-        auto events = Loader.fromString(str).parse();
+        auto events = new Parser(Scanner(Reader(cast(ubyte[])str.dup)));
         foreach (event; events)
         {
-            string line;
-            final switch (event.id)
-            {
-                case EventID.scalar:
-                    line = "=VAL ";
-                    if (event.anchor != "")
-                    {
-                        line ~= text("&", event.anchor, " ");
-                    }
-                    if (event.tag != "")
-                    {
-                        line ~= text("<", event.tag, "> ");
-                    }
-                    switch(event.scalarStyle)
-                    {
-                        case ScalarStyle.singleQuoted:
-                            line ~= "'";
-                            break;
-                        case ScalarStyle.doubleQuoted:
-                            line ~= '"';
-                            break;
-                        case ScalarStyle.literal:
-                            line ~= "|";
-                            break;
-                        case ScalarStyle.folded:
-                            line ~= ">";
-                            break;
-                        default:
-                            line ~= ":";
-                            break;
-                    }
-                    if (event.value != "")
-                    {
-                        line ~= text(event.value.substitute("\n", "\\n", `\`, `\\`, "\r", "\\r", "\t", "\\t", "\b", "\\b"));
-                    }
-                    break;
-                case EventID.streamStart:
-                    line = "+STR";
-                    break;
-                case EventID.documentStart:
-                    line = "+DOC";
-                    if (event.explicitDocument)
-                    {
-                        line ~= text(" ---");
-                    }
-                    break;
-                case EventID.mappingStart:
-                    line = "+MAP";
-                    if (event.collectionStyle == CollectionStyle.flow)
-                    {
-                        line ~= text(" {}");
-                    }
-                    if (event.anchor != "")
-                    {
-                        line ~= text(" &", event.anchor);
-                    }
-                    if (event.tag != "")
-                    {
-                        line ~= text(" <", event.tag, ">");
-                    }
-                    break;
-                case EventID.sequenceStart:
-                    line = "+SEQ";
-                    if (event.collectionStyle == CollectionStyle.flow)
-                    {
-                        line ~= text(" []");
-                    }
-                    if (event.anchor != "")
-                    {
-                        line ~= text(" &", event.anchor);
-                    }
-                    if (event.tag != "")
-                    {
-                        line ~= text(" <", event.tag, ">");
-                    }
-                    break;
-                case EventID.streamEnd:
-                    line = "-STR";
-                    break;
-                case EventID.documentEnd:
-                    line = "-DOC";
-                    if (event.explicitDocument)
-                    {
-                        line ~= " ...";
-                    }
-                    break;
-                case EventID.mappingEnd:
-                    line = "-MAP";
-                    break;
-                case EventID.sequenceEnd:
-                    line = "-SEQ";
-                    break;
-                case EventID.alias_:
-                    line = text("=ALI *", event.anchor);
-                    break;
-                case EventID.invalid:
-                    assert(0, "Invalid EventID produced");
-            }
-            output ~= line;
+            output ~= event.text;
         }
     }
     catch (Exception) {} //Exceptions should just stop adding output
@@ -141,27 +46,37 @@ struct TestResult
     string name;
     TestState state;
     string failMsg;
+    bool parserFailure;
+    bool dumperFailure;
+    bool composerFailure;
 
     const void toString(OutputRange)(ref OutputRange writer)
         if (isOutputRange!(OutputRange, char))
     {
+        enum goodColour = 32;
+        enum badColour = 31;
+        enum skipColour = 93;
         ubyte statusColour;
         string statusString;
         final switch (state) {
             case TestState.success:
-                statusColour = 32;
+                statusColour = goodColour;
                 statusString = "Succeeded";
                 break;
             case TestState.failure:
-                statusColour = 31;
+                statusColour = badColour;
                 statusString = "Failed";
                 break;
             case TestState.skipped:
-                statusColour = 93;
+                statusColour = skipColour;
                 statusString = "Skipped";
                 break;
         }
-        writer.formattedWrite!"[\033[%s;1m%s\033[0m] %s"(statusColour, statusString, name);
+        writer.formattedWrite!"[\033[%s;1m%s\033[0m]"(statusColour, statusString);
+        writer.formattedWrite!" [\033[%s;1mP\033[0m"(parserFailure ? badColour : goodColour);
+        writer.formattedWrite!"\033[%s;1mD\033[0m"(dumperFailure ? badColour : goodColour);
+        writer.formattedWrite!"\033[%s;1mC\033[0m] "(composerFailure ? badColour : goodColour);
+        put(writer, name);
         if (state != TestState.success)
         {
             writer.formattedWrite!" (%s)"(failMsg.replace("\n", " "));
@@ -203,6 +118,7 @@ TestResult runTests(string yaml) @safe
         catch (Exception e)
         {
             loadFailed = true;
+            output.composerFailure = true;
             failMsg = e.msg;
         }
     }
@@ -254,12 +170,14 @@ TestResult runTests(string yaml) @safe
         Appender!string buf;
         dumper().dump(buf);
         compareLineByLine(buf.data, compareYAMLString.get, false, "Dumped YAML mismatch");
+        output.dumperFailure = output.state == TestState.failure;
         testsRun++;
     }
     if (!loadFailed && !events.isNull && !shouldFail)
     {
         const compare = dumpEventString(yamlString);
         compareLineByLine(compare, events.get, true, "Event mismatch");
+        output.parserFailure = output.state == TestState.failure;
         testsRun++;
     }
     if (loadFailed && !shouldFail)
@@ -294,9 +212,13 @@ void main(string[] args) @system
 
     ulong total;
     ulong successes;
+    ulong parserFails;
+    ulong dumperFails;
     foreach (file; dirEntries(path, "*.yaml", SpanMode.shallow))
     {
         auto result = runTests(readText(file));
+        dumperFails += result.dumperFailure;
+        parserFails += result.parserFailure;
         if (result.state == TestState.success)
         {
             debug(verbose) printResult(file.baseName, result);
@@ -308,7 +230,9 @@ void main(string[] args) @system
         }
         total++;
     }
-    writefln!"%d/%d tests passed"(successes, total);
+    writefln!"Tests: %d/%d passed"(successes, total);
+    writefln!"Parser: %d/%d passed"(total - parserFails, total);
+    writefln!"Dumper: %d/%d passed"(total - dumperFails, total);
 }
 
 string cleanup(string input) @safe

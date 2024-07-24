@@ -30,22 +30,6 @@ import dyaml.event;
 import dyaml.exception;
 import dyaml.style;
 
-/// Exception thrown at node related errors.
-class NodeException : MarkedYAMLException
-{
-    package:
-        // Construct a NodeException.
-        //
-        // Params:  msg   = Error message.
-        //          start = Start position of the node.
-        this(string msg, const scope Mark start,
-             string file = __FILE__, size_t line = __LINE__)
-            @safe pure nothrow
-        {
-            super(msg, start, file, line);
-        }
-}
-
 // Node kinds.
 enum NodeID : ubyte
 {
@@ -2504,8 +2488,8 @@ struct Node
         }
 
     ///
-    public void toString (DGT) (DGT sink)
-        const @safe
+    public void toString (DGT) (scope DGT sink)
+        const scope @safe
     {
         this.value_.match!(
             (const bool v)        => formattedWrite(sink, v ? "true" : "false"),

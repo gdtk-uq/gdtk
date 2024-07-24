@@ -11,7 +11,8 @@ module dyaml.test.reader;
     import std.exception :assertThrown;
 
     import dyaml.test.common : readData, run;
-    import dyaml.reader : Reader, ReaderException;
+    import dyaml.exception : ReaderException;
+    import dyaml.reader : Reader;
 
     /**
     Try reading entire file through Reader, expecting an error (the file is invalid).
@@ -20,7 +21,7 @@ module dyaml.test.reader;
     */
     static void runReader(ubyte[] fileData) @safe
     {
-        auto reader = new Reader(fileData);
+        auto reader = Reader(fileData);
         while(reader.peek() != '\0') { reader.forward(); }
     }
 
