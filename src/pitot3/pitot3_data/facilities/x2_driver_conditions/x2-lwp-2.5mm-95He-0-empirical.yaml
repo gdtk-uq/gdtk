@@ -11,11 +11,11 @@
 # 
 # Chris James (c.james4@uq.edu.au) - 23/03/24
 
-driver_condition_name : 'x2-lwp-2.5mm-90He-0-empirical'
+driver_condition_name : 'x2-lwp-2.5mm-95He-0-empirical'
 driver_condition_type : 'empirical'
 
 driver_gas_model : 'CEAGas'
-driver_fill_composition : {'He':0.9, 'Ar':0.1} 
+driver_fill_composition : {'He':0.95, 'Ar':0.05} 
 driver_speciesList : ['He','Ar']
 driver_inputUnits : 'moles' 
 driver_withIons : False
