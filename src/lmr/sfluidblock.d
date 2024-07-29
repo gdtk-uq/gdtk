@@ -309,7 +309,7 @@ public:
         pragma(inline, true);
         debug {
             if (!(i < nic && j < njc && k < nkc)) {
-                writefln("cell_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njc, nkc);
+                writefln("cell_index[%d,%d,%d] from [%d,%d,%d] in blk.id %d", i, j, k, nic, njc, nkc, id);
             }
         }
         assert(i < nic && j < njc && k < nkc, "Index out of bounds.");
@@ -332,7 +332,7 @@ public:
         pragma(inline, true);
         debug {
             if (!(i < niv && j < njv && k < nkv)) {
-                writefln("vertex_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, niv, njv, nkv);
+                writefln("vertex_index[%d,%d,%d] from [%d,%d,%d] in blk.id %d", i, j, k, niv, njv, nkv, id);
             }
         }
         assert(i < niv && j < njv && k < nkv, "Index out of bounds.");
@@ -348,7 +348,7 @@ public:
         pragma(inline, true);
         debug {
             if (!(i < niv && j < njc && k < nkc)) {
-                writefln("ifi_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, niv, njc, nkc);
+                writefln("ifi_index[%d,%d,%d] from [%d,%d,%d] in blk.id %d", i, j, k, niv, njc, nkc, id);
             }
         }
         assert(i < niv && j < njc && k < nkc, "Index out of bounds.");
@@ -364,7 +364,7 @@ public:
         pragma(inline, true);
         debug {
             if (!(i < nic && j < njv && k < nkc)) {
-                writefln("ifj_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njv, nkc);
+                writefln("ifj_index[%d,%d,%d] from [%d,%d,%d] in blk.id %d", i, j, k, nic, njv, nkc, id);
             }
         }
         assert(i < nic && j < njv && k < nkc, "Index out of bounds.");
@@ -381,7 +381,7 @@ public:
         pragma(inline, true);
         debug {
             if (!(i < nic && j < njc && k < nkv)) {
-                writefln("ifj_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njc, nkv);
+                writefln("ifj_index[%d,%d,%d] from [%d,%d,%d] in blk.id %d", i, j, k, nic, njc, nkv, id);
             }
         }
         assert(i < nic && j < njc && k < nkv, "Index out of bounds.");
