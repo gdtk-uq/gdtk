@@ -33,7 +33,7 @@ function ghostCells(args)
  	 -- A simple reflecting boundary condition.
 	 cell0 = sampleFluidCell(downstreamBlk, blk_down.imin, args.j, blk_down.kmin)
 	 cell0.velx = -cell0.velx
-	 cell1 = sampleFluidCell(downstreanBlk, blk_down.imin+1, args.j, blk_down.kmin)
+	 cell1 = sampleFluidCell(downstreamBlk, blk_down.imin+1, args.j, blk_down.kmin)
 	 cell1.velx = -cell1.velx
      end
    elseif blkId == upstreamBlk and args.boundaryId == east then

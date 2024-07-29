@@ -1,5 +1,6 @@
 -- lmr(5) script for Langley Expansion Tube simulation
 --
+-- let.lua
 -- Author: Peter J. and Rowan G.
 -- Date: 2024-07-29
 --
@@ -29,7 +30,8 @@ flowDict = {
 }
 bcDict = {
    outFlow=OutFlowBC_Simple:new{},
-   coldWall=WallBC_NoSlip_FixedT:new{Twall=330.0},
+   coldWall=WallBC_NoSlip_FixedT:new{Twall=300.0},
+   warmWall=WallBC_NoSlip_FixedT:new{Twall=330.0},
    upstream_face_of_diaphragm = ExchangeBC_FullFacePlusUDF:new{
       otherBlock=downstreamBlk, otherFace='west', fileName="diaphragm.lua"},
    downstream_face_of_diaphragm = ExchangeBC_FullFacePlusUDF:new{
@@ -40,6 +42,8 @@ makeFluidBlocks(bcDict, flowDict)
 --
 -- simulation settings
 config.viscous = true
+config.spatial_deriv_locn = 'vertices'
+config.spatial_deriv_calc = 'divergence'
 config.viscous_signal_factor = 0.0
 config.max_time = 6.0e-3 -- s
 config.max_step = 1000000
