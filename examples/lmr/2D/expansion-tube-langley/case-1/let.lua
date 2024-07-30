@@ -14,6 +14,8 @@ print("Langley Expansion Tube, Case 1")
 config.solver_mode = 'transient'
 config.dimensions = 2
 config.axisymmetric = true
+config.grid_format = 'rawbinary'
+config.field_format = 'rawbinary'
 dofile('./geom.lua')
 dofile('./blkIds.lua')
 --
@@ -44,15 +46,17 @@ makeFluidBlocks(bcDict, flowDict)
 config.viscous = true
 config.spatial_deriv_locn = 'vertices'
 config.spatial_deriv_calc = 'divergence'
-config.viscous_signal_factor = 0.0
+config.viscous_signal_factor = 0.1
 config.max_time = 6.0e-3 -- s
 config.max_step = 1000000
 config.gasdynamic_update_scheme = "classic-rk3"
 config.dt_init = 1.0e-9
-config.cfl_value = 0.40
+config.cfl_value = 0.60
 config.flux_calculator = "ausmdv"
 config.cfl_count = 3
 config.suppress_radial_reconstruction_at_xaxis = true
+config.max_invalid_cells = 100
+config.adjust_invalid_cell_data = true
 --
 config.dt_plot = 0.5e-4 -- s (at 0.1 ms)
 --

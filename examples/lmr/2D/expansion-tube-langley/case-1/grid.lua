@@ -14,6 +14,7 @@ print("Langley Expansion Tube, Case 1")
 config.dimensions = 2
 config.axisymmetric = true
 config.viscous = true
+config.grid_format = 'rawbinary'
 --
 dofile('./geom.lua')
 quad0 = CoonsPatch:new{p00=A1, p10=B1, p11=B2, p01=A2}
@@ -23,7 +24,8 @@ quad3 = CoonsPatch:new{p00=C0, p10=D0, p11=D1, p01=C1}
 --
 -- Original grid on Cray-Y/MP was 2404x30.
 -- Distribute the cells between the three segments.
-nxcells_total = 2406
+factor = 1
+nxcells_total = math.floor(factor*2406)
 nxcells_d = math.floor((L_d/L_total)*nxcells_total + 0.5)
 nxcells_i = math.floor((L_i/L_total)*nxcells_total + 0.5)
 nxcells_a = math.floor((L_a/L_total)*nxcells_total + 0.5)
@@ -32,9 +34,9 @@ print("nxcells in int.: ", nxcells_i)
 print("nxcells in acc.: ", nxcells_a)
 print("total= ", nxcells_d + nxcells_i + nxcells_a)
 --
-nycells_driven = 30
+nycells_driven = math.floor(factor*30)
 beta = 1.1
-nycells_extra = 8
+nycells_extra = math.floor(factor*8)
 --
 clusterToWall = RobertsFunction:new{end0=false, end1=true, beta=beta}
 --
@@ -46,9 +48,12 @@ grid2 = StructuredGrid:new{psurface=quad2, niv=nxcells_i+1, njv=nycells_driven+1
 grid3 = StructuredGrid:new{psurface=quad3, niv=nxcells_a+1, njv=nycells_driven+1,
                            cfList={west=clusterToWall, east=clusterToWall}}
 -- Subdivide the grids so that we can run in parallel.
-nib_d = 2
+factorB = 1
+nib_d = math.floor(2*factorB)
 nib_i = math.floor(nib_d*L_i/L_d)
 nib_a = math.floor(nib_d*L_a/L_d)
+nblocks_total = nib_d*2 + nib_i + nib_a
+print("total number of blocks= ", nblocks_total)
 registerFluidGridArray{grid=grid0, fsTag='driver_gas', nib=nib_d, njb=1,
                        bcTags={north='warmWall', west='warmWall', east='warmWall'}}
 registerFluidGridArray{grid=grid1, fsTag='driver_gas', nib=nib_d, njb=1,
