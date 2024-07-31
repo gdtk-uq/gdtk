@@ -8,6 +8,23 @@ L_a = 14.13; R_a = R_i     -- acceleration tube
 L_total = L_d + L_i + L_a
 --
 -- Detailed geometry as quad patches.
+--
+-- y ^
+--   |
+-- 2 +------------+
+--   |   quad0    |
+-- 1 +------------+---------------+-----------------------+
+--   |            |               |                       |
+--   |   quad1    |     quad2     |         quad3         |
+--   |            |               |                       |
+-- 0 +------------+---------------+-----------------------+--> x
+--   A            B               C                       D
+--       driver     intermediate         acceleration
+--
+--                                ^
+--                                |
+--                       secondary diaphragm
+--
 A0 = Vector3:new{x=0.0, y=0.0}
 A1 = Vector3:new{x=0.0, y=R_i}
 A2 = Vector3:new{x=0.0, y=R_d}
