@@ -90,6 +90,9 @@ BlockIO limBlkIO;
 FVCellIO residCIO;
 BlockIO residBlkIO;
 
+FVCellIO gradCIO;
+BlockIO gradBlkIO;
+
 /*---------------------------------------------------------------------
  * Enums for preconditioners
  *---------------------------------------------------------------------
@@ -184,6 +187,7 @@ struct NKGlobalConfig {
     bool writeLoadsOnLastStep = true;
     bool writeLimiterValues = false;
     bool writeResidualValues = false;
+    bool writeGradientValues = false;
     bool writeLoads = false;
 
     void readValuesFromJSON(JSONValue jsonData)
@@ -235,6 +239,7 @@ struct NKGlobalConfig {
         writeLoadsOnLastStep = getJSONbool(jsonData, "write_loads_on_last_step", writeLoadsOnLastStep);
         writeLimiterValues = getJSONbool(jsonData, "write_limiter_values", writeLimiterValues);
         writeResidualValues = getJSONbool(jsonData, "write_residual_values", writeResidualValues);
+        writeGradientValues = getJSONbool(jsonData, "write_gradient_values", writeGradientValues);
         writeLoads = getJSONbool(jsonData, "write_loads", writeLoads);
     }
 }
@@ -754,7 +759,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
     }
     if (nkCfg.writeLimiterValues) {
-        limCIO = new FluidFVCellLimiterIO(buildLimiterVariables());
+        limCIO = new FluidFVCellLimiterIO(buildLimiterVariables(localFluidBlocks[0].grid_type));
         if (cfg.field_format == "rawbinary")
             limBlkIO = new BinaryBlockIO(limCIO);
         else
@@ -768,6 +773,14 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         else
             residBlkIO = new GzipBlockIO(residCIO);
         residBlkIO.writeMetadataToFile(lmrCfg.residualMetadataFile);
+    }
+    if (nkCfg.writeGradientValues) {
+        gradCIO = new FluidFVCellGradientIO(buildGradientVariables(localFluidBlocks[0].grid_type));
+        if (cfg.field_format == "rawbinary")
+            gradBlkIO = new BinaryBlockIO(gradCIO);
+        else
+            gradBlkIO = new GzipBlockIO(gradCIO);
+        gradBlkIO.writeMetadataToFile(lmrCfg.gradientMetadataFile);
     }
     allocateGlobalGMRESWorkspace();
     foreach (blk; localFluidBlocks) {
@@ -3018,6 +3031,9 @@ void writeSnapshot(int step, double dt, double cfl, int currentPhase, int stepsI
         if (nkCfg.writeResidualValues) {
             writeResidualValues(nWrittenSnapshots);
         }
+        if (nkCfg.writeGradientValues) {
+            writeGradientValues(nWrittenSnapshots);
+        }
 
 	// Add restart info
 	snapshots ~= RestartInfo(nConserved);
@@ -3047,6 +3063,11 @@ void writeSnapshot(int step, double dt, double cfl, int currentPhase, int stepsI
                     toName = residualFilename(iSnap-1, blk.id);
                     rename(fromName, toName);
                 }
+                if (nkCfg.writeGradientValues) {
+                    fromName = gradientFilename(iSnap, blk.id);
+                    toName = gradientFilename(iSnap-1, blk.id);
+                    rename(fromName, toName);
+                }
             }
         }
 
@@ -3056,6 +3077,9 @@ void writeSnapshot(int step, double dt, double cfl, int currentPhase, int stepsI
         }
         if (nkCfg.writeResidualValues) {
             writeResidualValues(nkCfg.totalSnapshots);
+        }
+        if (nkCfg.writeGradientValues) {
+            writeGradientValues(nkCfg.totalSnapshots);
         }
 
 	// Shuffle the restart info
@@ -3209,6 +3233,29 @@ void writeResidualValues(int iSnap)
         cells.length = blk.cells.length;
         foreach (i, ref c; cells) c = blk.cells[i];
         residBlkIO.writeVariablesToFile(fileName, cells);
+    }
+}
+
+/**
+ * Write gradient values to disk.
+ *
+ * Authors: RJG and KAD
+ * Date: 2024-08-01
+ */
+void writeGradientValues(int iSnap)
+{
+    alias cfg = GlobalConfig;
+    if (cfg.is_master_task) {
+        writefln("    |");
+        writefln("    |-->  Writing gradient values");
+    }
+
+    foreach (blk; localFluidBlocks) {
+        auto fileName = gradientFilename(iSnap, blk.id);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        gradBlkIO.writeVariablesToFile(fileName, cells);
     }
 }
 

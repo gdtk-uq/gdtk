@@ -8,7 +8,7 @@
 module fvcellio;
 
 import std.stdio;
-import std.algorithm : canFind, startsWith;
+import std.algorithm : findSplit, canFind, startsWith;
 import std.string : split;
 import std.conv : to;
 import std.format : format;
@@ -23,26 +23,29 @@ import lmr.fluidfvcell : FluidFVCell;
 import lmr.fvcell : FVCell;
 import solidfvcell : SolidFVCell;
 import flowstate : FlowState;
-import geom : Vector3;
+import geom : Grid_t, Vector3;
 
-enum FieldVarsType { fluid, solid, limiter, residual };
+enum FieldVarsType { fluid, solid, limiter, residual, gradient };
 
 string fieldVarsTypeName(FieldVarsType i)
 {
     final switch(i) {
-	case FieldVarsType.fluid: return "fluid";
-        case FieldVarsType.solid: return "solid";
-	case FieldVarsType.limiter: return "limiter";
-        case FieldVarsType.residual: return "residual";
+    case FieldVarsType.fluid: return "fluid";
+    case FieldVarsType.solid: return "solid";
+    case FieldVarsType.limiter: return "limiter";
+    case FieldVarsType.residual: return "residual";
+    case FieldVarsType.gradient: return "gradient";
     }
 }
 
 FieldVarsType fieldVarsTypeFromName(string name)
 {
     switch (name) {
-	case "fluid": return FieldVarsType.fluid;
+    case "fluid": return FieldVarsType.fluid;
     case "solid": return FieldVarsType.solid;
-	case "limiter": return FieldVarsType.limiter;
+    case "limiter": return FieldVarsType.limiter;
+    case "residual": return FieldVarsType.residual;
+    case "gradient": return FieldVarsType.gradient;
 	default:
         string errMsg = "The selection of FieldVarsType is unavailable.\n";
         errMsg ~= format("You selected '%s'\n", name);
@@ -51,6 +54,7 @@ FieldVarsType fieldVarsTypeFromName(string name)
         errMsg ~= "   'solid'\n";
         errMsg ~= "   'limiter'\n";
         errMsg ~= "   'residual'\n";
+        errMsg ~= "   'gradient'\n";
         errMsg ~= "Check the selection or its spelling.\n";
         throw new Error(errMsg);
     }
@@ -414,47 +418,59 @@ public:
  * Authors: RJG
  * Date: 2023-08-13
  */
-string[] buildLimiterVariables()
+string[] buildLimiterVariables(Grid_t grid_type)
 {
     alias cfg = GlobalConfig;
+    bool add_limiter_values = (grid_type == Grid_t.unstructured_grid) && (cfg.interpolation_order > 1);
     string[] variables;
-    final switch (cfg.thermo_interpolator) {
-    case InterpolateOption.pt:
-        variables ~= "p";
-        variables ~= "T";
-        break;
-    case InterpolateOption.rhou:
-        variables ~= "rho";
-        variables ~= "e";
-        break;
-    case InterpolateOption.rhop:
-        variables ~= "rho";
-        variables ~= "p";
-        break;
-    case InterpolateOption.rhot:
-        variables ~= "rho";
-        variables ~= "T";
-        break;
-    } // end switch
-    variables ~= "vel.x";
-    variables ~= "vel.y";
-    if (cfg.dimensions == 3) variables ~= "vel.z";
-    foreach (isp; 0 .. cfg.gmodel_master.n_species) {
-	variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
-    }
-    foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
-        if (cfg.thermo_interpolator == InterpolateOption.rhou ||
-            cfg.thermo_interpolator == InterpolateOption.rhop ) {
-            variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
-        } else {
-            variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+
+    if (add_limiter_values) {
+        final switch (cfg.thermo_interpolator) {
+        case InterpolateOption.pt:
+            variables ~= "p";
+            variables ~= "T";
+            break;
+        case InterpolateOption.rhou:
+            variables ~= "rho";
+            variables ~= "e";
+            break;
+        case InterpolateOption.rhop:
+            variables ~= "rho";
+            variables ~= "p";
+            break;
+        case InterpolateOption.rhot:
+            variables ~= "rho";
+            variables ~= "T";
+            break;
+        } // end switch
+        variables ~= "vel.x";
+        variables ~= "vel.y";
+        if (cfg.dimensions == 3) variables ~= "vel.z";
+        foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+            variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
+        }
+        foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+            if (cfg.thermo_interpolator == InterpolateOption.rhou ||
+                cfg.thermo_interpolator == InterpolateOption.rhop ) {
+                variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+            } else {
+                variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+            }
+        }
+        if (cfg.turbulence_model_name != "none") {
+            foreach (iturb; 0 .. cfg.turb_model.nturb) {
+                variables ~= "tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+            }
         }
     }
-    if (cfg.turbulence_model_name != "none") {
-	foreach (iturb; 0 .. cfg.turb_model.nturb) {
-	    variables ~= "tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
-	}
+
+    if (variables.length == 0 && cfg.is_master_task) {
+        string errMsg = "ERROR: NO LIMITER VARIABLES FOUND.\n";
+        errMsg ~= "** You have opted for cell-centered limiter values to be written to disk, however, no limiter variables have been found. \n";
+        errMsg ~= "** Note this option is only available for unstructured grid simulations with interpolation_order > 1. \n";
+        throw new Error(errMsg);
     }
+
     return variables;
 } // end buildLimiterVariables()
 
@@ -463,9 +479,9 @@ string[] buildLimiterVariables()
 class FluidFVCellLimiterIO : FVCellIO {
 public:
 
-    this()
+    this(Grid_t grid_type)
     {
-        this(buildLimiterVariables());
+        this(buildLimiterVariables(grid_type));
     }
 
     this(string[] variables)
@@ -546,7 +562,7 @@ public:
     	case "vel.x": return fcell.gradients.velxPhi.re;
     	case "vel.y": return fcell.gradients.velyPhi.re;
     	case "vel.z": return fcell.gradients.velzPhi.re;
-    	default:
+        default:
             throw new LmrException("Invalid selection for cell gradient variable: " ~ var);
         }
     } // end opIndex()
@@ -756,13 +772,463 @@ private:
 } // end class FluidFVCellResidualIO
 
 
+/**
+ * Build the list of gradient variables based on modelling configuration.
+ *
+ * The string names for variables should match those in this module in:
+ *
+ *   FluidFVCellGradientIO.opIndex; and
+ *   FluidFVCellGradientIO.opIndexAssign.
+ *
+ * Authors: KAD and RJG
+ * Date: 2024-08-01
+ */
+string[] buildGradientVariables(Grid_t grid_type)
+{
+    alias cfg = GlobalConfig;
+    bool add_convective_gradients = (grid_type == Grid_t.unstructured_grid) && (cfg.interpolation_order > 1);
+    bool add_viscous_gradients = cfg.viscous &&
+        (cfg.spatial_deriv_calc == SpatialDerivCalc.least_squares) &&
+        (cfg.spatial_deriv_locn == SpatialDerivLocn.cells);
+    bool add_z_component = (cfg.dimensions == 3);
+    string[] variables;
+
+    // collect the convective gradients
+    if (add_convective_gradients) {
+        final switch (cfg.thermo_interpolator) {
+        case InterpolateOption.pt:
+            variables ~= "conv_x_p";
+            variables ~= "conv_y_p";
+            variables ~= "conv_x_T";
+            variables ~= "conv_y_T";
+            if (add_z_component) {
+                variables ~= "conv_z_p";
+                variables ~= "conv_z_T";
+            }
+            break;
+        case InterpolateOption.rhou:
+            variables ~= "conv_x_rho";
+            variables ~= "conv_y_rho";
+            variables ~= "conv_x_e";
+            variables ~= "conv_y_e";
+            if (add_z_component) {
+                variables ~= "conv_z_rho";
+                variables ~= "conv_z_e";
+            }
+            break;
+        case InterpolateOption.rhop:
+            variables ~= "conv_x_rho";
+            variables ~= "conv_y_rho";
+            variables ~= "conv_x_p";
+            variables ~= "conv_y_p";
+            if (add_z_component) {
+                variables ~= "conv_z_rho";
+                variables ~= "conv_z_p";
+            }
+            break;
+        case InterpolateOption.rhot:
+            variables ~= "conv_x_rho";
+            variables ~= "conv_y_rho";
+            variables ~= "conv_x_T";
+            variables ~= "conv_y_T";
+            if (add_z_component) {
+                variables ~= "conv_z_rho";
+                variables ~= "conv_z_T";
+            }
+            break;
+        } // end switch
+        if (add_convective_gradients) {
+            variables ~= "conv_x_vel.x";
+            variables ~= "conv_y_vel.x";
+            variables ~= "conv_x_vel.y";
+            variables ~= "conv_y_vel.y";
+        }
+        if (add_z_component) {
+            variables ~= "conv_x_vel.z";
+            variables ~= "conv_y_vel.z";
+            variables ~= "conv_z_vel.x";
+            variables ~= "conv_z_vel.y";
+            variables ~= "conv_z_vel.z";
+        }
+        foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+            variables ~= "conv_x_massf-" ~ cfg.gmodel_master.species_name(isp);
+            variables ~= "conv_y_massf-" ~ cfg.gmodel_master.species_name(isp);
+            if (add_z_component) {
+                variables ~= "conv_z_massf-" ~ cfg.gmodel_master.species_name(isp);
+            }
+        }
+        foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+            if (cfg.thermo_interpolator == InterpolateOption.rhou ||
+                cfg.thermo_interpolator == InterpolateOption.rhop ) {
+                variables ~= "conv_x_e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+                variables ~= "conv_y_e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+                if (add_z_component) {
+                    variables ~= "conv_z_e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+                }
+            } else {
+                variables ~= "conv_x_T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+                variables ~= "conv_y_T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+                if (add_z_component) {
+                    variables ~= "conv_z_T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+                }
+            }
+        }
+        if (cfg.turbulence_model_name != "none") {
+            foreach (iturb; 0 .. cfg.turb_model.nturb) {
+                variables ~= "conv_x_tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+                variables ~= "conv_y_tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+                if (add_z_component) {
+                    variables ~= "conv_z_tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+                }
+            }
+        }
+    }
+
+    // collect the viscous gradients
+    if (add_viscous_gradients) {
+        variables ~= "visc_x_vel.x";
+        variables ~= "visc_y_vel.x";
+        variables ~= "visc_x_vel.y";
+        variables ~= "visc_y_vel.y";
+        if (add_z_component) {
+            variables ~= "visc_x_vel.z";
+            variables ~= "visc_y_vel.z";
+            variables ~= "visc_z_vel.x";
+            variables ~= "visc_z_vel.y";
+            variables ~= "visc_z_vel.z";
+        }
+        variables ~= "visc_x_T";
+        variables ~= "visc_y_T";
+        if (add_z_component) {
+            variables ~= "visc_z_T";
+        }
+        foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+            variables ~= "visc_x_massf-" ~ cfg.gmodel_master.species_name(isp);
+            variables ~= "visc_y_massf-" ~ cfg.gmodel_master.species_name(isp);
+            if (add_z_component) {
+                variables ~= "visc_z_massf-" ~ cfg.gmodel_master.species_name(isp);
+            }
+        }
+        foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+            variables ~= "visc_x_T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+            variables ~= "visc_y_T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+            if (add_z_component) {
+                variables ~= "visc_z_T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+            }
+        }
+        if (cfg.turbulence_model_name != "none") {
+            foreach (iturb; 0 .. cfg.turb_model.nturb) {
+                variables ~= "visc_x_tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+                variables ~= "visc_y_tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+                if (add_z_component) {
+                    variables ~= "visc_z_tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+                }
+            }
+        }
+    }
+
+    if (variables.length == 0 && cfg.is_master_task) {
+        string errMsg = "ERROR: NO GRADIENT VARIABLES FOUND.\n";
+        errMsg ~= "** You have opted for cell-centered gradient values to be written to disk, however, no gradient variables have been found. \n";
+        errMsg ~= "** Note this option is only available for either: \n";
+        errMsg ~= "**     1. inviscid unstructured grid simulations with interpolation_order > 1. \n";
+        errMsg ~= "** or \n";
+        errMsg ~= "**     2. viscous simulations using spatial_deriv_calc set to least_squares and spatial_deriv_locn set to cells. \n";
+        throw new Error(errMsg);
+    }
+
+    return variables;
+} // end buildGradientVariables()
+
+class FluidFVCellGradientIO : FVCellIO {
+public:
+
+    this(Grid_t grid_type)
+    {
+        this(buildGradientVariables(grid_type));
+    }
+
+    this(string[] variables)
+    {
+        cFVT = FieldVarsType.gradient;
+        mVariables = variables.dup;
+
+        alias cfg = GlobalConfig;
+        foreach (var; variables) {
+            if (var.canFind("massf-")) {
+                auto spName = var.findSplit("massf-")[2];
+                auto spIdx = cfg.gmodel_master.species_index(spName);
+                if (spIdx != -1)
+                    mSpecies[var.idup] = spIdx;
+                else
+                    throw new LmrException("Invalid species name: " ~ spName);
+            }
+            if (var.canFind("T-")) {
+                auto modeName = var.split("-")[1];
+                auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+                if (modeIdx != -1)
+                    mTModes[var.idup] = modeIdx;
+                else
+                    throw new LmrException("Invalid mode name: " ~ modeName);
+            }
+            if (var.canFind("e-")) {
+                auto modeName = var.split("-")[1];
+                auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+                if (modeIdx != -1)
+                    muModes[var.idup] = modeIdx;
+                else
+                    throw new LmrException("Invalid mode name: " ~ modeName);
+            }
+            if (var.canFind("tq-")) {
+                auto tqName = var.split("-")[1];
+                auto tqIdx = cfg.turb_model.primitive_variable_index(tqName);
+                if (tqIdx != -1)
+                    mTurbQuants[var.idup] = tqIdx;
+                else
+                    throw new LmrException("Invalid turbulence quantity name: " ~ tqName);
+            }
+        }
+    } // end constructor
+
+    override
+    FluidFVCellGradientIO dup()
+    {
+        return new FluidFVCellGradientIO(mVariables);
+    }
+
+    override
+    const double opIndex(FVCell cell, string var)
+    {
+        auto fcell = cast(FluidFVCell) cell;
+        if (fcell is null) {
+            throw new LmrException("Invalid cast to FluidFVCell.");
+        }
+        // First handle array-stored values:
+        // species, modes and turbulence quantities
+        if (var in mSpecies) {
+            if (var.canFind("conv_x")) { return fcell.gradients.rho_s[mSpecies[var]][0].re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.rho_s[mSpecies[var]][1].re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.rho_s[mSpecies[var]][2].re; }
+            if (var.canFind("visc_x")) { return fcell.grad.massf[mSpecies[var]][0].re; }
+            if (var.canFind("visc_y")) { return fcell.grad.massf[mSpecies[var]][1].re; }
+            if (var.canFind("visc_z")) { return fcell.grad.massf[mSpecies[var]][2].re; }
+        }
+        if (var in mTModes) {
+            if (var.canFind("conv_x")) { return fcell.gradients.T_modes[mTModes[var]][0].re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.T_modes[mTModes[var]][1].re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.T_modes[mTModes[var]][2].re; }
+            if (var.canFind("visc_x")) { return fcell.grad.T_modes[mTModes[var]][0].re; }
+            if (var.canFind("visc_y")) { return fcell.grad.T_modes[mTModes[var]][1].re; }
+            if (var.canFind("visc_z")) { return fcell.grad.T_modes[mTModes[var]][2].re; }
+        }
+        if (var in muModes) {
+            if (var.canFind("conv_x")) { return fcell.gradients.u_modes[muModes[var]][0].re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.u_modes[muModes[var]][1].re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.u_modes[muModes[var]][2].re; }
+        }
+        if (var in mTurbQuants) {
+            if (var.canFind("conv_x")) { return fcell.gradients.turb[mTurbQuants[var]][0].re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.turb[mTurbQuants[var]][1].re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.turb[mTurbQuants[var]][2].re; }
+            if (var.canFind("visc_x")) { return fcell.grad.turb[mTurbQuants[var]][0].re; }
+            if (var.canFind("visc_y")) { return fcell.grad.turb[mTurbQuants[var]][1].re; }
+            if (var.canFind("visc_z")) { return fcell.grad.turb[mTurbQuants[var]][2].re; }
+        }
+        // For everything else, find appropriate case
+        switch(var) {
+        case "conv_x_rho": return fcell.gradients.rho[0].re;
+        case "conv_y_rho": return fcell.gradients.rho[1].re;
+        case "conv_z_rho": return fcell.gradients.rho[2].re;
+        case "conv_x_p": return fcell.gradients.p[0].re;
+        case "conv_y_p": return fcell.gradients.p[1].re;
+        case "conv_z_p": return fcell.gradients.p[2].re;
+        case "conv_x_e": return fcell.gradients.u[0].re;
+        case "conv_y_e": return fcell.gradients.u[1].re;
+        case "conv_z_e": return fcell.gradients.u[2].re;
+        case "conv_x_T": return fcell.gradients.T[0].re;
+        case "conv_y_T": return fcell.gradients.T[1].re;
+        case "conv_z_T": return fcell.gradients.T[2].re;
+        case "visc_x_T": return fcell.grad.T[0].re;
+        case "visc_y_T": return fcell.grad.T[1].re;
+        case "visc_z_T": return fcell.grad.T[2].re;
+        case "conv_x_vel.x": return fcell.gradients.velx[0].re;
+        case "conv_y_vel.x": return fcell.gradients.velx[1].re;
+        case "conv_z_vel.x": return fcell.gradients.velx[2].re;
+        case "visc_x_vel.x": return fcell.grad.vel[0][0].re;
+        case "visc_y_vel.x": return fcell.grad.vel[0][1].re;
+        case "visc_z_vel.x": return fcell.grad.vel[0][2].re;
+        case "conv_x_vel.y": return fcell.gradients.vely[0].re;
+        case "conv_y_vel.y": return fcell.gradients.vely[1].re;
+        case "conv_z_vel.y": return fcell.gradients.vely[2].re;
+        case "visc_x_vel.y": return fcell.grad.vel[1][0].re;
+        case "visc_y_vel.y": return fcell.grad.vel[1][1].re;
+        case "visc_z_vel.y": return fcell.grad.vel[1][2].re;
+        case "conv_x_vel.z": return fcell.gradients.velz[0].re;
+        case "conv_y_vel.z": return fcell.gradients.velz[1].re;
+        case "conv_z_vel.z": return fcell.gradients.velz[2].re;
+        case "visc_x_vel.z": return fcell.grad.vel[2][0].re;
+        case "visc_y_vel.z": return fcell.grad.vel[2][1].re;
+        case "visc_z_vel.z": return fcell.grad.vel[2][2].re;
+        default:
+            throw new LmrException("Invalid selection for cell gradient variable: " ~ var);
+        }
+    } // end opIndex()
+
+    override
+    ref double opIndexAssign(double value, FVCell cell, string var)
+    {
+        auto fcell = cast(FluidFVCell) cell;
+        if (fcell is null) {
+            throw new LmrException("Invalid cast to FluidFVCell.");
+        }
+
+        if (var in mSpecies) {
+            if (var.canFind("conv_x")) {
+                fcell.gradients.rho_s[mSpecies[var]][0].re = value;
+                return fcell.gradients.rho_s[mSpecies[var]][0].re;
+            }
+            if (var.canFind("conv_y")) {
+                fcell.gradients.rho_s[mSpecies[var]][1].re = value;
+                return fcell.gradients.rho_s[mSpecies[var]][1].re;
+            }
+            if (var.canFind("conv_z")) {
+                fcell.gradients.rho_s[mSpecies[var]][2].re = value;
+                return fcell.gradients.rho_s[mSpecies[var]][2].re;
+            }
+            if (var.canFind("visc_x")) {
+                fcell.grad.massf[mSpecies[var]][0].re = value;
+                return fcell.grad.massf[mSpecies[var]][0].re;
+            }
+            if (var.canFind("visc_y")) {
+                fcell.grad.massf[mSpecies[var]][1].re = value;
+                return fcell.grad.massf[mSpecies[var]][1].re;
+            }
+            if (var.canFind("visc_z")) {
+                fcell.grad.massf[mSpecies[var]][2].re = value;
+                return fcell.grad.massf[mSpecies[var]][2].re;
+            }
+        }
+        if (var in mTModes) {
+            if (var.canFind("conv_x")) {
+                fcell.gradients.T_modes[mTModes[var]][0].re = value;
+                return fcell.gradients.T_modes[mTModes[var]][0].re;
+            }
+            if (var.canFind("conv_y")) {
+                fcell.gradients.T_modes[mTModes[var]][1].re = value;
+                return fcell.gradients.T_modes[mTModes[var]][1].re;
+            }
+            if (var.canFind("conv_z")) {
+                fcell.gradients.T_modes[mTModes[var]][2].re = value;
+                return fcell.gradients.T_modes[mTModes[var]][2].re;
+            }
+            if (var.canFind("visc_x")) {
+                fcell.grad.T_modes[mTModes[var]][0].re = value;
+                return fcell.grad.T_modes[mTModes[var]][0].re;
+            }
+            if (var.canFind("visc_y")) {
+                fcell.grad.T_modes[mTModes[var]][1].re = value;
+                return fcell.grad.T_modes[mTModes[var]][1].re;
+            }
+            if (var.canFind("visc_z")) {
+                fcell.grad.T_modes[mTModes[var]][2].re = value;
+                return fcell.grad.T_modes[mTModes[var]][2].re;
+            }
+        }
+        if (var in muModes) {
+            if (var.canFind("conv_x")) {
+                fcell.gradients.u_modes[muModes[var]][0].re = value;
+                return fcell.gradients.u_modes[muModes[var]][0].re;
+            }
+            if (var.canFind("conv_y")) {
+                fcell.gradients.u_modes[muModes[var]][1].re = value;
+                return fcell.gradients.u_modes[muModes[var]][1].re;
+            }
+            if (var.canFind("conv_z")) {
+                fcell.gradients.u_modes[muModes[var]][2].re = value;
+                return fcell.gradients.u_modes[muModes[var]][2].re;
+            }
+        }
+        if (var in mTurbQuants) {
+            if (var.canFind("conv_x")) {
+                fcell.gradients.turb[mTurbQuants[var]][0].re = value;
+                return fcell.gradients.turb[mTurbQuants[var]][0].re;
+            }
+            if (var.canFind("conv_y")) {
+                fcell.gradients.turb[mTurbQuants[var]][1].re = value;
+                return fcell.gradients.turb[mTurbQuants[var]][1].re;
+            }
+            if (var.canFind("conv_z")) {
+                fcell.gradients.turb[mTurbQuants[var]][2].re = value;
+                return fcell.gradients.turb[mTurbQuants[var]][2].re;
+            }
+            if (var.canFind("visc_x")) {
+                fcell.grad.turb[mTurbQuants[var]][0].re = value;
+                return fcell.grad.turb[mTurbQuants[var]][0].re;
+            }
+            if (var.canFind("visc_y")) {
+                fcell.grad.turb[mTurbQuants[var]][1].re = value;
+                return fcell.grad.turb[mTurbQuants[var]][1].re;
+            }
+            if (var.canFind("visc_z")) {
+                fcell.grad.turb[mTurbQuants[var]][2].re = value;
+                return fcell.grad.turb[mTurbQuants[var]][2].re;
+            }
+        }
+        // For everything else, find appropriate case
+        switch(var) {
+        case "conv_x_rho": fcell.gradients.rho[0].re = value; return fcell.gradients.rho[0].re;
+        case "conv_y_rho": fcell.gradients.rho[1].re = value; return fcell.gradients.rho[1].re;
+        case "conv_z_rho": fcell.gradients.rho[2].re = value; return fcell.gradients.rho[2].re;
+        case "conv_x_p": fcell.gradients.p[0].re = value; return fcell.gradients.p[0].re;
+        case "conv_y_p": fcell.gradients.p[1].re = value; return fcell.gradients.p[1].re;
+        case "conv_z_p": fcell.gradients.p[2].re = value; return fcell.gradients.p[2].re;
+        case "conv_x_e": fcell.gradients.u[0].re = value; return fcell.gradients.u[0].re;
+        case "conv_y_e": fcell.gradients.u[1].re = value; return fcell.gradients.u[1].re;
+        case "conv_z_e": fcell.gradients.u[2].re = value; return fcell.gradients.u[2].re;
+        case "conv_x_T": fcell.gradients.T[0].re = value; return fcell.gradients.T[0].re;
+        case "conv_y_T": fcell.gradients.T[1].re = value; return fcell.gradients.T[1].re;
+        case "conv_z_T": fcell.gradients.T[2].re = value; return fcell.gradients.T[2].re;
+        case "visc_x_T": fcell.grad.T[0].re = value; return fcell.grad.T[0].re;
+        case "visc_y_T": fcell.grad.T[1].re = value; return fcell.grad.T[1].re;
+        case "visc_z_T": fcell.grad.T[2].re = value; return fcell.grad.T[2].re;
+        case "conv_x_vel.x": fcell.gradients.velx[0].re = value; return fcell.gradients.velx[0].re;
+        case "conv_y_vel.x": fcell.gradients.velx[1].re = value; return fcell.gradients.velx[1].re;
+        case "conv_z_vel.x": fcell.gradients.velx[2].re = value; return fcell.gradients.velx[2].re;
+        case "visc_x_vel.x": fcell.grad.vel[0][0].re = value; return fcell.grad.vel[0][0].re;
+        case "visc_y_vel.x": fcell.grad.vel[0][1].re = value; return fcell.grad.vel[0][1].re;
+        case "visc_z_vel.x": fcell.grad.vel[0][2].re = value; return fcell.grad.vel[0][2].re;
+        case "conv_x_vel.y": fcell.gradients.vely[0].re = value; return fcell.gradients.vely[0].re;
+        case "conv_y_vel.y": fcell.gradients.vely[1].re = value; return fcell.gradients.vely[1].re;
+        case "conv_z_vel.y": fcell.gradients.vely[2].re = value; return fcell.gradients.vely[2].re;
+        case "visc_x_vel.y": fcell.grad.vel[1][0].re = value; return fcell.grad.vel[1][0].re;
+        case "visc_y_vel.y": fcell.grad.vel[1][1].re = value; return fcell.grad.vel[1][1].re;
+        case "visc_z_vel.y": fcell.grad.vel[1][2].re = value; return fcell.grad.vel[1][2].re;
+        case "conv_x_vel.z": fcell.gradients.velz[0].re = value; return fcell.gradients.velz[0].re;
+        case "conv_y_vel.z": fcell.gradients.velz[1].re = value; return fcell.gradients.velz[1].re;
+        case "conv_z_vel.z": fcell.gradients.velz[2].re = value; return fcell.gradients.velz[2].re;
+        case "visc_x_vel.z": fcell.grad.vel[2][0].re = value; return fcell.grad.vel[2][0].re;
+        case "visc_y_vel.z": fcell.grad.vel[2][1].re = value; return fcell.grad.vel[2][1].re;
+        case "visc_z_vel.z": fcell.grad.vel[2][2].re = value; return fcell.grad.vel[2][2].re;
+        default:
+            throw new LmrException("Invalid selection for cell gradient variable: " ~ var);
+        }
+    } // end opIndexAssign()
+
+private:
+    int[string] mSpecies;
+    int[string] mTModes;
+    int[string] muModes;
+    int[string] mTurbQuants;
+} // end class FluidFVCellLimiterIO
+
 FVCellIO createFVCellIO(FieldVarsType fvt, string[] variables)
 {
     final switch (fvt) {
-        case FieldVarsType.fluid: return new FluidFVCellIO(variables);
-	case FieldVarsType.solid: return new SolidFVCellIO(variables);
-	case FieldVarsType.limiter: return new FluidFVCellLimiterIO(variables);
-	case FieldVarsType.residual: return new FluidFVCellResidualIO(variables);
+    case FieldVarsType.fluid: return new FluidFVCellIO(variables);
+    case FieldVarsType.solid: return new SolidFVCellIO(variables);
+    case FieldVarsType.limiter: return new FluidFVCellLimiterIO(variables);
+    case FieldVarsType.residual: return new FluidFVCellResidualIO(variables);
+    case FieldVarsType.gradient: return new FluidFVCellGradientIO(variables);
     }
 }
 

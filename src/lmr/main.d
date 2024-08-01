@@ -11,6 +11,7 @@ import sliceflow;
 import extractline;
 import limiter2vtk;
 import residual2vtk;
+import gradient2vtk;
 import lmr.commands.listspecies;
 import lmr.commands.plotdiagnostics;
 import lmr.commands.prepenergyexchange;
@@ -58,6 +59,7 @@ Show help for a given Eilmer command or topic.
     commands["custom-script"] = customScriptCmd;
     commands["extract-line"] = extractLineCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
+    commands["gradient2vtk"] = gradient2vtkCmd;
     commands["list-species"] = listSpeciesCmd;
     // alias for list-species, provided for consistency with prep-gas tool
     commands["list-available-species"] = commands["list-species"];
