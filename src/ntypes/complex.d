@@ -260,6 +260,13 @@ if (isFloatingPoint!T)
         return this;
     }
 
+    // CASTING OPERATORS
+
+    R opCast(R : T)() const
+    {
+        return re;
+    }
+
     // COMPARISON OPERATORS
 
     // For the opEquals comparison operators, we only want the real component to be checked,
