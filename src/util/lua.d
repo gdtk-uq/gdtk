@@ -3,6 +3,21 @@ module util.lua;
 import ntypes.complex;
 void lua_pushnumber(lua_State* L, Complex!double n) { lua_pushnumber(L, n.re); }
 
+// A.M.M - 01/12/2023
+// Create a trait that allows us to check if a type can be cast to another.
+// We require this, as the traditional "isFloatingPoint" cannot be extended
+// to custom types, such as Complex and Dual. 
+public template canCastTo(T, U) {
+    import std.traits : ReturnType;
+    // Check if T can be implicitly or explicitly cast to U
+    // A more complete version will hijack the `to!` checks
+    static if ( is(T : U) || is(ReturnType!(T.opCast!U) == U) ) {
+        enum canCastTo = true;
+    } else {
+        enum canCastTo = false;
+    }
+}
+
 extern (C):
 
 const LUAI_MAXSTACK = 1000000;
