@@ -14,7 +14,6 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.algorithm;
-import ntypes.complex;
 
 import util.lua;
 
@@ -310,7 +309,11 @@ void getArrayOfStrings(lua_State* L, string key, out string[] values)
  * Get named array of numbers from index in Lua stack.
  */
 
-void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values)
+void getArrayOfDoubles(T)(lua_State* L, int tblIdx, string key, out T[] values)
+    // NOTE: This checks if we can cast T -> double, which isn't exactly what
+    //       we want, but it's a reasonable assumption for now. 
+    //       A better method will check if `to!` is valid, but `to!` is *very* powerful
+    if (canCastTo!(T, double))
 {
     int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
@@ -327,32 +330,7 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values
     auto n = to!int(lua_objlen(L, -1));
     foreach ( i; 1..n+1 ) {
         lua_rawgeti(L, -1, i);
-        if ( lua_isnumber(L, -1) ) values ~= lua_tonumber(L, -1);
-        // Silently ignore anything that isn't a value.
-        lua_pop(L, 1);
-    }
-    lua_pop(L, 1);
-    warnOnStackChange(L, old_top);
-}
-
-void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[] values)
-{
-    int old_top = lua_gettop(L);
-    if (!lua_istable(L, tblIdx)) {
-        string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
-        throw new Error(errMsg);
-    }
-    values.length = 0;
-    lua_getfield(L, tblIdx, key.toStringz);
-    if ( !lua_istable(L, -1) ) {
-        string errMsg = format("A table of numbers was expected in field: %s", key);
-        lua_pop(L, 1);
-        throw new Error(errMsg);
-    }
-    auto n = to!int(lua_objlen(L, -1));
-    foreach ( i; 1..n+1 ) {
-        lua_rawgeti(L, -1, i);
-        if ( lua_isnumber(L, -1) ) values ~= to!(Complex!double)(lua_tonumber(L, -1));
+        if ( lua_isnumber(L, -1) ) values ~= to!(T)(lua_tonumber(L, -1));
         // Silently ignore anything that isn't a value.
         lua_pop(L, 1);
     }
@@ -389,7 +367,7 @@ void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
     warnOnStackChange(L, old_top);
 }
 
-void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double[string] params)
+void getAssocArrayOfDoubles(T)(lua_State* L, string key, string[] pList, out T[string] params)
 {
     int old_top = lua_gettop(L);
     if (!lua_istable(L, -1)) {
@@ -403,27 +381,7 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double
         throw new Error(errMsg);
     }
     foreach (p; pList) {
-        params[p] = getDouble(L, -1, p);
-    }
-    lua_pop(L, 1);
-    warnOnStackChange(L, old_top);
-}
-
-void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Complex!double[string] params)
-{
-    int old_top = lua_gettop(L);
-    if (!lua_istable(L, -1)) {
-        string errMsg = format("getAssocArrayOfDoubles was expecting a table at stack index: %d", -1);
-        throw new Error(errMsg);
-    }
-    lua_getfield(L, -1, key.toStringz);
-    if ( !lua_istable(L, -1) ) {
-        string errMsg = format("A table with key and values (doubles) was expected in field: %s", key);
-        lua_pop(L, 1);
-        throw new Error(errMsg);
-    }
-    foreach (p; pList) {
-        params[p] = Complex!double(getDouble(L, -1, p), 0.0);
+        params[p] = to!(T)(getDouble(L, -1, p));
     }
     lua_pop(L, 1);
     warnOnStackChange(L, old_top);
