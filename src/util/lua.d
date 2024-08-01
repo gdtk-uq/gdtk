@@ -18,6 +18,41 @@ public template canCastTo(T, U) {
     }
 }
 
+@("canCastTo Trait")
+unittest {
+    struct MyType(T) {
+        T inner;
+
+        R opCast(R : T)() const {
+            return inner;
+        }
+    }
+
+    auto value = MyType!(double)(1.0);
+    auto casted = cast(double)(value);
+    assert( is(typeof(value) == MyType!double) );
+    assert( is(typeof(casted) == double) );
+
+    static assert(canCastTo!(MyType!double, double));
+    static assert(canCastTo!(MyType!float, float));
+    static assert(canCastTo!(MyType!double, float));
+    static assert(canCastTo!(MyType!float, double));
+
+    static assert(canCastTo!(double, double));
+    static assert(canCastTo!(float, double));
+    static assert(canCastTo!(double, float));
+
+    int i1 = 1;
+    double d1 = cast(double) i1;
+    assert( is(typeof(d1) == double) );
+    assert( d1 == 1.0 );
+    
+    static assert(canCastTo!(int, double));
+    static assert(canCastTo!(char, double));
+    static assert(canCastTo!(bool, double));
+    static assert(!canCastTo!(string, double));
+}
+
 extern (C):
 
 const LUAI_MAXSTACK = 1000000;
