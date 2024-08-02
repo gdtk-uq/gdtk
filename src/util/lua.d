@@ -1,11 +1,59 @@
 module util.lua;
 
-import ntypes.complex;
-void lua_pushnumber(lua_State* L, Complex!double n) { lua_pushnumber(L, n.re); }
+
+// A.M.M - 01/12/2023
+// Create a trait that allows us to check if a type can be cast to another.
+// We require this, as the traditional "isFloatingPoint" cannot be extended
+// to custom types, such as Complex and Dual. 
+public template canCastTo(T, U) {
+    import std.traits : ReturnType;
+    // Check if T can be implicitly or explicitly cast to U
+    // A more complete version will hijack the `to!` checks
+    static if ( is(T : U) || is(ReturnType!(T.opCast!U) == U) ) {
+        enum canCastTo = true;
+    } else {
+        enum canCastTo = false;
+    }
+}
+
+@("canCastTo Trait")
+unittest {
+    struct MyType(T) {
+        T inner;
+
+        R opCast(R : T)() const {
+            return inner;
+        }
+    }
+
+    auto value = MyType!(double)(1.0);
+    auto casted = cast(double)(value);
+    assert( is(typeof(value) == MyType!double) );
+    assert( is(typeof(casted) == double) );
+
+    static assert(canCastTo!(MyType!double, double));
+    static assert(canCastTo!(MyType!float, float));
+    static assert(canCastTo!(MyType!double, float));
+    static assert(canCastTo!(MyType!float, double));
+
+    static assert(canCastTo!(double, double));
+    static assert(canCastTo!(float, double));
+    static assert(canCastTo!(double, float));
+
+    int i1 = 1;
+    double d1 = cast(double) i1;
+    assert( is(typeof(d1) == double) );
+    assert( d1 == 1.0 );
+    
+    static assert(canCastTo!(int, double));
+    static assert(canCastTo!(char, double));
+    static assert(canCastTo!(bool, double));
+    static assert(!canCastTo!(string, double));
+}
 
 extern (C):
 
-const LUAI_MAXSTACK = 1000000;
+const LUAI_MAXSTACK = 1_000_000;
 
 
 const LUA_REGISTRYINDEX = -LUAI_MAXSTACK - 1000;
@@ -27,12 +75,13 @@ const LUA_GCSETPAUSE = 6;
 const LUA_GCSETSTEPMUL = 7;
 
 struct lua_State {}
-alias int function(lua_State* L) lua_CFunction;
-alias int  function(lua_State *L, int status, lua_KContext ctx) lua_KFunction;
+alias lua_CFunction = int function(lua_State* L);
+alias lua_KFunction = int function(lua_State *L, int status, lua_KContext ctx);
 
-alias double lua_Number;
-alias int lua_KContext;
-alias ptrdiff_t lua_Integer;
+alias lua_Number = double;
+alias lua_KContext = int;
+alias lua_Integer = ptrdiff_t;
+
 void lua_close(lua_State* L);
 int lua_gettop(lua_State* L) nothrow;
 void lua_settop(lua_State *L, int idx) nothrow;
@@ -45,6 +94,8 @@ void lua_replace(lua_State* L, int idx);
 
 void lua_pushnil(lua_State* L);
 void lua_pushnumber(lua_State* L, lua_Number n);
+// Templated version, to allow for Complex and Dual numbers without coupling packages
+void lua_pushnumber(T)(lua_State* L, T n) if (canCastTo!(T, lua_Number)) { lua_pushnumber(L, cast(lua_Number) n); }
 void lua_pushinteger(lua_State* L, lua_Integer n);
 void lua_pushstring(lua_State* L, const(char)* s);
 void lua_pushcclosure(lua_State* L, lua_CFunction fn, int n);
@@ -89,7 +140,7 @@ bool lua_isfunction(lua_State* L, int n) { return lua_type(L, n) == LUA_TFUNCTIO
 lua_Number lua_tonumberx(lua_State *L, int idx, int *isnum);
 lua_Number lua_tonumber(lua_State *L, int idx) {return lua_tonumberx(L,idx,null);}
 lua_Integer lua_tointegerx(lua_State* L, int idx, int *pisnum);
-lua_Integer lua_tointeger(lua_State* L, int idx){return lua_tointegerx(L,idx,null);};
+lua_Integer lua_tointeger(lua_State* L, int idx){return lua_tointegerx(L,idx,null);}
 bool lua_toboolean(lua_State* L, int idx);
 const(char)* lua_tostring(lua_State* L, int i) { return lua_tolstring(L, i, null); }
 size_t lua_rawlen (lua_State *L, int idx);

@@ -260,6 +260,13 @@ if (isFloatingPoint!T)
         return this;
     }
 
+    // CASTING OPERATORS
+
+    R opCast(R : T)() const
+    {
+        return re;
+    }
+
     // COMPARISON OPERATORS
 
     // For the opEquals comparison operators, we only want the real component to be checked,
@@ -543,6 +550,15 @@ if (isFloatingPoint!T)
         return this;
     }
 
+}
+
+@("Test casting")
+@safe pure nothrow unittest
+{
+    auto c1 = complex(1.0, 1.0);
+    auto c2 = cast(double) c1;
+    assert(is(typeof(c2) == double));
+    assert(c2 == 1.0);
 }
 
 @safe pure nothrow unittest
