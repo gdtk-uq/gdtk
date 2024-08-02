@@ -53,7 +53,7 @@ unittest {
 
 extern (C):
 
-const LUAI_MAXSTACK = 1000000;
+const LUAI_MAXSTACK = 1_000_000;
 
 
 const LUA_REGISTRYINDEX = -LUAI_MAXSTACK - 1000;
@@ -75,12 +75,13 @@ const LUA_GCSETPAUSE = 6;
 const LUA_GCSETSTEPMUL = 7;
 
 struct lua_State {}
-alias int function(lua_State* L) lua_CFunction;
-alias int function(lua_State *L, int status, lua_KContext ctx) lua_KFunction;
+alias lua_CFunction = int function(lua_State* L);
+alias lua_KFunction = int function(lua_State *L, int status, lua_KContext ctx);
 
-alias double lua_Number;
-alias int lua_KContext;
-alias ptrdiff_t lua_Integer;
+alias lua_Number = double;
+alias lua_KContext = int;
+alias lua_Integer = ptrdiff_t;
+
 void lua_close(lua_State* L);
 int lua_gettop(lua_State* L) nothrow;
 void lua_settop(lua_State *L, int idx) nothrow;
@@ -139,7 +140,7 @@ bool lua_isfunction(lua_State* L, int n) { return lua_type(L, n) == LUA_TFUNCTIO
 lua_Number lua_tonumberx(lua_State *L, int idx, int *isnum);
 lua_Number lua_tonumber(lua_State *L, int idx) {return lua_tonumberx(L,idx,null);}
 lua_Integer lua_tointegerx(lua_State* L, int idx, int *pisnum);
-lua_Integer lua_tointeger(lua_State* L, int idx){return lua_tointegerx(L,idx,null);};
+lua_Integer lua_tointeger(lua_State* L, int idx){return lua_tointegerx(L,idx,null);}
 bool lua_toboolean(lua_State* L, int idx);
 const(char)* lua_tostring(lua_State* L, int i) { return lua_tolstring(L, i, null); }
 size_t lua_rawlen (lua_State *L, int idx);
