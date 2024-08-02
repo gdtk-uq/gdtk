@@ -389,7 +389,7 @@ public:
         repr ~= ", fr_reactions_allowed=" ~ to!string(fr_reactions_allowed);
         repr ~= ", contains_flow_data=" ~ to!string(contains_flow_data);
         repr ~= ", allow_k_omega_update=" ~ to!string(allow_k_omega_update);
-        repr ~= ",\n... fs=" ~ to!string(fs);
+        repr ~= ",\n... fs=" ~ (fs ? to!string(*fs) : "None");
         repr ~= ",\n... U=" ~ to!string(U);
         repr ~= ",\n... dUdt=" ~ to!string(dUdt);
         repr ~= ")";
