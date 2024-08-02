@@ -142,16 +142,24 @@ public:
     @nogc
     void accumulate_values_from(in FlowGradients other)
     {
-        foreach (i; 0 .. 3) { vel[i][] += other.vel[i][]; }
-        version(multi_species_gas) {
-            foreach (isp; 0 .. massf.length) { massf[isp][] += other.massf[isp][]; }
+        foreach (i; 0 .. 3) {
+            foreach (j; 0 .. 3) vel[i][j] += other.vel[i][j];
         }
-        T[] += other.T[];
+        version(multi_species_gas) {
+            foreach (isp; 0 .. massf.length) {
+                foreach (j; 0 .. 3) massf[isp][j] += other.massf[isp][j];
+            }
+        }
+        foreach (j; 0 .. 3) T[j] += other.T[j];
         version(multi_T_gas) {
-            foreach (imode; 0 .. T_modes.length) { T_modes[imode][] += other.T_modes[imode][]; }
+            foreach (imode; 0 .. T_modes.length) {
+                foreach (j; 0 .. 3) T_modes[imode][j] += other.T_modes[imode][j];
+            }
         }
         version(turbulence) {
-            foreach(i; 0 .. turb.length) turb[i][] += other.turb[i][];
+            foreach(i; 0 .. turb.length) {
+                foreach (j; 0 .. 3) turb[i][j] += other.turb[i][j];
+            }
         }
     }
 
