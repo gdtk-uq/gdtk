@@ -107,6 +107,7 @@ configOptionsHidden = { -- hidden from user
    --
    shock_detector = "PJ",
    compression_tolerance = -0.30,
+   shock_detector_minimum_blend_value = 0.1,
    do_shock_detect = false,
    damped_outflow = false,
    strict_shock_detector = true,

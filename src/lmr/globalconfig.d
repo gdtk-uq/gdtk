@@ -1067,6 +1067,8 @@ final class GlobalConfig {
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
     shared static ShockDetector shock_detector = ShockDetector.PJ;
+    // Used by adaptive_ausmdv_asf blended-flux calculator because some dissipation is usually needed.
+    shared static double shock_detector_minimum_blend_value = 0.1;
     //
     // How many iterations to perform shock detector averaging
     shared static int shock_detector_smoothing = 0;
@@ -1382,6 +1384,7 @@ public:
     bool do_shock_detect;
     bool damped_outflow;
     bool strict_shock_detector;
+    double shock_detector_minimum_blend_value;
     bool artificial_compressibility;
     double ac_alpha;
     //
@@ -1556,6 +1559,7 @@ public:
         do_shock_detect = cfg.do_shock_detect;
         damped_outflow = cfg.damped_outflow;
         strict_shock_detector = cfg.strict_shock_detector;
+        shock_detector_minimum_blend_value = cfg.shock_detector_minimum_blend_value;
         //
         artificial_compressibility = cfg.artificial_compressibility;
         ac_alpha = cfg.ac_alpha;
@@ -1888,6 +1892,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
     mixin(update_bool("do_shock_detect", "do_shock_detect"));
+    mixin(update_double("shock_detector_minimum_blend_value", "shock_detector_minimum_blend_value"));
     mixin(update_bool("damped_outflow", "damped_outflow"));
     mixin(update_bool("strict_shock_detector", "strict_shock_detector"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
@@ -1983,6 +1988,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  shock_detector_smoothing: ", cfg.shock_detector_smoothing);
         writeln("  frozen_shock_detector: ", cfg.frozen_shock_detector);
         writeln("  shock_detector_freeze_step: ", cfg.shock_detector_freeze_step);
+        writeln("  shock_detector_minimum_blend_value: ", cfg.shock_detector_minimum_blend_value);
         //
         writeln("  MHD: ", cfg.MHD);
         writeln("  MHD_static_field: ", cfg.MHD_static_field);

@@ -2344,6 +2344,7 @@ void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 // The actual work is passed off to the original flux calculation functions.
 {
     number alpha = IFace.fs.S;
+    alpha = fmax(alpha, myConfig.shock_detector_minimum_blend_value);
     if (alpha > 0.0) {
         ausmdv(Lft, Rght, IFace, myConfig, alpha);
     }
