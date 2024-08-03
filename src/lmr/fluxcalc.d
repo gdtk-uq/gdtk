@@ -2138,18 +2138,14 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // An implementation of what PJ calls the Osher Riemann-solver flux calculator.
 // It is not intended for general use but, rather, to produce reference data for Christine Mittler's thesis work.
 // This implementation lifted from the Puffin program, 2022-05-27.
-// Note that it will only work in a debug build because we have hidden the memory allocations in a debug block.
+// 2024-08-04 We have hidden the memory allocations in the constructor for myConfig.
 {
     auto gmodel = myConfig.gmodel;
-    GasState* stateLstar, stateRstar, stateX0;
-    debug {
-        // This cheat is to hide the allocation from the @nogc checker.
-        if (!stateLstar) stateLstar = new GasState(gmodel);
-        if (!stateRstar) stateRstar = new GasState(gmodel);
-        if (!stateX0) stateX0 = new GasState(gmodel);
-    }
+    GasState* stateLstar = myConfig.osher_flux_calc_stateLstar;
+    GasState* stateRstar = myConfig.osher_flux_calc_stateRstar;
+    GasState* stateX0 = myConfig.osher_flux_calc_stateX0;
     if (!(stateLstar && stateRstar && stateX0)) {
-        throw new Error("The osher flux calculator is only usable in the debug flavour of build.");
+        throw new Error("The osher flux calculator is missing its workspace.");
     }
     //
     number tkeL = 0.0;

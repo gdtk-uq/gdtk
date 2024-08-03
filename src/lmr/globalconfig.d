@@ -1480,6 +1480,11 @@ public:
         ShapeSensitivityCalculatorOptions sscOptions;
     }
     string[] flow_variable_list;
+    // Some workspace for the osher flux calculator.
+    GasState* osher_flux_calc_stateLstar;
+    GasState* osher_flux_calc_stateRstar;
+    GasState* osher_flux_calc_stateX0;
+
     //
     this(int universe_blk_id)
     {
@@ -1663,6 +1668,10 @@ public:
         if (cfg.reacting) {
             thermochemUpdate = init_thermochemical_reactor(gmodel, cfg.reactions_file, cfg.energy_exchange_file);
         }
+        // 2024-08-04 Some workspace for the osher flux calculator.
+        osher_flux_calc_stateLstar = new GasState(gmodel);
+        osher_flux_calc_stateRstar = new GasState(gmodel);
+        osher_flux_calc_stateX0 = new GasState(gmodel);
     }
 
     void update_control_parameters()
