@@ -2568,40 +2568,19 @@ public:
             if (myConfig.high_order_flux_calculator && f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
                 throw new Error("ghost cell data missing");
             }
-            if ((myConfig.flux_calculator == FluxCalculator.asf)
-                || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) && (f.fs.S < ESSENTIALLY_ZERO))) {
-                // [FIX_ME] 2021-10-28 PJ changed the bitwise and to logical and.
-                // The high-order ASF flux calculator is a flux reconstruction scheme,
-                // so the expensive interpolation process can be bypassed if it's pure ASF flux.
-                // If we're using the hybrid flux calculator,
-                // we don't need the interpolation process if the 'shock' value is 0.
-                // This short-cut provides a significant speed-up for Lachlan's simulations.
-                ASF_242(f, myConfig);
-
-                // The viscous fluxes use the interface values, so despite them not being required for the convective
-                // flux calculation with the ASF method, we do need them later on. Maybe I re-fold the ASF method back
-                // into the general convective flux path, as its unlikely the method will ever be used without viscous
-                // effects?
-                if (myConfig.viscous) {
-                    one_d.interp(f, *Lft, *Rght);
-                    f.fs.copy_average_values_from(*Lft, *Rght);
-                }
-
+            // Typical code path, with interpolation for the flowstates to the left and right of the interface.
+            if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S >= (1.0 - ESSENTIALLY_ZERO)))) {
+                one_d.interp(f, *Lft, *Rght);
             } else {
-                // Typical code path, with interpolation for the flowstates to the left and right of the interface.
-                if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                    !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == (1.0 - ESSENTIALLY_ZERO)))) {
-                    one_d.interp(f, *Lft, *Rght);
-                } else {
-                    FluidFVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-                    FluidFVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-                    Lft.copy_values_from(cL0.fs);
-                    Rght.copy_values_from(cR0.fs);
-                }
-                f.fs.copy_average_values_from(*Lft, *Rght);
-                if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
-                compute_interface_flux(*Lft, *Rght, f, myConfig, omegaz);
+                FluidFVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+                FluidFVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+                Lft.copy_values_from(cL0.fs);
+                Rght.copy_values_from(cR0.fs);
             }
+            f.fs.copy_average_values_from(*Lft, *Rght);
+            if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
+            compute_interface_flux(*Lft, *Rght, f, myConfig, omegaz);
         }
         return;
     } // end convective_flux_phase0()

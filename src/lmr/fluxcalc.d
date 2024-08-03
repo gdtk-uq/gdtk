@@ -2226,20 +2226,27 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     // And the AIAA Paper by White et al. 2012
     // Low-Dissipation Advection Schemes Designed for Large Eddy Simulation of Hypersonic Propulsion
     // Systems
-
+    //
+    // 2024-08-03 PJ
+    //   changed to be more like the other 1D flux calculators
+    //   because we have removed the dedicated code path over in sfluidblock.d/convective_flux_phase0()
+    //
     auto gmodel = myConfig.gmodel;
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
-    // this stencil is using references to comply with @nogc
-    // we need to convert back after we have finished with them
-    // (this is very inefficient)
+    //
+    // Unlike the other flux calculators that work from a single left- and right- flowstate,
+    // this flux calculator uses data from the 2 cell-centres on either side of the interface.
+    // We now have to transform that nearby data into a local frame because it was not done
+    // already by the calling function compute_interface_flux_interior().
+    //
+    // We need access to the gas state data below. Be careful to not interfer with the original data.
     GasState*[4] gases = [&(IFace.left_cells[1].fs.gas),  &(IFace.left_cells[0].fs.gas),
                           &(IFace.right_cells[0].fs.gas), &(IFace.right_cells[1].fs.gas)];
-    // Function-local copy of the velocity vectors.
+    // Function-local copy of the velocity vectors because we do want to mutate the original data.
     Vector3[4] vels = [IFace.left_cells[1].fs.vel,  IFace.left_cells[0].fs.vel,
                        IFace.right_cells[0].fs.vel, IFace.right_cells[1].fs.vel];
-    // Start by substracting interface velocities and transforming to local frame;
-    // it is unlikely we will be using moving grids with this solver, but no harm in including this.
+    // Start by substracting interface velocities and transforming to local frame.
     foreach (ref vel; vels) {
         vel -= IFace.gvel;
         vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
@@ -2291,18 +2298,6 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
                                      alpha_ke*f_c[6] + (1.0-alpha_ke)*f_e[6] +
                                      alpha_ke*f_c[7] + (1.0-alpha_ke)*f_e[7]) +
                                 alpha_p*f_c[8] + (1.0-alpha_p)*f_e[8]);
-    //
-    // If we're doing pure high-order flux, we bypass the normal convective flux program path
-    // so need to transform the fluxes to the global frame here.
-    if (factor == 1.0) {
-        if (cqi.threeD) {
-            F[cqi.zMom] += IFace.gvel.z * mass_flux;
-            transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
-        } else {
-            number zDummy = to!number(0.0);
-            transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], zDummy, IFace.n, IFace.t1, IFace.t2);
-        }
-    }
     //
     // Other fluxes (copied from Roe flux)
     // Here we will base these extended properties based on the left and right
