@@ -902,8 +902,48 @@ number[5] osher_riemann(ref const(GasState) stateL, ref const(GasState) stateR,
             }
         }
     }
-    gm.update_thermo_from_rhou(stateX0);
-    gm.update_sound_speed(stateX0);
+    try {
+        try {
+            gm.update_thermo_from_rhou(stateX0);
+        } catch (GasModelException err) {
+            // Oops, it seems that the thermo update has failed to work,
+            // but we can try to patch it, if density is ok.
+            if (stateX0.rho > 0.0) {
+                // This small-energy, hopefully-transient error may get
+                // washed out of the flow field, so let's try to keep going.
+                // We reset the thermo data to an acceptable low-T state
+                // and make the current conserved quantities consistent.
+                double suggested_low_T_value = 20.0; // degree Kelvin
+                stateX0.T = suggested_low_T_value;
+                foreach(i; 0 .. gm.n_modes) {
+                    stateX0.T_modes[i] = suggested_low_T_value;
+                }
+                gm.update_thermo_from_rhoT(stateX0);
+            } else {
+                // We do not ignore the thermo update error at this point.
+                throw err;
+            }
+        }
+        if (stateX0.T<=0.0) throw new GasFlowException("update_thermo returned negative temperature.");
+        foreach(i; 0 .. gm.n_modes) {
+            if (stateX0.T_modes[i]<=0.0) throw new GasFlowException("update_thermo returned negative T_modes.");
+        }
+        gm.update_sound_speed(stateX0);
+    } catch (GasModelException err) {
+        string msg = "Bad Osher-Riemann solve with failed thermodynamic update.";
+        debug {
+            msg ~= format(" thermodynamic update exception with message:\n  %s", err.msg);
+            msg ~= format("  stateL: %s\n", stateL);
+            msg ~= format("  stateR: %s\n", stateR);
+            msg ~= format("  stateLstar: %s\n", stateLstar);
+            msg ~= format("  stateRstar: %s\n", stateRstar);
+            msg ~= format("  stateX0: %s\n", stateX0);
+            msg ~= format("  velL: %e\n", velL);
+            msg ~= format("  velR: %e\n", velR);
+            msg ~= format("  velX0: %e\n", velX0);
+        }
+        throw new GasFlowException(msg);
+    } // end catch
     //
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()

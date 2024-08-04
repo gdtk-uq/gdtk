@@ -11,6 +11,7 @@ module fluxcalc;
 import std.math;
 import std.stdio;
 import std.conv;
+import std.format;
 import ntypes.complex;
 import nm.number;
 
@@ -18,6 +19,7 @@ import geom;
 import gas;
 import flowstate;
 import gasflow: osher_riemann;
+import gasflowexception: GasFlowException;
 import conservedquantities;
 import fvinterface;
 import globalconfig;
@@ -2155,12 +2157,24 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         tkeR = myConfig.turb_model.turbulent_kinetic_energy(Rght);
     }
     //
-    number[5] rsol = osher_riemann(Lft.gas, Rght.gas, Lft.vel.x, Rght.vel.x,
-                                   *stateLstar, *stateRstar, *stateX0, gmodel);
-    number rho = stateX0.rho;
-    number p = stateX0.p;
-    number u = gmodel.internal_energy(*stateX0);
-    number velx = rsol[4];
+    number rho, p, u, velx;
+    try {
+        number[5] rsol = osher_riemann(Lft.gas, Rght.gas, Lft.vel.x, Rght.vel.x,
+                                       *stateLstar, *stateRstar, *stateX0, gmodel);
+        rho = stateX0.rho;
+        p = stateX0.p;
+        u = gmodel.internal_energy(*stateX0);
+        velx = rsol[4];
+    } catch (GasFlowException err) {
+        string msg = "Osher-Riemann solution replaced with simple average.";
+        debug {
+            msg ~= format(" gasflow exception message:\n  %s", err.msg);
+        }
+        rho = 0.5*(Lft.gas.rho + Rght.gas.rho);
+        p = 0.5*(Lft.gas.p + Rght.gas.p);
+        u = 0.5*(Lft.gas.u + Rght.gas.u);
+        velx = 0.5*(Lft.vel.x + Rght.vel.x);
+    }
     number vely = (velx > 0.0) ? Lft.vel.y : Rght.vel.y;
     number velz = (velx > 0.0) ? Lft.vel.z : Rght.vel.z;
     number tke = (velx > 0.0) ? tkeL : tkeR;
