@@ -193,18 +193,17 @@ void initLocalBlocks()
         }
     }
     else {
-	    foreach (blk; globalBlocks) {
+        foreach (blk; globalBlocks) {
             auto fblk = cast(FluidBlock) blk;
-	        if (fblk) { localFluidBlocks ~= fblk; }
+            if (fblk) { localFluidBlocks ~= fblk; }
             auto mysblk = cast(SSolidBlock) blk;
             if (mysblk) { localSolidBlocks ~= mysblk; }
-	    }
+        }
     }
     // Set block IDs
     foreach (blk; localFluidBlocks) { cfg.localFluidBlockIds ~= blk.id; }
     foreach (blk; localSolidBlocks) { cfg.localSolidBlockIds ~= blk.id; }
-
-}
+} // end initLocalBlocks()
 
 /**
  * Set the pool of threads on a per process basis.
@@ -241,13 +240,13 @@ void initThreadPool(int maxCPUs, int threadsPerMPITask)
 	    writeln("Single process running with ", extraThreadsInPool+1, " threads.");
 	}
     }
-}
+} // end initThreadPool()
 
 /**
  * Initialise basic components of all fluid blocks.
  *
  * This function instructs blocks to:
- *   + initialise gas moodel
+ *   + initialise gas model
  *   + initialise any workspace in the block
  *   + set globals for Lua state used by user-defined hooks
  *   + complete the construction of boundary conditions
