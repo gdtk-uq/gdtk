@@ -1,3 +1,7 @@
+# Look for pytest under different names
+PYTEST := $(shell which pytest)
+PYTEST := $(or $(PYTEST), pytest-3)
+
 gas:
 	printf '%s\n' 'model = "ideal gas"' 'species = {"air"}' > ideal-air.inp
 	lmr prep-gas -i ideal-air.inp -o ideal-air.lua
@@ -20,6 +24,9 @@ vtk:
 
 wall-props:
 	lmr slice-flow -l ":,:,$$,0" --output=wall-properties.dat
+
+test:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTEST) -v
 
 clean:
 	- rm -rf lmrsim

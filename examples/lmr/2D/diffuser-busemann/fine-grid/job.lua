@@ -95,7 +95,7 @@ print("V1= ", V1)
 inflow = FlowState:new{p=gs.p, T=gs.T, velx=V1, vely=0.0}
 
 flowDict = {
-   initial=FlowSolution:new{dir="../coarse", snapshot="final", nBlocks=41, make_kdtree=true}
+   initial=FlowSolution:new{dir="../coarse-grid", snapshot="final", nBlocks=41, make_kdtree=true}
 }
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
