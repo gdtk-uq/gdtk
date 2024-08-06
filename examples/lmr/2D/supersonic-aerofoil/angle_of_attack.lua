@@ -1,1 +1,1 @@
-angle_in_degrees=0.0
+angle_in_degrees=3.0

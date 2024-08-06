@@ -71,11 +71,7 @@ def read_com(filename):
     com = [float(i) for i in contents.strip().split(',')]
     return com
 
-if __name__=='__main__':
-    data = wall_data()
-    aoa = read_aoa('angle_of_attack.lua')
-    com = read_com('centre_of_mass.lua')
-
+def compute_totals(data, com):
     p = data['p']
     nx = data['n.x']
     ny = data['n.y']
@@ -91,6 +87,14 @@ if __name__=='__main__':
     dx = data['pos.x'] - com[0]
     dy = data['pos.y'] - com[1]
     M = (dx*Fy - dy*Fx).sum()
+    return xforce, yforce, taux, tauy, M
+
+if __name__=='__main__':
+    data = wall_data()
+    aoa = read_aoa('angle_of_attack.lua')
+    com = read_com('centre_of_mass.lua')
+    xforce, yforce, taux, tauy, M = compute_totals(data, com)
+
 
     print("Alpha: ", aoa)
     print("Inviscid x-Force: {} (N)".format(xforce))

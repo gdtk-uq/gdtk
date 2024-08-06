@@ -6,7 +6,7 @@ grid: gengrid.lua
 	lmr custom-script --job="gengrid.lua"
 
 partition:
-	ugrid_partition grid.su2 mapped-cells 16 2
+	ugrid_partition grid.su2 mapped-cells 4 2
 	mkdir -p su2grid
 	mv block_* su2grid/
 
@@ -17,7 +17,7 @@ clean:
 	rm -rf lmrsim
 
 run:
-	mpirun -np 16 lmrZ-mpi-run
+	mpirun -np 4 lmrZ-mpi-run
 			
 prep:
 	mkdir -p lmrsim
