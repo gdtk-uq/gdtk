@@ -13,8 +13,9 @@ import std.stdio;
 import std.string;
 import std.format;
 import core.stdc.stdlib : system;
-import std.process : environment;
+import std.process : environment, executeShell;
 import std.file : copy;
+import lmr.lmrerrors;
 
 import command;
 
@@ -89,6 +90,27 @@ options ([+] can be repeated):
      Increase verbosity.
 `, cmdName, plotDiagnosticsCmd.shortDescription);
  
+}
+
+string detectPyCmdName()
+{
+    // First try 'python' as command name.
+    // This is typical on RedHat family and Arch
+    auto pyVer = executeShell(`python -c "import sys; print(sys.version_info.major)"`);
+    if (pyVer.status == 0 && strip(pyVer.output) == "3") {
+        return "python";
+    }
+    // Second, try 'python3' as command name.
+    // This is typical on Debain family sysetms.
+    pyVer = executeShell(`python3 -c "import sys; print(sys.version_info.major)"`);
+    if (pyVer.status == 0 && strip(pyVer.output) == "3") {
+        return "python3";
+    }
+
+    // If we get here, there's an error.
+    string msg = "Unable to find a Python command to use.";
+    lmrErrorExit(LmrError.initialisation, msg);
+    return "";
 }
 
 int main_(string[] args)
@@ -185,13 +207,14 @@ int main_(string[] args)
     case Style.kad, Style.nng:
         plotCmdFileLocalUse = (style == Style.kad) ? kadPlotCmdFile : nngPlotCmdFile;
         plotCmdFile = shareDir ~ plotCmdFileLocalUse;
+        auto pyCmd = detectPyCmdName();
         final switch (mode) {
         case Mode.live:
-            cmd = "python " ~ plotCmdFile ~ " live";
+            cmd = pyCmd ~ " " ~ plotCmdFile ~ " live";
             cmdForLocalUse = "python " ~ plotCmdFileLocalUse ~ " live";
             break;
         case Mode.file:
-            cmd = "python " ~ plotCmdFile ~ " to-file " ~ outputFile;
+            cmd = pyCmd ~ " " ~ plotCmdFile ~ " to-file " ~ outputFile;
             cmdForLocalUse = "python " ~ plotCmdFileLocalUse ~ " to-file " ~ outputFile;
         }
         break;
