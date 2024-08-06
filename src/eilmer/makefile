@@ -555,6 +555,8 @@ clean:
 	- rm -f main_with_rev_string.d
 	- rm -f main_complex_with_rev_string.d
 	- rm -f nk_accelerator_with_string_subst.d
+	- rm -f cht_accelerator_with_string_subst.d
+	- rm -f mpi_cht_accelerator_with_string_subst.d
 	- rm -f mpi_nk_accelerator_with_string_subst.d
 	- rm -f steadystate_solver_with_rev_string.d
 	- rm -f steadystate_solver_complex_with_rev_string.d
