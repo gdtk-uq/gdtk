@@ -88,6 +88,6 @@ def test_probe_expanded_driver_region():
     # assert False, f"refs={refs}, vals={vals}"
 
 def test_cleanup():
-    cmd = "rm -r ./lmrsim"
+    cmd = "rm -rf ./lmrsim ideal-air.gas"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd

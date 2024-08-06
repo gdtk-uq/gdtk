@@ -105,3 +105,6 @@ def test_cleanup():
     cmd = "rm -r ./lmrsim"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
+    cmd = "rm -rf shock-shape.dat"
+    proc = subprocess.run(cmd.split())
+    assert proc.returncode == 0, "Failed during: " + cmd
