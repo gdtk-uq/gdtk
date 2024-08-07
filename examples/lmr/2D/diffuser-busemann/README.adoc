@@ -28,6 +28,19 @@ This example:
 . Has coarse-grid to fine-grid sequencing; it shows how to warm-start the fine-grid from coarse-grid solution.
 . Shows the use of the `ControlPointPatch` with a "channel" guide patch.
 ====
+
+image::2D/diffuser-busemann/fine-grid/mach-and-total-p-field.png[align="center", width=70%]
+
+The simulation is axisymmetric so only top-half of images is used in simulation in domain.
+The white mesh overlay are the control points of the `ControlPointPatch`, not the grid.
+The grid is much much finer in resolution.
+
+The top image shows how the diffuser acts to reduce Mach number.
+The bottom image, displaying total pressure, shows how most of the compression
+is isentropic until the terminating (conical) shock is encountered.
+
+
+
 //end::description[]
 
 == Reference
