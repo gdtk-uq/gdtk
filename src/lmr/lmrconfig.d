@@ -277,10 +277,11 @@ string gridFilename(int snapshot, int blkId)
  *                  we think it's somewhat obvious
  *                  given these files live in a hist/ area
  */
-string historyFilename(size_t blkId, size_t cellId)
+string historyFilename(size_t hcellIdx, size_t blkId, size_t cellId)
 {
     string hname = lmrCfg.historyDir ~ "/" ~
-         "blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
+         "hc-" ~ format("%02d", hcellIdx) ~
+         "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
          "-cell-" ~ format(lmrCfg.cellIdxFmt, cellId) ~
          ".dat";
     return hname;

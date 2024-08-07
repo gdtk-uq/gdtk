@@ -45,7 +45,7 @@ void initHistoryCells()
     if (GlobalConfig.is_master_task) ensure_directory_is_present(lmrCfg.historyDir);
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
-    foreach (hcell; GlobalConfig.hcells) {
+    foreach (ih, hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
         auto blk = cast(FluidBlock) globalBlocks[blkId];
@@ -57,7 +57,7 @@ void initHistoryCells()
             errMsg ~= format("This block only has %d cells.\n", blk.cells.length);
             throw new TimeMarchingException(errMsg);
         }
-        string basicName = historyFilename(blkId, cellId);
+        string basicName = historyFilename(ih, blkId, cellId);
         string nameWithoutDir = basicName.split("/")[2];
         auto numberOfExistingHistFiles = walkLength(dirEntries(lmrCfg.historyDir, nameWithoutDir~".*", SpanMode.shallow));
         string fname = format("%s.%d", basicName, numberOfExistingHistFiles);
@@ -84,7 +84,7 @@ void initHistoryCells()
  */
 void writeHistoryCellsToFiles(double sim_time)
 {
-    foreach (hcell; GlobalConfig.hcells) {
+    foreach (ih, hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
         if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
@@ -93,7 +93,7 @@ void writeHistoryCellsToFiles(double sim_time)
         auto cell = blk.cells[cellId];
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %s\n", sim_time, cell.historyDataAsString());
-        string basicName = historyFilename(blkId, cellId);
+        string basicName = historyFilename(ih, blkId, cellId);
         string nameWithoutDir = basicName.split("/")[2];
         auto numberOfExistingHistFiles = walkLength(dirEntries(lmrCfg.historyDir, nameWithoutDir~".*", SpanMode.shallow));
         string fname = format("%s.%d", basicName, numberOfExistingHistFiles-1);

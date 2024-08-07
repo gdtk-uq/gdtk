@@ -112,6 +112,19 @@ function history.setHistoryPoint(args)
    local pos = blk.grid:cellCentroid(i)
    print(string.format("Fluid History point [%d] ib=%d i=%d x=%g y=%g z=%g",
                        n, ib, i, pos.x, pos.y, pos.z))
+   -- Look for duplicates and report
+   for ii,hc in ipairs(historyCells) do
+      if (ii ~= n) then 
+         if (i == hc.i and ib == hc.ib) then
+            print("   W: Duplicate history cell requested.")
+            print(string.format("   W: Earlier cell is: %02d", ii))
+            print(string.format("   W: Current request is: %02d", n))
+            print(string.format("   W: Cell is [blk:idx]= [%d:%d] located at: %s", hc.ib, hc.i, pos))
+            print("   W: At run-time, the code will produce one file per history cell request.")
+            print("   W: For this case, you will receive two files with identical information.")
+         end
+      end
+   end
    local fhpfile = "./lmrsim/fluid-history-points.list"
    if not file_exists(fhpfile) then
       local file = io.open(fhpfile, "w")
