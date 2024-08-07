@@ -1241,7 +1241,8 @@ final class GlobalConfig {
     shared static int cfl_count = 10;  // steps between checking time step size
     shared static bool fixed_time_step = false; // set true to fix dt_allow
     //
-    shared static double dt_plot = 1.0e-3; // interval for writing soln
+    shared static double dt_plot_value = 1.0e-3; // interval for writing soln
+    static Schedule!double dt_plot_schedule;
     shared static int write_flow_solution_at_step = -1; // flag for premature writing of flow solution files
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
@@ -1815,6 +1816,17 @@ void set_config_for_core(JSONValue jsonData)
     double[] cfl_schedule_times = getJSONdoublearray(jsonData, "cfl_schedule_times", cfl_schedule_times_default);
     double[] cfl_schedule_values = getJSONdoublearray(jsonData, "cfl_schedule_values", cfl_schedule_values_default);
     cfg.cfl_schedule = new Schedule!double(cfl_schedule_times, cfl_schedule_values);
+    // The dt_plot schedule arrives as a pair of tables that should have at least one entry each.
+    int dt_plot_schedule_length = getJSONint(jsonData, "dt_plot_schedule_length", 1);
+    double[] dt_plot_schedule_values_default;
+    double[] dt_plot_schedule_times_default;
+    foreach (i; 0 .. dt_plot_schedule_length) {
+        dt_plot_schedule_times_default ~= 0.0;
+        dt_plot_schedule_values_default ~= 1.0e-3;
+    }
+    double[] dt_plot_schedule_times = getJSONdoublearray(jsonData, "dt_plot_schedule_times", dt_plot_schedule_times_default);
+    double[] dt_plot_schedule_values = getJSONdoublearray(jsonData, "dt_plot_schedule_values", dt_plot_schedule_values_default);
+    cfg.dt_plot_schedule = new Schedule!double(dt_plot_schedule_times, dt_plot_schedule_values);
     //
     mixin(update_bool("residual_smoothing", "residual_smoothing"));
     mixin(update_bool("with_local_time_stepping", "with_local_time_stepping"));
@@ -1931,6 +1943,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(cfg.gasdynamic_update_scheme));
         writeln("  eval_udf_source_terms_at_each_stage: ", cfg.eval_udf_source_terms_at_each_stage);
         writeln("  cfl_schedule: ", cfg.cfl_schedule);
+        writeln("  dt_plot_schedule: ", cfg.dt_plot_schedule);
         writeln("  residual_smoothing: ", cfg.residual_smoothing);
         writeln("  with_local_time_stepping: ", cfg.with_local_time_stepping);
         writeln("  local_time_stepping_limit_factor: ", cfg.local_time_stepping_limit_factor);

@@ -99,7 +99,7 @@ void readControl()
     mixin(update_int("cfl_count", "cfl_count"));
     mixin(update_double("max_time", "max_time"));
     mixin(update_int("max_step", "max_step"));
-    mixin(update_double("dt_plot", "dt_plot"));
+    // mixin(update_double("dt_plot", "dt_plot")); // 2024-08-07 moved to dt_plot_schedule in config file.
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
     mixin(update_int("write_loads_at_step", "write_loads_at_step"));
@@ -124,7 +124,7 @@ void readControl()
         writeln("  cfl_count: ", cfg.cfl_count);
         writeln("  max_time: ", cfg.max_time);
         writeln("  max_step: ", cfg.max_step);
-        writeln("  dt_plot: ", cfg.dt_plot);
+        // writeln("  dt_plot: ", cfg.dt_plot); // 2024-08-07 moved to dt_plot_schedule in config file.
         writeln("  dt_history: ", cfg.dt_history);
         writeln("  dt_loads: ", cfg.dt_loads);
         writeln("  write_loads_at_step: ", cfg.write_loads_at_step);

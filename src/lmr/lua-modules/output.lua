@@ -23,7 +23,7 @@ function output.write_control_file(fileName)
    f:write(string.format('"cfl_count": %d,\n', config.cfl_count))
    f:write(string.format('"max_time": %.18e,\n', config.max_time))
    f:write(string.format('"max_step": %d,\n', config.max_step))
-   f:write(string.format('"dt_plot": %.18e,\n', config.dt_plot))
+   -- f:write(string.format('"dt_plot": %.18e,\n', config.dt_plot)) -- 2024-08-07 move to dt_plot schedule in config
    f:write(string.format('"dt_history": %.18e,\n', config.dt_history))
    f:write(string.format('"dt_loads": %.18e,\n', config.dt_loads))
    f:write(string.format('"write_loads_at_step": %d,\n', config.write_loads_at_step))
@@ -80,7 +80,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"suggested_low_T_value": %.18e,\n', config.suggested_low_T_value))
    f:write(string.format('"perturbation_for_real_differences": %.18e,\n', config.perturbation_for_real_differences))
    if #config.cfl_schedule > 0 then
-      -- The table already have some values.
+      -- The table already has some values.
       -- We will presume that they are valid entries, however,
       -- if enough people get it wrong, we'll put some check here.
    else
@@ -105,6 +105,40 @@ function output.write_config_file(fileName)
    for i,e in ipairs(cfl_times) do
       f:write(string.format('%.18e', e))
       if i < #cfl_times then f:write(', ') end
+   end
+   f:write('],\n')
+   --
+   if type(config.dt_plot) == 'number' then
+      -- The user has written a single number; turn it into the required table.
+      config.dt_plot = {{0.0, config.dt_plot}}
+   end
+   -- At this point, we should have a table, but it may be empty.
+   if #config.dt_plot > 0 then
+      -- The table already has some values.
+      -- We will presume that they are valid entries, however,
+      -- if enough people get it wrong, we'll put some check here.
+   else
+      -- Fall back to making up a schedule from dt_plot_value.
+      config.dt_plot = {{0.0, config.dt_plot_value},}
+   end
+   local dt_plot_schedule_length = #config.dt_plot
+   f:write(string.format('"dt_plot_schedule_length": %d,\n', dt_plot_schedule_length))
+   local dt_plot_values = {}
+   local dt_plot_times = {}
+   for i,dt_plot_pair in ipairs(config.dt_plot) do
+      dt_plot_times[#dt_plot_times+1] = dt_plot_pair[1]
+      dt_plot_values[#dt_plot_values+1] = dt_plot_pair[2]
+   end
+   f:write('"dt_plot_schedule_values": [')
+   for i,e in ipairs(dt_plot_values) do
+      f:write(string.format('%.18e', e))
+      if i < #dt_plot_values then f:write(', ') end
+   end
+   f:write('],\n')
+   f:write('"dt_plot_schedule_times": [')
+   for i,e in ipairs(dt_plot_times) do
+      f:write(string.format('%.18e', e))
+      if i < #dt_plot_times then f:write(', ') end
    end
    f:write('],\n')
    --

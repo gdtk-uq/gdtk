@@ -265,7 +265,7 @@ int integrateInTime(double targetTimeAsRequested)
     }
     SimState.target_time = (GlobalConfig.block_marching) ? targetTimeAsRequested : GlobalConfig.max_time;
     // The next time for output...
-    SimState.t_plot = SimState.time + GlobalConfig.dt_plot;
+    SimState.t_plot = SimState.time + GlobalConfig.dt_plot_schedule.get_value(SimState.time);
     SimState.t_history = SimState.time + GlobalConfig.dt_history;
     SimState.t_loads = SimState.time + GlobalConfig.dt_loads;
     //
@@ -544,7 +544,7 @@ int integrateInTime(double targetTimeAsRequested)
                 writeSnapshotFiles_timemarching();
                 if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
                 SimState.output_just_written = true;
-                SimState.t_plot = SimState.t_plot + GlobalConfig.dt_plot;
+                SimState.t_plot = SimState.t_plot + GlobalConfig.dt_plot_schedule.get_value(SimState.time);
                 GC.collect();
                 GC.minimize();
             }

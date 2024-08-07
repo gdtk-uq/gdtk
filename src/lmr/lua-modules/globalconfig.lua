@@ -199,7 +199,10 @@ configOptionsHidden = { -- hidden from user
    stringent_cfl = false,
    cfl_count = 10,
    fixed_time_step = false,
-   dt_plot = 1.0e-3,
+   dt_plot_value = 1.0e-3,
+   -- A schedule of dt_plot values, as requested by Hans H.
+   -- Operates like the cfl_schedule.
+   dt_plot = {},
    dt_history = 1.0e-3,
    --
    dt_loads = 1.0e-3,
