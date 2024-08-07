@@ -20,6 +20,9 @@ This example shows some advanced grid manipulation:
 . How to join `StructuredGrid` grids; and
 . How to form an `UnstructuredGrid` from a `StructuredGrid`.
 ====
+
+image::2D/wedge/mach-field.png[align='center', width=60%]
+
 //end::description[]
 
 == Reference
