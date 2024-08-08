@@ -54,8 +54,8 @@ def test_run():
       "Failed to arrive at expected time on final step."
 
 def test_history():
-    files = ["lmrsim/hist/blk-0001-cell-9.dat.0",
-             "lmrsim/hist/blk-0001-cell-20.dat.0"]
+    files = ["lmrsim/hist/hc-00-blk-0001-cell-9.dat.0",
+             "lmrsim/hist/hc-01-blk-0001-cell-20.dat.0"]
     for fname in files:
         cmd = f"wc -l {fname}"
         proc = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
