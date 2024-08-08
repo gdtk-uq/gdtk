@@ -357,7 +357,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int temporal_order, max_physical_steps, physical_step = 0;
     double dt_physical, dt_physical_old, target_physical_time, physicalSimTime = 0.0;
     double t_plot = GlobalConfig.dt_plot, dt_plot = GlobalConfig.dt_plot;
-    double t_loads = GlobalConfig.dt_plot, dt_loads = GlobalConfig.dt_loads;
+    double t_loads = GlobalConfig.dt_loads, dt_loads = GlobalConfig.dt_loads;
     if (GlobalConfig.sssOptions.temporalIntegrationMode == 0) {
         // steady-state operation via a backward Euler method
         dual_time_stepping = false;
