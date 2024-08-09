@@ -1006,66 +1006,66 @@ public:
         // First handle array-stored values:
         // species, modes and turbulence quantities
         if (var in mSpecies) {
-            if (var.canFind("conv_x")) { return fcell.gradients.rho_s[mSpecies[var]][0].re; }
-            if (var.canFind("conv_y")) { return fcell.gradients.rho_s[mSpecies[var]][1].re; }
-            if (var.canFind("conv_z")) { return fcell.gradients.rho_s[mSpecies[var]][2].re; }
+            if (var.canFind("conv_x")) { return fcell.gradients.rho_s[mSpecies[var]].x.re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.rho_s[mSpecies[var]].y.re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.rho_s[mSpecies[var]].z.re; }
             if (var.canFind("visc_x")) { return fcell.grad.massf[mSpecies[var]][0].re; }
             if (var.canFind("visc_y")) { return fcell.grad.massf[mSpecies[var]][1].re; }
             if (var.canFind("visc_z")) { return fcell.grad.massf[mSpecies[var]][2].re; }
         }
         if (var in mTModes) {
-            if (var.canFind("conv_x")) { return fcell.gradients.T_modes[mTModes[var]][0].re; }
-            if (var.canFind("conv_y")) { return fcell.gradients.T_modes[mTModes[var]][1].re; }
-            if (var.canFind("conv_z")) { return fcell.gradients.T_modes[mTModes[var]][2].re; }
+            if (var.canFind("conv_x")) { return fcell.gradients.T_modes[mTModes[var]].x.re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.T_modes[mTModes[var]].y.re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.T_modes[mTModes[var]].z.re; }
             if (var.canFind("visc_x")) { return fcell.grad.T_modes[mTModes[var]][0].re; }
             if (var.canFind("visc_y")) { return fcell.grad.T_modes[mTModes[var]][1].re; }
             if (var.canFind("visc_z")) { return fcell.grad.T_modes[mTModes[var]][2].re; }
         }
         if (var in muModes) {
-            if (var.canFind("conv_x")) { return fcell.gradients.u_modes[muModes[var]][0].re; }
-            if (var.canFind("conv_y")) { return fcell.gradients.u_modes[muModes[var]][1].re; }
-            if (var.canFind("conv_z")) { return fcell.gradients.u_modes[muModes[var]][2].re; }
+            if (var.canFind("conv_x")) { return fcell.gradients.u_modes[muModes[var]].x.re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.u_modes[muModes[var]].y.re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.u_modes[muModes[var]].z.re; }
         }
         if (var in mTurbQuants) {
-            if (var.canFind("conv_x")) { return fcell.gradients.turb[mTurbQuants[var]][0].re; }
-            if (var.canFind("conv_y")) { return fcell.gradients.turb[mTurbQuants[var]][1].re; }
-            if (var.canFind("conv_z")) { return fcell.gradients.turb[mTurbQuants[var]][2].re; }
+            if (var.canFind("conv_x")) { return fcell.gradients.turb[mTurbQuants[var]].x.re; }
+            if (var.canFind("conv_y")) { return fcell.gradients.turb[mTurbQuants[var]].y.re; }
+            if (var.canFind("conv_z")) { return fcell.gradients.turb[mTurbQuants[var]].z.re; }
             if (var.canFind("visc_x")) { return fcell.grad.turb[mTurbQuants[var]][0].re; }
             if (var.canFind("visc_y")) { return fcell.grad.turb[mTurbQuants[var]][1].re; }
             if (var.canFind("visc_z")) { return fcell.grad.turb[mTurbQuants[var]][2].re; }
         }
         // For everything else, find appropriate case
         switch(var) {
-        case "conv_x_rho": return fcell.gradients.rho[0].re;
-        case "conv_y_rho": return fcell.gradients.rho[1].re;
-        case "conv_z_rho": return fcell.gradients.rho[2].re;
-        case "conv_x_p": return fcell.gradients.p[0].re;
-        case "conv_y_p": return fcell.gradients.p[1].re;
-        case "conv_z_p": return fcell.gradients.p[2].re;
-        case "conv_x_e": return fcell.gradients.u[0].re;
-        case "conv_y_e": return fcell.gradients.u[1].re;
-        case "conv_z_e": return fcell.gradients.u[2].re;
-        case "conv_x_T": return fcell.gradients.T[0].re;
-        case "conv_y_T": return fcell.gradients.T[1].re;
-        case "conv_z_T": return fcell.gradients.T[2].re;
+        case "conv_x_rho": return fcell.gradients.rho.x.re;
+        case "conv_y_rho": return fcell.gradients.rho.y.re;
+        case "conv_z_rho": return fcell.gradients.rho.z.re;
+        case "conv_x_p": return fcell.gradients.p.x.re;
+        case "conv_y_p": return fcell.gradients.p.y.re;
+        case "conv_z_p": return fcell.gradients.p.z.re;
+        case "conv_x_e": return fcell.gradients.u.x.re;
+        case "conv_y_e": return fcell.gradients.u.y.re;
+        case "conv_z_e": return fcell.gradients.u.z.re;
+        case "conv_x_T": return fcell.gradients.T.x.re;
+        case "conv_y_T": return fcell.gradients.T.y.re;
+        case "conv_z_T": return fcell.gradients.T.z.re;
         case "visc_x_T": return fcell.grad.T[0].re;
         case "visc_y_T": return fcell.grad.T[1].re;
         case "visc_z_T": return fcell.grad.T[2].re;
-        case "conv_x_vel.x": return fcell.gradients.velx[0].re;
-        case "conv_y_vel.x": return fcell.gradients.velx[1].re;
-        case "conv_z_vel.x": return fcell.gradients.velx[2].re;
+        case "conv_x_vel.x": return fcell.gradients.velx.x.re;
+        case "conv_y_vel.x": return fcell.gradients.velx.y.re;
+        case "conv_z_vel.x": return fcell.gradients.velx.z.re;
         case "visc_x_vel.x": return fcell.grad.vel[0][0].re;
         case "visc_y_vel.x": return fcell.grad.vel[0][1].re;
         case "visc_z_vel.x": return fcell.grad.vel[0][2].re;
-        case "conv_x_vel.y": return fcell.gradients.vely[0].re;
-        case "conv_y_vel.y": return fcell.gradients.vely[1].re;
-        case "conv_z_vel.y": return fcell.gradients.vely[2].re;
+        case "conv_x_vel.y": return fcell.gradients.vely.x.re;
+        case "conv_y_vel.y": return fcell.gradients.vely.y.re;
+        case "conv_z_vel.y": return fcell.gradients.vely.z.re;
         case "visc_x_vel.y": return fcell.grad.vel[1][0].re;
         case "visc_y_vel.y": return fcell.grad.vel[1][1].re;
         case "visc_z_vel.y": return fcell.grad.vel[1][2].re;
-        case "conv_x_vel.z": return fcell.gradients.velz[0].re;
-        case "conv_y_vel.z": return fcell.gradients.velz[1].re;
-        case "conv_z_vel.z": return fcell.gradients.velz[2].re;
+        case "conv_x_vel.z": return fcell.gradients.velz.x.re;
+        case "conv_y_vel.z": return fcell.gradients.velz.y.re;
+        case "conv_z_vel.z": return fcell.gradients.velz.z.re;
         case "visc_x_vel.z": return fcell.grad.vel[2][0].re;
         case "visc_y_vel.z": return fcell.grad.vel[2][1].re;
         case "visc_z_vel.z": return fcell.grad.vel[2][2].re;
@@ -1084,16 +1084,16 @@ public:
 
         if (var in mSpecies) {
             if (var.canFind("conv_x")) {
-                fcell.gradients.rho_s[mSpecies[var]][0].re = value;
-                return fcell.gradients.rho_s[mSpecies[var]][0].re;
+                fcell.gradients.rho_s[mSpecies[var]].x.re = value;
+                return fcell.gradients.rho_s[mSpecies[var]].x.re;
             }
             if (var.canFind("conv_y")) {
-                fcell.gradients.rho_s[mSpecies[var]][1].re = value;
-                return fcell.gradients.rho_s[mSpecies[var]][1].re;
+                fcell.gradients.rho_s[mSpecies[var]].y.re = value;
+                return fcell.gradients.rho_s[mSpecies[var]].y.re;
             }
             if (var.canFind("conv_z")) {
-                fcell.gradients.rho_s[mSpecies[var]][2].re = value;
-                return fcell.gradients.rho_s[mSpecies[var]][2].re;
+                fcell.gradients.rho_s[mSpecies[var]].z.re = value;
+                return fcell.gradients.rho_s[mSpecies[var]].z.re;
             }
             if (var.canFind("visc_x")) {
                 fcell.grad.massf[mSpecies[var]][0].re = value;
@@ -1110,16 +1110,16 @@ public:
         }
         if (var in mTModes) {
             if (var.canFind("conv_x")) {
-                fcell.gradients.T_modes[mTModes[var]][0].re = value;
-                return fcell.gradients.T_modes[mTModes[var]][0].re;
+                fcell.gradients.T_modes[mTModes[var]].x.re = value;
+                return fcell.gradients.T_modes[mTModes[var]].x.re;
             }
             if (var.canFind("conv_y")) {
-                fcell.gradients.T_modes[mTModes[var]][1].re = value;
-                return fcell.gradients.T_modes[mTModes[var]][1].re;
+                fcell.gradients.T_modes[mTModes[var]].y.re = value;
+                return fcell.gradients.T_modes[mTModes[var]].y.re;
             }
             if (var.canFind("conv_z")) {
-                fcell.gradients.T_modes[mTModes[var]][2].re = value;
-                return fcell.gradients.T_modes[mTModes[var]][2].re;
+                fcell.gradients.T_modes[mTModes[var]].z.re = value;
+                return fcell.gradients.T_modes[mTModes[var]].z.re;
             }
             if (var.canFind("visc_x")) {
                 fcell.grad.T_modes[mTModes[var]][0].re = value;
@@ -1136,30 +1136,30 @@ public:
         }
         if (var in muModes) {
             if (var.canFind("conv_x")) {
-                fcell.gradients.u_modes[muModes[var]][0].re = value;
-                return fcell.gradients.u_modes[muModes[var]][0].re;
+                fcell.gradients.u_modes[muModes[var]].x.re = value;
+                return fcell.gradients.u_modes[muModes[var]].x.re;
             }
             if (var.canFind("conv_y")) {
-                fcell.gradients.u_modes[muModes[var]][1].re = value;
-                return fcell.gradients.u_modes[muModes[var]][1].re;
+                fcell.gradients.u_modes[muModes[var]].y.re = value;
+                return fcell.gradients.u_modes[muModes[var]].y.re;
             }
             if (var.canFind("conv_z")) {
-                fcell.gradients.u_modes[muModes[var]][2].re = value;
-                return fcell.gradients.u_modes[muModes[var]][2].re;
+                fcell.gradients.u_modes[muModes[var]].z.re = value;
+                return fcell.gradients.u_modes[muModes[var]].z.re;
             }
         }
         if (var in mTurbQuants) {
             if (var.canFind("conv_x")) {
-                fcell.gradients.turb[mTurbQuants[var]][0].re = value;
-                return fcell.gradients.turb[mTurbQuants[var]][0].re;
+                fcell.gradients.turb[mTurbQuants[var]].x.re = value;
+                return fcell.gradients.turb[mTurbQuants[var]].x.re;
             }
             if (var.canFind("conv_y")) {
-                fcell.gradients.turb[mTurbQuants[var]][1].re = value;
-                return fcell.gradients.turb[mTurbQuants[var]][1].re;
+                fcell.gradients.turb[mTurbQuants[var]].y.re = value;
+                return fcell.gradients.turb[mTurbQuants[var]].y.re;
             }
             if (var.canFind("conv_z")) {
-                fcell.gradients.turb[mTurbQuants[var]][2].re = value;
-                return fcell.gradients.turb[mTurbQuants[var]][2].re;
+                fcell.gradients.turb[mTurbQuants[var]].z.re = value;
+                return fcell.gradients.turb[mTurbQuants[var]].z.re;
             }
             if (var.canFind("visc_x")) {
                 fcell.grad.turb[mTurbQuants[var]][0].re = value;
@@ -1176,36 +1176,36 @@ public:
         }
         // For everything else, find appropriate case
         switch(var) {
-        case "conv_x_rho": fcell.gradients.rho[0].re = value; return fcell.gradients.rho[0].re;
-        case "conv_y_rho": fcell.gradients.rho[1].re = value; return fcell.gradients.rho[1].re;
-        case "conv_z_rho": fcell.gradients.rho[2].re = value; return fcell.gradients.rho[2].re;
-        case "conv_x_p": fcell.gradients.p[0].re = value; return fcell.gradients.p[0].re;
-        case "conv_y_p": fcell.gradients.p[1].re = value; return fcell.gradients.p[1].re;
-        case "conv_z_p": fcell.gradients.p[2].re = value; return fcell.gradients.p[2].re;
-        case "conv_x_e": fcell.gradients.u[0].re = value; return fcell.gradients.u[0].re;
-        case "conv_y_e": fcell.gradients.u[1].re = value; return fcell.gradients.u[1].re;
-        case "conv_z_e": fcell.gradients.u[2].re = value; return fcell.gradients.u[2].re;
-        case "conv_x_T": fcell.gradients.T[0].re = value; return fcell.gradients.T[0].re;
-        case "conv_y_T": fcell.gradients.T[1].re = value; return fcell.gradients.T[1].re;
-        case "conv_z_T": fcell.gradients.T[2].re = value; return fcell.gradients.T[2].re;
+        case "conv_x_rho": fcell.gradients.rho.x.re = value; return fcell.gradients.rho.x.re;
+        case "conv_y_rho": fcell.gradients.rho.y.re = value; return fcell.gradients.rho.y.re;
+        case "conv_z_rho": fcell.gradients.rho.z.re = value; return fcell.gradients.rho.z.re;
+        case "conv_x_p": fcell.gradients.p.x.re = value; return fcell.gradients.p.x.re;
+        case "conv_y_p": fcell.gradients.p.y.re = value; return fcell.gradients.p.y.re;
+        case "conv_z_p": fcell.gradients.p.z.re = value; return fcell.gradients.p.z.re;
+        case "conv_x_e": fcell.gradients.u.x.re = value; return fcell.gradients.u.x.re;
+        case "conv_y_e": fcell.gradients.u.y.re = value; return fcell.gradients.u.y.re;
+        case "conv_z_e": fcell.gradients.u.z.re = value; return fcell.gradients.u.z.re;
+        case "conv_x_T": fcell.gradients.T.x.re = value; return fcell.gradients.T.x.re;
+        case "conv_y_T": fcell.gradients.T.y.re = value; return fcell.gradients.T.y.re;
+        case "conv_z_T": fcell.gradients.T.z.re = value; return fcell.gradients.T.z.re;
         case "visc_x_T": fcell.grad.T[0].re = value; return fcell.grad.T[0].re;
         case "visc_y_T": fcell.grad.T[1].re = value; return fcell.grad.T[1].re;
         case "visc_z_T": fcell.grad.T[2].re = value; return fcell.grad.T[2].re;
-        case "conv_x_vel.x": fcell.gradients.velx[0].re = value; return fcell.gradients.velx[0].re;
-        case "conv_y_vel.x": fcell.gradients.velx[1].re = value; return fcell.gradients.velx[1].re;
-        case "conv_z_vel.x": fcell.gradients.velx[2].re = value; return fcell.gradients.velx[2].re;
+        case "conv_x_vel.x": fcell.gradients.velx.x.re = value; return fcell.gradients.velx.x.re;
+        case "conv_y_vel.x": fcell.gradients.velx.y.re = value; return fcell.gradients.velx.y.re;
+        case "conv_z_vel.x": fcell.gradients.velx.z.re = value; return fcell.gradients.velx.z.re;
         case "visc_x_vel.x": fcell.grad.vel[0][0].re = value; return fcell.grad.vel[0][0].re;
         case "visc_y_vel.x": fcell.grad.vel[0][1].re = value; return fcell.grad.vel[0][1].re;
         case "visc_z_vel.x": fcell.grad.vel[0][2].re = value; return fcell.grad.vel[0][2].re;
-        case "conv_x_vel.y": fcell.gradients.vely[0].re = value; return fcell.gradients.vely[0].re;
-        case "conv_y_vel.y": fcell.gradients.vely[1].re = value; return fcell.gradients.vely[1].re;
-        case "conv_z_vel.y": fcell.gradients.vely[2].re = value; return fcell.gradients.vely[2].re;
+        case "conv_x_vel.y": fcell.gradients.vely.x.re = value; return fcell.gradients.vely.x.re;
+        case "conv_y_vel.y": fcell.gradients.vely.y.re = value; return fcell.gradients.vely.y.re;
+        case "conv_z_vel.y": fcell.gradients.vely.z.re = value; return fcell.gradients.vely.z.re;
         case "visc_x_vel.y": fcell.grad.vel[1][0].re = value; return fcell.grad.vel[1][0].re;
         case "visc_y_vel.y": fcell.grad.vel[1][1].re = value; return fcell.grad.vel[1][1].re;
         case "visc_z_vel.y": fcell.grad.vel[1][2].re = value; return fcell.grad.vel[1][2].re;
-        case "conv_x_vel.z": fcell.gradients.velz[0].re = value; return fcell.gradients.velz[0].re;
-        case "conv_y_vel.z": fcell.gradients.velz[1].re = value; return fcell.gradients.velz[1].re;
-        case "conv_z_vel.z": fcell.gradients.velz[2].re = value; return fcell.gradients.velz[2].re;
+        case "conv_x_vel.z": fcell.gradients.velz.x.re = value; return fcell.gradients.velz.x.re;
+        case "conv_y_vel.z": fcell.gradients.velz.y.re = value; return fcell.gradients.velz.y.re;
+        case "conv_z_vel.z": fcell.gradients.velz.z.re = value; return fcell.gradients.velz.z.re;
         case "visc_x_vel.z": fcell.grad.vel[2][0].re = value; return fcell.grad.vel[2][0].re;
         case "visc_y_vel.z": fcell.grad.vel[2][1].re = value; return fcell.grad.vel[2][1].re;
         case "visc_z_vel.z": fcell.grad.vel[2][2].re = value; return fcell.grad.vel[2][2].re;

@@ -1080,55 +1080,55 @@ public:
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
                     auto c = blk.cells[cid].gradients;
                     // velocity
-                    buf[ii++] = c.velx[0].re; version(complex_numbers) { buf[ii++] = c.velx[0].im; }
-                    buf[ii++] = c.velx[1].re; version(complex_numbers) { buf[ii++] = c.velx[1].im; }
-                    buf[ii++] = c.velx[2].re; version(complex_numbers) { buf[ii++] = c.velx[2].im; }
+                    buf[ii++] = c.velx.x.re; version(complex_numbers) { buf[ii++] = c.velx.x.im; }
+                    buf[ii++] = c.velx.y.re; version(complex_numbers) { buf[ii++] = c.velx.y.im; }
+                    buf[ii++] = c.velx.z.re; version(complex_numbers) { buf[ii++] = c.velx.z.im; }
                     buf[ii++] = c.velxPhi.re; version(complex_numbers) { buf[ii++] = c.velxPhi.im; }
                     buf[ii++] = c.velxMin.re; version(complex_numbers) { buf[ii++] = c.velxMin.im; }
                     buf[ii++] = c.velxMax.re; version(complex_numbers) { buf[ii++] = c.velxMax.im; }
-                    buf[ii++] = c.vely[0].re; version(complex_numbers) { buf[ii++] = c.vely[0].im; }
-                    buf[ii++] = c.vely[1].re; version(complex_numbers) { buf[ii++] = c.vely[1].im; }
-                    buf[ii++] = c.vely[2].re; version(complex_numbers) { buf[ii++] = c.vely[2].im; }
+                    buf[ii++] = c.vely.x.re; version(complex_numbers) { buf[ii++] = c.vely.x.im; }
+                    buf[ii++] = c.vely.y.re; version(complex_numbers) { buf[ii++] = c.vely.y.im; }
+                    buf[ii++] = c.vely.z.re; version(complex_numbers) { buf[ii++] = c.vely.z.im; }
                     buf[ii++] = c.velyPhi.re; version(complex_numbers) { buf[ii++] = c.velyPhi.im; }
                     buf[ii++] = c.velyMin.re; version(complex_numbers) { buf[ii++] = c.velyMin.im; }
                     buf[ii++] = c.velyMax.re; version(complex_numbers) { buf[ii++] = c.velyMax.im; }
-                    buf[ii++] = c.velz[0].re; version(complex_numbers) { buf[ii++] = c.velz[0].im; }
-                    buf[ii++] = c.velz[1].re; version(complex_numbers) { buf[ii++] = c.velz[1].im; }
-                    buf[ii++] = c.velz[2].re; version(complex_numbers) { buf[ii++] = c.velz[2].im; }
+                    buf[ii++] = c.velz.x.re; version(complex_numbers) { buf[ii++] = c.velz.x.im; }
+                    buf[ii++] = c.velz.y.re; version(complex_numbers) { buf[ii++] = c.velz.y.im; }
+                    buf[ii++] = c.velz.z.re; version(complex_numbers) { buf[ii++] = c.velz.z.im; }
                     buf[ii++] = c.velzPhi.re; version(complex_numbers) { buf[ii++] = c.velzPhi.im; }
                     buf[ii++] = c.velzMin.re; version(complex_numbers) { buf[ii++] = c.velzMin.im; }
                     buf[ii++] = c.velzMax.re; version(complex_numbers) { buf[ii++] = c.velzMax.im; }
                     // rho, p, T, u
-                    buf[ii++] = c.rho[0].re; version(complex_numbers) { buf[ii++] = c.rho[0].im; }
-                    buf[ii++] = c.rho[1].re; version(complex_numbers) { buf[ii++] = c.rho[1].im; }
-                    buf[ii++] = c.rho[2].re; version(complex_numbers) { buf[ii++] = c.rho[2].im; }
+                    buf[ii++] = c.rho.x.re; version(complex_numbers) { buf[ii++] = c.rho.x.im; }
+                    buf[ii++] = c.rho.y.re; version(complex_numbers) { buf[ii++] = c.rho.y.im; }
+                    buf[ii++] = c.rho.z.re; version(complex_numbers) { buf[ii++] = c.rho.z.im; }
                     buf[ii++] = c.rhoPhi.re; version(complex_numbers) { buf[ii++] = c.rhoPhi.im; }
                     buf[ii++] = c.rhoMin.re; version(complex_numbers) { buf[ii++] = c.rhoMin.im; }
                     buf[ii++] = c.rhoMax.re; version(complex_numbers) { buf[ii++] = c.rhoMax.im; }
-                    buf[ii++] = c.p[0].re; version(complex_numbers) { buf[ii++] = c.p[0].im; }
-                    buf[ii++] = c.p[1].re; version(complex_numbers) { buf[ii++] = c.p[1].im; }
-                    buf[ii++] = c.p[2].re; version(complex_numbers) { buf[ii++] = c.p[2].im; }
+                    buf[ii++] = c.p.x.re; version(complex_numbers) { buf[ii++] = c.p.x.im; }
+                    buf[ii++] = c.p.y.re; version(complex_numbers) { buf[ii++] = c.p.y.im; }
+                    buf[ii++] = c.p.z.re; version(complex_numbers) { buf[ii++] = c.p.z.im; }
                     buf[ii++] = c.pPhi.re; version(complex_numbers) { buf[ii++] = c.pPhi.im; }
                     buf[ii++] = c.pMin.re; version(complex_numbers) { buf[ii++] = c.pMin.im; }
                     buf[ii++] = c.pMax.re; version(complex_numbers) { buf[ii++] = c.pMax.im; }
-                    buf[ii++] = c.T[0].re; version(complex_numbers) { buf[ii++] = c.T[0].im; }
-                    buf[ii++] = c.T[1].re; version(complex_numbers) { buf[ii++] = c.T[1].im; }
-                    buf[ii++] = c.T[2].re; version(complex_numbers) { buf[ii++] = c.T[2].im; }
+                    buf[ii++] = c.T.x.re; version(complex_numbers) { buf[ii++] = c.T.x.im; }
+                    buf[ii++] = c.T.y.re; version(complex_numbers) { buf[ii++] = c.T.y.im; }
+                    buf[ii++] = c.T.z.re; version(complex_numbers) { buf[ii++] = c.T.z.im; }
                     buf[ii++] = c.TPhi.re; version(complex_numbers) { buf[ii++] = c.TPhi.im; }
                     buf[ii++] = c.TMin.re; version(complex_numbers) { buf[ii++] = c.TMin.im; }
                     buf[ii++] = c.TMax.re; version(complex_numbers) { buf[ii++] = c.TMax.im; }
-                    buf[ii++] = c.u[0].re; version(complex_numbers) { buf[ii++] = c.u[0].im; }
-                    buf[ii++] = c.u[1].re; version(complex_numbers) { buf[ii++] = c.u[1].im; }
-                    buf[ii++] = c.u[2].re; version(complex_numbers) { buf[ii++] = c.u[2].im; }
+                    buf[ii++] = c.u.x.re; version(complex_numbers) { buf[ii++] = c.u.x.im; }
+                    buf[ii++] = c.u.y.re; version(complex_numbers) { buf[ii++] = c.u.y.im; }
+                    buf[ii++] = c.u.z.re; version(complex_numbers) { buf[ii++] = c.u.z.im; }
                     buf[ii++] = c.uPhi.re; version(complex_numbers) { buf[ii++] = c.uPhi.im; }
                     buf[ii++] = c.uMin.re; version(complex_numbers) { buf[ii++] = c.uMin.im; }
                     buf[ii++] = c.uMax.re; version(complex_numbers) { buf[ii++] = c.uMax.im; }
                     // formerly tke, omega
                     version(turbulence) {
                         foreach(j; 0 .. nturb) {
-                            buf[ii++] = c.turb[j][0].re; version(complex_numbers) { buf[ii++] = c.turb[j][0].im; }
-                            buf[ii++] = c.turb[j][1].re; version(complex_numbers) { buf[ii++] = c.turb[j][1].im; }
-                            buf[ii++] = c.turb[j][2].re; version(complex_numbers) { buf[ii++] = c.turb[j][2].im; }
+                            buf[ii++] = c.turb[j].x.re; version(complex_numbers) { buf[ii++] = c.turb[j].x.im; }
+                            buf[ii++] = c.turb[j].y.re; version(complex_numbers) { buf[ii++] = c.turb[j].y.im; }
+                            buf[ii++] = c.turb[j].z.re; version(complex_numbers) { buf[ii++] = c.turb[j].z.im; }
                             buf[ii++] = c.turbPhi[j].re; version(complex_numbers) { buf[ii++] = c.turbPhi[j].im; }
                             buf[ii++] = c.turbMin[j].re; version(complex_numbers) { buf[ii++] = c.turbMin[j].im; }
                             buf[ii++] = c.turbMax[j].re; version(complex_numbers) { buf[ii++] = c.turbMax[j].im; }
@@ -1136,27 +1136,27 @@ public:
                     }
                     // MHD
                     version(MHD) {
-                        buf[ii++] = c.Bx[0].re; version(complex_numbers) { buf[ii++] = c.Bx[0].im; }
-                        buf[ii++] = c.Bx[1].re; version(complex_numbers) { buf[ii++] = c.Bx[1].im; }
-                        buf[ii++] = c.Bx[2].re; version(complex_numbers) { buf[ii++] = c.Bx[2].im; }
+                        buf[ii++] = c.Bx.x.re; version(complex_numbers) { buf[ii++] = c.Bx.x.im; }
+                        buf[ii++] = c.Bx.y.re; version(complex_numbers) { buf[ii++] = c.Bx.y.im; }
+                        buf[ii++] = c.Bx.z.re; version(complex_numbers) { buf[ii++] = c.Bx.z.im; }
                         buf[ii++] = c.BxPhi.re; version(complex_numbers) { buf[ii++] = c.BxPhi.im; }
                         buf[ii++] = c.BxMin.re; version(complex_numbers) { buf[ii++] = c.BxMin.im; }
                         buf[ii++] = c.BxMax.re; version(complex_numbers) { buf[ii++] = c.BxMax.im; }
-                        buf[ii++] = c.By[0].re; version(complex_numbers) { buf[ii++] = c.By[0].im; }
-                        buf[ii++] = c.By[1].re; version(complex_numbers) { buf[ii++] = c.By[1].im; }
-                        buf[ii++] = c.By[2].re; version(complex_numbers) { buf[ii++] = c.By[2].im; }
+                        buf[ii++] = c.By.x.re; version(complex_numbers) { buf[ii++] = c.By.x.im; }
+                        buf[ii++] = c.By.y.re; version(complex_numbers) { buf[ii++] = c.By.y.im; }
+                        buf[ii++] = c.By.z.re; version(complex_numbers) { buf[ii++] = c.By.z.im; }
                         buf[ii++] = c.ByPhi.re; version(complex_numbers) { buf[ii++] = c.ByPhi.im; }
                         buf[ii++] = c.ByMin.re; version(complex_numbers) { buf[ii++] = c.ByMin.im; }
                         buf[ii++] = c.ByMax.re; version(complex_numbers) { buf[ii++] = c.ByMax.im; }
-                        buf[ii++] = c.Bz[0].re; version(complex_numbers) { buf[ii++] = c.Bz[0].im; }
-                        buf[ii++] = c.Bz[1].re; version(complex_numbers) { buf[ii++] = c.Bz[1].im; }
-                        buf[ii++] = c.Bz[2].re; version(complex_numbers) { buf[ii++] = c.Bz[2].im; }
+                        buf[ii++] = c.Bz.x.re; version(complex_numbers) { buf[ii++] = c.Bz.x.im; }
+                        buf[ii++] = c.Bz.y.re; version(complex_numbers) { buf[ii++] = c.Bz.y.im; }
+                        buf[ii++] = c.Bz.z.re; version(complex_numbers) { buf[ii++] = c.Bz.z.im; }
                         buf[ii++] = c.BzPhi.re; version(complex_numbers) { buf[ii++] = c.BzPhi.im; }
                         buf[ii++] = c.BzMin.re; version(complex_numbers) { buf[ii++] = c.BzMin.im; }
                         buf[ii++] = c.BzMax.re; version(complex_numbers) { buf[ii++] = c.BzMax.im; }
-                        buf[ii++] = c.psi[0].re; version(complex_numbers) { buf[ii++] = c.psi[0].im; }
-                        buf[ii++] = c.psi[1].re; version(complex_numbers) { buf[ii++] = c.psi[1].im; }
-                        buf[ii++] = c.psi[2].re; version(complex_numbers) { buf[ii++] = c.psi[2].im; }
+                        buf[ii++] = c.psi.x.re; version(complex_numbers) { buf[ii++] = c.psi.x.im; }
+                        buf[ii++] = c.psi.y.re; version(complex_numbers) { buf[ii++] = c.psi.y.im; }
+                        buf[ii++] = c.psi.z.re; version(complex_numbers) { buf[ii++] = c.psi.z.im; }
                         buf[ii++] = c.psiPhi.re; version(complex_numbers) { buf[ii++] = c.psiPhi.im; }
                         buf[ii++] = c.psiMin.re; version(complex_numbers) { buf[ii++] = c.psiMin.im; }
                         buf[ii++] = c.psiMax.re; version(complex_numbers) { buf[ii++] = c.psiMax.im; }
@@ -1164,9 +1164,9 @@ public:
                     // multi-species
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) {
-                            buf[ii++] = c.rho_s[j][0].re; version(complex_numbers) { buf[ii++] = c.rho_s[j][0].im; }
-                            buf[ii++] = c.rho_s[j][1].re; version(complex_numbers) { buf[ii++] = c.rho_s[j][1].im; }
-                            buf[ii++] = c.rho_s[j][2].re; version(complex_numbers) { buf[ii++] = c.rho_s[j][2].im; }
+                            buf[ii++] = c.rho_s[j].x.re; version(complex_numbers) { buf[ii++] = c.rho_s[j].x.im; }
+                            buf[ii++] = c.rho_s[j].y.re; version(complex_numbers) { buf[ii++] = c.rho_s[j].y.im; }
+                            buf[ii++] = c.rho_s[j].z.re; version(complex_numbers) { buf[ii++] = c.rho_s[j].z.im; }
                             buf[ii++] = c.rho_sPhi[j].re; version(complex_numbers) { buf[ii++] = c.rho_sPhi[j].im; }
                             buf[ii++] = c.rho_sMin[j].re; version(complex_numbers) { buf[ii++] = c.rho_sMin[j].im; }
                             buf[ii++] = c.rho_sMax[j].re; version(complex_numbers) { buf[ii++] = c.rho_sMax[j].im; }
@@ -1175,17 +1175,17 @@ public:
                     // multi-T
                     version(multi_T_gas) {
                         foreach (j; 0 .. nmodes) {
-                            buf[ii++] = c.T_modes[j][0].re; version(complex_numbers) { buf[ii++] = c.T_modes[j][0].im; }
-                            buf[ii++] = c.T_modes[j][1].re; version(complex_numbers) { buf[ii++] = c.T_modes[j][1].im; }
-                            buf[ii++] = c.T_modes[j][2].re; version(complex_numbers) { buf[ii++] = c.T_modes[j][2].im; }
+                            buf[ii++] = c.T_modes[j].x.re; version(complex_numbers) { buf[ii++] = c.T_modes[j].x.im; }
+                            buf[ii++] = c.T_modes[j].y.re; version(complex_numbers) { buf[ii++] = c.T_modes[j].y.im; }
+                            buf[ii++] = c.T_modes[j].z.re; version(complex_numbers) { buf[ii++] = c.T_modes[j].z.im; }
                             buf[ii++] = c.T_modesPhi[j].re; version(complex_numbers) { buf[ii++] = c.T_modesPhi[j].im; }
                             buf[ii++] = c.T_modesMin[j].re; version(complex_numbers) { buf[ii++] = c.T_modesMin[j].im; }
                             buf[ii++] = c.T_modesMax[j].re; version(complex_numbers) { buf[ii++] = c.T_modesMax[j].im; }
                         }
                         foreach (j; 0 .. nmodes) {
-                            buf[ii++] = c.u_modes[j][0].re; version(complex_numbers) { buf[ii++] = c.u_modes[j][0].im; }
-                            buf[ii++] = c.u_modes[j][1].re; version(complex_numbers) { buf[ii++] = c.u_modes[j][1].im; }
-                            buf[ii++] = c.u_modes[j][2].re; version(complex_numbers) { buf[ii++] = c.u_modes[j][2].im; }
+                            buf[ii++] = c.u_modes[j].x.re; version(complex_numbers) { buf[ii++] = c.u_modes[j].x.im; }
+                            buf[ii++] = c.u_modes[j].y.re; version(complex_numbers) { buf[ii++] = c.u_modes[j].y.im; }
+                            buf[ii++] = c.u_modes[j].z.re; version(complex_numbers) { buf[ii++] = c.u_modes[j].z.im; }
                             buf[ii++] = c.u_modesPhi[j].re; version(complex_numbers) { buf[ii++] = c.u_modesPhi[j].im; }
                             buf[ii++] = c.u_modesMin[j].re; version(complex_numbers) { buf[ii++] = c.u_modesMin[j].im; }
                             buf[ii++] = c.u_modesMax[j].re; version(complex_numbers) { buf[ii++] = c.u_modesMax[j].im; }
@@ -1230,55 +1230,55 @@ public:
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi].gradients;
                     // velocity
-                    c.velx[0].re = buf[ii++]; version(complex_numbers) { c.velx[0].im = buf[ii++]; }
-                    c.velx[1].re = buf[ii++]; version(complex_numbers) { c.velx[1].im = buf[ii++]; }
-                    c.velx[2].re = buf[ii++]; version(complex_numbers) { c.velx[2].im = buf[ii++]; }
+                    c.velx.x.re = buf[ii++]; version(complex_numbers) { c.velx.x.im = buf[ii++]; }
+                    c.velx.y.re = buf[ii++]; version(complex_numbers) { c.velx.y.im = buf[ii++]; }
+                    c.velx.z.re = buf[ii++]; version(complex_numbers) { c.velx.z.im = buf[ii++]; }
                     c.velxPhi.re = buf[ii++]; version(complex_numbers) { c.velxPhi.im = buf[ii++]; }
                     c.velxMin.re = buf[ii++]; version(complex_numbers) { c.velxMin.im = buf[ii++]; }
                     c.velxMax.re = buf[ii++]; version(complex_numbers) { c.velxMax.im = buf[ii++]; }
-                    c.vely[0].re = buf[ii++]; version(complex_numbers) { c.vely[0].im = buf[ii++]; }
-                    c.vely[1].re = buf[ii++]; version(complex_numbers) { c.vely[1].im = buf[ii++]; }
-                    c.vely[2].re = buf[ii++]; version(complex_numbers) { c.vely[2].im = buf[ii++]; }
+                    c.vely.x.re = buf[ii++]; version(complex_numbers) { c.vely.x.im = buf[ii++]; }
+                    c.vely.y.re = buf[ii++]; version(complex_numbers) { c.vely.y.im = buf[ii++]; }
+                    c.vely.z.re = buf[ii++]; version(complex_numbers) { c.vely.z.im = buf[ii++]; }
                     c.velyPhi.re = buf[ii++]; version(complex_numbers) { c.velyPhi.im = buf[ii++]; }
                     c.velyMin.re = buf[ii++]; version(complex_numbers) { c.velyMin.im = buf[ii++]; }
                     c.velyMax.re = buf[ii++]; version(complex_numbers) { c.velyMax.im = buf[ii++]; }
-                    c.velz[0].re = buf[ii++]; version(complex_numbers) { c.velz[0].im = buf[ii++]; }
-                    c.velz[1].re = buf[ii++]; version(complex_numbers) { c.velz[1].im = buf[ii++]; }
-                    c.velz[2].re = buf[ii++]; version(complex_numbers) { c.velz[2].im = buf[ii++]; }
+                    c.velz.x.re = buf[ii++]; version(complex_numbers) { c.velz.x.im = buf[ii++]; }
+                    c.velz.y.re = buf[ii++]; version(complex_numbers) { c.velz.y.im = buf[ii++]; }
+                    c.velz.z.re = buf[ii++]; version(complex_numbers) { c.velz.z.im = buf[ii++]; }
                     c.velzPhi.re = buf[ii++]; version(complex_numbers) { c.velzPhi.im = buf[ii++]; }
                     c.velzMin.re = buf[ii++]; version(complex_numbers) { c.velzMin.im = buf[ii++]; }
                     c.velzMax.re = buf[ii++]; version(complex_numbers) { c.velzMax.im = buf[ii++]; }
                     // rho, p, T, u
-                    c.rho[0].re = buf[ii++]; version(complex_numbers) { c.rho[0].im = buf[ii++]; }
-                    c.rho[1].re = buf[ii++]; version(complex_numbers) { c.rho[1].im = buf[ii++]; }
-                    c.rho[2].re = buf[ii++]; version(complex_numbers) { c.rho[2].im = buf[ii++]; }
+                    c.rho.x.re = buf[ii++]; version(complex_numbers) { c.rho.x.im = buf[ii++]; }
+                    c.rho.y.re = buf[ii++]; version(complex_numbers) { c.rho.y.im = buf[ii++]; }
+                    c.rho.z.re = buf[ii++]; version(complex_numbers) { c.rho.z.im = buf[ii++]; }
                     c.rhoPhi.re = buf[ii++]; version(complex_numbers) { c.rhoPhi.im = buf[ii++]; }
                     c.rhoMin.re = buf[ii++]; version(complex_numbers) { c.rhoMin.im = buf[ii++]; }
                     c.rhoMax.re = buf[ii++]; version(complex_numbers) { c.rhoMax.im = buf[ii++]; }
-                    c.p[0].re = buf[ii++]; version(complex_numbers) { c.p[0].im = buf[ii++]; }
-                    c.p[1].re = buf[ii++]; version(complex_numbers) { c.p[1].im = buf[ii++]; }
-                    c.p[2].re = buf[ii++]; version(complex_numbers) { c.p[2].im = buf[ii++]; }
+                    c.p.x.re = buf[ii++]; version(complex_numbers) { c.p.x.im = buf[ii++]; }
+                    c.p.y.re = buf[ii++]; version(complex_numbers) { c.p.y.im = buf[ii++]; }
+                    c.p.z.re = buf[ii++]; version(complex_numbers) { c.p.z.im = buf[ii++]; }
                     c.pPhi.re = buf[ii++]; version(complex_numbers) { c.pPhi.im = buf[ii++]; }
                     c.pMin.re = buf[ii++]; version(complex_numbers) { c.pMin.im = buf[ii++]; }
                     c.pMax.re = buf[ii++]; version(complex_numbers) { c.pMax.im = buf[ii++]; }
-                    c.T[0].re = buf[ii++]; version(complex_numbers) { c.T[0].im = buf[ii++]; }
-                    c.T[1].re = buf[ii++]; version(complex_numbers) { c.T[1].im = buf[ii++]; }
-                    c.T[2].re = buf[ii++]; version(complex_numbers) { c.T[2].im = buf[ii++]; }
+                    c.T.x.re = buf[ii++]; version(complex_numbers) { c.T.x.im = buf[ii++]; }
+                    c.T.y.re = buf[ii++]; version(complex_numbers) { c.T.y.im = buf[ii++]; }
+                    c.T.z.re = buf[ii++]; version(complex_numbers) { c.T.z.im = buf[ii++]; }
                     c.TPhi.re = buf[ii++]; version(complex_numbers) { c.TPhi.im = buf[ii++]; }
                     c.TMin.re = buf[ii++]; version(complex_numbers) { c.TMin.im = buf[ii++]; }
                     c.TMax.re = buf[ii++]; version(complex_numbers) { c.TMax.im = buf[ii++]; }
-                    c.u[0].re = buf[ii++]; version(complex_numbers) { c.u[0].im = buf[ii++]; }
-                    c.u[1].re = buf[ii++]; version(complex_numbers) { c.u[1].im = buf[ii++]; }
-                    c.u[2].re = buf[ii++]; version(complex_numbers) { c.u[2].im = buf[ii++]; }
+                    c.u.x.re = buf[ii++]; version(complex_numbers) { c.u.x.im = buf[ii++]; }
+                    c.u.y.re = buf[ii++]; version(complex_numbers) { c.u.y.im = buf[ii++]; }
+                    c.u.z.re = buf[ii++]; version(complex_numbers) { c.u.z.im = buf[ii++]; }
                     c.uPhi.re = buf[ii++]; version(complex_numbers) { c.uPhi.im = buf[ii++]; }
                     c.uMin.re = buf[ii++]; version(complex_numbers) { c.uMin.im = buf[ii++]; }
                     c.uMax.re = buf[ii++]; version(complex_numbers) { c.uMax.im = buf[ii++]; }
                     // tke, omega
                     version(turbulence) {
                         foreach (j; 0 .. nturb){
-                            c.turb[j][0].re = buf[ii++]; version(complex_numbers) { c.turb[j][0].im = buf[ii++]; }
-                            c.turb[j][1].re = buf[ii++]; version(complex_numbers) { c.turb[j][1].im = buf[ii++]; }
-                            c.turb[j][2].re = buf[ii++]; version(complex_numbers) { c.turb[j][2].im = buf[ii++]; }
+                            c.turb[j].x.re = buf[ii++]; version(complex_numbers) { c.turb[j].x.im = buf[ii++]; }
+                            c.turb[j].y.re = buf[ii++]; version(complex_numbers) { c.turb[j].y.im = buf[ii++]; }
+                            c.turb[j].z.re = buf[ii++]; version(complex_numbers) { c.turb[j].z.im = buf[ii++]; }
                             c.turbPhi[j].re = buf[ii++]; version(complex_numbers) { c.turbPhi[j].im = buf[ii++]; }
                             c.turbMin[j].re = buf[ii++]; version(complex_numbers) { c.turbMin[j].im = buf[ii++]; }
                             c.turbMax[j].re = buf[ii++]; version(complex_numbers) { c.turbMax[j].im = buf[ii++]; }
@@ -1286,27 +1286,27 @@ public:
                     }
                     // MHD
                     version(MHD) {
-                        c.Bx[0].re = buf[ii++]; version(complex_numbers) { c.Bx[0].im = buf[ii++]; }
-                        c.Bx[1].re = buf[ii++]; version(complex_numbers) { c.Bx[1].im = buf[ii++]; }
-                        c.Bx[2].re = buf[ii++]; version(complex_numbers) { c.Bx[2].im = buf[ii++]; }
+                        c.Bx.x.re = buf[ii++]; version(complex_numbers) { c.Bx.x.im = buf[ii++]; }
+                        c.Bx.y.re = buf[ii++]; version(complex_numbers) { c.Bx.y.im = buf[ii++]; }
+                        c.Bx.z.re = buf[ii++]; version(complex_numbers) { c.Bx.z.im = buf[ii++]; }
                         c.BxPhi.re = buf[ii++]; version(complex_numbers) { c.BxPhi.im = buf[ii++]; }
                         c.BxMin.re = buf[ii++]; version(complex_numbers) { c.BxMin.im = buf[ii++]; }
                         c.BxMax.re = buf[ii++]; version(complex_numbers) { c.BxMax.im = buf[ii++]; }
-                        c.By[0].re = buf[ii++]; version(complex_numbers) { c.By[0].im = buf[ii++]; }
-                        c.By[1].re = buf[ii++]; version(complex_numbers) { c.By[1].im = buf[ii++]; }
-                        c.By[2].re = buf[ii++]; version(complex_numbers) { c.By[2].im = buf[ii++]; }
+                        c.By.x.re = buf[ii++]; version(complex_numbers) { c.By.x.im = buf[ii++]; }
+                        c.By.y.re = buf[ii++]; version(complex_numbers) { c.By.y.im = buf[ii++]; }
+                        c.By.z.re = buf[ii++]; version(complex_numbers) { c.By.z.im = buf[ii++]; }
                         c.ByPhi.re = buf[ii++]; version(complex_numbers) { c.ByPhi.im = buf[ii++]; }
                         c.ByMin.re = buf[ii++]; version(complex_numbers) { c.ByMin.im = buf[ii++]; }
                         c.ByMax.re = buf[ii++]; version(complex_numbers) { c.ByMax.im = buf[ii++]; }
-                        c.Bz[0].re = buf[ii++]; version(complex_numbers) { c.Bz[0].im = buf[ii++]; }
-                        c.Bz[1].re = buf[ii++]; version(complex_numbers) { c.Bz[1].im = buf[ii++]; }
-                        c.Bz[2].re = buf[ii++]; version(complex_numbers) { c.Bz[2].im = buf[ii++]; }
+                        c.Bz.x.re = buf[ii++]; version(complex_numbers) { c.Bz.x.im = buf[ii++]; }
+                        c.Bz.y.re = buf[ii++]; version(complex_numbers) { c.Bz.y.im = buf[ii++]; }
+                        c.Bz.z.re = buf[ii++]; version(complex_numbers) { c.Bz.z.im = buf[ii++]; }
                         c.BzPhi.re = buf[ii++]; version(complex_numbers) { c.BzPhi.im = buf[ii++]; }
                         c.BzMin.re = buf[ii++]; version(complex_numbers) { c.BzMin.im = buf[ii++]; }
                         c.BzMax.re = buf[ii++]; version(complex_numbers) { c.BzMax.im = buf[ii++]; }
-                        c.psi[0].re = buf[ii++]; version(complex_numbers) {c.psi[0].im = buf[ii++]; }
-                        c.psi[1].re = buf[ii++]; version(complex_numbers) {c.psi[1].im = buf[ii++]; }
-                        c.psi[2].re = buf[ii++]; version(complex_numbers) {c.psi[2].im = buf[ii++]; }
+                        c.psi.x.re = buf[ii++]; version(complex_numbers) {c.psi.x.im = buf[ii++]; }
+                        c.psi.y.re = buf[ii++]; version(complex_numbers) {c.psi.y.im = buf[ii++]; }
+                        c.psi.z.re = buf[ii++]; version(complex_numbers) {c.psi.z.im = buf[ii++]; }
                         c.psiPhi.re = buf[ii++]; version(complex_numbers) {c.psiPhi.im = buf[ii++]; }
                         c.psiMin.re = buf[ii++]; version(complex_numbers) {c.psiMin.im = buf[ii++]; }
                         c.psiMax.re = buf[ii++]; version(complex_numbers) {c.psiMax.im = buf[ii++]; }
@@ -1314,9 +1314,9 @@ public:
                     // multi-species
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) {
-                            c.rho_s[j][0].re = buf[ii++]; version(complex_numbers) { c.rho_s[j][0].im = buf[ii++]; }
-                            c.rho_s[j][1].re = buf[ii++]; version(complex_numbers) { c.rho_s[j][1].im = buf[ii++]; }
-                            c.rho_s[j][2].re = buf[ii++]; version(complex_numbers) { c.rho_s[j][2].im = buf[ii++]; }
+                            c.rho_s[j].x.re = buf[ii++]; version(complex_numbers) { c.rho_s[j].x.im = buf[ii++]; }
+                            c.rho_s[j].y.re = buf[ii++]; version(complex_numbers) { c.rho_s[j].y.im = buf[ii++]; }
+                            c.rho_s[j].z.re = buf[ii++]; version(complex_numbers) { c.rho_s[j].z.im = buf[ii++]; }
                             c.rho_sPhi[j].re = buf[ii++]; version(complex_numbers) { c.rho_sPhi[j].im = buf[ii++]; }
                             c.rho_sMin[j].re = buf[ii++]; version(complex_numbers) { c.rho_sMin[j].im = buf[ii++]; }
                             c.rho_sMax[j].re = buf[ii++]; version(complex_numbers) { c.rho_sMax[j].im = buf[ii++]; }
@@ -1325,17 +1325,17 @@ public:
                     // multi-T
                     version(multi_T_gas) {
                         foreach (j; 0 .. nmodes) {
-                            c.T_modes[j][0].re = buf[ii++]; version(complex_numbers) { c.T_modes[j][0].im = buf[ii++]; }
-                            c.T_modes[j][1].re = buf[ii++]; version(complex_numbers) { c.T_modes[j][1].im = buf[ii++]; }
-                            c.T_modes[j][2].re = buf[ii++]; version(complex_numbers) { c.T_modes[j][2].im = buf[ii++]; }
+                            c.T_modes[j].x.re = buf[ii++]; version(complex_numbers) { c.T_modes[j].x.im = buf[ii++]; }
+                            c.T_modes[j].y.re = buf[ii++]; version(complex_numbers) { c.T_modes[j].y.im = buf[ii++]; }
+                            c.T_modes[j].z.re = buf[ii++]; version(complex_numbers) { c.T_modes[j].z.im = buf[ii++]; }
                             c.T_modesPhi[j].re = buf[ii++]; version(complex_numbers) { c.T_modesPhi[j].im = buf[ii++]; }
                             c.T_modesMin[j].re = buf[ii++]; version(complex_numbers) { c.T_modesMin[j].im = buf[ii++]; }
                             c.T_modesMax[j].re = buf[ii++]; version(complex_numbers) { c.T_modesMax[j].im = buf[ii++]; }
                         }
                         foreach (j; 0 .. nmodes) {
-                            c.u_modes[j][0].re = buf[ii++]; version(complex_numbers) { c.u_modes[j][0].im = buf[ii++]; }
-                            c.u_modes[j][1].re = buf[ii++]; version(complex_numbers) { c.u_modes[j][1].im = buf[ii++]; }
-                            c.u_modes[j][2].re = buf[ii++]; version(complex_numbers) { c.u_modes[j][2].im = buf[ii++]; }
+                            c.u_modes[j].x.re = buf[ii++]; version(complex_numbers) { c.u_modes[j].x.im = buf[ii++]; }
+                            c.u_modes[j].y.re = buf[ii++]; version(complex_numbers) { c.u_modes[j].y.im = buf[ii++]; }
+                            c.u_modes[j].z.re = buf[ii++]; version(complex_numbers) { c.u_modes[j].z.im = buf[ii++]; }
                             c.u_modesPhi[j].re = buf[ii++]; version(complex_numbers) { c.u_modesPhi[j].im = buf[ii++]; }
                             c.u_modesMin[j].re = buf[ii++]; version(complex_numbers) { c.u_modesMin[j].im = buf[ii++]; }
                             c.u_modesMax[j].re = buf[ii++]; version(complex_numbers) { c.u_modesMax[j].im = buf[ii++]; }

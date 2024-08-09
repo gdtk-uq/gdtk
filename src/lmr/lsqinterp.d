@@ -112,38 +112,38 @@ struct LSQInterpGradients {
     // to the Left and Right sides of interfaces.
     // We need to hold onto their gradients within cells.
 public:
-    number[3] velx, vely, velz;
+    Vector3 velx, vely, velz;
     number velxPhi, velyPhi, velzPhi;
     number velxMax, velyMax, velzMax;
     number velxMin, velyMin, velzMin;
     version(MHD) {
-        number[3] Bx, By, Bz, psi;
+        Vector3 Bx, By, Bz, psi;
         number BxPhi, ByPhi, BzPhi, psiPhi;
         number BxMax, ByMax, BzMax, psiMax;
         number BxMin, ByMin, BzMin, psiMin;
     }
     version(turbulence) {
-        number[3][2] turb;
+        Vector3[2] turb;
         number[2] turbPhi;
         number[2] turbMax;
         number[2] turbMin;
     }
     version(multi_species_gas) {
-        number[3][] rho_s;
+        Vector3[] rho_s;
         number[] rho_sPhi;
         number[] rho_sMax;
         number[] rho_sMin;
     }
-    number[3] rho, p;
+    Vector3 rho, p;
     number rhoPhi, pPhi;
     number rhoMax, pMax;
     number rhoMin, pMin;
-    number[3] T, u;
+    Vector3 T, u;
     number TPhi, uPhi;
     number TMax, uMax;
     number TMin, uMin;
     version(multi_T_gas) {
-        number[3][] T_modes, u_modes;
+        Vector3[] T_modes, u_modes;
         number[] T_modesPhi, u_modesPhi;
         number[] T_modesMax, u_modesMax;
         number[] T_modesMin, u_modesMin;
@@ -213,12 +213,12 @@ public:
     @nogc
     void copy_values_from(ref const(LSQInterpGradients) other)
     {
-        velx[] = other.velx[]; vely[] = other.vely[]; velz[] = other.velz[];
+        velx = other.velx; vely = other.vely; velz = other.velz;
         velxPhi = other.velxPhi; velyPhi = other.velyPhi; velzPhi = other.velzPhi;
         velxMax = other.velxMax; velyMax = other.velyMax; velzMax = other.velzMax;
         velxMin = other.velxMin; velyMin = other.velyMin; velzMin = other.velzMin;
         version(MHD) {
-            Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
+            Bx = other.Bx; By = other.By; Bz = other.Bz; psi = other.psi;
             BxPhi = other.BxPhi; ByPhi = other.ByPhi; BzPhi = other.BzPhi; psiPhi = other.psiPhi;
             BxMax = other.BxMax; ByMax = other.ByMax; BzMax = other.BzMax; psiMax = other.psiMax;
             BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
@@ -226,7 +226,7 @@ public:
         version(turbulence) {
             assert(turb.length == other.turb.length, "Mismatch in turb length");
             foreach(i; 0 .. turb.length){
-                turb[i][] = other.turb[i][];
+                turb[i] = other.turb[i];
                 turbPhi[i] = other.turbPhi[i];
                 turbMax[i] = other.turbMax[i];
                 turbMin[i] = other.turbMin[i];
@@ -234,7 +234,7 @@ public:
         }
         version(multi_species_gas) {
             assert(rho_s.length == other.rho_s.length, "Mismatch in rho_s length");
-            foreach(i; 0 .. other.rho_s.length) { rho_s[i][] = other.rho_s[i][]; }
+            foreach(i; 0 .. other.rho_s.length) { rho_s[i] = other.rho_s[i]; }
             assert(rho_sPhi.length == other.rho_sPhi.length, "Mismatch in rho_sPhi length");
             foreach(i; 0 .. other.rho_s.length) { rho_sPhi[i] = other.rho_sPhi[i]; }
             assert(rho_sMax.length == other.rho_sMax.length, "Mismatch in rho_sMax length");
@@ -242,11 +242,11 @@ public:
             assert(rho_sMin.length == other.rho_sMin.length, "Mismatch in rho_sMin length");
             foreach(i; 0 .. other.rho_s.length) { rho_sMin[i] = other.rho_sMin[i]; }
         }
-        rho[] = other.rho[]; p[] = other.p[];
+        rho = other.rho; p = other.p;
         rhoPhi = other.rhoPhi; pPhi = other.pPhi;
         rhoMax = other.rhoMax; pMax = other.pMax;
         rhoMin = other.rhoMin; pMin = other.pMin;
-        T[] = other.T[]; u[] = other.u[];
+        T = other.T; u = other.u;
         TPhi = other.TPhi; uPhi = other.uPhi;
         TMax = other.TMax; uMax = other.uMax;
         TMin = other.TMin; uMin = other.uMin;
@@ -254,7 +254,7 @@ public:
             assert(T_modes.length == other.T_modes.length, "Mismatch in T_modes length");
             assert(u_modes.length == other.u_modes.length, "Mismatch in u_modes length");
             foreach(i; 0 .. other.T_modes.length) {
-                T_modes[i][] = other.T_modes[i][]; u_modes[i][] = other.u_modes[i][];
+                T_modes[i] = other.T_modes[i]; u_modes[i] = other.u_modes[i];
             }
             assert(T_modesPhi.length == other.T_modesPhi.length, "Mismatch in T_modesPhi length");
             assert(u_modesPhi.length == other.u_modesPhi.length, "Mismatch in u_modesPhi length");
@@ -270,6 +270,34 @@ public:
             assert(u_modesMin.length == other.u_modesMin.length, "Mismatch in u_modesMin length");
             foreach(i; 0 .. other.T_modesMin.length) {
                 T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
+            }
+        }
+    } // end copy_values_from()
+
+    @nogc
+    void copy_limiter_values_from(ref const(LSQInterpGradients) other)
+    {
+        velxPhi = other.velxPhi; velyPhi = other.velyPhi; velzPhi = other.velzPhi;
+        version(MHD) {
+            BxPhi = other.BxPhi; ByPhi = other.ByPhi; BzPhi = other.BzPhi; psiPhi = other.psiPhi;
+        }
+        version(turbulence) {
+            assert(turb.length == other.turb.length, "Mismatch in turb length");
+            foreach(i; 0 .. turb.length){
+                turbPhi[i] = other.turbPhi[i];
+            }
+        }
+        version(multi_species_gas) {
+            assert(rho_sPhi.length == other.rho_sPhi.length, "Mismatch in rho_sPhi length");
+            foreach(i; 0 .. other.rho_s.length) { rho_sPhi[i] = other.rho_sPhi[i]; }
+        }
+        rhoPhi = other.rhoPhi; pPhi = other.pPhi;
+        TPhi = other.TPhi; uPhi = other.uPhi;
+        version(multi_T_gas) {
+            assert(T_modesPhi.length == other.T_modesPhi.length, "Mismatch in T_modesPhi length");
+            assert(u_modesPhi.length == other.u_modesPhi.length, "Mismatch in u_modesPhi length");
+            foreach(i; 0 .. other.T_modesPhi.length) {
+                T_modesPhi[i] = other.T_modesPhi[i]; u_modesPhi[i] = other.u_modesPhi[i];
             }
         }
     } // end copy_values_from()
@@ -300,8 +328,8 @@ public:
                 number dx = f.pos.x - cell_cloud[0].pos[0].x;
                 number dy = f.pos.y - cell_cloud[0].pos[0].y;
                 number dz = f.pos.z - cell_cloud[0].pos[0].z;
-                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delm = "~gname~".x * dx + "~gname~".y * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~".z * dz; }
                 delm += eps;
                 if (delm >= 0.0) {
                     delp = "~qMaxname~" - U;
@@ -344,7 +372,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -461,8 +489,8 @@ public:
                 number dx = v.pos[gtl].x - cell_cloud[0].pos[gtl].x;
                 number dy = v.pos[gtl].y - cell_cloud[0].pos[gtl].y;
                 number dz = v.pos[gtl].z - cell_cloud[0].pos[gtl].z;
-                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delm = "~gname~".x * dx + "~gname~".y * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~".z * dz; }
                 delp = (delm >= 0.0) ? Umax - U: Umin - U;
                 delp /= nondim;
                 delm /= nondim;
@@ -507,7 +535,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -609,8 +637,8 @@ public:
                 number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
                 number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
                 number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
-                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delm = "~gname~".x * dx + "~gname~".y * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~".z * dz; }
                 delp = (delm >= 0.0) ? 0.5*("~qMaxname~" - U): 0.5*("~qMinname~" - U);
                 delp /= nondim;
                 delm /= nondim;
@@ -655,7 +683,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -768,8 +796,8 @@ public:
                 number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
                 number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
                 number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
-                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delm = "~gname~".x * dx + "~gname~".y * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~".z * dz; }
                 delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
                 delp /= nondim;
                 delm /= nondim;
@@ -814,7 +842,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -914,8 +942,8 @@ public:
                 number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
                 number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
                 number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
-                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delm = "~gname~".x * dx + "~gname~".y * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~".z * dz; }
                 delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
                 delp /= nondim;
                 a = fabs(delp);
@@ -963,7 +991,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -1044,9 +1072,9 @@ public:
             //number dpy = dy1*cell_cloud[0].gradients.p[1] - dy2*ncell.gradients.p[1];
             //number dpz = dz1*cell_cloud[0].gradients.p[2] - dz2*ncell.gradients.p[2];
             // this step is a modification on the original algorithm since we don't have cell gradients from neighbouring blocks at this point
-            number dpx = dx1*cell_cloud[0].gradients.p[0] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-            number dpy = dy1*cell_cloud[0].gradients.p[1] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-            number dpz = dz1*cell_cloud[0].gradients.p[2] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+            number dpx = dx1*cell_cloud[0].gradients.p.x - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+            number dpy = dy1*cell_cloud[0].gradients.p.y - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+            number dpz = dz1*cell_cloud[0].gradients.p.z - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
             number dp = dpx*dpx + dpy*dpy;
             if (myConfig.dimensions == 3) { dp += dpz*dpz; }
             dp = sqrt(dp);
@@ -1075,7 +1103,7 @@ public:
                 foreach (isp; 0 .. nsp) { rho_sPhi[isp] = phi; }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
 
@@ -1163,7 +1191,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -1262,7 +1290,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -1321,12 +1349,12 @@ public:
         {
             string code = "{
                 number q0 = cell_cloud[0].fs."~qname~";
-                "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
+                "~gname~".x = 0.0; "~gname~".y = 0.0; "~gname~".z = 0.0;
                 foreach (i; 1 .. np) {
                     number dq = cell_cloud[i].fs."~qname~" - q0;
-                    "~gname~"[0] += ws.wx[i] * dq;
-                    "~gname~"[1] += ws.wy[i] * dq;
-                    if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
+                    "~gname~".x += ws.wx[i] * dq;
+                    "~gname~".y += ws.wy[i] * dq;
+                    if (dimensions == 3) { "~gname~".z += ws.wz[i] * dq; }
                 }
                 }
                 ";
@@ -1361,7 +1389,7 @@ public:
                 }
             } else {
                 // Only one possible gradient value for a single species.
-                rho_s[0][0] = 0.0; rho_s[0][1] = 0.0; rho_s[0][2] = 0.0;
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
             }
         }
         // Interpolate on two of the thermodynamic quantities,
@@ -1428,6 +1456,95 @@ public:
         return;
     } // end compute_lsq_gradients()
 
+    @nogc
+    void reflect_normal(FVInterface face, ref LocalConfig myConfig)
+    {
+        // The following function is to be used at compile time.
+        string codeForGradients(string gname)
+        {
+            string code = "
+            {
+                "~gname~".transform_to_local_frame(face.n, face.t1, face.t2);
+                "~gname~".x = -("~gname~".x);
+                "~gname~".transform_to_global_frame(face.n, face.t1, face.t2);
+            }
+            ";
+            return code;
+        }
+        mixin(codeForGradients("velx"));
+        mixin(codeForGradients("vely"));
+        mixin(codeForGradients("velz"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForGradients("Bx"));
+                mixin(codeForGradients("By"));
+                mixin(codeForGradients("Bz"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForGradients("psi"));
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForGradients("turb[it]"));
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForGradients("rho_s[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            mixin(codeForGradients("p"));
+            mixin(codeForGradients("T"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("T_modes[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            mixin(codeForGradients("rho"));
+            mixin(codeForGradients("u"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("u_modes[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            mixin(codeForGradients("rho"));
+            mixin(codeForGradients("p"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("u_modes[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            mixin(codeForGradients("rho"));
+            mixin(codeForGradients("T"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("T_modes[imode]"));
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+        return;
+    } // end reflect_normal()
+
 } // end class LSQInterpGradients
 
 
@@ -1477,15 +1594,15 @@ public:
                 number qL0 = cL0.fs."~qname~";
                 number qMinL = qL0;
                 number qMaxL = qL0;
-                mygradL[0] = cL0.gradients."~gname~"[0];
-                mygradL[1] = cL0.gradients."~gname~"[1];
-                mygradL[2] = cL0.gradients."~gname~"[2];
+                mygradL[0] = cL0.gradients."~gname~".x;
+                mygradL[1] = cL0.gradients."~gname~".y;
+                mygradL[2] = cL0.gradients."~gname~".z;
                 number qR0 = cR0.fs."~qname~";
                 number qMinR = qR0;
                 number qMaxR = qR0;
-                mygradR[0] = cR0.gradients."~gname~"[0];
-                mygradR[1] = cR0.gradients."~gname~"[1];
-                mygradR[2] = cR0.gradients."~gname~"[2];
+                mygradR[0] = cR0.gradients."~gname~".x;
+                mygradR[1] = cR0.gradients."~gname~".y;
+                mygradR[2] = cR0.gradients."~gname~".z;
                 if (myConfig.apply_limiter) {
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.svan_albada:
@@ -1834,9 +1951,9 @@ public:
                 number qR0 = cR0.fs."~qname~";
                 number qMinR = qR0;
                 number qMaxR = qR0;
-                mygradR[0] = cR0.gradients."~gname~"[0];
-                mygradR[1] = cR0.gradients."~gname~"[1];
-                mygradR[2] = cR0.gradients."~gname~"[2];
+                mygradR[0] = cR0.gradients."~gname~".x;
+                mygradR[1] = cR0.gradients."~gname~".y;
+                mygradR[2] = cR0.gradients."~gname~".z;
                 if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.svan_albada:
@@ -2105,9 +2222,9 @@ public:
                 number qL0 = cL0.fs."~qname~";
                 number qMinL = qL0;
                 number qMaxL = qL0;
-                mygradL[0] = cL0.gradients."~gname~"[0];
-                mygradL[1] = cL0.gradients."~gname~"[1];
-                mygradL[2] = cL0.gradients."~gname~"[2];
+                mygradL[0] = cL0.gradients."~gname~".x;
+                mygradL[1] = cL0.gradients."~gname~".y;
+                mygradL[2] = cL0.gradients."~gname~".z;
                 if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.svan_albada:
