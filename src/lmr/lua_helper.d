@@ -341,6 +341,8 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
     }
     else {
         string msg = "You have asked for an unknown loads group: "~loadsGroup;
+        msg ~= "\nAvailable loads groups:";
+        foreach (name; runTimeLoadsByName.keys()) { msg ~= " " ~ name; }
         luaL_error(L, msg.toStringz);
     }
     // Set force as table {x=.., y=..., z=...}
