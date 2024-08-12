@@ -45,7 +45,7 @@ import blockio : BinaryBlockIO, GzipBlockIO;
 import lmr.fvcell : FVCell;
 import fvcellio;
 import fileutil : ensure_directory_is_present;
-import lmr.loads : init_loads_metadata_file;
+import lmr.loads : init_loads_metadata_file, initRunTimeLoads;
 
 version(mpi_parallel) {
     import mpi;
@@ -639,6 +639,19 @@ void initCornerCoordinates()
 void initWallDistances()
 {
     compute_wall_distances();
+}
+
+/**
+ * Initialise run-time loads computation.
+ *
+ * Authors: RJG
+ * Date: 2024-08-12
+ */
+void initRunTimeLoads()
+{
+    string content = readText(lmrCfg.cfgFile);
+    JSONValue jsonData = parseJSON!string(content);
+    initRunTimeLoads(jsonData["run_time_loads"]);
 }
 
 

@@ -203,8 +203,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initCornerCoordinates();
     if (cfg.turb_model.needs_dwall) initWallDistances();
 
-    // [TODO] RJG, 2024-02-07
-    // Configure run-time loads.
+    if (cfg.compute_run_time_loads) initRunTimeLoads();
 
     // [TODO] RJG, 2024-02-07
     // Configure Nick's electric field solver.
