@@ -195,7 +195,8 @@ NewtonKrylovPhaseDefaults = {
    start_cfl = 1.0,
    max_cfl = 1000.0,
    auto_cfl_exponent = 0.75,
-
+   limit_on_cfl_increase_ratio = 2.0,
+   limit_on_cfl_decrease_ratio = 0.1,
 }
 
 local NewtonKrylovPhases = {}
@@ -260,6 +261,8 @@ function NewtonKrylovPhase:tojson()
       str = str .. string.format('    "start_cfl": %.18e,\n', self.start_cfl)
       str = str .. string.format('    "max_cfl": %.18e,\n', self.max_cfl)
       str = str .. string.format('    "auto_cfl_exponent": %.18e,\n', self.auto_cfl_exponent)
+      str = str .. string.format('    "limit_on_cfl_increase_ratio": %.18e,\n', self.limit_on_cfl_increase_ratio)
+      str = str .. string.format('    "limit_on_cfl_decrease_ratio": %.18e,\n', self.limit_on_cfl_decrease_ratio)
    end
    str = str .. '    "dummy_entry_without_trailing_comma": 0\n' -- no comma on last entry
    str = str .. '}'

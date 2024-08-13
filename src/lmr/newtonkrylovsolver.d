@@ -264,6 +264,8 @@ struct NKPhaseConfig {
     double startCFL = 1.0;
     double maxCFL = 1000.0;
     double autoCFLExponent = 0.75;
+    double limitOnCFLIncreaseRatio = 2.0;
+    double limitOnCFLDecreaseRatio = 0.1;
 
     void readValuesFromJSON(JSONValue jsonData)
     {
@@ -284,6 +286,8 @@ struct NKPhaseConfig {
         startCFL = getJSONdouble(jsonData, "start_cfl", startCFL);
         maxCFL = getJSONdouble(jsonData, "max_cfl", maxCFL);
         autoCFLExponent = getJSONdouble(jsonData, "auto_cfl_exponent", autoCFLExponent);
+        limitOnCFLIncreaseRatio = getJSONdouble(jsonData, "limit_on_cfl_increase_ratio", limitOnCFLIncreaseRatio);
+        limitOnCFLDecreaseRatio = getJSONdouble(jsonData, "limit_on_cfl_decrease_ratio", limitOnCFLDecreaseRatio);
     }
 }
 
@@ -364,11 +368,13 @@ private:
  */
 
 class ResidualBasedAutoCFL : CFLSelector {
-    this(double p, double cfl_max, double thresholdResidualDrop)
+    this(double p, double cfl_max, double thresholdResidualDrop, double limit_on_cfl_increase_ratio, double limit_on_cfl_decrease_ratio)
     {
         mP = p;
         mMaxCFL = cfl_max;
         mThresholdResidualDrop = thresholdResidualDrop;
+        mLimitOnCFLIncreaseRatio = limit_on_cfl_increase_ratio;
+        mLimitOnCFLDecreaseRatio = limit_on_cfl_decrease_ratio;
     }
 
     @nogc
@@ -389,8 +395,8 @@ class ResidualBasedAutoCFL : CFLSelector {
     }
 
 private:
-    immutable double mLimitOnCFLIncreaseRatio = 2.0;
-    immutable double mLimitOnCFLDecreaseRatio = 0.1;
+    double mLimitOnCFLIncreaseRatio;
+    double mLimitOnCFLDecreaseRatio;
     double mP;
     double mMaxCFL;
     double mThresholdResidualDrop;
@@ -870,7 +876,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         setPhaseSettings(currentPhase);
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
-						   activePhase.thresholdRelativeResidualForCFLGrowth);
+                                                   activePhase.thresholdRelativeResidualForCFLGrowth,
+                                                   activePhase.limitOnCFLIncreaseRatio, activePhase.limitOnCFLDecreaseRatio);
             cfl = cflSelector.nextCFL(restart.cfl, startStep, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
         }
         else { // Assume we have a global (phase-independent) schedule
@@ -916,7 +923,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         setPhaseSettings(0);
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
-						   activePhase.thresholdRelativeResidualForCFLGrowth);
+                                                   activePhase.thresholdRelativeResidualForCFLGrowth,
+                                                   activePhase.limitOnCFLIncreaseRatio, activePhase.limitOnCFLDecreaseRatio);
             cfl = activePhase.startCFL;
         }
         else { // Assume we have a global (phase-independent) schedule
