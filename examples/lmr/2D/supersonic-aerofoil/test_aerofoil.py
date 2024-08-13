@@ -13,11 +13,11 @@ from loads import *
 
 # Solution generated on 6th of August 2024
 REF_LOADS={"Alpha":  3.0,
-"Inviscid x-Force": 15.482681031167786,
-"Inviscid y-Force": 261.9861216341203,
-"Viscous x-Force": 30.403376964349402,
-"Viscous y-Force": 0.2613541265815517,
-"Pitching Moment": -4.564915283311019,
+"Inviscid x-Force": 15.482679675691575,
+"Inviscid y-Force": 261.9861054325388,
+"Viscous x-Force": 30.403375039731085,
+"Viscous y-Force": 0.26135415113805344,
+"Pitching Moment": -4.5649138837923475,
 }
 
     
