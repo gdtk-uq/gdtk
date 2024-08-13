@@ -948,6 +948,18 @@ public:
                     } // end switch
                 } // end foreach c
 
+                if (myConfig.apply_unstructured_limiter_stagnation_point_filter) {
+                    foreach (c; cell_list) {
+                        c.gradients.apply_stagnation_point_filter(c.cell_cloud, myConfig);
+                    }
+                }
+
+                if (myConfig.apply_unstructured_limiter_min_pressure_filter) {
+                    foreach (c; cell_list) {
+                        c.gradients.apply_minimum_limiter_filter(myConfig);
+                    }
+                }
+
                 // We now fill in limiter values for ghost cells on the edge of the computational domain (note that we will handle mapped ghost cells later)
                 foreach (bcond; bc) {
                     if (bcond.ghost_cell_data_available == false) { continue; }

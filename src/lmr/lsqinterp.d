@@ -112,6 +112,8 @@ struct LSQInterpGradients {
     // to the Left and Right sides of interfaces.
     // We need to hold onto their gradients within cells.
 public:
+    number lref; // reference length (m) for a simulation
+
     Vector3 velx, vely, velz;
     number velxPhi, velyPhi, velzPhi;
     number velxMax, velyMax, velzMax;
@@ -464,11 +466,9 @@ public:
             if ( qname == "vel.x" || qname == "vel.y" || qname == "vel.z" ) {
                 code ~= "number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
                          number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
-                         nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;";
-            } else if ( qname == "gas.rho_s[isp]" ) {
-                code ~= "nondim = 1.0;";
+                         nondim = fmax(velMax,velMin) + 1.0e-25;";
             } else {
-                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~");";
+                code ~= "nondim = fmax(fabs("~qMaxname~"), fabs("~qMinname~")) + 1.0e-25;";
             }
             code ~= "
             U = cell_cloud[0].fs."~qname~";
@@ -481,7 +481,7 @@ public:
                 }
             }
             delu = (Umax-Umin)/nondim;
-            theta = delu/(K*pow(h, 1.5));
+            theta = delu/(K*pow(h/lref, 1.5));
             eps2 = (K*delu*delu)/(1.0+theta);
             eps2 += 1.0e-25; // prevent division by zero
             phi = 1.0;
@@ -752,11 +752,11 @@ public:
         // [2] Blazek J.
         //     CFD principles and applications
         //     pg. 156, Third edition, 2007
-        // [3] J. S. Park and C. Kim
-        //     Multi-dimensional limiting process for ﬁnite volume methods on unstructured grids
-        //     Computers & Fluids, vol. 65, pg. 8-24 (2012)
+        // [3] E. A. Luke, X.-L. Tong, J. Wu, L. Tang, and P. Cinella
+        //     A Chemically Reacting Flow Solver for Generalized Grids
+        //     AIAA Journal, 2003
         //
-        number delp, delm, delu, U, theta, phi, h, phi_f, nondim;
+        number delp, delm, delu, U, theta, phi, h, phi_f, qref;
         immutable double K = myConfig.smooth_limiter_coeff;
         if (myConfig.dimensions == 3) {
             h = pow(cell_cloud[0].volume[gtl], 1.0/3.0);
@@ -779,18 +779,13 @@ public:
             if ( qname == "vel.x" || qname == "vel.y" || qname == "vel.z" ) {
                 code ~= "number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
                          number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
-                         nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;";
-            } else if ( qname == "gas.rho_s[isp]" ) {
-                code ~= "nondim = 1.0;";
+                         qref = fmax(velMax, velMin);";
             } else {
-                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~");";
+                code ~= "qref = fmax(fabs("~qMaxname~"),fabs("~qMinname~"));";
             }
             code ~= "
             U = cell_cloud[0].fs."~qname~";
-            delu = ("~qMaxname~"-"~qMinname~")/nondim;
-            theta = delu/(K*pow(h, 1.5));
-            eps2 = (K*delu*delu)/(1.0+theta);
-            eps2 += 1.0e-25; // prevent division by zero
+            eps2 = pow(K*h/lref, 3) * pow(qref, 2) + 1.0e-25;
             phi = 1.0;
             foreach (i, f; cell_cloud[0].iface) {
                 number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
@@ -799,8 +794,6 @@ public:
                 delm = "~gname~".x * dx + "~gname~".y * dy;
                 if (myConfig.dimensions == 3) { delm += "~gname~".z * dz; }
                 delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
-                delp /= nondim;
-                delm /= nondim;
                 if (delm == 0.0) {
                     phi_f = 1.0;
                 } else {
@@ -890,6 +883,7 @@ public:
             }
             break;
         } // end switch thermo_interpolator
+
     } // end venkat_limit()
 
     @nogc
@@ -1416,7 +1410,8 @@ public:
                 }
             }
             // the Park limiter needs the pressure gradient
-            if (myConfig.unstructured_limiter == UnstructuredLimiter.park ||
+            if (myConfig.apply_unstructured_limiter_min_pressure_filter ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.park ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp ||
@@ -1444,7 +1439,8 @@ public:
                 }
             }
             // the Park limiter needs the pressure gradient
-            if (myConfig.unstructured_limiter == UnstructuredLimiter.park ||
+            if (myConfig.apply_unstructured_limiter_min_pressure_filter ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.park ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp ||
@@ -1544,6 +1540,195 @@ public:
         } // end switch thermo_interpolator
         return;
     } // end reflect_normal()
+
+    @nogc
+    void apply_stagnation_point_filter(FluidFVCell[] cell_cloud, ref LocalConfig myConfig)
+    {
+        // This is the stagnation point fix employed in ref. [1] and originally proposed in ref. [2].
+        //
+        // references:
+        // [1] H. Nishikawa and J. A. White,
+        //     An Efficient Cell-Centered Finite-Volume Method with Face-Averaged Nodal-Gradients for Triangular Grids,
+        //     Journal of Computational Physics, vol. 411, 2020
+        // [2] C. Michalak and C. Ollivier-Gooch,
+        //     Accuracy Preserving Limiter for the High-Order Accurate Solution of the Euler Equations,
+        //     Journal of Computational Physics, vol. 228, 2009
+
+        // the values for M1 and M2 differ from the reference papers, they have been tuned here to apply a smoother transition
+        double M1 = 0.5;
+        double M2 = 0.75;
+        number Mmax = 0.0;
+        foreach (c; cell_cloud) {
+            number vel  = sqrt(c.fs.vel.x^^2+c.fs.vel.y^^2+c.fs.vel.z^^2);
+            number mach = vel/c.fs.gas.a;
+            Mmax = fmax(Mmax, mach);
+        }
+        // The following function is to be used at compile time.
+        string codeForFilter(string lname)
+        {
+            string code = "
+            {
+                number sigma;
+                if (Mmax <= M1) {
+                    sigma = 1.0;
+                } else if (Mmax >= M2) {
+                    sigma = 0.0;
+                } else {
+                    number y = (Mmax-M1)/(M2-M1);
+                    sigma = 2*y*y*y - 3*y*y + 1.0;
+                }
+                "~lname~" = sigma + (1.0 - sigma)*"~lname~";
+            }
+            ";
+            return code;
+        }
+        mixin(codeForFilter("velxPhi"));
+        mixin(codeForFilter("velyPhi"));
+        mixin(codeForFilter("velzPhi"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForFilter("BxPhi"));
+                mixin(codeForFilter("ByPhi"));
+                mixin(codeForFilter("BzPhi"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForFilter("psiPhi"));
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForFilter("turbPhi[it]"));
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForFilter("rho_sPhi[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                rho_s[0].x = 0.0; rho_s[0].y = 0.0; rho_s[0].z = 0.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            mixin(codeForFilter("pPhi"));
+            mixin(codeForFilter("TPhi"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForFilter("T_modesPhi[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            mixin(codeForFilter("rhoPhi"));
+            mixin(codeForFilter("uPhi"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForFilter("u_modesPhi[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            mixin(codeForFilter("rhoPhi"));
+            mixin(codeForFilter("pPhi"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForFilter("u_modesPhi[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            mixin(codeForFilter("rhoPhi"));
+            mixin(codeForFilter("TPhi"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForFilter("T_modesPhi[imode]"));
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+        return;
+    } // end apply_stagnation_point_filter()
+
+    @nogc
+    void apply_minimum_limiter_filter(ref LocalConfig myConfig)
+    {
+        velxPhi = fmin(pPhi, velxPhi);
+        velyPhi = fmin(pPhi, velyPhi);
+        velzPhi = fmin(pPhi, velzPhi);
+        version(MHD) {
+            if (myConfig.MHD) {
+                BxPhi = fmin(pPhi, BxPhi);
+                ByPhi = fmin(pPhi, ByPhi);
+                BzPhi = fmin(pPhi, BzPhi);
+                if (myConfig.divergence_cleaning) {
+                    psiPhi = fmin(pPhi, psiPhi);
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                turbPhi[it] = fmin(pPhi, turbPhi[it]);
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    rho_sPhi[isp] = fmin(pPhi, rho_sPhi[isp]);
+                }
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            pPhi = fmin(pPhi, pPhi);
+            TPhi = fmin(pPhi, TPhi);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    T_modesPhi[imode] = fmin(pPhi, T_modesPhi[imode]);
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            rhoPhi = fmin(pPhi, rhoPhi);
+            uPhi = fmin(pPhi, uPhi);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    u_modesPhi[imode] = fmin(pPhi, u_modesPhi[imode]);
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            rhoPhi = fmin(pPhi, rhoPhi);
+            pPhi = fmin(pPhi, pPhi);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    u_modesPhi[imode] = fmin(pPhi, u_modesPhi[imode]);
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            rhoPhi = fmin(pPhi, rhoPhi);
+            TPhi = fmin(pPhi, TPhi);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    T_modesPhi[imode] = fmin(pPhi, T_modesPhi[imode]);
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+        return;
+    } // end apply_minimum_limiter_filter()
 
 } // end class LSQInterpGradients
 

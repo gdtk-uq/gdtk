@@ -122,6 +122,14 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initGhostCellGeometry();
     initLeastSquaresStencils();
 
+    if ((cfg.interpolation_order > 1) &&
+        ((cfg.unstructured_limiter == UnstructuredLimiter.hvenkat) ||
+         (cfg.unstructured_limiter == UnstructuredLimiter.venkat) ||
+         (cfg.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp) ||
+         (cfg.unstructured_limiter == UnstructuredLimiter.venkat_mlp))) {
+        initUSGlimiters();
+    }
+
     // [TODO] RJG, 2024-04-07
     // Here is where initialise GPU chemistry, if we are going to continue
     // with that particular implementation.

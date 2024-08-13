@@ -611,6 +611,14 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         initMLPlimiter();
     }
 
+    if ((cfg.interpolation_order > 1) &&
+        ((cfg.unstructured_limiter == UnstructuredLimiter.hvenkat) ||
+         (cfg.unstructured_limiter == UnstructuredLimiter.venkat) ||
+         (cfg.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp) ||
+         (cfg.unstructured_limiter == UnstructuredLimiter.venkat_mlp))) {
+        initUSGlimiters();
+    }
+
     orderBlocksBySize();
     initMasterLuaState();
     initCornerCoordinates();

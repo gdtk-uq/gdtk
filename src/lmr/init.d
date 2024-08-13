@@ -11,6 +11,7 @@
 
 module init;
 
+import std.math: pow;
 import std.algorithm : min, sort, find;
 import std.conv : to;
 import std.parallelism : parallel, defaultPoolThreads;
@@ -574,6 +575,37 @@ void initGhostCellGeometry()
 void initLeastSquaresStencils()
 {
     foreach (blk; localFluidBlocks) blk.compute_least_squares_setup(0);
+}
+
+/**
+ * Initialise the unstructured grid limiters (for unstructured blocks).
+ *
+ * Authors: KAD
+ * Date: 2024-08-06
+ */
+void initUSGlimiters()
+{
+    auto sblock = cast(SFluidBlock) localFluidBlocks[0];
+    if (sblock) return; // we don't need a reference length for structured grid simulations
+
+    double dim = to!double(GlobalConfig.dimensions);
+    double length = 0.0;
+
+    // compute a reference length for the computational domain
+    foreach (blk; localFluidBlocks) {
+        foreach (cell; blk.cells) { length += cell.volume[0].re; }
+    }
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE,&length,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    }
+    length = pow(length, 1.0/dim);
+
+    if (GlobalConfig.is_master_task) { writeln("Computational Domain Reference Length (m): ", length); }
+
+    // set the reference length in the gradients objects for later use in computing the unstructured grid limiter
+    foreach (blk; localFluidBlocks) {
+        foreach (cell; blk.cells) { cell.gradients.lref = length; }
+    }
 }
 
 /**

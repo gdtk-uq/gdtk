@@ -1026,6 +1026,8 @@ final class GlobalConfig {
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
     shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
+    shared static bool apply_unstructured_limiter_stagnation_point_filter = false;
+    shared static bool apply_unstructured_limiter_min_pressure_filter = false;
     shared static int freeze_limiter_on_step = 1_000_000_000;
     shared static bool frozen_limiter = false;
     // Allow the AUSMDV entropy fix to be switched off
@@ -1371,6 +1373,8 @@ public:
     bool enforce_species_density_positivity;
     bool scale_species_after_reconstruction;
     UnstructuredLimiter unstructured_limiter;
+    bool apply_unstructured_limiter_stagnation_point_filter;
+    bool apply_unstructured_limiter_min_pressure_filter;
     int freeze_limiter_on_step;
     bool use_extended_stencil;
     double smooth_limiter_coeff;
@@ -1551,6 +1555,8 @@ public:
         enforce_species_density_positivity = cfg.enforce_species_density_positivity;
         scale_species_after_reconstruction = cfg.scale_species_after_reconstruction;
         unstructured_limiter = cfg.unstructured_limiter;
+        apply_unstructured_limiter_stagnation_point_filter = cfg.apply_unstructured_limiter_stagnation_point_filter;
+        apply_unstructured_limiter_min_pressure_filter = cfg.apply_unstructured_limiter_min_pressure_filter;
         freeze_limiter_on_step = cfg.freeze_limiter_on_step;
         use_extended_stencil = cfg.use_extended_stencil;
         smooth_limiter_coeff = cfg.smooth_limiter_coeff;
@@ -1901,6 +1907,8 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("enforce_species_density_positivity", "enforce_species_density_positivity"));
     mixin(update_bool("scale_species_after_reconstruction", "scale_species_after_reconstruction"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
+    mixin(update_bool("apply_unstructured_limiter_stagnation_point_filter", "apply_unstructured_limiter_stagnation_point_filter"));
+    mixin(update_bool("apply_unstructured_limiter_min_pressure_filter", "apply_unstructured_limiter_min_pressure_filter"));
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
     mixin(update_double("smooth_limiter_coeff", "smooth_limiter_coeff"));
@@ -1996,6 +2004,8 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  enforce_species_density_positivity: ", cfg.enforce_species_density_positivity);
         writeln("  scale_species_after_reconstruction: ", cfg.scale_species_after_reconstruction);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));
+        writeln("  apply_unstructured_limiter_stagnation_point_filter: ", cfg.apply_unstructured_limiter_stagnation_point_filter);
+        writeln("  apply_unstructured_limiter_min_pressure_filter: ", cfg.apply_unstructured_limiter_min_pressure_filter);
         writeln("  freeze_limiter_on_step: ", cfg.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", cfg.use_extended_stencil);
         writeln("  smooth_limiter_coeff: ", cfg.smooth_limiter_coeff);
