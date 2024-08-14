@@ -23,36 +23,42 @@ blk_down = infoFluidBlock(downstreamBlk)
 
 function ghostCells(args)
    local ruptureFlag = userPad[1]
-   local cell0, cell1
+   local cell0, cell1, cell2
    if blkId == downstreamBlk and args.boundaryId == west then
       if ruptureFlag >= 1 then
 	 -- Leave previous exchange data from upstream-block, east boundary.
 	 cell0 = {}
 	 cell1 = {}
+	 cell2 = {}
       else
  	 -- A simple reflecting boundary condition.
 	 cell0 = sampleFluidCell(downstreamBlk, blk_down.imin, args.j, blk_down.kmin)
 	 cell0.velx = -cell0.velx
 	 cell1 = sampleFluidCell(downstreamBlk, blk_down.imin+1, args.j, blk_down.kmin)
 	 cell1.velx = -cell1.velx
+	 cell2 = sampleFluidCell(downstreamBlk, blk_down.imin+2, args.j, blk_down.kmin)
+	 cell2.velx = -cell2.velx
      end
    elseif blkId == upstreamBlk and args.boundaryId == east then
       if ruptureFlag >= 1 then
 	 -- Leave previous exchange data from downstream-block, west boundary.
 	 cell0 = {}
 	 cell1 = {}
+         cell2 = {}
       else
 	 -- A simple reflecting boundary condition.
 	 cell0 = sampleFluidCell(upstreamBlk, blk_up.imax, args.j, blk_up.kmin)
 	 cell0.velx = -cell0.velx
 	 cell1 = sampleFluidCell(upstreamBlk, blk_up.imax-1, args.j, blk_up.kmin)
 	 cell1.velx = -cell1.velx
+	 cell2 = sampleFluidCell(upstreamBlk, blk_up.imax-2, args.j, blk_up.kmin)
+	 cell2.velx = -cell2.velx
       end
    else
       error(string.format("No ghost cell b.c. function available"..
 			  " for block %d, on boundary: %d", blkId, args.boundaryId))
    end
-   return cell0, cell1
+   return cell0, cell1, cell2
 end
 
 function interface(args)

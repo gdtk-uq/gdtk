@@ -49,14 +49,18 @@ config.spatial_deriv_calc = 'divergence'
 config.viscous_signal_factor = 0.1
 config.max_time = 6.0e-3 -- s
 config.max_step = 1000000
-config.gasdynamic_update_scheme = "classic-rk3"
+config.gasdynamic_update_scheme = "predictor-corrector"
 config.dt_init = 1.0e-9
-config.cfl_value = 0.60
-config.flux_calculator = "ausmdv"
+config.cfl_value = 0.50
+config.flux_calculator = "osher"
 config.cfl_count = 3
+config.interpolation_order = 3
 config.suppress_radial_reconstruction_at_xaxis = true
 config.max_invalid_cells = 100
 config.adjust_invalid_cell_data = true
+config.extrema_clipping = false
+config.apply_limiter = false
+config.apply_heuristic_pressure_based_limiting = true
 --
 config.dt_plot = 0.5e-4 -- s (at 0.1 ms)
 --
@@ -67,7 +71,7 @@ config.user_pad_length = 1
 user_pad_data = {0}
 -- We want the intermediate-tube right-most block that sets the rupture state
 -- to be on the MPI master task 0.  Its user_pad_data is broadcast.
-mpiDistributeBlocks{ntasks=7, dist="load-balance",
+mpiDistributeBlocks{ntasks=21, dist="load-balance",
                     preassign={[upstreamBlk]=0}}
 -- The function that sets the diaphragm state is also a user-defined function.
 config.udf_supervisor_file='supervisor.lua'
