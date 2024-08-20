@@ -7,14 +7,13 @@
 
 config.solver_mode = "steady"
 config.dimensions = 2
-config.flux_calculator = "ausmdv"
+config.flux_calculator = "ldfss2"
 config.viscous = true
 config.turbulence_model = "spalart_allmaras_edwards"
 config.with_local_time_stepping=true
 
-config.unstructured_limiter = "svan_albada"
 config.extrema_clipping=false
-config.smooth_limiter_coeff = 1e-3
+config.epsilon_van_albada = 1e-6
 
 -- Gas model and flow conditions to match Table 1, the first entry
 nsp, nmodes, gm = setGasModel('ideal-air.gas')
@@ -39,9 +38,9 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf, nuhat=nuhat_inf}
 L = 600.0e-3 -- metres
 H = 0.20 * L
 --
---         wall
+--           wall
 --        c---------b
--- flow=> |         |
+--        |         |
 --        d         |
 --          -\-     |
 --    flow=>    -\- |
@@ -51,15 +50,15 @@ a = Vector3:new{x=L, y=0.0}; b = Vector3:new{x=L, y=H};
 c = Vector3:new{x=0.0, y=H}; d = Vector3:new{x=0.0, y=3.0*H/4.0}
 patch = CoonsPatch:new{p00=d, p10=a, p11=b, p01=c}
 
-niv = 150+1; njv = 60+1;
-cflist = {north=cfx, east=GeometricFunction:new{a=0.0003, r=1.2, N=njv, reverse=true},
-          south=cfx, west=GeometricFunction:new{a=0.0006, r=1.2, N=njv, reverse=true}}
-cfx = RobertsFunction:new{end0=true,end1=false,beta=1.05}
+niv = 256+1; njv = 64+1; a = 2e-5;
+cfx = RobertsFunction:new{end0=true,end1=false,beta=1.09}
+cflist = {north=cfx, east=GeometricFunction:new{a=a/H,       r=1.2, N=njv, reverse=true},
+          south=cfx, west=GeometricFunction:new{a=a/(H/4.0), r=1.2, N=njv, reverse=true}}
 
 grd = StructuredGrid:new{psurface=patch, niv=niv, njv=njv, cfList=cflist}
 grid0 = registerFluidGridArray{
    grid = grd,
-   nib = 4,
+   nib = 2,
    njb = 2,
    fsTag="inflow",
    bcTags={north="wall",east="outflow",south="inflow",west="inflow"}
@@ -79,7 +78,6 @@ makeFluidBlocks(bcDict, flowDict)
 
 -- loads settings
 config.boundary_groups_for_loads = "wall"
-config.write_loads = true
 
 NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 0,
@@ -97,9 +95,11 @@ NewtonKrylovGlobalConfig{
    preconditioner_perturbation = 1.0e-30,
    preconditioner = "ilu",
    ilu_fill = 0,
+   write_loads = true,
    total_snapshots = 2,
    steps_between_snapshots = 100,
-   steps_between_diagnostics = 1
+   steps_between_diagnostics = 1,
+   steps_between_loads_update = 1000000,
 }
 
 NewtonKrylovPhase:new{
@@ -108,7 +108,7 @@ NewtonKrylovPhase:new{
    frozen_preconditioner = true,
    frozen_limiter_for_jacobian = false,
    use_adaptive_preconditioner = false,
-   steps_between_preconditioner_update = 50,
+   steps_between_preconditioner_update = 15,
    linear_solve_tolerance = 0.01,
    use_auto_cfl = true,
    threshold_relative_residual_for_cfl_growth = 0.1,
