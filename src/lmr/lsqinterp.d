@@ -1555,28 +1555,30 @@ public:
         //     Journal of Computational Physics, vol. 228, 2009
 
         // the values for M1 and M2 differ from the reference papers, they have been tuned here to apply a smoother transition
-        double M1 = 0.5;
-        double M2 = 0.75;
+        double M1 = 0.4;
+        double M2 = 0.85;
         number Mmax = 0.0;
         foreach (c; cell_cloud) {
-            number vel  = sqrt(c.fs.vel.x^^2+c.fs.vel.y^^2+c.fs.vel.z^^2);
+            number vel  = sqrt(c.fs.vel.dot(c.fs.vel));
             number mach = vel/c.fs.gas.a;
             Mmax = fmax(Mmax, mach);
         }
+
+        number sigma;
+        if (Mmax <= M1) {
+            sigma = 1.0;
+        } else if (Mmax >= M2) {
+            sigma = 0.0;
+        } else {
+            number y = (Mmax-M1)/(M2-M1);
+            sigma = 2*y*y*y - 3*y*y + 1.0;
+        }
+
         // The following function is to be used at compile time.
         string codeForFilter(string lname)
         {
             string code = "
             {
-                number sigma;
-                if (Mmax <= M1) {
-                    sigma = 1.0;
-                } else if (Mmax >= M2) {
-                    sigma = 0.0;
-                } else {
-                    number y = (Mmax-M1)/(M2-M1);
-                    sigma = 2*y*y*y - 3*y*y + 1.0;
-                }
                 "~lname~" = sigma + (1.0 - sigma)*"~lname~";
             }
             ";
