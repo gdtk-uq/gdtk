@@ -9,6 +9,9 @@ from sys import argv
 from glob import glob
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({'font.size': 12})
+plt.rcParams['svg.fonttype'] = 'none'
+
 def number(thing):
     try:
         outnumber = int(thing)
@@ -58,6 +61,7 @@ def wall_data(dirname='lmrsim', groupname='wall', time=-1):
     datafiles = [read_loads_file(filename) for filename in datafilenames]
 
     data = collate_datafiles(datafiles)
+    data['q_total'] *= -1.0*data['outsign']
     return data
 
 def linear_fit(x, y):
@@ -132,7 +136,7 @@ if __name__=='__main__':
 
     fig = plt.figure(figsize=(11,4.5))
     ax,ax2 = fig.subplots(1,2) 
-    colours = ['blue','red','darkgreen','magenta', 'goldenrod', 'teal', 'wheat']
+    colours = ['blue','red','darkgreen','magenta', 'goldenrod', 'teal', 'olive']
 
     whts = []
     spacings = []
@@ -164,8 +168,8 @@ if __name__=='__main__':
         colour = colours[j]
         cutout = cutouts[j]
         
-        ax.plot(data['pos.x']*1000,  -1.0*data['q_total']/1e4,    color=colour, linewidth=1.5, linestyle='-', label=dirs)
-        ax2.plot(data['pos.x']*1000,  -1.0*data['q_total']/1e4,    color=colour, linewidth=3.0, linestyle='-', label=dirs)
+        ax.plot(data['pos.x']*1000,  data['q_total']/1e4,    color=colour, linewidth=1.5, linestyle='-', label=dirs)
+        ax2.plot(data['pos.x']*1000,  data['q_total']/1e4,    color=colour, linewidth=2.0, linestyle='-', label=dirs)
         #ax.plot(cutout['pos.x']*1000,-1.0*cutout['q_total']/1e4,  color=colour, linewidth=1.0, linestyle='-', label=dirs)
 
     zoom_xmin = 400-40; zoom_xmax = 400+40
@@ -175,7 +179,7 @@ if __name__=='__main__':
             color='black', linewidth=2.0, linestyle='--')
 
     ax.legend(framealpha=1.0)
-    ax.set_ylabel('Heat Transfer (W/m2)')
+    ax.set_ylabel('Heat Transfer (W/cm2)')
     ax.set_xlabel('X Position (mm)')
     ax.set_ylim((-4, 144))
     ax2.set_xlabel('X Position (mm)')

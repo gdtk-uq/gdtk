@@ -13,7 +13,7 @@ config.turbulence_model = "spalart_allmaras_edwards"
 config.with_local_time_stepping=true
 
 config.extrema_clipping=false
-config.epsilon_van_albada = 1e-6
+config.epsilon_van_albada = 1e-3
 
 -- Gas model and flow conditions to match Table 1, the first entry
 nsp, nmodes, gm = setGasModel('ideal-air.gas')
@@ -38,30 +38,30 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf, nuhat=nuhat_inf}
 L = 600.0e-3 -- metres
 H = 0.20 * L
 --
---           wall
---        c---------b
---        |         |
---        d         |
---          -\-     |
---    flow=>    -\- |
---        0         a ----> x
 --
-a = Vector3:new{x=L, y=0.0}; b = Vector3:new{x=L, y=H};
-c = Vector3:new{x=0.0, y=H}; d = Vector3:new{x=0.0, y=3.0*H/4.0}
-patch = CoonsPatch:new{p00=d, p10=a, p11=b, p01=c}
+--    Flow ->                         ...----c
+--                    inflow   ...----       |
+--                   .....-----              |
+--        d.....-----                        | outflow
+--        |                                  |
+--        a----------------------------------b
+--                    wall
+a = Vector3:new{x=0.0, y=0.0}; b = Vector3:new{x=L, y=0.0};
+c = Vector3:new{x=L, y=H};     d = Vector3:new{x=0.0, y=1.0*H/4.0}
+patch = CoonsPatch:new{p00=a, p10=b, p11=c, p01=d}
 
 niv = 256+1; njv = 64+1; a = 2e-5;
 cfx = RobertsFunction:new{end0=true,end1=false,beta=1.09}
-cflist = {north=cfx, east=GeometricFunction:new{a=a/H,       r=1.2, N=njv, reverse=true},
-          south=cfx, west=GeometricFunction:new{a=a/(H/4.0), r=1.2, N=njv, reverse=true}}
+cflist = {north=cfx, east=GeometricFunction:new{a=a/H,       r=1.2, N=njv},
+          south=cfx, west=GeometricFunction:new{a=a/(H/4.0), r=1.2, N=njv}}
 
 grd = StructuredGrid:new{psurface=patch, niv=niv, njv=njv, cfList=cflist}
 grid0 = registerFluidGridArray{
    grid = grd,
-   nib = 2,
+   nib = 4,
    njb = 2,
    fsTag="inflow",
-   bcTags={north="wall",east="outflow",south="inflow",west="inflow"}
+   bcTags={north="inflow",east="outflow",south="wall",west="inflow"}
 }
 identifyGridConnections()
 
