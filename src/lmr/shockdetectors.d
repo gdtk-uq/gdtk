@@ -158,7 +158,7 @@ import std.algorithm;
     number pL = L.gas.p;
     number pR = R.gas.p;
     number dp = (pL-pR)/fmin(pL,pR);
-    number S  = 1.0 - 1.0/(1.0+pow(g*dp, 4));
+    number S  = 1.0 - 1.0/(1.0+pow(g*dp, 2));
 
     return S;
 }
