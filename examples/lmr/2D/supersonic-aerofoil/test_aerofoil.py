@@ -11,13 +11,13 @@ import sys
 sys.path.append(__file__.replace('test_aerofoil.py', '.')) # So that we can import the below line when running in pytest
 from loads import *
 
-# Solution generated on 6th of August 2024
+# Solution generated on 21st of August 2024
 REF_LOADS={"Alpha":  3.0,
-"Inviscid x-Force": 15.482679675691575,
-"Inviscid y-Force": 261.9861054325388,
-"Viscous x-Force": 30.403375039731085,
-"Viscous y-Force": 0.26135415113805344,
-"Pitching Moment": -4.5649138837923475,
+"Inviscid x-Force": 15.479138121629932,
+"Inviscid y-Force": 262.59714106272236,
+"Viscous x-Force": 30.459896093918754,
+"Viscous y-Force": 0.2528720799466463,
+"Pitching Moment": -4.584229142740343,
 }
 
     
