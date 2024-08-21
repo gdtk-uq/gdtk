@@ -1,0 +1,28 @@
+//tag::description[]
+= Verification of k-omega implementation via manufactured solutions (in 3D)
+`gdtk/examples/lmr/3D/manufactured solutions`
+
+Rowan J. Gollan; Kyle A. Damm; Nick N. Gibbons; Peter A. Jacobs
+2024-08-21
+
+:stem: latexmath
+
+== Description of subdirectories
+
+The cases present in these subdirectories are designed to test different configurations
+of the flow solver algorithm such as: numerics (structured or unstructuctured),
+blocking topologies and execution modes (shared or distributed memory).
+
+The cases in these subdirectories are single spot checks.
+This means that the manufactured solution is exercised on a single grid
+(typically a coarse one for speed) and the output is compared to a known
+good result (sometimes known as a golden result).
+Those known good results have been selected from a formal verification
+process that exercises the solution procedure on multiple grid resolutions
+and extracts an observed order of accuracy.
+
+The subdirectories are described here:
+
+`ugrid-sb`:: A single-block grid (of 8x8x8 cells) that uses the unstructured solver.
+
+

@@ -16,7 +16,56 @@ _The set of cases here exercise the three spatial dimensions simulation capabili
 
 == References
 
-*`[TODO]`*
+For the Euler and Navier-Stokes manufactured solutions...
+
+  @article{roy2004verification,
+    title={Verification of Euler/Navier--Stokes codes using the method of manufactured solutions},
+    author={Roy, Christopher John and Nelson, CC and Smith, TM and Ober, CC},
+    journal={International Journal for Numerical Methods in Fluids},
+    volume={44},
+    number={6},
+    pages={599--620},
+    year={2004},
+    publisher={Wiley Online Library}
+  }
+
+  @inproceedings{roy2007verification,
+    title={Verification of RANS turbulence models in Loci-CHEM using the method of manufactured solutions},
+    author={Roy, Christopher and Tendean, Eric and Veluri, Subramanya and Rifki, Rifki and Luke, Edward and Hebert, Shelley},
+    booktitle={18th AIAA Computational Fluid Dynamics Conference},
+    number={2007-4203}
+}
+
+These cases have appeared in our own work in:
+
+  @article{gollan2013formulation,
+    title={About the formulation, verification and validation of the hypersonic flow solver Eilmer},
+    author={Gollan, R Jacobs and Jacobs, Peter A},
+    journal={International Journal for Numerical Methods in Fluids},
+    volume={73},
+    number={1},
+    pages={19--57},
+    year={2013},
+    publisher={Wiley Online Library}
+  }
+
+  @inproceedings{wang2016verification,
+    title={Verification of RANS turbulence model in Eilmer using the Method of Manufactured Solutions},
+    author={Wang, J and Gollan, RJ and Veeraragavan, A},
+    booktitle={Proceedings of the 20th Australasian Fluid Mechanics Conference, AFMC 2016},
+    year={2016},
+    organization={Australasian Fluid Mechanics Society}
+  }
+
+  @article{gibbons2023eilmer,
+    title={Eilmer: an open-source multi-physics hypersonic flow solver},
+    author={Gibbons, Nicholas N and Damm, Kyle A and Jacobs, Peter A and Gollan, Rowan J},
+    journal={Computer Physics Communications},
+    volume={282},
+    pages={108551},
+    year={2023},
+    publisher={Elsevier}
+  }
 
 == Description of subdirectories
 
@@ -29,5 +78,7 @@ for testing the Euler solver mode in `Eilmer`.
 `navier-stokes`:: This manufactured solution tests the diffusive terms
 (along with the convective) through use of a highly-inflated viscosity value.
 The flow field is smooth and subsonic.
-`rans-k-omega`:: *`[TODO]`*
+`rans-k-omega`:: This manufactured solution is designed to test the implementation
+of the k-omega RANS turbulence model.
+
 
