@@ -1053,26 +1053,20 @@ public:
         number pmin;
         number phi = 0.0;
         number n = 0.0;
-        foreach (i, f; cell_cloud[0].iface) {
-            if (f.left_cell.id == cell_cloud[0].id) { ncell = f.right_cell; }
-            else { ncell = f.left_cell; }
-            number dx1 = f.pos.x - cell_cloud[0].pos[gtl].x;
-            number dy1 = f.pos.y - cell_cloud[0].pos[gtl].y;
-            number dz1 = f.pos.z - cell_cloud[0].pos[gtl].z;
-            //number dx2 = f.pos.x - ncell.pos[gtl].x;
-            //number dy2 = f.pos.y - ncell.pos[gtl].y;
-            //number dz2 = f.pos.z - ncell.pos[gtl].z;
-            //number dpx = dx1*cell_cloud[0].gradients.p[0] - dx2*ncell.gradients.p[0];
-            //number dpy = dy1*cell_cloud[0].gradients.p[1] - dy2*ncell.gradients.p[1];
-            //number dpz = dz1*cell_cloud[0].gradients.p[2] - dz2*ncell.gradients.p[2];
-            // this step is a modification on the original algorithm since we don't have cell gradients from neighbouring blocks at this point
-            number dpx = dx1*cell_cloud[0].gradients.p.x - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-            number dpy = dy1*cell_cloud[0].gradients.p.y - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-            number dpz = dz1*cell_cloud[0].gradients.p.z - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+        foreach (f; cell_cloud[0].iface) {
+            number dx1 = f.pos.x - f.left_cell.pos[gtl].x;
+            number dy1 = f.pos.y - f.left_cell.pos[gtl].y;
+            number dz1 = f.pos.z - f.left_cell.pos[gtl].z;
+            number dx2 = f.pos.x - f.right_cell.pos[gtl].x;
+            number dy2 = f.pos.y - f.right_cell.pos[gtl].y;
+            number dz2 = f.pos.z - f.right_cell.pos[gtl].z;
+            number dpx = dx1*f.left_cell.gradients.p.x - dx2*f.right_cell.gradients.p.x;
+            number dpy = dy1*f.left_cell.gradients.p.y - dy2*f.right_cell.gradients.p.y;
+            number dpz = dz1*f.left_cell.gradients.p.z - dz2*f.right_cell.gradients.p.z;
             number dp = dpx*dpx + dpy*dpy;
             if (myConfig.dimensions == 3) { dp += dpz*dpz; }
             dp = sqrt(dp);
-            pmin = fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p);
+            pmin = fmin(f.left_cell.fs.gas.p, f.right_cell.fs.gas.p);
             number s = 1.0-tanh(dp/pmin);
             phi += 1.0/fmax(s, 1e-16);
             n += 1.0;
