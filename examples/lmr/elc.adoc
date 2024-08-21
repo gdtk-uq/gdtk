@@ -23,6 +23,6 @@ include::2D/cylinder-coupled-fluid-thermal/transient/README.adoc[tag=description
 
 include::2D/manufactured-solutions/README.adoc[tag=description]
 
+include::2D/supersonic-duct/README.adoc[tag=description]
+
 include::3D/manufactured-solutions/README.adoc[tag=description]
-
-
