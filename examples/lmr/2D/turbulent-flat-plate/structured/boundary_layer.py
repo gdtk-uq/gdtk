@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 from wall_heat_transfer import read_loads_file
 
 if __name__=='__main__':
-    directory_names = argv[1:]
+    #directory_names = argv[1:]
+    directory_names = ['80um','01um']
+    colours = ['olive','blue']
 
     datas = []
 
@@ -21,25 +23,33 @@ if __name__=='__main__':
         datas.append(data)
 
     fig = plt.figure(figsize=(11,4.5))
-    ax,ax2 = fig.subplots(1,2) 
-    #colours = ['blue','red','darkgreen','magenta', 'goldenrod', 'teal', 'wheat']
-    colours = ['blue', 'olive']
+    axes = fig.subplots(1,2) 
+    lims = [(-305,2200),(-320,2200)]
+    lines = []
 
-    for j, dirs in enumerate(directory_names):
-        data = datas[j]
-        colour = colours[j]
+    for i,data in enumerate(datas):
+        ax = axes[i]
+        colour = colours[i]
+        dirs = directory_names[i]
         
-        ax.plot(data['vel.x'], data['pos.y']*1000, color=colour, marker='o',mfc='none', linewidth=1.5, linestyle='-', label=dirs)
-        ax2.plot(data['T'], data['pos.y']*1000, color=colour,  marker='o', mfc='none', linewidth=1.5, linestyle='-')
+        axy = ax.twiny()
+        lines.extend(ax.plot(data['vel.x'], data['pos.y']*1000, color=colour, marker='.',mfc='none', linewidth=1.0, linestyle='--', label=dirs+'- vel'))
+        lines.extend(axy.plot(data['T'], data['pos.y']*1000, color=colour,  marker='o', mfc='none', linewidth=1.5, linestyle='-', label=dirs+'- T'))
+        ax.plot([0.0,0.0], [data['pos.y'].min()*1000, data['pos.y'].max()*1000], 'k--')
 
-    ax.legend(framealpha=1.0)
-    ax.set_ylabel('Y Position Above Plate (mm)')
-    ax.set_xlabel('X-Velocity (m/s)')
-    ax2.set_xlabel('Temperature (K)')
-    ax.grid()
-    ax2.grid()
+        ax.set_ylabel('Y Position Above Plate (mm)')
+        ax.set_xlabel('X-Velocity (m/s)')
+        axy.set_xlabel('Temperature (K)')
+        ax.set_xlim(lims[i])
+        #ax.grid()
+
+
+    leg = ax.legend(lines, ['', '', 'Velocity', 'Temperature'],
+                    title="80um    01um", columnspacing=1.5,
+                    ncol=2, framealpha=1.0, loc="upper center")
+    leg._legend_box.align = "left"
     plt.tight_layout()
-    plt.savefig('wht.svg')
+    plt.savefig('bl.svg')
     #plt.close()
     plt.show()
 

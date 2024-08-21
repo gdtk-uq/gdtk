@@ -17,7 +17,7 @@ is used.
 
 image::figures/pmap.svg[width=100%,opts=inline,title="Pressure and turbulent viscosity color maps for the Mach 6.5 flat plate."]
 
-The tests for this example have been configured to run multiple copies of the flow with different resolutions. Specifically, the clustering to the viscous wall is changed while the rest of the grid is held constant. This allows us to test the rate of convergence of the numerics. Clustering affects the solution A LOT. The figure below shows a slice through the boundary layer at x=400mm, for the coarsest (80 micron first cell height) and finest (1.25 micron first cell height). Note that in both cases the wall is set to 300K and no slip, but the coarse grid's first cell is quite far from the interface values.
+The tests for this example have been configured to run multiple copies of the flow with different resolutions. Specifically, the clustering to the viscous wall is changed while the rest of the grid is held constant. This allows us to test the rate of convergence of the numerics. Clustering affects the solution A LOT. The figure below shows a slice through the boundary layer at x=400mm, for the coarsest (80 micron first cell height) and finest (1.25 micron first cell height). Note that in both cases the wall is set to 300K and no slip, but the coarse grid's first cell only manages to get down 500 m/s in the velocity and a wildly inaccurate 1600 K in the temperature.
 
 image::figures/bl.svg[width=100%,opts=inline,title="Comparison of coarse and tight clustering in the boundary layer."]
 
@@ -51,15 +51,11 @@ Taking the mean over a 40mm region centered on x=400mm, we can quantitatively sh
 
 |===
 
-Of note is that the reduction is super-linear, a result of the second order numerical method used to comput the viscous fluxes. The order of convergence (p) shows the exponent in this relationship between refinement and error.
+Of note is that the reduction is super-linear, a result of the second order numerical method used to compute the viscous fluxes. The order of convergence (p) can be used to quantify the exponent in the relationship between refinement and error.
 [stem]
 ++++
 p = log\left(\frac{q_{10um} - q_{5um}}{q_{20um}-q_{5um}}\right)/log\left(\frac{10e-6}{20e-6}\right)
 ++++
-//[stem]
-//++++
-//M_{\infty} = 2.0; \quad \delta = -10.0^{\circ}; \quad \gamma = 1.4
-//++++
 
 The automated test for this example is actually checking the p value for the 20um -> 10um case as defined above. The other ones are listed below.
 

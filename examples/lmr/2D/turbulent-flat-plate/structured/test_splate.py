@@ -132,7 +132,8 @@ def test_cleanup():
 
 if __name__=='__main__':
     # So we can run this as a normal script
-    for i in range(2,5): #len(params)):
+    #for i in range(2,5): #len(params)):
+    for i in range(len(params)):
         print("Running stage ", i)
         prep(i)
         run_steady(i)
