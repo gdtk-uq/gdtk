@@ -1,0 +1,28 @@
+//tag::description[]
+= Supersonic flow over a ramp
+`gdtk/examples/lmr/2D/supersonic-ramp`
+
+Kyle A. Damm
+2024-08-21
+
+This example is of supersonic flow over a ramp.
+This test case has been taken from the paper by Marques et al. (2004).
+The ramp has been discretised by a grid of unstructured triangular elements.
+The example was set up with the following conditions:
+[stem]
+++++
+M_{\infty} = 2.0; \quad \rho_{\infty} = 1.0 ~~ kg\cdot m^{-3};  \quad T_{\infty} = 300.0 ~~ K; \quad \gamma = 1.4
+++++
+
+image::2D/supersonic-ramp/mach-field.png[align="center",width=95%]
+
+//end::description[]
+
+== Reference
+
+@inproceedings{marques_etal_2004,
+    title={Comparison of Matrix-Free Acceleration Techniques in Compressible Navier-Stokes Calculations},
+    author={N. P. C. Marques and J. C. F. Pereira},
+    booktitle={International Journal for Numerical Methods in Engineering},
+    year={2004}
+}

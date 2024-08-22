@@ -1,7 +1,7 @@
 # Author: Kyle A. Damm
 # Date: 2024-08-21
 #
-# Integration test for supersonic duct on unstructured grids.
+# Integration test for supersonic ramp on unstructured grids.
 # Note that the tests are not independent and must be run in order of appearance.
 
 import pytest
@@ -10,12 +10,12 @@ import re
 import os
 import sys
 import shutil
-import numpy as np
 from math import *
+import numpy as np
 import importlib
 # the following lines enable us to import the local python module from any higher-level directory
 # without having module name clash issues with any of the other automated tests
-path_to_module = os.path.relpath(__file__).replace('test_supersonic_duct.py', 'plot_over_line')
+path_to_module = os.path.relpath(__file__).replace('test_supersonic_ramp.py', 'plot_over_line')
 plot_over_line = importlib.import_module(path_to_module.replace('/', '.'))
 
 # This is used to change to local directory so that subprocess runs nicely.
@@ -24,7 +24,7 @@ def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
 def test_partition_grid():
-    cmd = "ugrid_partition duct.su2 mapped_cells 1 2 true"
+    cmd = "ugrid_partition ramp.su2 mapped_cells 1 2 true"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
 
@@ -49,8 +49,8 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 69
-    expected_final_cfl = 1.343e+05
+    expected_number_steps = 97
+    expected_final_cfl = 6.057e+04
     reason = ""
     steps = 0
     cfl = 0.0
@@ -110,7 +110,7 @@ def test_solution():
     assert error < 1e-6, "Computed incorrect density profile over line."
 
 def test_cleanup():
-    cmd = "rm -rf ./lmrsim mapped_cells block_0_duct.su2 solution_over_line.dat ideal-air.gas __pycache__"
+    cmd = "rm -rf ./lmrsim mapped_cells block_0_ramp.su2 solution_over_line.dat ideal-air.gas __pycache__"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
 
