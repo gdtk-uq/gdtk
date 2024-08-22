@@ -624,9 +624,9 @@ public:
                     if (i>2)     facedata.stencil_idxs[fid].L2 = cell_index(i-3, j, k);
                     if (i>1)     facedata.stencil_idxs[fid].L1 = cell_index(i-2, j, k);
                     if (i>0)     facedata.stencil_idxs[fid].L0 = cell_index(i-1, j, k);
-                    if (i<niv-1) facedata.stencil_idxs[fid].R0 = cell_index(i+0, j, k);
-                    if (i<niv-2) facedata.stencil_idxs[fid].R1 = cell_index(i+1, j, k);
-                    if (i<niv-3) facedata.stencil_idxs[fid].R2 = cell_index(i+2, j, k);
+                    if (i+1<niv) facedata.stencil_idxs[fid].R0 = cell_index(i+0, j, k);
+                    if (i+2<niv) facedata.stencil_idxs[fid].R1 = cell_index(i+1, j, k);
+                    if (i+3<niv) facedata.stencil_idxs[fid].R2 = cell_index(i+2, j, k);
                 } // i loop
             } // j loop
         } // k loop
@@ -637,9 +637,9 @@ public:
                     if (j>2)     facedata.stencil_idxs[fid].L2 = cell_index(i, j-3, k);
                     if (j>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j-2, k);
                     if (j>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j-1, k);
-                    if (j<njv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j+0, k);
-                    if (j<njv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j+1, k);
-                    if (j<njv-3) facedata.stencil_idxs[fid].R2 = cell_index(i, j+2, k);
+                    if (j+1<njv) facedata.stencil_idxs[fid].R0 = cell_index(i, j+0, k);
+                    if (j+2<njv) facedata.stencil_idxs[fid].R1 = cell_index(i, j+1, k);
+                    if (j+3<njv) facedata.stencil_idxs[fid].R2 = cell_index(i, j+2, k);
                 } // j loop
             } // i loop
         } // k loop
@@ -651,9 +651,9 @@ public:
                         if (k>2)     facedata.stencil_idxs[fid].L2 = cell_index(i, j, k-3);
                         if (k>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j, k-2);
                         if (k>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j, k-1);
-                        if (k<nkv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j, k+0);
-                        if (k<nkv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j, k+1);
-                        if (k<nkv-3) facedata.stencil_idxs[fid].R2 = cell_index(i, j, k+2);
+                        if (k+1<nkv) facedata.stencil_idxs[fid].R0 = cell_index(i, j, k+0);
+                        if (k+2<nkv) facedata.stencil_idxs[fid].R1 = cell_index(i, j, k+1);
+                        if (k+3<nkv) facedata.stencil_idxs[fid].R2 = cell_index(i, j, k+2);
                     } // k loop
                 } // i loop
             } // j loop
