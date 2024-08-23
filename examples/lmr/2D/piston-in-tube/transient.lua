@@ -22,8 +22,8 @@ flowDict = {
    initialRight=initialRight
 }
 bcDict = {
-   piston_upstream_face=WallBC_WithSlip1:new{group=pistonUpstream},
-   piston_downstream_face=WallBC_WithSlip1:new{group=pistonDownstream}
+   piston_upstream_face=WallBC_WithSlip1:new{group="pistonUpstream"},
+   piston_downstream_face=WallBC_WithSlip1:new{group="pistonDownstream"}
 }
 makeFluidBlocks(bcDict, flowDict)
 --
