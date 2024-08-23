@@ -93,8 +93,8 @@ The full list of options are described here.
   is a slip wall, `WallBC_WithSlip`.
   In 3D, the `top` and `bottom` faces can also be set.
   If a boundary is a connection, this can be explicitly set or you
-  can rely on the `identifyBlockConnections()` helper function to
-  make that connection for you.
+  can rely on the `identifyGridConnections()` helper function to
+  make that connection for you, at the grid preparation stage.
   That helper function is called _after_ the blocks have been configured.
   An example to set a supersonic inflow on a west boundary, and
   an outflow on the north boundary is:

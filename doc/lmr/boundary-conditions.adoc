@@ -469,7 +469,7 @@ If the face sits across the plane, a blending of the flow states is used.
     reorient_vector_quantities, Rmatrix}
 
 Usually, this boundary condition is applied implicitly, by calling the function
-`identifyBlockConnections`, for cases where one structured-grid block interfaces with another
+`identifyGridConnections`, for cases where one structured-grid block interfaces with another
 and the block boundaries are cleanly aligned,
 however, it can be applied manually for cases where you want the flow to be plumbed
 from one block face into another and the blocks are not geometrically aligned.

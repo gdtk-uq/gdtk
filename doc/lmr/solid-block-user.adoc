@@ -28,8 +28,8 @@ The full list of options are described here.
   is an adiabatic wall, `SolidAdiabaticBC`.
   In 3D, the `top` and `bottom` faces can also be set.
   If a boundary is a connection, this can be explicitly set or you
-  can rely on the `identifyBlockConnections()` helper function to
-  make that connection for you.
+  can rely on the `identifyGridConnections()` helper function to
+  make that connection for you, at the grid preparation stage.
   That helper function is called _after_ the blocks have been configured.
   An example to set a fixed temperature on a west boundary, and
   a constant flux on the north boundary is:
