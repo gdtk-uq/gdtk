@@ -1132,10 +1132,31 @@ extern(C) int luaSetCtrlPtInPatch(lua_State *L)
     }
     auto ctrlPatch = checkObj!(ControlPointPatch, ControlPointPatchMT)(L, 1);
     int i = to!int(luaL_checkinteger(L, 2));
-    int j = to!int(luaL_checkinteger(L, 2));
+    int j = to!int(luaL_checkinteger(L, 3));
     auto p = toVector3(L, 4);
     ctrlPatch.setCtrlPt(i, j, p);
     return 0;
+}
+
+extern(C) int luaGetCtrlPts(lua_State *L)
+{
+    auto ctrlPatch = checkObj!(ControlPointPatch, ControlPointPatchMT)(L, 1);
+    int nci, ncj;
+    ctrlPatch.nCtrlPts(nci, ncj);
+    lua_newtable(L);
+    foreach (i; 0 .. nci) {
+        lua_newtable(L);
+        lua_rawseti(L, -2, i);
+    }
+    foreach (i; 0 .. nci) {
+        lua_rawgeti(L, -1, i);
+        foreach (j; 0 .. ncj) {
+            pushVector3(L, ctrlPatch.getCtrlPt(i,j));
+            lua_rawseti(L, -2, j);
+        }
+        lua_pop(L, 1);
+    }
+    return 1;
 }
 
 extern(C) int luaWriteCtrlPtsInPatchAsVtkXml(lua_State *L)
@@ -1803,6 +1824,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &areaOfSurface!(ControlPointPatch, ControlPointPatchMT));
     lua_setfield(L, -2, "area");
+    lua_pushcfunction(L, &luaGetCtrlPts);
+    lua_setfield(L, -2, "getCtrlPts");
     lua_pushcfunction(L, &luaSetCtrlPtInPatch);
     lua_setfield(L, -2, "setCtrlPt");
     lua_pushcfunction(L, &luaWriteCtrlPtsInPatchAsVtkXml);
