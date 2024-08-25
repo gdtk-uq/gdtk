@@ -1188,11 +1188,19 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          *---
          */
         string reasonForStop;
+        wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();
         if (step == nkCfg.maxNewtonSteps) {
             finalStep = true;
             if (cfg.is_master_task) {
                 writeln("*** STOPPING: Reached maximum number of steps.");
                 reasonForStop = "STOP-REASON: maximum-steps";
+            }
+        }
+        if ((SimState.maxWallClockSeconds > 0) && (wallClockElapsed > SimState.maxWallClockSeconds)) {
+            finalStep = true;
+            if (cfg.is_master_task) {
+                writefln("*** STOPPING: Reached maximum wall-clock-time with elapsed time %s", to!string(wallClockElapsed));
+                reasonForStop = "STOP-REASON: maximum-wall-clock";
             }
         }
         if (!activePhase.ignoreStoppingCriteria) {
@@ -1217,7 +1225,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          * 2c. Reporting (to files and screen)
          *---
          */
-        wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();
         if (((step % nkCfg.stepsBetweenDiagnostics) == 0) || (finalStep && nkCfg.writeDiagnosticsOnLastStep)) {
             writeDiagnostics(step, dt, cfl, wallClockElapsed, omega, currentPhase, residualsUpToDate);
         }
