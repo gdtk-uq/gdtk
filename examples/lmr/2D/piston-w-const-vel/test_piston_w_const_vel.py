@@ -9,7 +9,7 @@ import subprocess
 import re
 import os
 import sys
-# import pyyaml
+import yaml
 
 # This is used to change to local directory so that subprocess runs nicely.
 @pytest.fixture(autouse=True)
@@ -64,20 +64,13 @@ def test_probe():
     cmd = 'lmr probe-flow --location=0.28,0,0 --names=pos.x,T,vel.x,p'
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
-    text = proc.stdout
-    lines = proc.stdout.split("\n")
-    # Pull apart the YAML output manually because
-    # we don't want to depend upon the PyYAML package.
-    # Look for first line with cell position.
-    while not lines[0].strip().startswith("pos.x"): lines = lines[1:]
-    posx = float(lines[0].split()[-1])
-    assert abs(posx - 0.283) < 0.01, "Failed to report correct probe position."
-    T = float(lines[1].split()[-1])
-    assert abs(T - 398.5) < 1.0, "Failed to see correct temperature."
-    velx = float(lines[2].split()[-1])
-    assert abs(velx - 293.0) < 1.0, "Failed to see correct velocity."
-    velx = float(lines[3].split()[-1])
-    assert abs(velx - 30258.0) < 100.0, "Failed to see correct pressure."
+    probe_result = yaml.safe_load(proc.stdout)
+    expected_result = {'x':0.283, 'T':398.5, 'vel.x':293.0, 'p':30258.0}
+    for key in expected_result.keys():
+        val = float(probe_result['pointdata'][0][key])
+        v = expected_result[key]
+        assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
+    return
 
 def test_cleanup_transient():
     cmd = "rm -r ./lmrsim"

@@ -207,7 +207,10 @@ int main_(string[] args)
             }
             auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
             size_t iblk = nearest[0]; size_t icell = nearest[1];
-            outfile.writefln("    Pos: {x: %s, y: %s, z: %s }",
+            // Each probe point becomes a YAML list item and
+            // all of the data for this probe point is in a YAML map.
+            outfile.writeln("pointdata:");
+            outfile.writefln("  - x: %s\n    y: %s\n    z: %s",
                              soln.get_value_str(iblk, icell, "pos.x"),
                              soln.get_value_str(iblk, icell, "pos.y"),
                              soln.get_value_str(iblk, icell, "pos.z"));
@@ -221,7 +224,7 @@ int main_(string[] args)
                     writeln("  ", soln.flowBlocks[0].variableNames);
                     continue;
                 }
-                outfile.writefln("       %s: %s", var, soln.get_value_str(iblk, icell, var));
+                outfile.writefln("    %s: %s", var, soln.get_value_str(iblk, icell, var));
             }
         }
         outfile.writeln("..."); // YAML document closer
