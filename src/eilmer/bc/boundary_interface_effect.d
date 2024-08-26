@@ -1941,7 +1941,7 @@ private:
         number C = -(pin*pin - pout*pout)/2.0/pin/porous_plate_thickness;
 
         number v = (-B + sqrt(B*B - 4.0*A*C))/(2.0*A);
-        assert(v>0.0);
+        if (v<=0.0) throw new Error("Incorrect v branch chosen in porous wall");
 
         // Note that this is the velocity on the plenum side, the velocity at the
         // outflow can be computed using mass conservation.
@@ -1956,9 +1956,6 @@ private:
 
         injectant.vel = -1.0*outsign*n*vout;
 
-        debug{
-            writefln("IF pressureout %e. Computed mass flux %e vout %e", pout, mdot_per_m2, vout);
-        }
         return;
     }
 }
