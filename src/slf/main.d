@@ -8,6 +8,7 @@ import std.mathspecial;
 import std.format;
 import std.algorithm;
 import std.string;
+import std.datetime.stopwatch : StopWatch;
 import gas;
 import gas.physical_constants;
 import kinetics;
@@ -349,7 +350,7 @@ struct Parameters {
     size_t N;
     size_t n;
 
-    double p;
+    number p;
     double dZ;
     double T0;
     double T1;
@@ -387,7 +388,7 @@ void write_solution_to_file(ref const Parameters pm, double[] U, string filename
     ibuff[0] = pm.N;    outfile.rawWrite(ibuff);
     ibuff[0] = pm.n;    outfile.rawWrite(ibuff);
 
-    dbuff[0] = pm.p;    outfile.rawWrite(dbuff);
+    dbuff[0] = pm.p.re; outfile.rawWrite(dbuff);
     dbuff[0] = pm.dZ;   outfile.rawWrite(dbuff);
     dbuff[0] = pm.T0;   outfile.rawWrite(dbuff);
     dbuff[0] = pm.T1;   outfile.rawWrite(dbuff);
@@ -410,7 +411,7 @@ void write_solution_to_file(ref const Parameters pm, number[] U, string filename
     ibuff[0] = pm.N;    outfile.rawWrite(ibuff);
     ibuff[0] = pm.n;    outfile.rawWrite(ibuff);
 
-    dbuff[0] = pm.p;    outfile.rawWrite(dbuff);
+    dbuff[0] = pm.p.re; outfile.rawWrite(dbuff);
     dbuff[0] = pm.dZ;   outfile.rawWrite(dbuff);
     dbuff[0] = pm.T0;   outfile.rawWrite(dbuff);
     dbuff[0] = pm.T1;   outfile.rawWrite(dbuff);
@@ -597,7 +598,8 @@ double[] get_derivatives_from_adjoint(number[] U, number[] U2nd, number[] R, num
 
     // compute the RHS vector, which is the partial derivate of R with x constant
     // and p changed
-    pm.p += 1e-3;
+    double eta = 1e-12;
+    pm.p.im = eta;
     second_derivs_from_cent_diffs(pm, U, U2nd);
     compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, Rp, false);
 
@@ -606,7 +608,7 @@ double[] get_derivatives_from_adjoint(number[] U, number[] U2nd, number[] R, num
         J2[cell][0]._data[] *= -1.0; 
         J2[cell][1]._data[] *= -1.0; 
         J2[cell][2]._data[] *= -1.0; 
-        foreach(i; 0 .. neq) R2[cell][i, 0] = (Rp[cell*neq + i].re - R[cell*neq + i].re)/(1e-3);
+        foreach(i; 0 .. neq) R2[cell][i, 0] = (Rp[cell*neq + i].im)/(eta);
     }
     solve_tridigonal_block_matrix(pm, tdws, J2, U2, R2);
 
@@ -616,14 +618,14 @@ double[] get_derivatives_from_adjoint(number[] U, number[] U2nd, number[] R, num
             dUdp[cell*neq +  j] = U2[cell][j, 0];
         }
     }
-    pm.p -= 1e-3;
+    pm.p.im = 0.0;
     return dUdp;
 }
 
 
 int main(string[] args)
 {
-    int exitFlag = 0; // Presume OK in the beginning.
+    int exitFlag = 0;
     string name = "flame";
     if (args.length>1) name = args[1];
 
@@ -631,12 +633,13 @@ int main(string[] args)
     ThermochemicalReactor reactor = init_thermochemical_reactor(gm, "rr.lua", "");
     GasState gs = GasState(gm);
     Parameters pm = Parameters();
+    StopWatch sw;
 
     pm.nsp = gm.n_species;
     pm.neq = pm.nsp+1;
 
-    pm.p = 75e3;
-    pm.N = 48;
+    pm.p = 75e3+100.0;
+    pm.N = 64;
     pm.n = pm.N*pm.neq;
     pm.Z.length = pm.N;
     foreach(i; 1 .. pm.N+1) pm.Z[i-1] = i/(pm.N+1.0);
@@ -707,13 +710,15 @@ int main(string[] args)
     GRmax = sqrt(GRmax);
 
     immutable int maxiters = 4000;
-    immutable double targetGRR = 1e-9;
+    immutable double targetGRR = 1e-15;
     double dt = 5e-7;
     bool verbose = false;
     double GRRold = 1.0;
     double GRold = 1e99;
     double tau = 4e-2;
     string[] log;
+
+    sw.start();
     foreach(iter; 0 .. maxiters) {
 
         //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
@@ -742,14 +747,16 @@ int main(string[] args)
         }
         if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
     }
+    sw.stop();
+    long wall_clock_elapsed = sw.peek.total!"seconds";
 
     write_solution_to_file(pm, U, format("%s.sol", name));
     write_log_to_file(log, "log.txt");
 
-    double[] dUdp;
-    dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
-    write_solution_to_file(pm, dUdp, format("%s-derivatives.sol", name));
-    writefln("Done!");
+    //double[] dUdp;
+    //dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+    //write_solution_to_file(pm, dUdp, format("%s-derivatives.sol", name));
+    writefln("Done simulation in %d seconds.", wall_clock_elapsed);
 
 
     return exitFlag;
