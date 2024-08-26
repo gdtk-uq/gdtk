@@ -55,7 +55,7 @@ MPI_FILES = $(OPENMPI_FILES)
 MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
-PROGRAMS := lmr gdtk-module
+PROGRAMS := lmr lmr-debug gdtk-module
 SUB_PROGRAMS := lmr-run lmrZ-run
 ifeq ($(OPT_OUT_MPI), 0)
 	SUB_PROGRAMS += lmr-mpi-run lmrZ-mpi-run
@@ -315,6 +315,30 @@ lmrconfig_with_str_subst.d: lmrconfig.d
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$< > $@
+
+
+lmr-debug: main.d lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+	$(DYAML_FILES) $(TINYENDIAN_FILES)
+	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)newton_krylov \
+		main.d \
+		lmrconfig_with_str_subst.d \
+		$(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
+		$(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(DLINKFLAGS)
 
 lmr: main.d lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \

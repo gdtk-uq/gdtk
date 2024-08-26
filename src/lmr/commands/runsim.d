@@ -124,8 +124,13 @@ options ([+] can be repeated):
      NOTE: in solver_mode=steady, this option has no effect.
 
  --max-wall-clock=hh:mm:ss
-     This the maximum simultion duration given in hours, minutes and seconds.
+     This the maximum simulation duration given in hours, minutes and seconds.
      default: 24:00:00
+ <OR>
+ --max-wall-clock=s
+     A single integer value in seconds can also be given.
+     A value of -1 disables the max-wall-clock stopping criterion.
+
 
  -v, --verbose [+]
      Increase verbosity during progression of the simulation.

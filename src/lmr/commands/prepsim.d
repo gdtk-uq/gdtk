@@ -10,6 +10,7 @@
 
 module prepsim;
 
+import core.stdc.stdlib : system;
 import std.getopt;
 import std.stdio : writeln, writefln;
 import std.string : toStringz, strip, split, format;
@@ -56,7 +57,13 @@ options ([+] can be repeated):
 
  -j, --job=flow.lua
      Specify the input file to be something other than job.lua.
-     default: job.lua
+     default: job.luare
+
+ --with-cea-usage
+     If using a CEAGas as part of the simulation setup, then the debug-version
+     of the executable needs to be called. This flag lets the program know
+     in advance that cea will be used, and so the debug executable can be called automatically.
+     (Alternatively, one could call 'lmr-debug' directly at prep stage.)
 `;
 
 }
@@ -66,6 +73,32 @@ int main_(string[] args)
     string blocksForPrep = "";
     int verbosity = 0;
     string userFlowName = lmrCfg.jobFile;
+    bool withCEAGas = false;
+
+    // First only look for with-cea-usage. If we find it, we delegate the rest.
+    try {
+        getopt(args,
+               config.bundling,
+               config.passThrough,
+               "with-cea-usage", &withCEAGas
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
+    if (withCEAGas) {
+        string shellStr = "lmr-debug prep-sim";
+        if (args.length >= 3) {
+            foreach (s; args[2 .. $]) {
+                shellStr ~= " " ~ s;
+            }
+        }
+        return system(shellStr.toStringz);
+    }
+
+    // From here on we do a regular execution of prep-sim
     try {
         getopt(args,
                config.bundling,
@@ -80,7 +113,6 @@ int main_(string[] args)
     }
 
     if (verbosity > 1) { writeln("lmr prep-sim: Start lua connection."); }
-
     auto L = initLuaStateForPrep();
     lua_pushinteger(L, verbosity);
     lua_setglobal(L, "verbosity");
