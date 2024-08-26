@@ -7,6 +7,7 @@
 
 module prepgrids;
 
+import core.stdc.stdlib : system;
 import std.getopt;
 import std.stdio : writeln, writefln;
 import std.string : toStringz;
@@ -41,8 +42,15 @@ options ([+] can be repeated):
 
  -v, --verbose [+]
      Increase verbosity during grid generation.
+
  -j, --job=grid.lua
      Specify the input file to be different from job.lua.
+
+ --with-cea-usage
+     If using a CEAGas in the grid setup script, then the debug-version
+     of the executable needs to be called. This flag lets the program know
+     in advance that cea will be used, and so the debug executable can be called automatically.
+     (Alternatively, one could call 'lmr-debug' directly at prep grid stage.)
 
 `;
 
@@ -53,6 +61,32 @@ int main_(string[] args)
 {
     int verbosity = 0;
     string userGridName = lmrCfg.jobFile;
+    bool withCEAGas = false;
+
+    // First only look for with-cea-usage. If we find it, we delegate the rest.
+    try {
+        getopt(args,
+               config.bundling,
+               config.passThrough,
+               "with-cea-usage", &withCEAGas
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
+    if (withCEAGas) {
+        string shellStr = "lmr-debug prep-grids";
+        if (args.length >= 3) {
+            foreach (s; args[2 .. $]) {
+                shellStr ~= " " ~ s;
+            }
+        }
+        return system(shellStr.toStringz);
+    }
+
+    // From here on we do a regular execution of prep-grids
     try {
         getopt(args,
                config.bundling,
