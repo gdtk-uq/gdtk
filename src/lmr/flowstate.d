@@ -464,6 +464,7 @@ public:
                     (txt, pos[$-1], volume, fstate[$-1],
                      Q_rad_org, f_rad_org, Q_rE_rad,
                      GlobalConfig.with_local_time_stepping,
+                     GlobalConfig.solverMode,
                      dt_local, dt_chem, dt_therm,
                      GlobalConfig.include_quality,
                      GlobalConfig.MHD, GlobalConfig.divergence_cleaning,

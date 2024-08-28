@@ -114,7 +114,7 @@ string[] buildFluidVariables()
         variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
         variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
     }
-    if (cfg.with_local_time_stepping) variables ~= "dt_local";
+    if (cfg.with_local_time_stepping || cfg.solverMode == SolverMode.steady) variables ~= "dt_local";
     //
     return variables;
 } // end buildFluidVariables()
@@ -1242,7 +1242,7 @@ void scan_cell_data_from_fixed_order_string
 (string buffer,
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
- bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
+ bool with_local_time_stepping, SolverMode solver_mode, ref double dt_local, ref double dt_chem, ref double dt_therm,
  bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation, size_t nturb)
 {
     // This function needs to be kept consistent with cell_data_as_string() above.
@@ -1323,7 +1323,7 @@ void scan_cell_data_from_fixed_order_string
                 dt_therm = to!double(items.front); items.popFront();
             }
         }
-        if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
+        if (with_local_time_stepping || solver_mode == SolverMode.steady) { dt_local = to!double(items.front); items.popFront(); }
     } else {
         // version double_numbers
         pos.x = to!double(items.front); items.popFront();
@@ -1399,7 +1399,7 @@ void scan_cell_data_from_fixed_order_string
                 dt_therm = to!double(items.front); items.popFront();
             }
         }
-        if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
+        if (with_local_time_stepping || solver_mode == SolverMode.steady) { dt_local = to!double(items.front); items.popFront(); }
     } // end version double_numbers
     version(multi_species_gas) {
         foreach(i; 0 .. fs.gas.massf.length) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
