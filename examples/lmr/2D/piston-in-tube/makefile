@@ -20,15 +20,19 @@ init-transient: transient.lua
 run:
 	lmr run
 
-post: vtk
+post: vtk trajectory-plot
 
 vtk:
 	lmr snapshot2vtk --all
 
+trajectory-plot:
+	ruby analytic-trajectory.rb > analytic-trajectory.data
+	gnuplot plot-trajectory.gnuplot
 test:
 	PYTHONDONTWRITEBYTECODE=1 pytest -v
 
 clean:
 	- rm -rf $(LMR_DIR)
-	- rm ideal-air.gas
-	- rm profile.dat *-profile.pdf
+	- rm ideal-air.gas userPadSave.lua
+	- rm piston.data analytic-trajectory.data
+	- rm piston-position.pdf piston-velocity.pdf
