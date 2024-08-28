@@ -323,6 +323,9 @@ public:
         celldata.c2v.length = ncells;
         celldata.lsqgradients.reserve(ncells + nghost);
         foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
+        // TODO: for now this is only needed for the adjoint solver and/or the check-jacobian tool - we can think about dropping this for the flow solver. KAD 2024-08-28
+        celldata.saved_lsqgradients.reserve(ncells + nghost);
+        foreach (n; 0 .. ncells+nghost) celldata.saved_lsqgradients ~= LSQInterpGradients(myConfig.n_species, myConfig.n_modes, myConfig.turb_model.nturb);
 
         facedata.dL.length = nfaces;
         facedata.dR.length = nfaces;
