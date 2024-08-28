@@ -19,13 +19,15 @@ to initialise the domain with a flow field from another
     string `"last"` or `"final"`.
 
 `nBlocks` ::
-    _int_, no default +
+    _int_, default=nil +
     number of blocks in completed simulation. +
+    If no value (or a 0) is provided, then _all_ blocks from the completed
+    simulation will be used. +
     Note that if you provide a value _smaller_ than the
     total number of blocks in the completed simulation,
     then only blocks up to `nBlocks-1` will be used
     to initialise the flow field. A use case for this would
-    if one only want to use some inflow portion of the
+    be if one only want to use some inflow portion of the
     domain when intialising a new simulation.
 
 
