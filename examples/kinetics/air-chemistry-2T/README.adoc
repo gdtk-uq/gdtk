@@ -1,0 +1,43 @@
+= Thermochemistry input files for two-temperature air
+
+Rowan J. Gollan & Nick N. Gibbons
+2024-08-29
+
+The files in this directory fall into three categories:
+
+. Files for gas properties (thermodynamics and transport properties)
+. Files related to chemical reactions
+. Files related to energy exchage mechanisms and rates
+
+A complete specification of a thermochemistry model would involve a file from
+each of those categories.
+The gas properties files are common regardless what model one selects.
+The chemical reactions and energy exchanges are not necessarily indepedendent.
+Here we give guidance on which files to use to match certain models described
+in literature.
+
+== Gas files
+
+These files are intened as input for the `prep-gas` program.
+For a lot of these files, the hint as to what it is for is in the name.
+
+`air-5sp-gas-model.lua` :: 5-species air components: N2, O2, N, O, NO
+`air-7sp-gas-model.lua` :: 7-species air components, used at threshold of ionising flow conditions: N2, O2, N, O, NO, NO+, e-
+`air-11sp-gas-modela.lua` :: 11-species air components, all heavy particles are (singly-)ionised: N2, O2, N, O, NO, N2+, O2+, N+, O+, NO+, e-
+
+== Chemistry files
+
+The files described in this section are for use with the `prep-chem` program.
+
+When using these chemistry files, you will need to match the species selection with the gas components you have selected (based on which gas file you chose for your situation).
+
+`GuptaEtAl-air-reactions-2T.lua` :: reaction rates from the Gupta et al. model of 1990.
+`Park-air-reactions-2T.lua` :: reaction rates from the Park 1993 model, exclusively set up for 11-species air
+
+== Energy exchange
+
+The energy exchange files are used as input to the `prep-kinetics` program.
+
+Presently, the only set of rates available are those that correspond to the Park 1993 model. This set may also be used with the Gupta chemical rates.
+
+`Park-air-energy-exchange-2T.lua` :: energy exchange mechanisms and rates from the Park 1993 model.
