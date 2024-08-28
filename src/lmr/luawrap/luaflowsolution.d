@@ -121,9 +121,9 @@ extern(C) int newFlowSolution(lua_State* L)
     int nBlocks;
     lua_getfield(L, 1, "nBlocks");
     if ( lua_isnil(L, -1) ) {
-        string errMsg = "Error in call to FlowSolution:new.";
-        errMsg ~= " A field for 'nBlocks' was not found.";
-        luaL_error(L, errMsg.toStringz);
+        // A nil value will signal no selection, so assume that *all* blocks are desired.
+        // A value of 0 indictates all blocks
+        nBlocks = 0;
     } else if ( lua_isnumber(L, -1) ) {
         nBlocks = to!int(luaL_checknumber(L, -1));
     } else {
@@ -453,6 +453,14 @@ extern(C) int get_sim_time(lua_State* L)
     auto fsol = checkFlowSolution(L, 1);
     lua_settop(L, 0);
     lua_pushnumber(L, fsol.simTime);
+    return 1;
+}
+
+extern(C) int get_nblocks(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    lua_settop(L, 0);
+    lua_pushnumber(L, fsol.nBlocks);
     return 1;
 }
 
@@ -852,6 +860,11 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "find_nearest_cell_centre");
     lua_pushcfunction(L, &get_sim_time);
     lua_setfield(L, -2, "sim_time");
+    lua_pushcfunction(L, &get_nblocks);
+    lua_setfield(L, -2, "get_nblocks");
+    // Alias get_nblocks == nblocks
+    lua_pushcfunction(L, &get_nblocks);
+    lua_setfield(L, -2, "nblocks");
     lua_pushcfunction(L, &get_nic);
     lua_setfield(L, -2, "get_nic");
     // Alias get_nic == nic

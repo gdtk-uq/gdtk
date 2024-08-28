@@ -85,7 +85,19 @@ public:
         string gridFmt = jsonData["grid_format"].str;
         GlobalConfig.grid_format = gridFmt;
         grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
+        auto nBlocksOrig = jsonData["nfluidblock"].integer;
         // -- end initialising from JSONData
+
+        // Make a decision about how many blocks to work with.
+        // If the caller supplied a number, use that.
+        // If the caller gave us 0, then assume we want to use all blocks we can find in the original simulation area (because a request for 0 blocks would have no effect otherwise).
+        if (nBlocks == 0) {
+            nBlocks = nBlocksOrig;
+        }
+        // Also give the user some information about their selection relative to the total available.
+        if (nBlocks < nBlocksOrig) {
+            writefln("INFO: Requested nBlocks in FlowSolution is: %d. There are %d blocks available in total in the original flow field.", nBlocks, nBlocksOrig);
+        }
 
 	    // Find out variables from metadata file
         string fluidMetadataFile = (dir == ".") ? lmrCfg.fluidMetadataFile : dir ~ "/" ~ lmrCfg.fluidMetadataFile;
