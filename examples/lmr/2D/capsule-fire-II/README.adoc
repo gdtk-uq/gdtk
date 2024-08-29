@@ -1,0 +1,25 @@
+//tag::description[]
+= FIRE-II capsule simulation
+`gdtk/examples/lmr/2D/capsule-fire-II`
+
+Nick N. Gibbons; Rowan J. Gollan
+2024-08-29
+
+This is example is used to simulate the flow past the FIRE-II reentry capsule
+at the 1636s point on the trajectory, at an altitude of 71 km.
+The free stream conditions are:
+[stem]
+++++
+u_{\infty} = 11.3 km/s; T_{\infty} = 210 K; \rho_{\infty} = 8.57e-5 kg/m^3
+++++
+[stem]
+
+[TIP]
+====
+This example demonstrates how to:
+
+. Setup a high-temperature gas model simulation (a two temperature, 11-species air model)
+. Select a shock-fitting simulation
+. Use a `ControlPointPatch` and manipulate some control points for fine-tuning of the grid
+====
+//end::description[]
