@@ -11,6 +11,6 @@ instDir: '/home/groups/gdtk-dev/gdtkinst'
 logDir: '/home/groups/gdtk-dev/lmr-test/logs'
 logFilePrefix: 'lmr-test'
 mailFilePrefix: 'autobot-mail'
-buildCommand: 'make FLAVOUR=fast'
+buildCommand: 'make FLAVOUR=fast WITH_CHECK_JAC=1'
 testEmail: "r.gollan@uq.edu.au"
 ...
