@@ -37,11 +37,17 @@ public:
     }
 
     @nogc
-    void assemble_and_invert_normal_matrix(FluidFVCell[] cell_cloud, int dimensions, size_t gtl)
+    void assemble_and_invert_normal_matrix(FluidFVCell[] cell_cloud, int dimensions, size_t gtl, ref LocalConfig myConfig)
     {
         auto np = cell_cloud.length;
         assert(np <= cloud_nmax, "Too many points in cloud.");
         number[cloud_nmax] dx, dy, dz;
+        number[cloud_nmax] weights2;
+        bool apply_weighting = false;
+        if (myConfig.inviscid_least_squares_type == InviscidLeastSquaresType.weighted_normal) {
+            apply_weighting = true;
+        }
+
         foreach (i; 1 .. np) {
             dx[i] = cell_cloud[i].pos[gtl].x - cell_cloud[0].pos[gtl].x;
             dy[i] = cell_cloud[i].pos[gtl].y - cell_cloud[0].pos[gtl].y;
@@ -49,6 +55,11 @@ public:
                 dz[i] = cell_cloud[i].pos[gtl].z - cell_cloud[0].pos[gtl].z;
             } else {
                 dz[i] = 0.0;
+            }
+            if (apply_weighting) {
+                weights2[i] = 1.0/(dx[i]*dx[i]+dy[i]*dy[i]);
+            } else {
+                weights2[i] = 1.0;
             }
         }
         // Prepare the normal matrix for the cloud and invert it.
@@ -58,8 +69,8 @@ public:
             number yy = 0.0; number yz = 0.0;
             number zz = 0.0;
             foreach (i; 1 .. np) {
-                xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; xz += dx[i]*dz[i];
-                yy += dy[i]*dy[i]; yz += dy[i]*dz[i]; zz += dz[i]*dz[i];
+                xx += weights2[i]*dx[i]*dx[i]; xy += weights2[i]*dx[i]*dy[i]; xz += weights2[i]*dx[i]*dz[i];
+                yy += weights2[i]*dy[i]*dy[i]; yz += weights2[i]*dy[i]*dz[i]; zz += weights2[i]*dz[i]*dz[i];
             }
             xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = xz;
             xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = yz;
@@ -77,15 +88,18 @@ public:
             // Prepare final weights for later use in the reconstruction phase.
             foreach (i; 1 .. np) {
                 wx[i] = xTx[0][3]*dx[i] + xTx[0][4]*dy[i] + xTx[0][5]*dz[i];
+                wx[i] *= weights2[i];
                 wy[i] = xTx[1][3]*dx[i] + xTx[1][4]*dy[i] + xTx[1][5]*dz[i];
+                wy[i] *= weights2[i];
                 wz[i] = xTx[2][3]*dx[i] + xTx[2][4]*dy[i] + xTx[2][5]*dz[i];
+                wz[i] *= weights2[i];
             }
         } else {
             // dimensions == 2
             number[4][2] xTx; // normal matrix, augmented to give 4 entries per row
             number xx = 0.0; number xy = 0.0; number yy = 0.0;
             foreach (i; 1 .. np) {
-                xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; yy += dy[i]*dy[i];
+                xx += weights2[i]*dx[i]*dx[i]; xy += weights2[i]*dx[i]*dy[i]; yy += weights2[i]*dy[i]*dy[i];
             }
             xTx[0][0] =  xx; xTx[0][1] =  xy;
             xTx[1][0] =  xy; xTx[1][1] =  yy;
@@ -101,10 +115,153 @@ public:
             // Prepare final weights for later use in the reconstruction phase.
             foreach (i; 1 .. np) {
                 wx[i] = xTx[0][2]*dx[i] + xTx[0][3]*dy[i];
+                wx[i] *= weights2[i];
                 wy[i] = xTx[1][2]*dx[i] + xTx[1][3]*dy[i];
+                wy[i] *= weights2[i];
             }
         }
     } // end assemble_and_invert_normal_matrix()
+
+    @nogc
+    void compute_weights_via_qr_factorization(FluidFVCell[] cell_cloud, int dimensions, size_t gtl, ref LocalConfig myConfig)
+    {
+        /**
+         *
+         * The following algorithm is taken from ref. [2].
+         * There is a section in ref. [1] that gives a bit more detail on the method,
+         * however, it should be noted that there appears to be some errors in the equations.
+         * We use the weighting suggested in ref. [3].
+         *
+         * references:
+         * [1] J. Blazek,
+         *     CFD principles and applications,
+         *     pg. 152, Third edition, 2007
+         * [2] A. Haselbacher and J. Blazek,
+         *     On the accurate and efficient discretisation of the Navier-Stokes equations on mixed grids,
+         *     AIAA Journal, vol. 38, no. 11, 1999
+         * [3] H. Nishikawa and J. White,
+         *     An efficient cell-centered finite-volume method with face-averaged nodal-gradients for triangular grids,
+         *     Journal of Computational Physics, vol. 411, 2020
+         *
+         * @author: Kyle A. Damm (2024-07-25)
+         *
+         **/
+
+        auto np = cell_cloud.length;
+        assert(np <= cloud_nmax, "Too many points in cloud.");
+        number[cloud_nmax] theta;
+        number x0 = cell_cloud[0].pos[gtl].x;
+        number y0 = cell_cloud[0].pos[gtl].y;
+        number z0 = cell_cloud[0].pos[gtl].z;
+        bool apply_weighting = false;
+        if (myConfig.inviscid_least_squares_type == InviscidLeastSquaresType.weighted_qr) {
+            apply_weighting = true;
+        }
+
+        // set the weighting coefficient (this is theta from eq. 5.60)
+        if (apply_weighting) {
+            if (dimensions == 2) {
+                foreach (i; 1 .. np) {
+                    number dx = cell_cloud[i].pos[gtl].x - x0;
+                    number dy = cell_cloud[i].pos[gtl].y - y0;
+                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy),0.25);
+                }
+            } else { //3D
+                foreach (i; 1 .. np) {
+                    number dx = cell_cloud[i].pos[gtl].x - x0;
+                    number dy = cell_cloud[i].pos[gtl].y - y0;
+                    number dz = cell_cloud[i].pos[gtl].z - z0;
+                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy+dz*dz),0.25);
+                }
+            }
+        } else {
+            if (dimensions == 2) {
+                foreach (i; 1 .. np) {
+                    theta[i] = 1.0;
+                }
+            } else { //3D
+                foreach (i; 1 .. np) {
+                    theta[i] = 1.0;
+                }
+            }
+        }
+
+        // compute dx, dy, dz from the A matrix in eq. 5.55 (incorporating the weighting coefficients)
+        number[cloud_nmax] dx, dy, dz;
+        foreach (i; 1 .. np) {
+            dx[i] = theta[i]*(cell_cloud[i].pos[gtl].x - x0);
+            dy[i] = theta[i]*(cell_cloud[i].pos[gtl].y - y0);
+            if (dimensions == 3) {
+                dz[i] = theta[i]*(cell_cloud[i].pos[gtl].z - z0);
+            } else {
+                dz[i] = 0.0;
+            }
+        }
+
+        if (dimensions == 2) {
+            // compute the vector of weights from eq. 5.61
+            number r11 = 0.0;
+            foreach(i; 1 .. np) { r11 += pow(dx[i], 2); }
+            r11 = sqrt(r11);
+
+            number r12 = 0.0;
+            foreach(i; 1 .. np) { r12 += dx[i]*dy[i]; }
+            r12 /= r11;
+
+            number r22 = 0.0;
+            foreach(i; 1 .. np) { r22 += pow(dy[i]-dx[i]*(r12/r11), 2); }
+            r22 = sqrt(r22);
+
+            foreach (i; 1 .. np) {
+                number alpha1 = dx[i]*pow(r11,-2);
+                number alpha2 = (dy[i]-(r12/r11)*dx[i])*pow(r22,-2);
+                wx[i] = theta[i]*(alpha1 - (r12/r11)*alpha2);
+                wy[i] = theta[i]*(alpha2);
+            }
+        } else {
+            // compute the vector of weights from eq. 5.61
+            number r11 = 0.0;
+            foreach(i; 1 .. np) { r11 += pow(dx[i], 2); }
+            r11 = sqrt(r11);
+
+            number r12 = 0.0;
+            foreach(i; 1 .. np) { r12 += dx[i]*dy[i]; }
+            r12 /= r11;
+
+            number r22 = 0.0;
+            foreach(i; 1 .. np) { r22 += pow(dy[i]-dx[i]*(r12/r11), 2); }
+            r22 = sqrt(r22);
+
+            number r13 = 0.0;
+            foreach(i; 1 .. np) { r13 += dx[i]*dz[i]; }
+            r13 /= r11;
+
+            number r23_a = 0.0;
+            number r23_b = 0.0;
+            foreach(i; 1 .. np) {
+                r23_a += dy[i]*dz[i];
+                r23_b += dx[i]*dz[i];
+            }
+            number r23 = (1.0/r22) * (r23_a - (r12/r11)*r23_b);
+
+            number r33 = 0.0;
+            foreach(i; 1 .. np) { r33 += pow(dz[i], 2); }
+            r33 = sqrt(r33-(pow(r13,2)+pow(r23,2)));
+
+            number beta = (r12*r23-r13*r22)/(r11*r22);
+
+            foreach (i; 1 .. np) {
+                number alpha1 = dx[i]*pow(r11,-2);
+                number alpha2 = (dy[i]-(r12/r11)*dx[i])*pow(r22,-2);
+                number alpha3 = (dz[i]-(r23/r22)*dy[i]+beta*dx[i])*pow(r33,-2);
+                wx[i] = theta[i]*(alpha1 - (r12/r11)*alpha2 + beta*alpha3);
+                wy[i] = theta[i]*(alpha2 - (r23/r22)*alpha3);
+                wz[i] = theta[i]*(alpha3);
+            }
+        }
+
+    } // end compute_weights_via_qr_factorization()
+
 } // end struct LSQInterpWorkspace
 
 struct LSQInterpGradients {

@@ -338,8 +338,8 @@ public:
     } // end gradients_xy_div()
 
     @nogc
-    void set_up_workspace_leastsq(in LocalConfig myConfig, ref Vector3*[] cloud_pos, ref Vector3 pos,
-                                  bool compute_about_mid, ref WLSQGradWorkspace ws)
+    void set_up_workspace_leastsq_via_normal(in LocalConfig myConfig, ref Vector3*[] cloud_pos, ref Vector3 pos,
+                                             bool compute_about_mid, ref WLSQGradWorkspace ws)
     {
         assert(&ws !is null, "We are missing the workspace!");
         size_t n = cloud_pos.length;
@@ -376,18 +376,30 @@ public:
         // (i.e. the face at which we are calculating the gradients) to be in
         // the first cloud position.
         number x0 = pos.x; number y0 = pos.y; number z0 = pos.z;
+        bool apply_weighting = false;
+        if (myConfig.viscous_least_squares_type == ViscousLeastSquaresType.weighted_normal) {
+            apply_weighting = true;
+        }
         if (myConfig.dimensions == 2) {
             foreach (i; loop_init .. n) {
                 number dx = cloud_pos[i].x - x0;
                 number dy = cloud_pos[i].y - y0;
-                weights2[i] = 1.0/(dx*dx+dy*dy);
+                if (apply_weighting) {
+                    weights2[i] = 1.0/(dx*dx+dy*dy);
+                } else {
+                    weights2[i] = 1.0;
+                }
             }
         } else { //3D
             foreach (i; loop_init .. n) {
                 number dx = cloud_pos[i].x - x0;
                 number dy = cloud_pos[i].y - y0;
                 number dz = cloud_pos[i].z - z0;
-                weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
+                if (apply_weighting) {
+                    weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
+                } else {
+                    weights2[i] = 1.0;
+                }
             }
         }
         // If computing about a mid-point, calculate that mid-point.
@@ -480,7 +492,179 @@ public:
                 ws.wz[i] = 0.0;
             }
         }
-    } // end set_up_workspace_leastsq()
+    } // end set_up_workspace_leastsq_via_normal()
+
+    @nogc
+    void set_up_workspace_leastsq_via_qr_factorization(in LocalConfig myConfig, ref Vector3*[] cloud_pos, ref Vector3 pos,
+                                                       bool compute_about_mid, ref WLSQGradWorkspace ws)
+    {
+        /**
+         *
+         * The following algorithm is taken from ref. [2].
+         * There is a section in ref. [1] that gives a bit more detail on the method,
+         * however, it should be noted that there appears to be some errors in the equations.
+         * We use the weighting suggested in ref. [3].
+         *
+         * references:
+         * [1] J. Blazek,
+         *     CFD principles and applications,
+         *     pg. 152, Third edition, 2007
+         * [2] A. Haselbacher and J. Blazek,
+         *     On the accurate and efficient discretisation of the Navier-Stokes equations on mixed grids,
+         *     AIAA Journal, vol. 38, no. 11, 1999
+         * [3] H. Nishikawa and J. White,
+         *     An efficient cell-centered finite-volume method with face-averaged nodal-gradients for triangular grids,
+         *     Journal of Computational Physics, vol. 411, 2020
+         *
+         * @author: Kyle A. Damm (2024-07-25)
+         *
+         **/
+
+        assert(&ws !is null, "We are missing the workspace!");
+        size_t n = cloud_pos.length;
+        assert(n <= cloud_nmax, "Too many points in cloud.");
+        number[cloud_nmax] theta;
+        ws.compute_about_mid = compute_about_mid;
+        size_t loop_init;
+        if (compute_about_mid) {
+            // We will compute differences about a "mid" point that is assumed
+            // to be distinct from all points in the incoming cloud.
+            loop_init = 0; // All points count.
+        } else {
+            loop_init = 1; // first point is reference for differences.
+            theta[0] = 0.0; // and doesn't enter into the sum itself.
+        }
+        if (n < 3) {
+            string msg = "Not enough points in cloud.";
+            debug {
+                import std.format;
+                msg ~= format("\n  pos=%s", pos);
+                msg ~= format("\n  compute_about_mid=%s, loop_init=%d, n=%d", compute_about_mid, loop_init, n);
+                foreach (i; 0 .. n) { msg ~= format("\n  cloud_pos[%d]=%s", i, cloud_pos[i]); }
+            }
+            throw new FlowSolverException(msg);
+        }
+        ws.n = n;
+        ws.loop_init = loop_init;
+
+        // set the weighting coefficient (this is theta from eq. 5.60)
+        number x0 = pos.x; number y0 = pos.y; number z0 = pos.z;
+        bool apply_weighting = false;
+        if (myConfig.viscous_least_squares_type == ViscousLeastSquaresType.weighted_qr) {
+            apply_weighting = true;
+        }
+        if (apply_weighting) {
+            if (myConfig.dimensions == 2) {
+                foreach (i; loop_init .. n) {
+                    number dx = cloud_pos[i].x - x0;
+                    number dy = cloud_pos[i].y - y0;
+                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy), 0.25);
+                }
+            } else { //3D
+                foreach (i; loop_init .. n) {
+                    number dx = cloud_pos[i].x - x0;
+                    number dy = cloud_pos[i].y - y0;
+                    number dz = cloud_pos[i].z - z0;
+                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy+dz*dz), 0.25);
+                }
+            }
+        } else {
+            if (myConfig.dimensions == 2) {
+                foreach (i; loop_init .. n) {
+                    theta[i] = 1.0;
+                }
+            } else { //3D
+                foreach (i; loop_init .. n) {
+                    theta[i] = 1.0;
+                }
+            }
+        }
+
+        // If computing about a mid-point, calculate that mid-point.
+        if (compute_about_mid) {
+            x0 = 0.0; y0 = 0.0; z0 = 0.0;
+            foreach (i; 0 .. n) {
+                x0 += cloud_pos[i].x; y0 += cloud_pos[i].y; z0 += cloud_pos[i].z;
+            }
+            x0 /= n; y0 /= n; z0 /= n; // midpoint
+        } else { // else use the primary point (assumed to be in cloud position 0)
+            x0 = cloud_pos[0].x; y0 = cloud_pos[0].y; z0 = cloud_pos[0].z;
+        }
+
+        // compute dx, dy, dz from the A matrix in eq. 5.55 (incorporating the weighting coefficients)
+        number[cloud_nmax] dx, dy, dz;
+        foreach (i; loop_init .. n) {
+            dx[i] = theta[i]*(cloud_pos[i].x - x0);
+            dy[i] = theta[i]*(cloud_pos[i].y - y0);
+            if (myConfig.dimensions == 3) {
+                dz[i] = theta[i]*(cloud_pos[i].z - z0);
+            } else {
+                dz[i] = 0.0;
+            }
+        }
+
+        if (myConfig.dimensions == 2) {
+            // compute the vector of weights from eq. 5.61
+            number r11 = 0.0;
+            foreach(i; loop_init .. n) { r11 += pow(dx[i], 2); }
+            r11 = sqrt(r11);
+
+            number r12 = 0.0;
+            foreach(i; loop_init .. n) { r12 += dx[i]*dy[i]; }
+            r12 /= r11;
+
+            number r22 = 0.0;
+            foreach(i; loop_init .. n) { r22 += pow(dy[i]-dx[i]*(r12/r11), 2); }
+            r22 = sqrt(r22);
+
+            foreach (i; loop_init .. n) {
+                number alpha1 = dx[i]*pow(r11,-2);
+                number alpha2 = (dy[i]-(r12/r11)*dx[i])*pow(r22,-2);
+                ws.wx[i] = theta[i]*(alpha1 - (r12/r11)*alpha2);
+                ws.wy[i] = theta[i]*(alpha2);
+            }
+        } else {
+            // compute the vector of weights from eq. 5.61
+            number r11 = 0.0;
+            foreach(i; loop_init .. n) { r11 += pow(dx[i], 2); }
+            r11 = sqrt(r11);
+
+            number r12 = 0.0;
+            foreach(i; loop_init .. n) { r12 += dx[i]*dy[i]; }
+            r12 /= r11;
+
+            number r22 = 0.0;
+            foreach(i; loop_init .. n) { r22 += pow(dy[i]-dx[i]*(r12/r11), 2); }
+            r22 = sqrt(r22);
+
+            number r13 = 0.0;
+            foreach(i; loop_init .. n) { r13 += dx[i]*dz[i]; }
+            r13 /= r11;
+
+            number r23_a = 0.0;
+            number r23_b = 0.0;
+            foreach(i; loop_init .. n) {
+                r23_a += dy[i]*dz[i];
+                r23_b += dx[i]*dz[i];
+            }
+            number r23 = (1.0/r22) * (r23_a - (r12/r11)*r23_b);
+
+            number r33 = 0.0;
+            foreach(i; loop_init .. n) { r33 += pow(dz[i], 2); }
+            r33 = sqrt(r33-(pow(r13,2)+pow(r23,2)));
+
+            number beta = (r12*r23-r13*r22)/(r11*r22);
+
+            foreach (i; loop_init .. n) {
+                number alpha1 = dx[i]*pow(r11,-2);
+                number alpha2 = (dy[i]-(r12/r11)*dx[i])*pow(r22,-2);
+                number alpha3 = (dz[i]-(r23/r22)*dy[i]+beta*dx[i])*pow(r33,-2);
+                ws.wx[i] = theta[i]*(alpha1 - (r12/r11)*alpha2 + beta*alpha3);
+                ws.wy[i] = theta[i]*(alpha2 - (r23/r22)*alpha3);
+                ws.wz[i] = theta[i]*(alpha3);
+            }
+        }
+    } // end set_up_workspace_leastsq_via_qr_factorization()
 
     @nogc
     void gradients_leastsq(in LocalConfig myConfig, ref FlowState*[] cloud_fs, ref Vector3*[] cloud_pos,

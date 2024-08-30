@@ -270,6 +270,8 @@ function output.write_config_file(fileName)
    --
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"use_viscosity_from_cells": %s,\n', tostring(config.use_viscosity_from_cells)))
+   f:write(string.format('"inviscid_least_squares_type": "%s",\n', config.inviscid_least_squares_type))
+   f:write(string.format('"viscous_least_squares_type": "%s",\n', config.viscous_least_squares_type))
    f:write(string.format('"spatial_deriv_calc": "%s",\n', config.spatial_deriv_calc))
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',

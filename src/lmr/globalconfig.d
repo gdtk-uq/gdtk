@@ -455,6 +455,68 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
     }
 }
 
+enum InviscidLeastSquaresType {
+    unweighted_normal,
+    weighted_normal,
+    unweighted_qr,
+    weighted_qr
+}
+
+@nogc
+string inviscid_least_squares_type_name(InviscidLeastSquaresType ilst)
+{
+    final switch ( ilst ) {
+    case InviscidLeastSquaresType.unweighted_normal: return "unweighted_normal";
+    case InviscidLeastSquaresType.weighted_normal: return "weighted_normal";
+    case InviscidLeastSquaresType.unweighted_qr: return "unweighted_qr";
+    case InviscidLeastSquaresType.weighted_qr: return "weighted_qr";
+    }
+}
+
+@nogc
+InviscidLeastSquaresType inviscid_least_squares_type_from_name(string name)
+{
+    switch ( name ) {
+    case "unweighted_normal": return InviscidLeastSquaresType.unweighted_normal;
+    case "weighted_normal": return InviscidLeastSquaresType.weighted_normal;
+    case "unweighted_qr": return InviscidLeastSquaresType.unweighted_qr;
+    case "weighted_qr": return InviscidLeastSquaresType.weighted_qr;
+    default:
+        throw new FlowSolverException("Invalid inviscid least squares type  name");
+    }
+}
+
+enum ViscousLeastSquaresType {
+    unweighted_normal,
+    weighted_normal,
+    unweighted_qr,
+    weighted_qr
+}
+
+@nogc
+string viscous_least_squares_type_name(ViscousLeastSquaresType ilst)
+{
+    final switch ( ilst ) {
+    case ViscousLeastSquaresType.unweighted_normal: return "unweighted_normal";
+    case ViscousLeastSquaresType.weighted_normal: return "weighted_normal";
+    case ViscousLeastSquaresType.unweighted_qr: return "unweighted_qr";
+    case ViscousLeastSquaresType.weighted_qr: return "weighted_qr";
+    }
+}
+
+@nogc
+ViscousLeastSquaresType viscous_least_squares_type_from_name(string name)
+{
+    switch ( name ) {
+    case "unweighted_normal": return ViscousLeastSquaresType.unweighted_normal;
+    case "weighted_normal": return ViscousLeastSquaresType.weighted_normal;
+    case "unweighted_qr": return ViscousLeastSquaresType.unweighted_qr;
+    case "weighted_qr": return ViscousLeastSquaresType.weighted_qr;
+    default:
+        throw new FlowSolverException("Invalid viscous least squares type  name");
+    }
+}
+
 // Symbolic names for the flavours of unstructured limiters.
 enum UnstructuredLimiter {
     svan_albada,
@@ -1119,6 +1181,9 @@ final class GlobalConfig {
     shared static bool viscous = false;
     // If true, viscous effects are included in the gas-dynamic update.
     shared static bool use_viscosity_from_cells = false;
+    // set the type of least squares calculation
+    shared static InviscidLeastSquaresType inviscid_least_squares_type = InviscidLeastSquaresType.unweighted_normal;
+    shared static ViscousLeastSquaresType viscous_least_squares_type = ViscousLeastSquaresType.weighted_normal;
     // Proper treatment of viscous effects at the walls implies using the viscous
     // transport coefficients evaluated at the wall temperature, however,
     // Eilmer3 was set up to use the cell-average values of transport coefficients
@@ -1417,6 +1482,8 @@ public:
     int njc_write;
     int nkc_write;
     //
+    InviscidLeastSquaresType inviscid_least_squares_type;
+    ViscousLeastSquaresType viscous_least_squares_type;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
@@ -1590,6 +1657,8 @@ public:
         //
         viscous = cfg.viscous;
         use_viscosity_from_cells = cfg.use_viscosity_from_cells;
+        inviscid_least_squares_type = cfg.inviscid_least_squares_type;
+        viscous_least_squares_type = cfg.viscous_least_squares_type;
         spatial_deriv_calc = cfg.spatial_deriv_calc;
         spatial_deriv_locn = cfg.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
@@ -2037,6 +2106,8 @@ void set_config_for_core(JSONValue jsonData)
     //
     mixin(update_bool("viscous", "viscous"));
     mixin(update_bool("use_viscosity_from_cells", "use_viscosity_from_cells"));
+    mixin(update_enum("inviscid_least_squares_type", "inviscid_least_squares_type", "inviscid_least_squares_type_from_name"));
+    mixin(update_enum("viscous_least_squares_type", "viscous_least_squares_type", "viscous_least_squares_type_from_name"));
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
@@ -2066,6 +2137,8 @@ void set_config_for_core(JSONValue jsonData)
     if (cfg.verbosity_level > 1) {
         writeln("  viscous: ", cfg.viscous);
         writeln("  use_viscosity_from_cells: ", cfg.use_viscosity_from_cells);
+        writeln("  inviscid_least_squares_type: ", inviscid_least_squares_type_name(cfg.inviscid_least_squares_type));
+        writeln("  viscous_least_squares_type: ", viscous_least_squares_type_name(cfg.viscous_least_squares_type));
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(cfg.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(cfg.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", cfg.include_ghost_cells_in_spatial_deriv_clouds);

@@ -134,6 +134,8 @@ configOptionsHidden = { -- hidden from user
    --
    viscous = false,
    use_viscosity_from_cells = false,
+   inviscid_least_squares_type = "unweighted_normal",
+   viscous_least_squares_type = "weighted_normal",
    spatial_deriv_calc = "least_squares",
    spatial_deriv_locn = "cells",
    include_ghost_cells_in_spatial_deriv_clouds = true,

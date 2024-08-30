@@ -721,15 +721,30 @@ public:
             // LSQ weights are used in the calculation of flow gradients for the viscous terms.
             if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                 foreach(cell; cells) {
-                    cell.grad.set_up_workspace_leastsq(myConfig, cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
+                    if (myConfig.viscous_least_squares_type == ViscousLeastSquaresType.weighted_normal ||
+                        myConfig.viscous_least_squares_type == ViscousLeastSquaresType.unweighted_normal) {
+                        cell.grad.set_up_workspace_leastsq_via_normal(myConfig, cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
+                    } else {
+                        cell.grad.set_up_workspace_leastsq_via_qr_factorization(myConfig, cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
+                    }
                 }
             } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
-                    iface.grad.set_up_workspace_leastsq(myConfig, iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
+                    if (myConfig.viscous_least_squares_type == ViscousLeastSquaresType.weighted_normal ||
+                        myConfig.viscous_least_squares_type == ViscousLeastSquaresType.unweighted_normal) {
+                        iface.grad.set_up_workspace_leastsq_via_normal(myConfig, iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
+                    } else {
+                        iface.grad.set_up_workspace_leastsq_via_qr_factorization(myConfig, iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
+                    }
                 }
             } else { // myConfig.spatial_deriv_locn == vertices
                 foreach(vtx; vertices) {
-                    vtx.grad.set_up_workspace_leastsq(myConfig, vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
+                    if (myConfig.viscous_least_squares_type == ViscousLeastSquaresType.weighted_normal ||
+                        myConfig.viscous_least_squares_type == ViscousLeastSquaresType.unweighted_normal) {
+                        vtx.grad.set_up_workspace_leastsq_via_normal(myConfig, vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
+                    } else {
+                        vtx.grad.set_up_workspace_leastsq_via_qr_factorization(myConfig, vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
+                    }
                 }
             }
         }
@@ -739,7 +754,12 @@ public:
         if (myConfig.interpolation_order > 1) {
             foreach (c; cells) {
                 try {
-                    c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
+                    if (myConfig.inviscid_least_squares_type == InviscidLeastSquaresType.unweighted_normal ||
+                        myConfig.inviscid_least_squares_type == InviscidLeastSquaresType.weighted_normal) {
+                        c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl, myConfig);
+                    } else {
+                        c.ws.compute_weights_via_qr_factorization(c.cell_cloud, myConfig.dimensions, gtl, myConfig);
+                    }
                 } catch (Exception e) {
                     debug {
                         writefln("In compute_least_squares_setup()," ~
