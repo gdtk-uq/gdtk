@@ -1,0 +1,71 @@
+-- 11 Species Air Reaction File, from:
+-- "Review of Chemical Kinetic Problems of Future Nasa Missions, I: Earth Entries"
+-- Chul Park, Journal of Thermophysics and Heat Transfer, Vol. 7, No. 3 (1993)
+-- Notes:
+--    - Note that in the input file (here), the reactions are specified in CGS units,
+--      primarily cm. prep-chem converts these into SI units automatically for the 
+--      machine readable reaction file that gets fed into the lua interpreter at runtime.
+--    - This file was ported from an eilmer 3 file written by Daniel Potter
+-- @author: Nick Gibbons
+
+Config{
+   tempLimits = {lower=300.0, upper=30000.0},
+   odeStep = {method='rkf', errTol=1.000000e-09},
+   tightTempCoupling = true,
+}
+
+-- Park Reactions are evaluated as:
+-- T = pow(Q.T, s)*pow(Q.T_modes[0], 1.0 - s);
+-- return A*pow(T, n)*exp(-C/T);
+
+-- Dissociation Reactions
+Reaction{ 'N2 + M <=> N + N + M',
+   fr={'Park', A=7.0e21, n=-1.60, C=113200.0, s=0.5},
+   efficiencies={['N2']=1.0,
+                 ['O2']=1.0,
+                 ['NO']=1.0,   ['NO+']=1.0,
+                 ['N']=4.2857,
+                 ['O']=4.2857,
+                 ['e-']=1714.2857142857142},
+}
+
+Reaction{'O2 + M <=> O + O + M',
+   fr={'Park', A=2.0e21, n=-1.5, C=59500.0, s=0.5},
+   efficiencies={['N2']=1.0,
+                 ['O2']=1.0,
+                 ['NO']=1.0, ['NO+']=1.0,
+                 ['N']=5.0,
+                 ['O']=5.0,
+                 ['e-']=0.0},
+}
+
+-- This reaction has a typo in the 1993 paper, I assume it should be NO+M -> N+O+M
+-- Also for some reason Dan Potter has slightly different efficiencies for the atomic species.
+-- I've left these in for the sake of comparison but we should think about putting them back
+Reaction{'NO + M <=> N + O + M',
+   fr={'Park', A=5.0e15, n=0.0, C=75500.0, s=0.5},
+   efficiencies={['N2']=1.0,
+                 ['O2']=1.0,
+                 ['NO']=1.0, ['NO+']=1.0,
+                 ['N']=20.0,
+                 ['O']=20.0,
+                 ['e-']=0.0},
+}
+
+
+-- Arrhenius reaction rates are evaluated using the translation temperature only:
+-- return A*pow(T, n)*exp(-C/T);
+
+-- NO Exchange Reactions
+Reaction{ 'NO + O <=> O2 + N',
+   fr={'Arrhenius', A=8.4e12, n=0.0, C=19450.0},
+}
+
+Reaction{'N2 + O <=> NO + N',
+   fr={'Arrhenius', A=6.4e17, n=-1.0, C=38400.0},
+}
+
+-- Associative ionization reactions
+Reaction{'N + O <=> NO+ + e-',
+   fr={'Arrhenius', A=8.8e8, n=1.0, C=31900.0},
+}
