@@ -63,13 +63,16 @@ class MappedCellsFile {
     size_t[] neighbour_block_id_list;
     size_t[] nfaces;
     size_t[][][] facevtxs;
-    //string[][] facevtxs;
     size_t[][] src_blks;
     size_t[][] src_cells;
     size_t[][] src_blks_2;
     size_t[][] src_cells_2;
 
     this(string filename, int blkid){
+        if (!exists(filename)) {
+            string msg = format("mapped_cells file %s does not exist.", filename);
+            throw new FlowSolverException(msg);
+        }
         auto file = File(filename, "r");
 
         string target = "MappedBlocks in BLOCK[%d]".format(blkid);
@@ -115,7 +118,6 @@ class MappedCellsFile {
                 }
             } else {
                 auto tokens = line.strip().split();
-                //facevtxs[iblk][iline] = to!string(tokens[0]);
                 foreach(vtx; tokens[0].split('-')) facevtxs[iblk][iline] ~= to!size_t(vtx);
                 src_blks[iblk][iline] = to!size_t(tokens[1]);
                 src_cells[iblk][iline] = to!size_t(tokens[2]);
@@ -264,195 +266,222 @@ public:
         }
     }
 
-    // not @nogc
     void set_up_cell_mapping()
     {
+    /*
+        High level routine for coordinating the setup of our exchange boundaries. The actual
+        work is farmed off to lower level routines depending on what kind of parameters are
+        configured. Normal usage is to read in a mapping from a file, then build different
+        arrays in shared or MPI parallelisation. 
+
+        @author: Nick Gibbons
+    */
         if (cell_mapping_from_file) {
-            if (!exists(mapped_cells_filename)) {
-                string msg = format("mapped_cells file %s does not exist.", mapped_cells_filename);
+            if (blk.grid_type==Grid_t.structured_grid)
+                throw new Error("cell mapping from file is not implemented for structured grids");
+
+            // This version switch is invoked at compile time, depending on shared or MPI 
+            version(mpi_parallel){
+                set_up_cell_mapping_from_file_mpi();
+            } else {
+                set_up_cell_mapping_from_file_shared();
+            }
+
+        // We also have this option, which is not used very often. Consider checking it?
+        } else {
+            set_up_cell_mapping_via_search();
+        }
+    } // end set_up_cell_mapping()
+
+    void set_up_cell_mapping_from_file_shared()
+    {
+    /*
+        Build the datastructures needed for a simple shared memory exchange of boundary data.
+
+        @author: Nick Gibbons
+    */
+        // We set up the ghost-cell reference list to have the same order as
+        // the list of faces that were stored in the boundary.
+        // We will later confirm that the ghost cells appear in the same order
+        // in the mapped_cells file.
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, face; bc.faces) {
+            ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
+            ghost_cells[$-1].is_interior_to_domain = true;
+        }
+
+        MappedCellsFile mcp = new MappedCellsFile(mapped_cells_filename, blk.id);
+        check_boundary_order_matches_file(mcp);
+
+        // For the shared-memory code, get references to the mapped (source) cells
+        // that need to be accessed for the current (destination) block.
+        foreach (i, face; bc.faces) {
+            size_t src_blk_id = mcp.src_blks[mcp.myblk][i];
+            size_t src_cell_id = mcp.src_cells[mcp.myblk][i];
+
+            if (!find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
+                auto blk = cast(FluidBlock) globalBlocks[src_blk_id];
+                assert(blk !is null, "Oops, this should be a FluidBlock object.");
+                mapped_cells ~= blk.cells[src_cell_id];
+            } else {
+                auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);
                 throw new FlowSolverException(msg);
             }
-            final switch (blk.grid_type) {
-            case Grid_t.unstructured_grid:
-                // We set up the ghost-cell reference list to have the same order as
-                // the list of faces that were stored in the boundary.
-                // We will later confirm that the ghost cells appear in the same order
-                // in the mapped_cells file.
-                BoundaryCondition bc = blk.bc[which_boundary];
-                foreach (i, face; bc.faces) {
-                    ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
-                    ghost_cells[$-1].is_interior_to_domain = true;
-                }
-                break;
-            case Grid_t.structured_grid:
-                throw new Error("cell mapping from file is not implemented for structured grids");
-            } // end switch grid_type
-            MappedCellsFile mcp = new MappedCellsFile(mapped_cells_filename, blk.id);
-            check_boundary_order_matches_file(mcp);
-            //
-            foreach (ii, dest_blk_id; mcp.neighbour_block_id_list) {
-                size_t nfaces  = mcp.nfaces[ii];
-                foreach(i; 0 .. nfaces) {
-                    size_t src_blk_id = mcp.src_blks[ii][i];
-                    size_t src_cell_id = mcp.src_cells[ii][i];
-                    size_t src_blk_id_2, src_cell_id_2;
-                    if (blk.n_ghost_cell_layers>1){
-                        if (mcp.src_cells_2[ii].length==0) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
-                        src_blk_id_2 = mcp.src_blks_2[ii][i];
-                        src_cell_id_2 = mcp.src_cells_2[ii][i];
-                    }
-                    version(mpi_parallel) {
-                        if ((src_blk_id==blk.id)||(dest_blk_id==blk.id)) {
-                            // These lists will be used to direct data when packing and unpacking
-                            // the buffers used to send data between the MPI tasks.
-                            src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
-                            ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
-                        }
-                        if (blk.n_ghost_cell_layers>1){
-                            if ((src_blk_id_2==blk.id)||(dest_blk_id==blk.id)) {
-                                src_cell_ids_2[src_blk_id_2][dest_blk_id] ~= src_cell_id_2;
-                                ghost_cell_indices_2[src_blk_id_2][dest_blk_id] ~= i+nfaces;
-                            }
-                        }
-                    }
-                }
-            } // end foreach dest_blk_id
-            //
-            version(mpi_parallel) {
-                // Experimental double layer of ghost cells, mpi vers.
-                // TODO: Move this
-                BoundaryCondition bc = blk.bc[which_boundary];
+        } // end foreach face
+        // Experimental second layer of unstructured cells by NNG
+        if (blk.n_ghost_cell_layers>1) {
+            foreach (i, face; bc.faces) {
+                size_t src_blk_id = mcp.src_blks_2[mcp.myblk][i];
+                size_t src_cell_id = mcp.src_cells_2[mcp.myblk][i];
+                auto oblk = cast(FluidBlock) globalBlocks[src_blk_id];
+                assert(oblk !is null, "Oops, this should be a FluidBlock object.");
+
+                auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
+                auto other_real1 = oblk.cells[src_cell_id];
+                ghost1.is_interior_to_domain = true;
+
+                ghost_cells ~= ghost1;
+                mapped_cells ~= other_real1;
+            }
+        }
+    }
+
+version(mpi_parallel) {
+    void set_up_cell_mapping_from_file_mpi()
+    {
+    /*
+        Build the datastructures needed for a full MPI exchange of boundary data.
+        These are, chiefly, the associative arrays src_cell_ids and ghost_cell_indices,
+        which are used to initialise all of the other stuff in the version(mpi) scope
+        in this object.
+
+        @author: Nick Gibbons
+    */
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, face; bc.faces) {
+            ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
+            ghost_cells[$-1].is_interior_to_domain = true;
+        }
+        //
+        MappedCellsFile mcp = new MappedCellsFile(mapped_cells_filename, blk.id);
+        check_boundary_order_matches_file(mcp);
+        //
+        foreach (ii, dest_blk_id; mcp.neighbour_block_id_list) {
+            size_t nfaces  = mcp.nfaces[ii];
+            foreach(i; 0 .. nfaces) {
+                size_t src_blk_id = mcp.src_blks[ii][i];
+                size_t src_cell_id = mcp.src_cells[ii][i];
+                size_t src_blk_id_2, src_cell_id_2;
                 if (blk.n_ghost_cell_layers>1){
-                    foreach(sblk, destblks; src_cell_ids_2){
-                        foreach(dblk, srccells; destblks){
-                            foreach(i; 0 .. srccells.length){
-                                src_cell_ids[sblk][dblk]       ~= src_cell_ids_2[sblk][dblk][i];
-                                ghost_cell_indices[sblk][dblk] ~= ghost_cell_indices_2[sblk][dblk][i];
-                            }
-                        }
-                    }
-                    foreach (i, face; bc.faces) {
-                        auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
-                        ghost_cells ~= ghost1;
-                        ghost_cells[$-1].is_interior_to_domain = true;
+                    if (mcp.src_cells_2[ii].length==0) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
+                    src_blk_id_2 = mcp.src_blks_2[ii][i];
+                    src_cell_id_2 = mcp.src_cells_2[ii][i];
+                }
+                if ((src_blk_id==blk.id)||(dest_blk_id==blk.id)) {
+                    // These lists will be used to direct data when packing and unpacking
+                    // the buffers used to send data between the MPI tasks.
+                    src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
+                    ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
+                }
+                if (blk.n_ghost_cell_layers>1){
+                    if ((src_blk_id_2==blk.id)||(dest_blk_id==blk.id)) {
+                        src_cell_ids_2[src_blk_id_2][dest_blk_id] ~= src_cell_id_2;
+                        ghost_cell_indices_2[src_blk_id_2][dest_blk_id] ~= i+nfaces;
                     }
                 }
-                //
-                // No communication needed just now because all MPI tasks have the full mapping,
-                // however, we can prepare buffers and the like for communication of the geometry
-                // and flowstate data.
-                //
-                // Incoming messages will carrying data from other block, to be copied into the
-                // ghost cells for the current boundary.
-                // N.B. We assume that there is only one such boundary per block.
-                incoming_ncells_list.length = 0;
-                incoming_block_list.length = 0;
-                incoming_rank_list.length = 0;
-                incoming_geometry_tag_list.length = 0;
-                incoming_flowstate_tag_list.length = 0;
-                incoming_convective_gradient_tag_list.length = 0;
-                incoming_viscous_gradient_tag_list.length = 0;
-                foreach (src_blk_id; mcp.neighbour_block_id_list) {
-                    if (blk.id !in src_cell_ids[src_blk_id]) continue;
-                    size_t nc = src_cell_ids[src_blk_id][blk.id].length;
-                    if (nc > 0) {
-                        incoming_ncells_list ~= nc;
-                        incoming_block_list ~= src_blk_id;
-                        incoming_rank_list ~= GlobalConfig.mpi_rank_for_block[src_blk_id];
-                        incoming_geometry_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 1);
-                        incoming_flowstate_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 2);
-                        incoming_convective_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 3);
-                        incoming_viscous_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 4);
+            }
+        } // end foreach dest_blk_id
+        //
+        // Experimental double layer of ghost cells, mpi vers.
+        // TODO: Move this
+        if (blk.n_ghost_cell_layers>1){
+            foreach(sblk, destblks; src_cell_ids_2){
+                foreach(dblk, srccells; destblks){
+                    foreach(i; 0 .. srccells.length){
+                        src_cell_ids[sblk][dblk]       ~= src_cell_ids_2[sblk][dblk][i];
+                        ghost_cell_indices[sblk][dblk] ~= ghost_cell_indices_2[sblk][dblk][i];
                     }
                 }
-                n_incoming = incoming_block_list.length;
-                incoming_geometry_request_list.length = n_incoming;
-                incoming_geometry_status_list.length = n_incoming;
-                incoming_geometry_buf_list.length = n_incoming;
-                incoming_flowstate_request_list.length = n_incoming;
-                incoming_flowstate_status_list.length = n_incoming;
-                incoming_flowstate_buf_list.length = n_incoming;
-                incoming_convective_gradient_request_list.length = n_incoming;
-                incoming_convective_gradient_status_list.length = n_incoming;
-                incoming_convective_gradient_buf_list.length = n_incoming;
-                incoming_viscous_gradient_request_list.length = n_incoming;
-                incoming_viscous_gradient_status_list.length = n_incoming;
-                incoming_viscous_gradient_buf_list.length = n_incoming;
-                //
-                // Outgoing messages will carry data from source cells in the current block,
-                // to be copied into ghost cells in another block.
-                outgoing_ncells_list.length = 0;
-                outgoing_block_list.length = 0;
-                outgoing_rank_list.length = 0;
-                outgoing_geometry_tag_list.length = 0;
-                outgoing_flowstate_tag_list.length = 0;
-                outgoing_convective_gradient_tag_list.length = 0;
-                outgoing_viscous_gradient_tag_list.length = 0;
-                foreach (dest_blk_id; mcp.neighbour_block_id_list) {
-                    if (dest_blk_id !in src_cell_ids[blk.id]) continue;
-                    size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
-                    if (nc > 0) {
-                        outgoing_ncells_list ~= nc;
-                        outgoing_block_list ~= dest_blk_id;
-                        outgoing_rank_list ~= GlobalConfig.mpi_rank_for_block[dest_blk_id];
-                        outgoing_geometry_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 1);
-                        outgoing_flowstate_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 2);
-                        outgoing_convective_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 3);
-                        outgoing_viscous_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 4);
-                    }
-                }
-                n_outgoing = outgoing_block_list.length;
-                outgoing_geometry_buf_list.length = n_outgoing;
-                outgoing_flowstate_buf_list.length = n_outgoing;
-                outgoing_convective_gradient_buf_list.length = n_outgoing;
-                outgoing_viscous_gradient_buf_list.length = n_outgoing;
-                //
-            } else { // not mpi_parallel
-                // For the shared-memory code, get references to the mapped (source) cells
-                // that need to be accessed for the current (destination) block.
-                final switch (blk.grid_type) {
-                case Grid_t.unstructured_grid:
-                    BoundaryCondition bc = blk.bc[which_boundary];
-                    foreach (i, face; bc.faces) {
-                        size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
-                        my_vtx_list.sort();
-                        size_t src_blk_id = mcp.src_blks[mcp.myblk][i];
-                        size_t src_cell_id = mcp.src_cells[mcp.myblk][i];
-                        assert(mcp.facevtxs[mcp.myblk][i]==my_vtx_list);
+            }
+            foreach (i, face; bc.faces) {
+                auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
+                ghost_cells ~= ghost1;
+                ghost_cells[$-1].is_interior_to_domain = true;
+            }
+        }
+        //
+        // No communication needed just now because all MPI tasks have the full mapping,
+        // however, we can prepare buffers and the like for communication of the geometry
+        // and flowstate data.
+        //
+        // Incoming messages will carrying data from other block, to be copied into the
+        // ghost cells for the current boundary.
+        // N.B. We assume that there is only one such boundary per block.
+        incoming_ncells_list.length = 0;
+        incoming_block_list.length = 0;
+        incoming_rank_list.length = 0;
+        incoming_geometry_tag_list.length = 0;
+        incoming_flowstate_tag_list.length = 0;
+        incoming_convective_gradient_tag_list.length = 0;
+        incoming_viscous_gradient_tag_list.length = 0;
+        foreach (src_blk_id; mcp.neighbour_block_id_list) {
+            if (blk.id !in src_cell_ids[src_blk_id]) continue;
+            size_t nc = src_cell_ids[src_blk_id][blk.id].length;
+            if (nc > 0) {
+                incoming_ncells_list ~= nc;
+                incoming_block_list ~= src_blk_id;
+                incoming_rank_list ~= GlobalConfig.mpi_rank_for_block[src_blk_id];
+                incoming_geometry_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 1);
+                incoming_flowstate_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 2);
+                incoming_convective_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 3);
+                incoming_viscous_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 4);
+            }
+        }
+        n_incoming = incoming_block_list.length;
+        incoming_geometry_request_list.length = n_incoming;
+        incoming_geometry_status_list.length = n_incoming;
+        incoming_geometry_buf_list.length = n_incoming;
+        incoming_flowstate_request_list.length = n_incoming;
+        incoming_flowstate_status_list.length = n_incoming;
+        incoming_flowstate_buf_list.length = n_incoming;
+        incoming_convective_gradient_request_list.length = n_incoming;
+        incoming_convective_gradient_status_list.length = n_incoming;
+        incoming_convective_gradient_buf_list.length = n_incoming;
+        incoming_viscous_gradient_request_list.length = n_incoming;
+        incoming_viscous_gradient_status_list.length = n_incoming;
+        incoming_viscous_gradient_buf_list.length = n_incoming;
+        //
+        // Outgoing messages will carry data from source cells in the current block,
+        // to be copied into ghost cells in another block.
+        outgoing_ncells_list.length = 0;
+        outgoing_block_list.length = 0;
+        outgoing_rank_list.length = 0;
+        outgoing_geometry_tag_list.length = 0;
+        outgoing_flowstate_tag_list.length = 0;
+        outgoing_convective_gradient_tag_list.length = 0;
+        outgoing_viscous_gradient_tag_list.length = 0;
+        foreach (dest_blk_id; mcp.neighbour_block_id_list) {
+            if (dest_blk_id !in src_cell_ids[blk.id]) continue;
+            size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
+            if (nc > 0) {
+                outgoing_ncells_list ~= nc;
+                outgoing_block_list ~= dest_blk_id;
+                outgoing_rank_list ~= GlobalConfig.mpi_rank_for_block[dest_blk_id];
+                outgoing_geometry_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 1);
+                outgoing_flowstate_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 2);
+                outgoing_convective_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 3);
+                outgoing_viscous_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 4);
+            }
+        }
+        n_outgoing = outgoing_block_list.length;
+        outgoing_geometry_buf_list.length = n_outgoing;
+        outgoing_flowstate_buf_list.length = n_outgoing;
+        outgoing_convective_gradient_buf_list.length = n_outgoing;
+        outgoing_viscous_gradient_buf_list.length = n_outgoing;
+    }
+}
 
-                        if (!find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
-                            auto blk = cast(FluidBlock) globalBlocks[src_blk_id];
-                            assert(blk !is null, "Oops, this should be a FluidBlock object.");
-                            mapped_cells ~= blk.cells[src_cell_id];
-                        } else {
-                            auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);
-                            throw new FlowSolverException(msg);
-                        }
-                    } // end foreach face
-                    // Experimental second layer of unstructured cells by NNG
-                    if (blk.n_ghost_cell_layers>1) {
-                        foreach (i, face; bc.faces) {
-                            size_t src_blk_id = mcp.src_blks_2[mcp.myblk][i];
-                            size_t src_cell_id = mcp.src_cells_2[mcp.myblk][i];
-                            auto oblk = cast(FluidBlock) globalBlocks[src_blk_id];
-                            assert(oblk !is null, "Oops, this should be a FluidBlock object.");
-
-                            auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
-                            auto other_real1 = oblk.cells[src_cell_id];
-
-                            ghost_cells ~= ghost1;
-                            mapped_cells ~= other_real1;
-                        }
-                    }
-                    break;
-                case Grid_t.structured_grid:
-                    throw new Error("cell mapping from file not implemented for structured grids");
-                } // end switch grid_type
-            } // end not mpi_parallel
-        } else { // !cell_mapping_from_file
-            set_up_cell_mapping_via_search();
-        } // end if !cell_mapping_from_file
-    } // end set_up_cell_mapping()
+    // not @nogc
 
     // not @nogc
     void set_up_cell_mapping_via_search()
