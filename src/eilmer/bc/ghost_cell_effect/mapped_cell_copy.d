@@ -40,11 +40,108 @@ struct BlockAndCellId {
     }
 }
 
+class MappedCellsFile {
+/*
+    Read the entire mapped_cells file.
+    The single mapped_cell file contains the indices mapped cells
+    for all ghost-cells, for all blocks.
+
+    They are in sections labelled by the block id.
+    Each boundary face is identified by its "faceTag",
+    which is a string composed of the vertex indices, in ascending order.
+    The order of the ghost-cells is assumed the same as for each
+    grids underlying the FluidBlock.
+
+    For the shared memory code, we only need the section for the block
+    associated with the current boundary.
+    For the MPI-parallel code, we need the mappings for all blocks,
+    so that we know what requests for data to expect from other blocks.
+
+    @author: Nick Gibbons (02/09/24)
+*/
+    size_t myblk;
+    size_t[] neighbour_block_id_list;
+    size_t[] nfaces;
+    size_t[][][] facevtxs;
+    //string[][] facevtxs;
+    size_t[][] src_blks;
+    size_t[][] src_cells;
+    size_t[][] src_blks_2;
+    size_t[][] src_cells_2;
+
+    this(string filename, int blkid){
+        auto file = File(filename, "r");
+
+        string target = "MappedBlocks in BLOCK[%d]".format(blkid);
+        foreach (line; file.byLine){
+            if (line.startsWith(target)){
+                foreach(blk; line.split('=')[1].strip().split()){
+                    neighbour_block_id_list ~= to!size_t(blk);
+                }
+                break;
+            }
+        }
+        if (neighbour_block_id_list.length==0) throw new Error("Failed to find MappedBlocks line in file mapped_cells");
+
+        if (!canFind(neighbour_block_id_list, blkid)) neighbour_block_id_list ~= blkid;
+        neighbour_block_id_list.sort();
+        myblk = neighbour_block_id_list.countUntil(blkid);
+
+        size_t iblk = 0;
+        bool searching_for_header = true;
+        size_t nsources;
+        size_t iline=0;
+
+        nfaces.length = neighbour_block_id_list.length;
+        facevtxs.length = neighbour_block_id_list.length;
+        src_blks.length = neighbour_block_id_list.length;
+        src_cells.length =  neighbour_block_id_list.length;
+        src_blks_2.length = neighbour_block_id_list.length;
+        src_cells_2.length =  neighbour_block_id_list.length;
+
+        foreach (line; file.byLine){
+            if (iblk==neighbour_block_id_list.length) break;
+            if (searching_for_header){
+                string ltarget = "NMappedCells in BLOCK[%d]".format(neighbour_block_id_list[iblk]);
+                if (line.startsWith(ltarget)){
+                    nsources = to!size_t(line.split("=")[1].strip());
+                    searching_for_header = false;
+                    nfaces[iblk] = nsources;
+                    facevtxs[iblk].length = nsources;
+                    src_blks[iblk].length = nsources;
+                    src_cells[iblk].length = nsources;
+                    src_blks_2[iblk].length = nsources;
+                    src_cells_2[iblk].length = nsources;
+                }
+            } else {
+                auto tokens = line.strip().split();
+                //facevtxs[iblk][iline] = to!string(tokens[0]);
+                foreach(vtx; tokens[0].split('-')) facevtxs[iblk][iline] ~= to!size_t(vtx);
+                src_blks[iblk][iline] = to!size_t(tokens[1]);
+                src_cells[iblk][iline] = to!size_t(tokens[2]);
+                if (tokens.length>3) {
+                    src_blks_2[iblk][iline] = to!size_t(tokens[3]);
+                    src_cells_2[iblk][iline] = to!size_t(tokens[4]);
+                }
+
+                iline += 1;
+                if (iline==nsources) {
+                    iblk += 1;
+                    iline = 0;
+                    searching_for_header = true;
+                }
+            }
+        }
+        file.close();
+    }
+private:
+}
+
+
 class GhostCellMappedCellCopy : GhostCellEffect {
 public:
     // Flow data along the boundary is stored in ghost cells.
     FVCell[] ghost_cells;
-    size_t[string] ghost_cell_index_from_faceTag;
     // For each ghost-cell associated with the current boundary,
     // we will have a corresponding "mapped cell", also known as "source cell"
     // from which we will copy the flow conditions.
@@ -59,8 +156,6 @@ public:
     // with the ghost cell via the faceTag.
     bool cell_mapping_from_file;
     string mapped_cells_filename;
-    BlockAndCellId[string][size_t] mapped_cells_list;
-    BlockAndCellId[string][size_t] secondary_mapped_cells_list;
     version(mpi_parallel) {
         // In the MPI-parallel code, we do not have such direct access and so
         // we store the integral ids of the source cell and block and send requests
@@ -151,6 +246,24 @@ public:
         return str;
     }
 
+    void check_boundary_order_matches_file(MappedCellsFile mcp){
+    /*
+        The mapped_cells file contains a column with the sorted vertices
+        making up a face. We use that here to double check that the order
+        of the faces in the file matches that here in the simulations.
+
+        @author: Nick Gibbons
+    */
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, face; bc.faces) {
+            size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
+            my_vtx_list.sort();
+            if (my_vtx_list != mcp.facevtxs[mcp.myblk][i]) {
+                throw new Error("Face order in mapped_cells does not match grid face signiture");
+            }
+        }
+    }
+
     // not @nogc
     void set_up_cell_mapping()
     {
@@ -168,107 +281,34 @@ public:
                 BoundaryCondition bc = blk.bc[which_boundary];
                 foreach (i, face; bc.faces) {
                     ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
-                    size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
-                    string faceTag =  makeFaceTag(my_vtx_list);
-                    ghost_cell_index_from_faceTag[faceTag] = i;
                     ghost_cells[$-1].is_interior_to_domain = true;
                 }
                 break;
             case Grid_t.structured_grid:
                 throw new Error("cell mapping from file is not implemented for structured grids");
             } // end switch grid_type
-            auto f = File(mapped_cells_filename, "r");
-            string getHeaderContent(string target)
-            {
-                // Helper function to proceed through file, line-by-line,
-                // looking for a particular header line.
-                // Returns the content from the header line and leaves the file
-                // at the next line to be read, presumably with expected data.
-                while (!f.eof) {
-                    auto line = f.readln().strip();
-                    if (canFind(line, target)) {
-                        auto tokens = line.split("=");
-                        return tokens[1].strip();
-                    }
-                } // end while
-                return ""; // didn't find the target
-            }
+            MappedCellsFile mcp = new MappedCellsFile(mapped_cells_filename, blk.id);
+            check_boundary_order_matches_file(mcp);
             //
-            // Read the entire mapped_cells file.
-            // The single mapped_cell file contains the indices mapped cells
-            // for all ghost-cells, for all blocks.
-            //
-            // They are in sections labelled by the block id.
-            // Each boundary face is identified by its "faceTag",
-            // which is a string composed of the vertex indices, in ascending order.
-            // The order of the ghost-cells is assumed the same as for each
-            // grids underlying the FluidBlock.
-            //
-            // For the shared memory code, we only need the section for the block
-            // associated with the current boundary.
-            // For the MPI-parallel code, we need the mappings for all blocks,
-            // so that we know what requests for data to expect from other blocks.
-            //
-            string txt = getHeaderContent(format("MappedBlocks in BLOCK[%d]", blk.id));
-            if (!txt.length) {
-                string msg = format("Did not find mapped blocks section for block id=%d.", blk.id);
-                throw new FlowSolverException(msg);
-            }
-            size_t[] neighbour_block_id_list;
-            neighbour_block_id_list ~= blk.id;
-            foreach (id; txt.split()) {
-                neighbour_block_id_list ~= to!int(id);
-            }
-            neighbour_block_id_list.sort();
-            //
-            foreach (dest_blk_id; neighbour_block_id_list) {
-                txt = getHeaderContent(format("NMappedCells in BLOCK[%d]", dest_blk_id));
-                if (!txt.length) {
-                    string msg = format("Did not find mapped cells section for destination block id=%d.",
-                                        dest_blk_id);
-                    throw new FlowSolverException(msg);
-                }
-                size_t nfaces  = to!size_t(txt);
+            foreach (ii, dest_blk_id; mcp.neighbour_block_id_list) {
+                size_t nfaces  = mcp.nfaces[ii];
                 foreach(i; 0 .. nfaces) {
-                    auto lineContent = f.readln().strip();
-                    auto tokens = lineContent.split();
-                    string faceTag = tokens[0];
-                    size_t src_blk_id = to!size_t(tokens[1]);
-                    size_t src_cell_id = to!size_t(tokens[2]);
+                    size_t src_blk_id = mcp.src_blks[ii][i];
+                    size_t src_cell_id = mcp.src_cells[ii][i];
                     size_t src_blk_id_2, src_cell_id_2;
-                    mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
                     if (blk.n_ghost_cell_layers>1){
-                        if (tokens.length!=5) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
-                        src_blk_id_2 = to!size_t(tokens[3]);
-                        src_cell_id_2 = to!size_t(tokens[4]);
-                        secondary_mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id_2, src_cell_id_2);
+                        if (mcp.src_cells_2[ii].length==0) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
+                        src_blk_id_2 = mcp.src_blks_2[ii][i];
+                        src_cell_id_2 = mcp.src_cells_2[ii][i];
                     }
                     version(mpi_parallel) {
                         if ((src_blk_id==blk.id)||(dest_blk_id==blk.id)) {
                             // These lists will be used to direct data when packing and unpacking
                             // the buffers used to send data between the MPI tasks.
-                            // TODO: Make two assoc arrays, one for sending and recving...
                             src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
                             ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
-                            // If we are presently reading the section for the current block,
-                            // we check that the listed faces are in the same order as the
-                            // underlying grid.
-                            if (blk.id == dest_blk_id) {
-                                if (canFind(ghost_cell_index_from_faceTag.keys(), faceTag)) {
-                                    if (i != ghost_cell_index_from_faceTag[faceTag]) {
-                                        throw new Error(format("Oops, ghost-cell indices do not match: %d %d",
-                                                               i, ghost_cell_index_from_faceTag[faceTag]));
-                                    }
-                                } else {
-                                    foreach (ft; ghost_cell_index_from_faceTag.keys()) {
-                                        writefln("ghost_cell_index_from_faceTag[\"%s\"] = %d",
-                                                 ft, ghost_cell_index_from_faceTag[ft]);
-                                    }
-                                    throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d", faceTag, blk.id));
-                                }
-                            }
                         }
-                        if (blk.n_ghost_cell_layers>1){ // TODO: If someone forget to add the argument to partitioner, src_cell_id_2 will be 0;
+                        if (blk.n_ghost_cell_layers>1){
                             if ((src_blk_id_2==blk.id)||(dest_blk_id==blk.id)) {
                                 src_cell_ids_2[src_blk_id_2][dest_blk_id] ~= src_cell_id_2;
                                 ghost_cell_indices_2[src_blk_id_2][dest_blk_id] ~= i+nfaces;
@@ -312,7 +352,7 @@ public:
                 incoming_flowstate_tag_list.length = 0;
                 incoming_convective_gradient_tag_list.length = 0;
                 incoming_viscous_gradient_tag_list.length = 0;
-                foreach (src_blk_id; neighbour_block_id_list) {
+                foreach (src_blk_id; mcp.neighbour_block_id_list) {
                     if (blk.id !in src_cell_ids[src_blk_id]) continue;
                     size_t nc = src_cell_ids[src_blk_id][blk.id].length;
                     if (nc > 0) {
@@ -348,7 +388,7 @@ public:
                 outgoing_flowstate_tag_list.length = 0;
                 outgoing_convective_gradient_tag_list.length = 0;
                 outgoing_viscous_gradient_tag_list.length = 0;
-                foreach (dest_blk_id; neighbour_block_id_list) {
+                foreach (dest_blk_id; mcp.neighbour_block_id_list) {
                     if (dest_blk_id !in src_cell_ids[blk.id]) continue;
                     size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
                     if (nc > 0) {
@@ -375,9 +415,11 @@ public:
                     BoundaryCondition bc = blk.bc[which_boundary];
                     foreach (i, face; bc.faces) {
                         size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
-                        string faceTag =  makeFaceTag(my_vtx_list);
-                        auto src_blk_id = mapped_cells_list[blk.id][faceTag].blkId;
-                        auto src_cell_id = mapped_cells_list[blk.id][faceTag].cellId;
+                        my_vtx_list.sort();
+                        size_t src_blk_id = mcp.src_blks[mcp.myblk][i];
+                        size_t src_cell_id = mcp.src_cells[mcp.myblk][i];
+                        assert(mcp.facevtxs[mcp.myblk][i]==my_vtx_list);
+
                         if (!find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
                             auto blk = cast(FluidBlock) globalBlocks[src_blk_id];
                             assert(blk !is null, "Oops, this should be a FluidBlock object.");
@@ -390,10 +432,8 @@ public:
                     // Experimental second layer of unstructured cells by NNG
                     if (blk.n_ghost_cell_layers>1) {
                         foreach (i, face; bc.faces) {
-                            size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
-                            string faceTag =  makeFaceTag(my_vtx_list);
-                            auto src_blk_id = secondary_mapped_cells_list[blk.id][faceTag].blkId;
-                            auto src_cell_id = secondary_mapped_cells_list[blk.id][faceTag].cellId;
+                            size_t src_blk_id = mcp.src_blks_2[mcp.myblk][i];
+                            size_t src_cell_id = mcp.src_cells_2[mcp.myblk][i];
                             auto oblk = cast(FluidBlock) globalBlocks[src_blk_id];
                             assert(oblk !is null, "Oops, this should be a FluidBlock object.");
 
