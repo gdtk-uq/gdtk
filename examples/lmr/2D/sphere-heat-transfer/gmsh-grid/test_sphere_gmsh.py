@@ -1,7 +1,9 @@
 # Author: Kyle A. Damm
 # Date: 2024-08-23
 #
-# Integration test for supersonic ramp on unstructured grids.
+# Integration test for heat transfer on a sphere discretized with an unstructured grid.
+# Note that the sphere.su2 file was generated with GMSH version 4.13.1.
+#
 # Note that the tests are not independent and must be run in order of appearance.
 
 import pytest
@@ -17,11 +19,6 @@ import numpy as np
 @pytest.fixture(autouse=True)
 def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
-
-def test_gmsh_grid_generation():
-    cmd = "python generate_su2_grid.py"
-    proc = subprocess.run(cmd.split())
-    assert proc.returncode == 0, "Failed during: " + cmd
 
 def test_partition_grid():
     cmd = "ugrid_partition sphere.su2 mapped_cells 1 2 true"

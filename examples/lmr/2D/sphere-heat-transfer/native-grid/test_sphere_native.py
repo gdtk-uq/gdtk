@@ -1,7 +1,8 @@
 # Author: Kyle A. Damm
 # Date: 2024-08-23
 #
-# Integration test for supersonic ramp on unstructured grids.
+# Integration test for heat transfer on a sphere discretized with an unstructured grid.
+#
 # Note that the tests are not independent and must be run in order of appearance.
 
 import pytest
