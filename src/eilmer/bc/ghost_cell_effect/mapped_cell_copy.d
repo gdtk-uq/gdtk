@@ -296,7 +296,8 @@ public:
     void set_up_cell_mapping_from_file_shared()
     {
     /*
-        Build the datastructures needed for a simple shared memory exchange of boundary data.
+        Build the datastructures needed for a simple shared memory exchange of boundary data. These
+        are just collections of references to cell objects, stored in this boundary condition.
 
         @author: Nick Gibbons
     */
@@ -306,44 +307,38 @@ public:
         // in the mapped_cells file.
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, face; bc.faces) {
-            ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
-            ghost_cells[$-1].is_interior_to_domain = true;
+            foreach(n; 0 .. blk.n_ghost_cell_layers){
+                ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cells[n] : face.left_cells[n];
+                ghost_cells[$-1].is_interior_to_domain = true;
+            }
         }
 
         MappedCellsFile mcp = new MappedCellsFile(mapped_cells_filename, blk.id);
+
+        // Do some quick checking that things look alright.
+        // Maybe this should be wrapped in a debug {} scope?
         check_boundary_order_matches_file(mcp);
+        foreach(src_blk_id; mcp.neighbour_block_id_list){
+            if (find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
+                auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);
+                throw new FlowSolverException(msg);
+            }
+        }
 
         // For the shared-memory code, get references to the mapped (source) cells
         // that need to be accessed for the current (destination) block.
         foreach (i, face; bc.faces) {
-            size_t src_blk_id = mcp.src_blks[mcp.myblk][i];
+            size_t src_blk_id  = mcp.src_blks[mcp.myblk][i];
             size_t src_cell_id = mcp.src_cells[mcp.myblk][i];
+            mapped_cells ~= localFluidBlocks[src_blk_id].cells[src_cell_id];
 
-            if (!find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
-                auto blk = cast(FluidBlock) globalBlocks[src_blk_id];
-                assert(blk !is null, "Oops, this should be a FluidBlock object.");
-                mapped_cells ~= blk.cells[src_cell_id];
-            } else {
-                auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);
-                throw new FlowSolverException(msg);
+            // Second layer of unstructured cells by NNG
+            if (blk.n_ghost_cell_layers>1) {
+                src_blk_id = mcp.src_blks_2[mcp.myblk][i];
+                src_cell_id = mcp.src_cells_2[mcp.myblk][i];
+                mapped_cells ~= localFluidBlocks[src_blk_id].cells[src_cell_id];
             }
         } // end foreach face
-        // Experimental second layer of unstructured cells by NNG
-        if (blk.n_ghost_cell_layers>1) {
-            foreach (i, face; bc.faces) {
-                size_t src_blk_id = mcp.src_blks_2[mcp.myblk][i];
-                size_t src_cell_id = mcp.src_cells_2[mcp.myblk][i];
-                auto oblk = cast(FluidBlock) globalBlocks[src_blk_id];
-                assert(oblk !is null, "Oops, this should be a FluidBlock object.");
-
-                auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
-                auto other_real1 = oblk.cells[src_cell_id];
-                ghost1.is_interior_to_domain = true;
-
-                ghost_cells ~= ghost1;
-                mapped_cells ~= other_real1;
-            }
-        }
     }
 
 version(mpi_parallel) {
