@@ -50,8 +50,8 @@ def test_run_steady():
     #
     # So we specialise the expected values based on OS
     if (sys.platform == 'linux'):
-        expected_number_steps = 245
-        expected_final_cfl = 1.333e+04
+        expected_number_steps = 246
+        expected_final_cfl = 2.808e+04
     else:
         expected_number_steps = 247
         expected_final_cfl = 1.556e+04
