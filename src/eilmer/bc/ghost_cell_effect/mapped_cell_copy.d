@@ -166,8 +166,8 @@ public:
         // data pipes need to be known at the source and destination ends of the pipes.
         // So, we store those cell indices in a matrix of lists with the indices
         // into the matrix being the source and destination block ids.
-        size_t[][size_t][size_t] src_cell_ids;
-        size_t[][size_t][size_t] ghost_cell_indices;
+        size_t[][size_t] src_cell_ids;
+        size_t[][size_t] ghost_cell_indices;
         size_t[][size_t][size_t] src_cell_ids_2;
         size_t[][size_t][size_t] ghost_cell_indices_2;
         //
@@ -266,6 +266,22 @@ public:
         }
     }
 
+    void check_secondary_ghost_cells_are_present(MappedCellsFile mcp){
+    /*
+        For NNG's experimental second layer of ghost cells, we might need
+        the secondary arrays set up. Check here whether mcp has them.
+
+        @author: Nick Gibbons
+    */
+        foreach (ii, dest_blk_id; mcp.neighbour_block_id_list) {
+            if (mcp.src_blks_2[ii].length==0) {
+                throw new Error(
+                "Asked for config.use_structured_stencil, but no secondary cells are present in mapped_cells!"
+                );
+            }
+        }
+    }
+
     void set_up_cell_mapping()
     {
     /*
@@ -352,58 +368,79 @@ version(mpi_parallel) {
 
         @author: Nick Gibbons
     */
-        BoundaryCondition bc = blk.bc[which_boundary];
-        foreach (i, face; bc.faces) {
-            ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
-            ghost_cells[$-1].is_interior_to_domain = true;
-        }
-        //
+
         MappedCellsFile mcp = new MappedCellsFile(mapped_cells_filename, blk.id);
         check_boundary_order_matches_file(mcp);
-        //
+        if (blk.n_ghost_cell_layers > 1){
+            check_secondary_ghost_cells_are_present(mcp);
+        }
+
+        // Create references to ghost cells, in the order matching our bc.faces
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, face; bc.faces) {
+            foreach(n; 0 .. blk.n_ghost_cell_layers){
+                ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cells[n] : face.left_cells[n];
+                ghost_cells[$-1].is_interior_to_domain = true;
+            }
+        }
+        /*
+        A little comment by way of explanation...
+
+        We're going to loop through the sections from the mapped cells file here and
+        do one of two things:
+
+        1.) If we're in OUR section, i.e. dest_blk_id == blk.id, then we fill out
+        the ghost_cell_indices table. This is an associatative array where the keys
+        are the blocks we will receive each cell from. You can think about it like this:
+
+        ghost_cell_indices:
+        (keys) src_blk:    0     1     2    3
+               --------------------------------
+        (values) gcid:     0
+                           1
+                           2
+                                 3
+                                 4
+                           5
+                           6
+                                      7
+                           8
+
+        We then rely on the ordering of the incoming data to match these expectations. In the
+        example above, we would receive six cells worth of data from process zero, and unpack
+        them into ghost cells 0,1,2,5,6,8
+
+        2.) If we're in another block's section, we check for our blkid in the src_blocks.
+        If we find one, that block will be expecting a send from us, so we record which cell
+        to send and where to, using the src_cell_ids table, which is an associative array
+        just like the above.
+
+        */
+        size_t ighost = 0;
         foreach (ii, dest_blk_id; mcp.neighbour_block_id_list) {
             size_t nfaces  = mcp.nfaces[ii];
             foreach(i; 0 .. nfaces) {
                 size_t src_blk_id = mcp.src_blks[ii][i];
                 size_t src_cell_id = mcp.src_cells[ii][i];
-                size_t src_blk_id_2, src_cell_id_2;
-                if (blk.n_ghost_cell_layers>1){
-                    if (mcp.src_cells_2[ii].length==0) throw new Error("Need extra cell source for n_ghost_cell_layers>1");
-                    src_blk_id_2 = mcp.src_blks_2[ii][i];
-                    src_cell_id_2 = mcp.src_cells_2[ii][i];
+                if (dest_blk_id==blk.id) {
+                    ghost_cell_indices[src_blk_id] ~= ighost; ighost += 1;
                 }
-                if ((src_blk_id==blk.id)||(dest_blk_id==blk.id)) {
-                    // These lists will be used to direct data when packing and unpacking
-                    // the buffers used to send data between the MPI tasks.
-                    src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
-                    ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
+                if (src_blk_id==blk.id) {
+                    src_cell_ids[dest_blk_id] ~= src_cell_id;
                 }
+
                 if (blk.n_ghost_cell_layers>1){
-                    if ((src_blk_id_2==blk.id)||(dest_blk_id==blk.id)) {
-                        src_cell_ids_2[src_blk_id_2][dest_blk_id] ~= src_cell_id_2;
-                        ghost_cell_indices_2[src_blk_id_2][dest_blk_id] ~= i+nfaces;
+                    size_t src_blk_id_2 = mcp.src_blks_2[ii][i];
+                    size_t src_cell_id_2 = mcp.src_cells_2[ii][i];
+                    if (dest_blk_id==blk.id) {
+                        ghost_cell_indices[src_blk_id_2] ~= ighost; ighost += 1;
+                    }
+                    if (src_blk_id_2==blk.id) {
+                        src_cell_ids[dest_blk_id] ~= src_cell_id_2;
                     }
                 }
             }
         } // end foreach dest_blk_id
-        //
-        // Experimental double layer of ghost cells, mpi vers.
-        // TODO: Move this
-        if (blk.n_ghost_cell_layers>1){
-            foreach(sblk, destblks; src_cell_ids_2){
-                foreach(dblk, srccells; destblks){
-                    foreach(i; 0 .. srccells.length){
-                        src_cell_ids[sblk][dblk]       ~= src_cell_ids_2[sblk][dblk][i];
-                        ghost_cell_indices[sblk][dblk] ~= ghost_cell_indices_2[sblk][dblk][i];
-                    }
-                }
-            }
-            foreach (i, face; bc.faces) {
-                auto ghost1 = (bc.outsigns[i] == 1) ?  face.right_cells[1] : face.left_cells[1];
-                ghost_cells ~= ghost1;
-                ghost_cells[$-1].is_interior_to_domain = true;
-            }
-        }
         //
         // No communication needed just now because all MPI tasks have the full mapping,
         // however, we can prepare buffers and the like for communication of the geometry
@@ -420,8 +457,8 @@ version(mpi_parallel) {
         incoming_convective_gradient_tag_list.length = 0;
         incoming_viscous_gradient_tag_list.length = 0;
         foreach (src_blk_id; mcp.neighbour_block_id_list) {
-            if (blk.id !in src_cell_ids[src_blk_id]) continue;
-            size_t nc = src_cell_ids[src_blk_id][blk.id].length;
+            if (src_blk_id !in ghost_cell_indices) continue;
+            size_t nc = ghost_cell_indices[src_blk_id].length;
             if (nc > 0) {
                 incoming_ncells_list ~= nc;
                 incoming_block_list ~= src_blk_id;
@@ -456,8 +493,8 @@ version(mpi_parallel) {
         outgoing_convective_gradient_tag_list.length = 0;
         outgoing_viscous_gradient_tag_list.length = 0;
         foreach (dest_blk_id; mcp.neighbour_block_id_list) {
-            if (dest_blk_id !in src_cell_ids[blk.id]) continue;
-            size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
+            if (dest_blk_id !in src_cell_ids) continue;
+            size_t nc = src_cell_ids[dest_blk_id].length;
             if (nc > 0) {
                 outgoing_ncells_list ~= nc;
                 outgoing_block_list ~= dest_blk_id;
@@ -475,8 +512,6 @@ version(mpi_parallel) {
         outgoing_viscous_gradient_buf_list.length = n_outgoing;
     }
 }
-
-    // not @nogc
 
     // not @nogc
     void set_up_cell_mapping_via_search()
@@ -671,7 +706,7 @@ version(mpi_parallel) {
                 if (outgoing_geometry_buf_list[i].length < ne) { outgoing_geometry_buf_list[i].length = ne; }
                 auto buf = outgoing_geometry_buf_list[i];
                 size_t ii = 0;
-                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                foreach (cid; src_cell_ids[outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
                     foreach (j; 0 .. blk.myConfig.n_grid_time_levels) {
                         buf[ii++] = c.pos[j].x.re; version(complex_numbers) { buf[ii++] = c.pos[j].x.im; }
@@ -718,7 +753,7 @@ version(mpi_parallel) {
                 }
                 auto buf = incoming_geometry_buf_list[i];
                 size_t ii = 0;
-                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]]) {
                     auto c = ghost_cells[gi];
                     foreach (j; 0 .. blk.myConfig.n_grid_time_levels) {
                         c.pos[j].x.re = buf[ii++]; version(complex_numbers) { c.pos[j].x.im = buf[ii++]; }
@@ -823,7 +858,7 @@ version(mpi_parallel) {
                 if (outgoing_flowstate_buf_list[i].length < ne) { outgoing_flowstate_buf_list[i].length = ne; }
                 auto buf = outgoing_flowstate_buf_list[i];
                 size_t ii = 0;
-                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                foreach (cid; src_cell_ids[outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
                     FlowState* fs = c.fs;
                     GasState* gs = &(fs.gas);
@@ -899,7 +934,7 @@ version(mpi_parallel) {
                 }
                 auto buf = incoming_flowstate_buf_list[i];
                 size_t ii = 0;
-                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]]) {
                     auto c = ghost_cells[gi];
                     FlowState* fs = c.fs;
                     GasState* gs = &(fs.gas);
@@ -980,7 +1015,7 @@ version(mpi_parallel) {
                 auto buf = outgoing_flowstate_buf_list[i];
 
                 size_t ii = 0;
-                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                foreach (cid; src_cell_ids[outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
                     FlowState* fs = c.fs;
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
@@ -1017,7 +1052,7 @@ version(mpi_parallel) {
                 }
                 auto buf = incoming_flowstate_buf_list[i];
                 size_t ii = 0;
-                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]]) {
                     auto c = ghost_cells[gi];
                     FlowState* fs = c.fs;
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
@@ -1103,7 +1138,7 @@ version(mpi_parallel) {
                 if (outgoing_convective_gradient_buf_list[i].length < ne) { outgoing_convective_gradient_buf_list[i].length = ne; }
                 auto buf = outgoing_convective_gradient_buf_list[i];
                 size_t ii = 0;
-                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                foreach (cid; src_cell_ids[outgoing_block_list[i]]) {
                     auto c = blk.cells[cid].gradients;
                     // velocity
                     buf[ii++] = c.velx[0].re; version(complex_numbers) { buf[ii++] = c.velx[0].im; }
@@ -1253,7 +1288,7 @@ version(mpi_parallel) {
                 }
                 auto buf = incoming_convective_gradient_buf_list[i];
                 size_t ii = 0;
-                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]]) {
                     auto c = ghost_cells[gi].gradients;
                     // velocity
                     c.velx[0].re = buf[ii++]; version(complex_numbers) { c.velx[0].im = buf[ii++]; }
@@ -1444,7 +1479,7 @@ version(mpi_parallel) {
                 if (outgoing_viscous_gradient_buf_list[i].length < ne) { outgoing_viscous_gradient_buf_list[i].length = ne; }
                 auto buf = outgoing_viscous_gradient_buf_list[i];
                 size_t ii = 0;
-                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                foreach (cid; src_cell_ids[outgoing_block_list[i]]) {
                     auto c = blk.cells[cid].grad;
                     // velocity
                     buf[ii++] = c.vel[0][0].re; version(complex_numbers) { buf[ii++] = c.vel[0][0].im; }
@@ -1520,7 +1555,7 @@ version(mpi_parallel) {
                 }
                 auto buf = incoming_viscous_gradient_buf_list[i];
                 size_t ii = 0;
-                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]]) {
                     auto c = ghost_cells[gi].grad;
                     // velocity
                     c.vel[0][0].re = buf[ii++]; version(complex_numbers) { c.vel[0][0].im = buf[ii++]; }
