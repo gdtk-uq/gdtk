@@ -98,7 +98,7 @@ def test_solution():
     assert error < 1e-6, "Computed incorrect heat flux along sphere surface."
 
 def test_cleanup():
-    cmd = "rm -rf ./lmrsim mapped_cells block_0_sphere.su2 sphere.su2 ideal-air.gas __pycache__"
+    cmd = "rm -rf ./lmrsim mapped_cells block_0_sphere.su2 ideal-air.gas __pycache__"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
 
