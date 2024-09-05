@@ -2697,9 +2697,10 @@ double determineRelaxationFactor()
         blk.omegaLocal = omega;
         size_t startIdx = 0;
         foreach (cell; blk.cells) {
+            // make a copy of the original cell flow state
+            blk.fs_save.copy_values_from(*(cell.fs));
             bool failedDecode = false;
             while (blk.omegaLocal >= minOmega) {
-                cell.U[1][] = cell.U[0][];
                 foreach (i; 0 .. nConserved) {
                     cell.U[1][i] = cell.U[0][i] + blk.omegaLocal * blk.dU[startIdx+i];
                 }
@@ -2709,8 +2710,8 @@ double determineRelaxationFactor()
                 catch (FlowSolverException e) {
                     failedDecode = true;
                 }
-                // return cell to original state
-                cell.decode_conserved(0, 0, 0.0);
+                // return cell to original flow state
+                cell.fs.copy_values_from(*(blk.fs_save));
 
                 if (failedDecode) {
                     blk.omegaLocal *= omegaReductionFactor;
