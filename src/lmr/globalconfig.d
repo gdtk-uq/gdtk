@@ -1380,6 +1380,7 @@ final class GlobalConfig {
 // at the lower levels of the code without having to guard them with memory barriers.
 class LocalConfig {
 public:
+    SolverMode solverMode;
     bool in_mpi_context;
     int universe_blk_id;
     string grid_format;
@@ -1561,6 +1562,7 @@ public:
     this(int universe_blk_id)
     {
         alias cfg = GlobalConfig;
+        solverMode = cfg.solverMode;
         in_mpi_context = cfg.in_mpi_context;
         this.universe_blk_id = universe_blk_id;
         grid_format = cfg.grid_format;
