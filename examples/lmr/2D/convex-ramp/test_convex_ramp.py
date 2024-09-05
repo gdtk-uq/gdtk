@@ -43,18 +43,20 @@ def test_run_steady():
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
     # KAD & RJG, 2024-03-22
+    #            2024-09-05
     # This case behaves subtly differently on linux and macos
-    # The macos version takes one extra step to convergence,
-    # but because of how we grow the CFL with a power law
-    # that extra step makes quite a difference in expected CFL.
+    # in terms of how the CFL grows.
+    #
+    # It appears that the macos version needed to drop
+    # the CFL on the way to convergence.
     #
     # So we specialise the expected values based on OS
     if (sys.platform == 'linux'):
         expected_number_steps = 246
         expected_final_cfl = 2.808e+04
     else:
-        expected_number_steps = 247
-        expected_final_cfl = 1.556e+04
+        expected_number_steps = 246
+        expected_final_cfl = 1.420e+04
     reason = ""
     steps = 0
     cfl = 0.0
