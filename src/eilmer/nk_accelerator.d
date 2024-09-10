@@ -20,6 +20,7 @@
 
 import core.thread;
 import core.runtime;
+import core.memory;
 import std.stdio;
 import std.file;
 import std.format;
@@ -252,6 +253,29 @@ int main(string[] args)
         }
         exitFlag = 1;
         return exitFlag;
+    }
+
+    // Keep our memory foot-print small.
+    GC.collect();
+    GC.minimize();
+
+    auto myStats = GC.stats();
+    double heapUsed = to!double(myStats.usedSize)/(2^^20);
+    double heapFree = to!double(myStats.freeSize)/(2^^20);
+    double minTotal = heapUsed+heapFree;
+    double maxTotal = heapUsed+heapFree;
+
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE,&heapUsed,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&heapFree,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&minTotal,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&maxTotal,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+    }
+
+    if (GlobalConfig.is_master_task) {
+        writefln("JFNK memory used: %.0f MB, unused: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
+                 heapUsed, heapFree, heapUsed+heapFree, minTotal, maxTotal);
+        stdout.flush();
     }
 
     iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask);

@@ -766,15 +766,24 @@ int init_simulation(int tindx, int nextLoadsIndx,
     GC.minimize();
     //
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    debug{
-        if (GlobalConfig.verbosity_level > 0) {
-            auto myStats = GC.stats();
-            auto heapUsed = to!double(myStats.usedSize)/(2^^20);
-            auto heapFree = to!double(myStats.freeSize)/(2^^20);
-            writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
-                     GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
-            stdout.flush();
-        }
+
+    auto myStats = GC.stats();
+    double heapUsed = to!double(myStats.usedSize)/(2^^20);
+    double heapFree = to!double(myStats.freeSize)/(2^^20);
+    double minTotal = heapUsed+heapFree;
+    double maxTotal = heapUsed+heapFree;
+
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE,&heapUsed,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&heapFree,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&minTotal,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE,&maxTotal,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+    }
+
+    if (GlobalConfig.is_master_task) {
+        writefln("JFNK memory used: %.0f MB, unused: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
+                 heapUsed, heapFree, heapUsed+heapFree, minTotal, maxTotal);
+        stdout.flush();
     }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
