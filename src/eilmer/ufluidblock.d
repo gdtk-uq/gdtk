@@ -577,7 +577,10 @@ public:
         // of cell faces.
         // (Will be used for the convective fluxes).
         if (myConfig.use_extended_stencil) {
-            allocate_extended_cell_cloud_references();
+            string err = "Extended cell clouds are not enabled by default for memory reasons.";
+            err       ~= "Please change cloud_nmax in lsqinterp to 112 and recompile.";
+            throw new Error(err);
+            //allocate_extended_cell_cloud_references();
         } else {
             allocate_regular_cell_cloud_references();
         } // end else
