@@ -271,7 +271,6 @@ public:
         this.ws_grad = &(fvcd.workspaces[id]);
         if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
         if (fvcd.lsqgradients) this.gradients = &(fvcd.lsqgradients[id]);
-        if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
         if (fvcd.source_terms) {
             this.Q = fvcd.source_terms[id*ncq + 0 .. id*ncq + ncq];
             Q.clear();
