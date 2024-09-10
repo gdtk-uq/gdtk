@@ -91,7 +91,7 @@ void initialize_simulation(int tindx_start, bool binary_data)
     configure_exchange_info(fluidBlocks, blk_configs);
 #ifdef CUDA
     // We need to put a copy of the block and config data onto the GPU.
-    int nbytes = blk_configs.size()*sizeof(BConfig);
+    size_t nbytes = blk_configs.size()*sizeof(BConfig);
     auto status = cudaMalloc(&blk_configs_on_gpu, nbytes);
     if (status) {
         cerr << cudaGetErrorString(cudaGetLastError()) << endl;
@@ -525,7 +525,7 @@ void march_in_time_using_gpu(bool binary_data)
         if (!cfg.active) continue;
         auto& blk = fluidBlocks[ib];
         // Transfer block data, including the initial flow states, to the GPU and encode.
-        int nbytes = blk.cells.size()*sizeof(FVCell);
+        size_t nbytes = blk.cells.size()*sizeof(FVCell);
         auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
         if (status) {
             cerr << cudaGetErrorString(cudaGetLastError()) << endl;
@@ -747,7 +747,7 @@ void march_in_time_using_gpu(bool binary_data)
                 BConfig& cfg = blk_configs[ib];
                 Block& blk = fluidBlocks[ib];
                 if (!cfg.active) continue;
-                int nbytes = cfg.nActiveCells*sizeof(FVCell);
+                size_t nbytes = cfg.nActiveCells*sizeof(FVCell);
                 auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
                 if (status) {
                     cerr << cudaGetErrorString(cudaGetLastError()) << endl;
@@ -775,7 +775,7 @@ void finalize_simulation(bool binary_data)
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
+            size_t nbytes = cfg.nActiveCells*sizeof(FVCell);
             auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
