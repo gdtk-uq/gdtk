@@ -500,19 +500,14 @@ public:
     {
         /**
          *
-         * The following algorithm is taken from ref. [2].
-         * There is a section in ref. [1] that gives a bit more detail on the method,
-         * however, it should be noted that there appears to be some errors in the equations.
-         * We use the weighting suggested in ref. [3].
+         * The following algorithm is taken from ref. [1].
+         * We use the inverse distance weighting as suggested in ref. [2] with a weighting coefficient of 0.75.
          *
          * references:
-         * [1] J. Blazek,
-         *     CFD principles and applications,
-         *     pg. 152, Third edition, 2007
-         * [2] A. Haselbacher and J. Blazek,
-         *     On the accurate and efficient discretisation of the Navier-Stokes equations on mixed grids,
-         *     AIAA Journal, vol. 38, no. 11, 1999
-         * [3] H. Nishikawa and J. White,
+         * [1] A. Haselbacher and J. Blazek,
+         *     Accurate and efficient discretization of Navier-Stokes equations on mixed grids,
+         *     AIAA Journal, vol. 38, no. 11, 2000
+         * [2] H. Nishikawa and J. White,
          *     An efficient cell-centered finite-volume method with face-averaged nodal-gradients for triangular grids,
          *     Journal of Computational Physics, vol. 411, 2020
          *
@@ -547,7 +542,7 @@ public:
         ws.n = n;
         ws.loop_init = loop_init;
 
-        // set the weighting coefficient (this is theta from eq. 5.60)
+        // set the weighting coefficient (this is w from eq. 21 from ref. [2] with p = 0.75)
         number x0 = pos.x; number y0 = pos.y; number z0 = pos.z;
         bool apply_weighting = false;
         if (myConfig.viscous_least_squares_type == ViscousLeastSquaresType.weighted_qr) {
@@ -558,25 +553,19 @@ public:
                 foreach (i; loop_init .. n) {
                     number dx = cloud_pos[i].x - x0;
                     number dy = cloud_pos[i].y - y0;
-                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy), 0.25);
+                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy), 0.75);
                 }
             } else { //3D
                 foreach (i; loop_init .. n) {
                     number dx = cloud_pos[i].x - x0;
                     number dy = cloud_pos[i].y - y0;
                     number dz = cloud_pos[i].z - z0;
-                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy+dz*dz), 0.25);
+                    theta[i] = 1.0/pow(sqrt(dx*dx+dy*dy+dz*dz), 0.75);
                 }
             }
         } else {
-            if (myConfig.dimensions == 2) {
-                foreach (i; loop_init .. n) {
-                    theta[i] = 1.0;
-                }
-            } else { //3D
-                foreach (i; loop_init .. n) {
-                    theta[i] = 1.0;
-                }
+            foreach (i; loop_init .. n) {
+                theta[i] = 1.0;
             }
         }
 
@@ -591,7 +580,7 @@ public:
             x0 = cloud_pos[0].x; y0 = cloud_pos[0].y; z0 = cloud_pos[0].z;
         }
 
-        // compute dx, dy, dz from the A matrix in eq. 5.55 (incorporating the weighting coefficients)
+        // compute dx, dy, dz from the A matrix in eq. 12/13 from ref. [1] (incorporating the weighting coefficients)
         number[cloud_nmax] dx, dy, dz;
         foreach (i; loop_init .. n) {
             dx[i] = theta[i]*(cloud_pos[i].x - x0);
@@ -604,7 +593,7 @@ public:
         }
 
         if (myConfig.dimensions == 2) {
-            // compute the vector of weights from eq. 5.61
+            // compute the vector of weights from eq. 12/13 from ref. [1]
             number r11 = 0.0;
             foreach(i; loop_init .. n) { r11 += pow(dx[i], 2); }
             r11 = sqrt(r11);
@@ -614,8 +603,8 @@ public:
             r12 /= r11;
 
             number r22 = 0.0;
-            foreach(i; loop_init .. n) { r22 += pow(dy[i]-dx[i]*(r12/r11), 2); }
-            r22 = sqrt(r22);
+            foreach(i; loop_init .. n) { r22 += pow(dy[i], 2); }
+            r22 = sqrt(r22 - pow(r12,2));
 
             foreach (i; loop_init .. n) {
                 number alpha1 = dx[i]*pow(r11,-2);
@@ -624,7 +613,7 @@ public:
                 ws.wy[i] = theta[i]*(alpha2);
             }
         } else {
-            // compute the vector of weights from eq. 5.61
+            // compute the vector of weights from eq. 12/13 from ref. [1]
             number r11 = 0.0;
             foreach(i; loop_init .. n) { r11 += pow(dx[i], 2); }
             r11 = sqrt(r11);
@@ -634,20 +623,16 @@ public:
             r12 /= r11;
 
             number r22 = 0.0;
-            foreach(i; loop_init .. n) { r22 += pow(dy[i]-dx[i]*(r12/r11), 2); }
-            r22 = sqrt(r22);
+            foreach(i; loop_init .. n) { r22 += pow(dy[i], 2); }
+            r22 = sqrt(r22 - pow(r12,2));
 
             number r13 = 0.0;
             foreach(i; loop_init .. n) { r13 += dx[i]*dz[i]; }
             r13 /= r11;
 
-            number r23_a = 0.0;
-            number r23_b = 0.0;
-            foreach(i; loop_init .. n) {
-                r23_a += dy[i]*dz[i];
-                r23_b += dx[i]*dz[i];
-            }
-            number r23 = (1.0/r22) * (r23_a - (r12/r11)*r23_b);
+            number r23 = 0.0;
+            foreach(i; loop_init .. n) { r23 += dy[i]*dz[i]; }
+            r23 = (1.0/r22) * (r23 - r12*r13);
 
             number r33 = 0.0;
             foreach(i; loop_init .. n) { r33 += pow(dz[i], 2); }
