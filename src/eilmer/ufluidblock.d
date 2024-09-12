@@ -754,7 +754,7 @@ public:
     /*
         Used in the experimental quasi-structured reconstruction mode.
     */
-        if (n_ghost_cell_layers<2) return;
+        if (myConfig.interpolation_order!=2) return;
 
         // Having completed the LLRR stencil indices, we can now precompute the stencil
         // coefficients, using the cell sizes, kind of like how the structured code does it.
