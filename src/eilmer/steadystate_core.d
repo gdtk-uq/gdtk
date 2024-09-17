@@ -717,6 +717,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 int cellCount = 0;
                 foreach (i; 0 .. blk.ncells) {
                     bool failed_decode = false;
+                    blk.fs_save.copy_values_from(blk.celldata.flowstates[i]);
                     while (omega >= omega_min) {
                         // check positivity of primitive variables
                         foreach (j; 0 .. nConserved) {
@@ -731,8 +732,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         }
 
                         // return cell to original state
-                        decode_conserved(blk.celldata.positions[i], blk.celldata.U0[cellCount .. cellCount+nConserved],
-                                         blk.celldata.flowstates[i], blk.omegaz, i, blk.myConfig);
+                        blk.celldata.flowstates[i].copy_values_from(blk.fs_save);
 
                         if (failed_decode) {
                             omega *= omega_reduction_factor;
