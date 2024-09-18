@@ -45,6 +45,9 @@ LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
+DYAML_DIR := $(DGD_REPO)/src/extern/D-YAML/source/dyaml
+include $(DYAML_DIR)/dyaml_files.mk
+
 TINYENDIAN_DIR := $(DGD_REPO)/src/extern/tinyendian/source
 include $(TINYENDIAN_DIR)/tinyendian_files.mk
 
@@ -156,6 +159,7 @@ clean:
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(CEQ_DIR); make clean
+	- cd $(DYAML_DIR); rm -rf *.o
 	- cd $(TINYENDIAN_DIR); rm -rf *.o
 
 $(LIBLUA):
@@ -168,7 +172,7 @@ $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
 slf: main.d $(SLF_FILES) \
-	$(GEOM_FILES) $(TINYENDIAN_FILES) \
+	$(GEOM_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
@@ -176,7 +180,7 @@ slf: main.d $(SLF_FILES) \
 	$(DMD) $(DFLAGS) $(OF)slf \
 		$(DVERSION)complex_numbers \
 		main.d \
-		$(NENZF1D_FILES) $(TINYENDIAN_FILES) \
+		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \

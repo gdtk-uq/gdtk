@@ -8,7 +8,9 @@ import std.mathspecial;
 import std.format;
 import std.algorithm;
 import std.string;
+import std.conv;
 import std.datetime.stopwatch : StopWatch;
+import dyaml;
 import gas;
 import gas.physical_constants;
 import kinetics;
@@ -344,7 +346,45 @@ void compute_jacobian2(GasModel gm, ThermochemicalReactor reactor, GasState gs, 
     return;
 }
 
+struct Config {
+    string gas_file_name;
+    string reaction_file_name;
+    size_t N;
+    double p;
+    double T0;
+    double T1;
+    double[string] Y0;
+    double[string] Y1;
+}
+
 struct Parameters {
+    this(ref Config config, GasModel gm) {
+        nsp = gm.n_species;
+        neq = nsp+1;
+
+        p = config.p;
+        N = config.N;
+        n = N*neq;
+        Z.length = N;
+        foreach(i; 1 .. N+1) Z[i-1] = i/(N+1.0);
+        dZ = 1.0/(N+1.0);
+
+        // Boundary Conditions
+        T0 = config.T0; T1 = config.T1;
+        Y0.length = nsp; foreach(isp; 0 .. nsp) Y0[isp] = 0.0;
+        Y1.length = nsp; foreach(isp; 0 .. nsp) Y1[isp] = 0.0;
+
+        foreach(sp,mf; config.Y0){
+            Y0[gm.species_index(sp)] = mf;
+        }
+        foreach(sp,mf; config.Y1){
+            Y1[gm.species_index(sp)] = mf;
+        }
+
+        U0.length = neq; foreach(isp; 0 .. nsp) U0[isp] = Y0[isp]; U0[nsp] = T0;
+        U1.length = neq; foreach(isp; 0 .. nsp) U1[isp] = Y1[isp]; U1[nsp] = T1;
+    }
+
     size_t nsp;
     size_t neq;
     size_t N;
@@ -456,6 +496,41 @@ void write_log_to_file(string[] log, string filename){
         file.write("\n");
     }
     file.close();
+}
+
+Config read_config_from_file(string filename){
+/*
+    We expect the config variables to be stored in a YAML file.
+
+    Inputs:
+        filename - The yaml file to be read.
+    Outputs:
+        - A new parameters structure, returned by copying.
+*/
+    Node data = dyaml.Loader.fromFile(filename).load();
+
+    Config cfg = Config();
+
+    cfg.gas_file_name      = data["gas_file_name"].as!string;
+    cfg.reaction_file_name = data["reaction_file_name"].as!string;
+
+    cfg.N  = to!size_t(data["N"].as!string);
+    cfg.p  = to!double(data["p"].as!string);
+    cfg.T0 = to!double(data["T0"].as!string);
+    cfg.T1 = to!double(data["T1"].as!string);
+
+    foreach(Node nd; data["Y0"].mappingKeys) {
+        string s = nd.as!string;
+        double Ys= to!double(data["Y0"][s].as!string);
+        cfg.Y0[s] = Ys;
+    }
+    foreach(Node nd; data["Y1"].mappingKeys) {
+        string s = nd.as!string;
+        double Ys= to!double(data["Y1"][s].as!string);
+        cfg.Y1[s] = Ys;
+    }
+
+    return cfg;
 }
 
 void gaussian_initial_condition(ref const Parameters pm, number[] U){
@@ -626,38 +701,18 @@ double[] get_derivatives_from_adjoint(number[] U, number[] U2nd, number[] R, num
 int main(string[] args)
 {
     int exitFlag = 0;
-    string name = "flame";
+    string name = "slf";
     if (args.length>1) name = args[1];
 
-    GasModel gm = init_gas_model("gm.lua");
-    ThermochemicalReactor reactor = init_thermochemical_reactor(gm, "rr.lua", "");
+    Config config = read_config_from_file(format("%s.yaml", name));
+
+    GasModel gm = init_gas_model(config.gas_file_name);
+    ThermochemicalReactor reactor = init_thermochemical_reactor(gm, config.reaction_file_name, "");
     GasState gs = GasState(gm);
-    Parameters pm = Parameters();
+
+    Parameters pm = Parameters(config, gm);
     StopWatch sw;
 
-    pm.nsp = gm.n_species;
-    pm.neq = pm.nsp+1;
-
-    pm.p = 75e3+100.0;
-    pm.N = 64;
-    pm.n = pm.N*pm.neq;
-    pm.Z.length = pm.N;
-    foreach(i; 1 .. pm.N+1) pm.Z[i-1] = i/(pm.N+1.0);
-    pm.dZ = 1.0/(pm.N+1.0);
-
-    // Boundary Conditions
-    pm.T0 = 300.0; pm.T1 = 300.0;
-    pm.Y0.length = pm.nsp; foreach(isp; 0 .. pm.nsp) pm.Y0[isp] = 0.0;
-    pm.Y1.length = pm.nsp; foreach(isp; 0 .. pm.nsp) pm.Y1[isp] = 0.0;
-
-    pm.Y0[gm.species_index("N2")] = 0.767;
-    pm.Y0[gm.species_index("O2")] = 0.233;
-
-    pm.Y1[gm.species_index("N2")] = 0.88;
-    pm.Y1[gm.species_index("H2")] = 0.12;
-
-    pm.U0.length = pm.neq; foreach(isp; 0 .. pm.nsp) pm.U0[isp] = pm.Y0[isp]; pm.U0[pm.nsp] = pm.T0;
-    pm.U1.length = pm.neq; foreach(isp; 0 .. pm.nsp) pm.U1[isp] = pm.Y1[isp]; pm.U1[pm.nsp] = pm.T1;
 
     size_t neq = pm.neq;
     size_t N = pm.N;
@@ -751,7 +806,7 @@ int main(string[] args)
     long wall_clock_elapsed = sw.peek.total!"seconds";
 
     write_solution_to_file(pm, U, format("%s.sol", name));
-    write_log_to_file(log, "log.txt");
+    write_log_to_file(log, format("%s.log", name));
 
     //double[] dUdp;
     //dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
