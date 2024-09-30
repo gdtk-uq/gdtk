@@ -76,7 +76,7 @@ function RegisteredGrid:new(o)
    -- Check the grid information.
    if config.dimensions ~= o.grid:get_dimensions() then
       local msg = string.format("Mismatch in dimensions, config %d grid %d.",
-				config.dimensions, o.grid.get_dimensions())
+				config.dimensions, o.grid:get_dimensions())
       error(msg)
    end
    o.bcTags = o.bcTags or {}
