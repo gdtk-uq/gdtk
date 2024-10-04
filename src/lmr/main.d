@@ -227,6 +227,8 @@ lmr help <command>   ==> prints help for <command>
 == Commonly used commands ==
 
 at preparation stage
+   prep-gas        build the gas model file for simulation
+ [ prep-chem       build a chemistry file for simulation ]    
    prep-grids      build grids for simulation
    prep-sim        build initial flow field for simulation
 
