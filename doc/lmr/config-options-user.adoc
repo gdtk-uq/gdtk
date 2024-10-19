@@ -458,6 +458,15 @@ https://gdtk.uqcloud.net/docs/eilmer/technical-notes/hybrid-fluxes/[Hybrid fluxe
   The default value is `300.0` since most reaction schemes seem to be valid for temperatures
   above this, however, you may have good reasons to set it higher or lower.
 
+`config.chemistry_update` ::
+  _string_, default: `'split'` +
+  Set how the chemistry update is included in the time-marching flow solver algorithm.
+  Valid options are: `'split'` to use an operator-splitting approach in which the chemistry
+  update may be subcycled at a time step appropriate to the chemistry, conditions and integrator; or
+  `'integral'` to include the chemistry as part of the general source term vector for
+  the species continuity equations: the result is that flow and chemistry are updated in a single
+  time step (usually dictated by a flow-appropriate time step).
+
 
 == Species Diffusion
 
