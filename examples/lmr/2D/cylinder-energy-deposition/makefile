@@ -15,7 +15,7 @@ run:
 	lmr run
 
 post:
-	lmr snapshot2vtk --all
+	lmr snapshot2vtk --all --add-vars="mach,pitot"
 
 test:
 	PYTHONDONTWRITEBYTECODE=1 pytest -v

@@ -1,6 +1,8 @@
+-- transient.lua
 print("Riggins drag reduction calculation -- set up simulation")
 dofile("parameters.lua")
--- Gas model and states
+
+-- Gas model and flow states
 nsp, nmodes, gmodel = setGasModel("ideal-air.gas")
 inflow = FlowState:new{p=p_inf, T=T_inf, velx=V_inf}
 initial = FlowState:new{p=p_inf/5, T=T_inf, velx=0}
@@ -10,13 +12,14 @@ flowDict = {
 }
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
-   cylinder_face=WallBC_WithSlip:new{group="loads"},
+   body=WallBC_NoSlip_Adiabatic:new{group="loads"},
    outflow=OutFlowBC_Simple:new{}
 }
 --
 makeFluidBlocks(bcDict, flowDict)
 
 -- Now, set some simulation options.
+config.viscous = true
 body_flow_length = R/V_inf
 t_final = 20 * body_flow_length -- allow time to establish
 config.flux_calculator = "adaptive_hanel_ausmdv"
@@ -29,8 +32,6 @@ config.dt_plot = config.max_time/10.0
 config.write_loads = true
 config.boundary_groups_for_loads = "loads"
 config.dt_loads = config.dt_plot
-config.max_invalid_cells = 20
-config.adjust_invalid_cell_data = true
 
 config.udf_source_terms = true
 config.udf_source_terms_file = "energy-deposition.lua"

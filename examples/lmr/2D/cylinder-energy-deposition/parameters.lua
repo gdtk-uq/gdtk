@@ -1,6 +1,11 @@
 -- parameters.lua
--- Extracted from Riggin and Nelson's paper
-
+-- Approximate Dave Riggin's drag reduction calculations.
+--
+-- Reference:
+--   David W. Riggins and H.F. Nelson (2000)
+--   Hypersonic flow control using upstream-focused energy deposition.
+--   AIAA Journal Vol 38 No 4 pp723-725
+--
 h = 0.015 -- body thickness, metres
 R = h/2 -- easier to define geometry on nose radius
 xmax = 0.0165 -- downstream extent of simulation domain
