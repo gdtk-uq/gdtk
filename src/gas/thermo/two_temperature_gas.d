@@ -632,6 +632,7 @@ private:
                     msg ~= "The supplied GasState was:\n";
                     msg ~= gs.toString() ~ "\n";
                 }
+                throw new GasModelException(msg);
             }
             return T_guess;
         }
