@@ -581,7 +581,8 @@ private:
         @nogc
         number vibElecTemperature(ref GasState gs)
         {
-            int MAX_ITERATIONS = 10;
+            immutable int MAX_ITERATIONS = 10;
+            immutable double TOL = 1e-10;
 
             // Take the supplied T_modes[0] as the initial guess.
             number T_guess = gs.T_modes[0];
@@ -595,10 +596,20 @@ private:
                 Cv = vibElecCvMixture(gs, T_guess);
                 dT = -f_guess/Cv;
                 T_guess += dT;
+                if (fabs(dT.re)/T_guess.re < TOL) {
+                    return T_guess;
+                }
                 f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
                 count++;
             }
-
+            if (fabs(dT)>1e-3) {
+                string msg = "The 'vibTemperature' function failed to converge.\n";
+                debug {
+                    msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                    msg ~= "The supplied GasState was:\n";
+                    msg ~= gs.toString() ~ "\n";
+                }
+            }
             return T_guess;
         }
     } else {
