@@ -347,8 +347,10 @@ public:
     @nogc
     override number internalEnergy(in GasState gs)
     {
+        number Tve = gs.T_modes[0];
+        number logTve = log(Tve);
         number u_tr = transRotEnergyMixture(gs);
-        number u_ve = vibElecEnergyMixture(gs, gs.T_modes[0]);
+        number u_ve = vibElecEnergyMixture(gs, Tve, logTve);
         return u_tr + u_ve;
     }
 
@@ -364,7 +366,8 @@ public:
     @nogc
     override number enthalpy(in GasState gs)
     {
-        number u = transRotEnergyMixture(gs) + vibElecEnergyMixture(gs, gs.T_modes[0]);
+        number logTve = log(gs.T_modes[0]);
+        number u = transRotEnergyMixture(gs) + vibElecEnergyMixture(gs, gs.T_modes[0], logTve);
         return u + gs.p/gs.rho;
     }
 
@@ -398,8 +401,9 @@ public:
     @nogc
     override number entropy(in GasState gs)
     {
+        number logT = log(gs.T);
         foreach ( isp; 0 .. mNSpecies ) {
-            ms[isp] = mCurves[isp].eval_s(gs.T) - mR[isp]*log(gs.p/P_atm);
+            ms[isp] = mCurves[isp].eval_s(gs.T, logT) - mR[isp]*log(gs.p/P_atm);
         }
         return mass_average(gs, ms);
     }
@@ -411,26 +415,40 @@ public:
     }
 
     @nogc
-    number vibElecEnergyPerSpecies(number Tve, int isp)
+    number vibElecEnergyPerSpecies(number Tve, number logTve, int isp)
     {
         // The electron possess energy only in translation.
         // We put this contribution in the electronic energy since
         // its translation is governed by the vibroelectronic temperature.
         if (isp == mElectronIdx) return (3./2.)* mR[isp] * Tve;
         // For heavy particles
-        number h_at_Tve = mCurves[isp].eval_h(Tve);
+        number h_at_Tve = mCurves[isp].eval_h(Tve, logTve);
         number h_ve = h_at_Tve - mCpTR[isp]*(Tve - T_REF) - mDel_hf[isp];
         return h_ve;
     }
 
     @nogc
-    number vibElecEnergyMixture(in GasState gs, number Tve)
+    number vibElecEnergyPerSpecies(number Tve, int isp)
+    {
+        number logTve = log(Tve);
+        return vibElecEnergyPerSpecies(Tve, logTve, isp);
+    }
+
+    @nogc
+    number vibElecEnergyMixture(in GasState gs, number Tve, number logTve)
     {
         number e_ve = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            e_ve += gs.massf[isp] * vibElecEnergyPerSpecies(Tve, isp);
+            e_ve += gs.massf[isp] * vibElecEnergyPerSpecies(Tve, logTve, isp);
         }
         return e_ve;
+    }
+
+    @nogc
+    number vibElecEnergyMixture(in GasState gs, number Tve)
+    {
+        number logTve = log(Tve);
+        return vibElecEnergyMixture(gs, Tve, logTve);
     }
     @nogc
     override number cpPerSpecies(in GasState gs, int isp)
@@ -442,13 +460,16 @@ public:
     @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
     {
         number T = gs.T;
+        number logT = log(T);
+        number Tve = gs.T_modes[0];
+        number logTve = log(Tve);
         number logp = log(gs.p/P_atm);
 
         foreach(isp; 0 .. mNSpecies){
             number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-            number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            number h_ve = vibElecEnergyPerSpecies(Tve, logTve, isp);
             number h = h_tr + h_ve;
-            number s = mCurves[isp].eval_s(gs.T) - mR[isp]*logp;
+            number s = mCurves[isp].eval_s(T, logT) - mR[isp]*logp;
             gibbs_energies[isp] = h - T*s;
         }
     }
@@ -586,7 +607,8 @@ private:
 
             // Take the supplied T_modes[0] as the initial guess.
             number T_guess = gs.T_modes[0];
-            number u0 = vibElecEnergyMixture(gs, T_guess);
+            number logT_guess = log(T_guess);
+            number u0 = vibElecEnergyMixture(gs, T_guess, logT_guess);
             number f_guess =  u0 - gs.u_modes[0];
 
             // Begin iterating.
@@ -599,7 +621,8 @@ private:
                 if (fabs(dT.re)/T_guess.re < TOL) {
                     return T_guess;
                 }
-                f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+                logT_guess = log(T_guess);
+                f_guess = vibElecEnergyMixture(gs, T_guess, logT_guess) - gs.u_modes[0];
                 count++;
             }
             if (fabs(dT)>1e-3) {
