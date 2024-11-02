@@ -18,9 +18,9 @@ driven_patch = CoonsPatch:new{p00={x=L2, y=0}, p10={x=L3, y=0},
 nxc = 100; nyc = 2
 grid0 = StructuredGrid:new{psurface=driver_patch, niv=nxc+1, njv=nyc+1}
 grid1 = StructuredGrid:new{psurface=driven_patch, niv=nxc+1, njv=nyc+1}
-registerFluidGrid{grid=grid0, fsTag='initialLeft',
+registerFluidGrid{grid=grid0, fsTag='driver_tube',
                   bcTags={east='piston_upstream_face'}}
-registerFluidGrid{grid=grid1, fsTag='initialRight',
+registerFluidGrid{grid=grid1, fsTag='driven_tube',
                   bcTags={west='piston_downstream_face'}}
 --
 -- Note that there are no direct connections between the grids

@@ -11,15 +11,15 @@ setGasModel('ideal-air.gas')
 pInit = 100.0e3 -- Pa
 TInit = 348.43 -- K
 -- density is 1.0 kg/m**3
-initialLeft = FlowState:new{p=pInit, T=TInit}
-initialRight = FlowState:new{p=1.0e-10, T=TInit}
+initial_driver = FlowState:new{p=pInit, T=TInit}
+initial_driven = FlowState:new{p=1.0e-10, T=TInit}
 --
 -- 2. Fluid blocks, with initial flow states and boundary conditions.
 -- Block boundaries that are not otherwise assigned a boundary condition
 -- are initialized as WallBC_WithSlip.
 flowDict = {
-   initialLeft=initialLeft,
-   initialRight=initialRight
+   driver_tube=initial_driver,
+   driven_tube=initial_driven
 }
 bcDict = {
    piston_upstream_face=WallBC_WithSlip1:new{group="pistonUpstream"},
