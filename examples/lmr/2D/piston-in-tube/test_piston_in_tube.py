@@ -85,7 +85,7 @@ def test_cleanup_transient():
     cmd = "rm -r ./lmrsim"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
-    cmd = "rm ideal-air.gas piston.data userPadSave.lua"
+    cmd = "rm ideal-air.gas piston.data"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
 
