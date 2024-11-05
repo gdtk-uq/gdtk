@@ -354,8 +354,10 @@ public:
     @nogc
     override number internalEnergy(in GasState gs)
     {
+        number Tve = gs.T_modes[0];
+        number logTve = log(Tve);
         number u_tr = transRotEnergyMixture(gs);
-        number u_ve = vibElecEnergyMixture(gs, gs.T_modes[0]);
+        number u_ve = vibElecEnergyMixture(gs, Tve, logTve);
         return u_tr + u_ve;
     }
 
@@ -371,16 +373,19 @@ public:
     @nogc
     override number enthalpy(in GasState gs)
     {
-        number u = transRotEnergyMixture(gs) + vibElecEnergyMixture(gs, gs.T_modes[0]);
+        number logTve = log(gs.T_modes[0]);
+        number u = transRotEnergyMixture(gs) + vibElecEnergyMixture(gs, gs.T_modes[0], logTve);
         return u + gs.p/gs.rho;
     }
 
     @nogc
     override void enthalpies(in GasState gs, number[] hs)
     {
+        number Tve = gs.T_modes[0];
+        number logTve = log(Tve);
         foreach(isp; 0 .. mNSpecies){
             number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-            number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            number h_ve = vibElecEnergyPerSpecies(Tve, logTve, isp);
             hs[isp] = h_tr + h_ve;
         }
     }
@@ -405,8 +410,9 @@ public:
     @nogc
     override number entropy(in GasState gs)
     {
+        number logT = log(gs.T);
         foreach ( isp; 0 .. mNSpecies ) {
-            ms[isp] = mCurves[isp].eval_s(gs.T) - mR[isp]*log(gs.p/P_atm);
+            ms[isp] = mCurves[isp].eval_s(gs.T, logT) - mR[isp]*log(gs.p/P_atm);
         }
         return mass_average(gs, ms);
     }
@@ -418,26 +424,40 @@ public:
     }
 
     @nogc
-    number vibElecEnergyPerSpecies(number Tve, int isp)
+    number vibElecEnergyPerSpecies(number Tve, number logTve, int isp)
     {
         // The electron possess energy only in translation.
         // We put this contribution in the electronic energy since
         // its translation is governed by the vibroelectronic temperature.
         if (isp == mElectronIdx) return (3./2.)* mR[isp] * Tve;
         // For heavy particles
-        number h_at_Tve = mCurves[isp].eval_h(Tve);
+        number h_at_Tve = mCurves[isp].eval_h(Tve, logTve);
         number h_ve = h_at_Tve - mCpTR[isp]*(Tve - T_REF) - mDel_hf[isp];
         return h_ve;
     }
 
     @nogc
-    number vibElecEnergyMixture(in GasState gs, number Tve)
+    number vibElecEnergyPerSpecies(number Tve, int isp)
+    {
+        number logTve = log(Tve);
+        return vibElecEnergyPerSpecies(Tve, logTve, isp);
+    }
+
+    @nogc
+    number vibElecEnergyMixture(in GasState gs, number Tve, number logTve)
     {
         number e_ve = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            e_ve += gs.massf[isp] * vibElecEnergyPerSpecies(Tve, isp);
+            e_ve += gs.massf[isp] * vibElecEnergyPerSpecies(Tve, logTve, isp);
         }
         return e_ve;
+    }
+
+    @nogc
+    number vibElecEnergyMixture(in GasState gs, number Tve)
+    {
+        number logTve = log(Tve);
+        return vibElecEnergyMixture(gs, Tve, logTve);
     }
     @nogc
     override number cpPerSpecies(in GasState gs, int isp)
@@ -449,13 +469,16 @@ public:
     @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
     {
         number T = gs.T;
+        number logT = log(T);
+        number Tve = gs.T_modes[0];
+        number logTve = log(Tve);
         number logp = log(gs.p/P_atm);
 
         foreach(isp; 0 .. mNSpecies){
             number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-            number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            number h_ve = vibElecEnergyPerSpecies(Tve, logTve, isp);
             number h = h_tr + h_ve;
-            number s = mCurves[isp].eval_s(gs.T) - mR[isp]*logp;
+            number s = mCurves[isp].eval_s(T, logT) - mR[isp]*logp;
             gibbs_energies[isp] = h - T*s;
         }
     }
@@ -585,14 +608,22 @@ private:
         //     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids by Using Complex Variables
         //     AIAA Journal, vol. 44, no. 4, 2006.
         //
+        // Changed Oct 2024 by NNG to match single species T from u.
+        //   1.) We can now exit early if the real component is converged, this saves lots of time.
+        //   2.) We always do at least one iteration, to ensure the complex component is set.
+        //   3.) We throw an exception if the real part of dT isn't small at the end. This helps the
+        //       physicality check make sure that the gas state has been set to a sensible value.
+        //   TODO: We don't really need a different routine for complex and real now.
         @nogc
         number vibElecTemperature(ref GasState gs)
         {
-            int MAX_ITERATIONS = 10;
+            immutable int MAX_ITERATIONS = 10;
+            immutable double TOL = 1e-10;
 
             // Take the supplied T_modes[0] as the initial guess.
             number T_guess = gs.T_modes[0];
-            number u0 = vibElecEnergyMixture(gs, T_guess);
+            number logT_guess = log(T_guess);
+            number u0 = vibElecEnergyMixture(gs, T_guess, logT_guess);
             number f_guess =  u0 - gs.u_modes[0];
 
             // Begin iterating.
@@ -602,10 +633,22 @@ private:
                 Cv = vibElecCvMixture(gs, T_guess);
                 dT = -f_guess/Cv;
                 T_guess += dT;
-                f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+                if (fabs(dT.re)/T_guess.re < TOL) {
+                    return T_guess;
+                }
+                logT_guess = log(T_guess);
+                f_guess = vibElecEnergyMixture(gs, T_guess, logT_guess) - gs.u_modes[0];
                 count++;
             }
-
+            if (fabs(dT)>1e-3) {
+                string msg = "The 'vibTemperature' function failed to converge.\n";
+                debug {
+                    msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                    msg ~= "The supplied GasState was:\n";
+                    msg ~= gs.toString() ~ "\n";
+                }
+                throw new GasModelException(msg);
+            }
             return T_guess;
         }
     } else {
@@ -683,6 +726,11 @@ version(two_temperature_gas_test) {
         tm.updateFromPT(gs);
         assert(approxEqualNumbers(to!number(11801825.6), gs.u + gs.u_modes[0], 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6), failedUnitTest());
+
+        tm.updateFromRhoU(gs);
+        assert(approxEqualNumbers(to!number(2000.0), gs.T, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(2000.0), gs.T_modes[0], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(1e6), gs.p, 1.0e-6), failedUnitTest());
 
         return 0;
     }
