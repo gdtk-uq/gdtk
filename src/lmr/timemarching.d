@@ -198,12 +198,35 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     else {
         // SimState.time, SimState.step and SimState.dt_global set in prepareTimesFileOnRestart
         // It's convenient to do that while we have the times file loaded.
-        prepareTimesFileOnRestart(SimState.current_tindx);
         if (cfg.is_master_task) {
+            // RJG, 2024-11-06
+            // For large-scale work (many processes on parallel filesystems),
+            // we need to be careful about attempting to read one small file from many processes.
+            // The solution is to read only from master, then broadcast to other ranks.
+            // This is the same solution NNG implemented in the steady-state codepath for
+            // broadcasting restart information.
+            //
+            // This issue was noted by Sebastiaan van Oeveren when working on the UQ Bunya cluster.
+            prepareTimesFileOnRestart(SimState.current_tindx);
             writeln("*** RESTARTING SIMULATION ***");
             writefln("RESTART-SNAPSHOT: %d", SimState.current_tindx);
             writefln("RESTART-STEP: %d", SimState.step);
             writefln("RESTART-TIME: %8.3e", SimState.time);
+        }
+        version(mpi_parallel) {
+            // After setting SimState on master, broadcast to other ranks
+            // 0. Make non-shared temporaries
+            double simTime = SimState.time;
+            int step = SimState.step;
+            double dtGlobal = SimState.dt_global;
+            // 1. Broadcast
+            MPI_Bcast(&simTime, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&step, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&dtGlobal, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            // 2. Write to shared variables
+            SimState.time = simTime;
+            SimState.step = step;
+            SimState.dt_global = dtGlobal;
         }
     }
 
