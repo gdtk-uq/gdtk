@@ -6,27 +6,29 @@
  * Version: Initial cut.
  */
 
-module luaflowstate;
+module lmr.luawrap.luaflowstate;
 
 import std.algorithm;
 import std.array;
+import std.conv;
 import std.format;
 import std.stdio;
 import std.string;
-import std.conv;
 import std.traits;
+
 import gzip;
+
+import gas.luagas_model;
+import gas;
+import geom.luawrap;
+import geom;
+import nm.number;
+import ntypes.complex;
 import util.lua;
 import util.lua_service;
-import ntypes.complex;
-import nm.number;
 
-import gas;
-import gas.luagas_model;
-import flowstate;
-import geom;
-import geom.luawrap;
-import globalconfig;
+import lmr.flowstate;
+import lmr.globalconfig;
 
 // Name for FlowState objects in Lua scripts are a pure Lua play,
 // however, we wish to provide a few FlowState-related functions

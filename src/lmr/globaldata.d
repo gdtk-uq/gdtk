@@ -11,18 +11,18 @@
  *           2024-02-12 : Moved into lmr5 area, removed globalFluidBlockIO
  */
 
-module globaldata;
+module lmr.globaldata;
 
 import std.datetime;
 
-import globalconfig;
-import fluidblock;
-import fluidblockarray;
-import ssolidblock;
-import block;
-import efield;
-import blockio : BlockIO;
+import lmr.block;
+import lmr.blockio : BlockIO;
+import lmr.efield.efield;
+import lmr.fluidblock;
+import lmr.fluidblockarray;
+import lmr.globalconfig;
 import lmr.loads : RunTimeLoads;
+import lmr.solid.ssolidblock;
 version(FSI) { import fsi; }
 
 // I/O objects (thread-local) for access from any module

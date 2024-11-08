@@ -6,18 +6,18 @@
  * First code: 2020-11-03
  */
 
-module jacobian;
+module lmr.jacobian;
 
 import std.conv;
 
-import ntypes.complex;
+import nm.bbla;
 import nm.number;
 import nm.smla;
-import nm.bbla;
+import ntypes.complex;
 
-import globalconfig;
 import lmr.fluidfvcell;
-import fvinterface;
+import lmr.fvinterface;
+import lmr.globalconfig;
 
 
 class FlowJacobian {

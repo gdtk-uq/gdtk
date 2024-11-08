@@ -1,36 +1,37 @@
 // gas_solid_full_face_copy.d
 
-module bc.ghost_cell_effect.gas_solid_full_face_copy;
+module lmr.bc.ghost_cell_effect.gas_solid_full_face_copy;
 
-import std.json;
-import std.string;
-import std.conv;
-import std.stdio;
-import std.math;
-import std.file;
 import std.algorithm;
+import std.conv;
 import std.datetime;
+import std.file;
+import std.json;
+import std.math;
+import std.stdio;
+import std.string;
 version(mpi_parallel) {
     import mpi;
 }
 
+import gas;
+import geom;
 import nm.number;
 import ntypes.complex;
-import geom;
 import util.json_helper;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
+
+import lmr.bc.boundary_condition;
+import lmr.bc;
+import lmr.conservedquantities;
+import lmr.flowstate;
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fluidblock;
-import sfluidblock;
-import ssolidblock;
-import solidfvcell;
-import gas;
-import bc;
-import bc.boundary_condition;
-import conservedquantities;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.sfluidblock;
+import lmr.solid.solidfvcell;
+import lmr.solid.ssolidblock;
 
 
 // ----------------------------------------------------------------------------------

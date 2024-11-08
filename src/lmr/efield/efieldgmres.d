@@ -5,19 +5,20 @@
  * Version: 2021-05-24: Prototyping
  */
 
-module efieldgmres;
+module lmr.efield.efieldgmres;
 
-import std.stdio;
-import std.math;
 import std.algorithm;
-
-import fvinterface;
-import geom;
-import efieldbc;
-import efieldexchange;
+import std.math;
+import std.stdio;
 version(mpi_parallel){
     import mpi;
 }
+
+import geom;
+
+import lmr.efield.efieldbc;
+import lmr.efield.efieldexchange;
+import lmr.fvinterface;
 
 class GMResFieldSolver {
     this() {}

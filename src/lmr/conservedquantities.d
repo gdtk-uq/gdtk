@@ -9,17 +9,19 @@
  * 2022-08-20: Bare array.
  */
 
-module conservedquantities;
+module lmr.conservedquantities;
 
 import std.string;
 import std.format;
 import std.conv;
-import ntypes.complex;
-import nm.number;
-import globalconfig;
-import geom;
+
 import gas;
-import turbulence;
+import geom;
+import nm.number;
+import ntypes.complex;
+
+import lmr.globalconfig;
+import lmr.turbulence;
 
 // Underlying definition of the conserved quantities collection,
 // as seen by the transient solver, is just an array.

@@ -5,41 +5,43 @@
 // RG & PJ  2015-12-03 : Decompose boundary conditions into lists of actions
 //
 
-module bc.boundary_condition;
+module lmr.bc.boundary_condition;
 
 import std.conv;
 import std.json;
 import std.stdio;
 import std.string;
 
-import util.lua;
-import util.lua_service;
-import gas;
 import gas.luagas_model;
+import gas;
+import geom;
 import nm.luabbla;
 import util.json_helper;
-import geom;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
-import fvvertex;
+import util.lua;
+import util.lua_service;
+
+import lmr.bc.boundary_cell_effect;
+import lmr.bc.boundary_flux_effect;
+import lmr.bc.boundary_interface_effect;
+import lmr.bc.ghost_cell_effect;
+import lmr.bc.user_defined_effects;
+import lmr.flowstate;
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fluidblock;
-import sfluidblock;
-import fluxcalc;
-import ssolidblock;
-import solidfvcell;
-import solidfvinterface;
-import bc.ghost_cell_effect;
-import bc.boundary_interface_effect;
-import bc.boundary_cell_effect;
-import bc.boundary_flux_effect;
-import bc.user_defined_effects;
-import lua_helper;
-import grid_motion;
-import grid_motion_udf;
-import mass_diffusion;
+import lmr.fluxcalc;
+import lmr.fvinterface;
+import lmr.fvvertex;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.grid_motion;
+import lmr.grid_motion_udf;
+import lmr.lua_helper;
+import lmr.mass_diffusion;
+import lmr.sfluidblock;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+import lmr.solid.ssolidblock;
+
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {

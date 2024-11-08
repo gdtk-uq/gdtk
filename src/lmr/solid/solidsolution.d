@@ -10,26 +10,28 @@
  * Date: 2015-08-04
  */
 
-module solidsolution;
+module lmr.solid.solidsolution;
 
-import std.stdio;
-import std.conv;
-import std.format;
-import std.string;
-import std.regex;
 import std.algorithm;
 import std.array;
-import std.math;
-import std.json;
+import std.conv;
 import std.file : readText;
+import std.format;
+import std.json;
+import std.math;
+import std.regex;
+import std.stdio;
+import std.string;
 
-import util.lua;
-import geom;
 import gzip;
-import fileutil;
-import globalconfig;
-import lmrconfig;
-import blockio : readVariablesFromMetadata, readSolidVariablesFromFile;
+
+import geom;
+import util.lua;
+
+import lmr.blockio : readVariablesFromMetadata, readSolidVariablesFromFile;
+import lmr.fileutil;
+import lmr.globalconfig;
+import lmr.lmrconfig;
 
 class SolidSolution {
     // This holds the collection of solid blocks and solid grid blocks

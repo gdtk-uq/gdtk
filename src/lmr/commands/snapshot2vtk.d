@@ -5,27 +5,26 @@
  * Date: 2022-08-08
  */
 
-module snapshot2vtk;
+module lmr.commands.snapshot2vtk;
 
-import std.stdio;
+import std.conv : to;
 import std.file;
 import std.format;
 import std.getopt;
-import std.conv : to;
 import std.range;
-import std.string;
 import std.regex;
+import std.stdio;
+import std.string;
 
-import globalconfig;
-import fileutil;
-import flowsolution;
-import solidsolution : SolidSolution;
-import lmrconfig : lmrCfg;
-import init : initConfiguration;
-import vtk_writer;
-import cmdhelper;
-
-import command;
+import lmr.commands.cmdhelper;
+import lmr.commands.command;
+import lmr.fileutil;
+import lmr.flowsolution;
+import lmr.globalconfig;
+import lmr.init : initConfiguration;
+import lmr.lmrconfig : lmrCfg;
+import lmr.solid.solidsolution : SolidSolution;
+import lmr.vtk_writer;
 
 Command snapshot2vtkCmd;
 string cmdName = "snapshot2vtk";

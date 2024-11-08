@@ -7,17 +7,18 @@
  *
  */
 
-module special_block_init;
+module lmr.special_block_init;
 
-import std.stdio;
 import std.algorithm.searching;
-import ntypes.complex;
-import nm.number;
+import std.stdio;
 
-import globalconfig;
-import fluidblock;
+import nm.number;
+import ntypes.complex;
+
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fvinterface;
+import lmr.fvinterface;
+import lmr.globalconfig;
 
 void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
 {

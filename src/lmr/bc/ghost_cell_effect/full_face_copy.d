@@ -1,30 +1,31 @@
 // full_face_copy.d
 
-module bc.ghost_cell_effect.full_face_copy;
+module lmr.bc.ghost_cell_effect.full_face_copy;
 
-import std.json;
-import std.string;
-import std.conv;
-import std.stdio;
-import std.math;
-import std.file;
 import std.algorithm;
+import std.conv;
 import std.datetime;
+import std.file;
+import std.json;
+import std.math;
+import std.stdio;
+import std.string;
 version(mpi_parallel) {
     import mpi;
 }
 
+import gas;
 import geom;
 import util.json_helper;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
+
+import lmr.bc;
+import lmr.flowstate;
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fluidblock;
-import sfluidblock;
-import gas;
-import bc;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.sfluidblock;
 
 // ----------------------------------------------------------------------------------
 // MPI-specific services.

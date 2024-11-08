@@ -13,27 +13,25 @@
  * Kyle A. Damm 2020-02-11
  */
 
-module solidblock;
+module lmr.solid.solidblock;
 
-import std.json;
 import std.conv;
+import std.json;
 
-import util.lua;
 import geom;
-import globaldata;
-import globalconfig;
-import solidfvcell;
-import solidfvinterface;
-import solidbc;
-import block;
-import jacobian;
-
-import nm.number;
-import ntypes.complex;
-
-import nm.smla;
 import nm.bbla;
+import nm.number;
+import nm.smla;
+import ntypes.complex;
+import util.lua;
 
+import lmr.block;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.jacobian;
+import lmr.solid.solidbc;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
 import lmr.solid.solidthermalmodel;
 
 class SolidBlock : Block {

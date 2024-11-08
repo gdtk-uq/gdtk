@@ -2,10 +2,10 @@
 // Base class for blocks of cells, for use within the Eilmer flow solver.
 // Kyle A. Damm 2020-02-11 first cut.
 
-module block;
+module lmr.block;
 
 import std.stdio;
-import globalconfig;
+import lmr.globalconfig;
 import util.lua;
 
 class Block {

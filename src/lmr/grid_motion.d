@@ -1,20 +1,22 @@
 // Authors: Rowan Gollan, Peter J., Kyle Damm & Ian Johnston
 // Date: 2015-11-20
 
-module grid_motion;
+module lmr.grid_motion;
 
 import std.conv;
+
+import geom;
+import nm.number;
+import ntypes.complex;
 import util.lua;
 import util.lua_service;
-import ntypes.complex;
-import nm.number;
-import fvvertex;
-import fvinterface;
-import globalconfig;
-import globaldata;
-import geom;
-import fluidblock;
-import sfluidblock;
+
+import lmr.fluidblock;
+import lmr.fvinterface;
+import lmr.fvvertex;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.sfluidblock;
 
 
 @nogc

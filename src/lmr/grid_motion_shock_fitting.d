@@ -5,34 +5,35 @@
 // 2019 Lachlan Whyborn multiple blocks and MPI
 // 2021-02-15 PJ complete rework to have a more "global" view of the shock.
 
-module grid_motion_shock_fitting;
+module lmr.grid_motion_shock_fitting;
 
-import std.stdio;
+import std.algorithm;
 import std.conv;
 import std.math;
-import std.algorithm;
-import ntypes.complex;
-import nm.number;
+import std.stdio;
 version(mpi_parallel) {
     import mpi;
 }
 
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvvertex;
-import fvinterface;
-import lmr.fluidfvcell;
-import onedinterp;
-import bc;
-import fluidblock;
-import fluidblockarray;
-import sfluidblock;
 import geom;
-import grid_motion;
-import bc;
+import nm.number;
+import ntypes.complex;
+
+import lmr.bc;
+import lmr.bc;
+import lmr.flowstate;
+import lmr.fluidblock;
+import lmr.fluidblockarray;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.fvvertex;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.grid_motion;
+import lmr.onedinterp;
+import lmr.sfluidblock;
 version(mpi_parallel) {
-    import bc.ghost_cell_effect.full_face_copy : MPI_Wait_a_while, make_mpi_tag;
+    import lmr.bc.ghost_cell_effect.full_face_copy : MPI_Wait_a_while, make_mpi_tag;
 }
 
 

@@ -9,27 +9,28 @@
  *                 to decide how the execution is delegated
  */
 
-module runsim;
+module lmr.commands.runsim;
 
 import core.runtime;
+import core.stdc.stdlib : exit;
 import core.stdc.stdlib : system;
+import std.conv : to;
+import std.file : exists;
 import std.getopt;
+import std.math : FloatingPointControl;
+import std.parallelism : totalCPUs;
 import std.stdio : File, write, writeln, writefln;
 import std.string;
-import std.file : exists;
-import core.stdc.stdlib : exit;
-import std.parallelism : totalCPUs;
-import std.math : FloatingPointControl;
-import std.conv : to;
+
 import dyaml;
 
 import util.json_helper : readJSONfile;
 
-import lmrconfig;
-import globalconfig;
-import command;
-import newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
-import timemarching: initTimeMarchingSimulation, integrateInTime, finalizeSimulation_timemarching;
+import lmr.commands.command;
+import lmr.globalconfig;
+import lmr.lmrconfig;
+import lmr.newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
+import lmr.timemarching : initTimeMarchingSimulation, integrateInTime, finalizeSimulation_timemarching;
 
 version(mpi_parallel) {
     import mpi;

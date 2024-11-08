@@ -4,20 +4,21 @@
 // See MBCNS workbook 2000/2 page 36 (26-Jan-2001) for formulation.
 // and MBCNS workbook 2005/Apr page 36 for new index labels
 
-module onedinterp;
+module lmr.onedinterp;
 
+import std.conv;
 import std.math;
 import std.stdio;
-import std.conv;
-import ntypes.complex;
-import nm.number;
-import nm.limiters;
 
 import gas;
-import globalconfig;
-import flowstate;
-import fvinterface;
+import nm.limiters;
+import nm.number;
+import ntypes.complex;
+
+import lmr.flowstate;
 import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig;
 
 //------------------------------------------------------------------------------
 

@@ -5,40 +5,42 @@
  * Version: 2015-22-04
  */
 
-module ssolidblock;
+module lmr.solid.ssolidblock;
 
-import std.stdio;
-import std.string : toStringz;
 import std.algorithm;
-import std.parallelism;
+import std.array;
 import std.conv;
 import std.format;
-import std.array;
-import std.math;
-import ntypes.complex;
-import nm.number;
 import std.json;
-import util.lua;
-import util.lua_service;
+import std.math;
+import std.parallelism;
+import std.stdio;
+import std.string : toStringz;
+
+import gzip;
+
+import geom.luawrap.luasgrid : checkStructuredGrid;
+import geom;
+import nm.number;
 import nm.rsla;
 import nm.smla;
-import geom.luawrap.luasgrid : checkStructuredGrid;
+import ntypes.complex;
 import util.json_helper;
-import lua_helper;
-import gzip;
-import geom;
-import globalconfig;
-import globaldata : dedicatedConfig;
-import fluidblock;
-import sfluidblock;
-import solidblock;
-import solidfvcell;
-import solidfvinterface;
-import solidfvvertex;
-import solidbc;
-import block;
-import jacobian;
+import util.lua;
+import util.lua_service;
 
+import lmr.block;
+import lmr.fluidblock;
+import lmr.globalconfig;
+import lmr.globaldata : dedicatedConfig;
+import lmr.jacobian;
+import lmr.lua_helper;
+import lmr.sfluidblock;
+import lmr.solid.solidbc;
+import lmr.solid.solidblock;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+import lmr.solid.solidfvvertex;
 import lmr.solid.solidthermalmodel;
 
 enum ghost_cell_start_id = 1_000_000_000;

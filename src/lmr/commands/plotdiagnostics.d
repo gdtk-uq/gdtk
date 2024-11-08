@@ -8,16 +8,16 @@
 
 module lmr.commands.plotdiagnostics;
 
+import core.stdc.stdlib : system;
+import std.file : copy;
+import std.format;
 import std.getopt;
+import std.process : environment, executeShell;
 import std.stdio;
 import std.string;
-import std.format;
-import core.stdc.stdlib : system;
-import std.process : environment, executeShell;
-import std.file : copy;
-import lmr.lmrerrors;
 
-import command;
+import lmr.commands.command;
+import lmr.lmrerrors;
 
 Command plotDiagnosticsCmd;
 string cmdName = "plot-diagnostics";

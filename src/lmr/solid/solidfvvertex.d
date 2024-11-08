@@ -5,11 +5,11 @@
  * Date: 2015-23-04
  */
 
-module solidfvvertex;
+module lmr.solid.solidfvvertex;
 
-import ntypes.complex;
-import nm.number;
 import geom;
+import nm.number;
+import ntypes.complex;
 
 class SolidFVVertex {
 public:

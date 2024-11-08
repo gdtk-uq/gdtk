@@ -5,35 +5,35 @@
  * Date: 2023-06-21
  */
 
-module blockio;
+module lmr.blockio;
 
 immutable string BLK_IO_VERSION = "1.0";
 
-import std.stdio;
+import std.algorithm: canFind;
 import std.conv : to;
 import std.format : format, formattedRead;
-import std.algorithm: canFind;
+import std.stdio;
 
 import gzip : GzipOut, GzipByLine;
 import dyaml;
 
-import util.lua;
-import nm.number;
 import geom.luawrap;
+import nm.number;
+import util.lua;
 
-import lmrexceptions : LmrException;
-import globalconfig : GlobalConfig;
-import lmrconfig;
+import lmr.flowsolution : FluidBlockLite;
+import lmr.fluidblock : FluidBlock;
 import lmr.fvcell : FVCell;
-import fvcellio;
-import fluidblock : FluidBlock;
-import sfluidblock : SFluidBlock;
-import ufluidblock : UFluidBlock;
-import flowsolution : FluidBlockLite;
-import solidblock : SolidBlock;
-import ssolidblock : SSolidBlock;
-import solidsolution : SolidBlockLite;
-import globaldata : fluidBlkIO, solidBlkIO;
+import lmr.fvcellio;
+import lmr.globalconfig : GlobalConfig;
+import lmr.globaldata : fluidBlkIO, solidBlkIO;
+import lmr.lmrconfig;
+import lmr.lmrexceptions : LmrException;
+import lmr.sfluidblock : SFluidBlock;
+import lmr.solid.solidsolution : SolidBlockLite;
+import lmr.solid.ssolidblock : SSolidBlock;
+import lmr.solid.solidblock : SolidBlock;
+import lmr.ufluidblock : UFluidBlock;
 
 class BlockIO {
 public:

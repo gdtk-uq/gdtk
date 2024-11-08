@@ -7,34 +7,34 @@
  *   2024-02-26 -- Ported from eilmer4 by Nick
  */
 
-module customscript;
+module lmr.commands.customscript;
 
+import std.algorithm : sort, uniq;
+import std.conv : to;
+import std.file : thisExePath, exists;
 import std.getopt;
+import std.json : JSONValue;
+import std.path : dirName;
 import std.stdio : writeln, writefln;
 import std.string : toStringz, strip, split, format;
-import std.conv : to;
-import std.path : dirName;
-import std.file : thisExePath, exists;
-import std.json : JSONValue;
-import std.algorithm : sort, uniq;
 
+import gas.luagas_model;
+import gas;
+import gasdyn.luagasflow;
+import gasdyn.luaidealgasflow;
+import geom.luawrap;
+import nm.luabbla;
+import util.json_helper;
 import util.lua;
 import util.lua_service : getString;
-import geom.luawrap;
-import gas;
-import gas.luagas_model;
-import nm.luabbla;
 
-import util.json_helper;
-import lua_helper : initLuaStateForPrep;
-import lmrconfig : lmrCfg;
-import command;
-import globalconfig;
-import luaflowsolution;
-import luaflowstate;
-import gasdyn.luaidealgasflow;
-import gasdyn.luagasflow;
-import blockio : luafn_writeFluidMetadata, luafn_writeInitialFluidFile;
+import lmr.blockio : luafn_writeFluidMetadata, luafn_writeInitialFluidFile;
+import lmr.commands.command;
+import lmr.globalconfig;
+import lmr.lmrconfig : lmrCfg;
+import lmr.lua_helper : initLuaStateForPrep;
+import lmr.luawrap.luaflowsolution;
+import lmr.luawrap.luaflowstate;
 
 Command customScriptCmd;
 string cmdName = "custom-script";

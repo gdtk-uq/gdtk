@@ -5,25 +5,25 @@
  * Date: 2022-08-08
  */
 
-module prepgrids;
+module lmr.commands.prepgrids;
 
 import core.stdc.stdlib : system;
+import std.conv : to;
+import std.file : thisExePath, exists;
 import std.getopt;
+import std.path : dirName;
 import std.stdio : writeln, writefln;
 import std.string : toStringz;
-import std.conv : to;
-import std.path : dirName;
-import std.file : thisExePath, exists;
 
-import util.lua;
 import geom.luawrap;
+import util.lua;
 
-import lua_helper : initLuaStateForPrep;
-import lmrconfig : lmrCfg;
-import command;
-import globalconfig;
-import luaflowsolution;
-import luaflowstate;
+import lmr.commands.command;
+import lmr.globalconfig;
+import lmr.lmrconfig : lmrCfg;
+import lmr.lua_helper : initLuaStateForPrep;
+import lmr.luawrap.luaflowsolution;
+import lmr.luawrap.luaflowstate;
 
 Command prepGridCmd;
 string cmdName = "prep-grids";

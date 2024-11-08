@@ -6,33 +6,35 @@
 //    the break-up of the Fixed_T boundary condition.
 //
 
-module bc.boundary_interface_effect;
+module lmr.bc.boundary_interface_effect;
 
-import std.json;
-import std.string;
 import std.conv;
-import std.stdio;
+import std.json;
 import std.math;
-import ntypes.complex;
-import nm.number;
-import nm.brent;
-import nm.bracketing;
+import std.stdio;
+import std.string;
 
-import geom;
-import util.json_helper;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
-import lmr.fluidfvcell;
-import fluidblock;
-import sfluidblock;
 import gas;
-import bc;
-import solidfvcell;
-import solidfvinterface;
+import geom;
 import kinetics.equilibrium_update;
-import mass_diffusion;
+import nm.bracketing;
+import nm.brent;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
+
+import lmr.bc;
+import lmr.flowstate;
+import lmr.fluidblock;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.mass_diffusion;
+import lmr.sfluidblock;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+
 
 BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {

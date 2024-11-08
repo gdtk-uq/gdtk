@@ -8,34 +8,34 @@
  *                 to better reflect its more general role
  */
 
-module prepsim;
+module lmr.commands.prepsim;
 
 import core.stdc.stdlib : system;
+import std.algorithm : sort, uniq;
+import std.conv : to;
+import std.file : thisExePath, exists, rmdirRecurse;
 import std.getopt;
+import std.json : JSONValue;
+import std.path : dirName;
 import std.stdio : writeln, writefln;
 import std.string : toStringz, strip, split, format;
-import std.conv : to;
-import std.path : dirName;
-import std.file : thisExePath, exists, rmdirRecurse;
-import std.json : JSONValue;
-import std.algorithm : sort, uniq;
 
+import gas.luagas_model;
+import gas;
+import gasdyn.luagasflow;
+import gasdyn.luaidealgasflow;
+import geom.luawrap;
+import nm.luabbla;
+import util.json_helper;
 import util.lua;
 import util.lua_service : getString;
-import geom.luawrap;
-import gas;
-import gas.luagas_model;
-import nm.luabbla;
 
-import util.json_helper;
-import lua_helper : initLuaStateForPrep;
-import lmrconfig : lmrCfg;
-import command;
-import globalconfig;
-import luaflowsolution;
-import luaflowstate;
-import gasdyn.luaidealgasflow;
-import gasdyn.luagasflow;
+import lmr.commands.command;
+import lmr.globalconfig;
+import lmr.lmrconfig : lmrCfg;
+import lmr.lua_helper : initLuaStateForPrep;
+import lmr.luawrap.luaflowsolution;
+import lmr.luawrap.luaflowstate;
 
 Command prepSimCmd;
 string cmdName = "prep-sim";

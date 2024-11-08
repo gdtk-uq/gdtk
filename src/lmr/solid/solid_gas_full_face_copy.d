@@ -1,39 +1,40 @@
 // solid_gas_full_face_copy.d
 
-module solid_gas_full_face_copy;
+module lmr.solid.solid_gas_full_face_copy;
 
-import std.json;
-import std.string;
-import std.conv;
-import std.stdio;
-import std.math;
-import std.file;
 import std.algorithm;
+import std.conv;
 import std.datetime;
+import std.file;
+import std.json;
+import std.math;
+import std.stdio;
+import std.string;
 version(mpi_parallel) {
     import mpi;
 }
 
+import gas;
+import geom;
 import nm.number;
 import ntypes.complex;
-import geom;
 import util.json_helper;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
-import lmr.fluidfvcell;
+
+import lmr.bc;
 import lmr.coredata;
-import fluidblock;
-import sfluidblock;
-import ssolidblock;
-import solidfvcell;
-import solidfvinterface;
-import gas;
-import bc;
-import solid_ghost_cell;
-import solidbc;
-import flowgradients;
+import lmr.flowgradients;
+import lmr.flowstate;
+import lmr.fluidblock;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.sfluidblock;
+import lmr.solid.solid_ghost_cell;
+import lmr.solid.solidbc;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+import lmr.solid.ssolidblock;
 
 
 // ----------------------------------------------------------------------------------

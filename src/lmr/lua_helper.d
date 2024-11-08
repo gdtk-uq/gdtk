@@ -9,36 +9,38 @@
 // RG & PJ 2015-03-17 -- First hack (with Guiness in hand)
 // 2022-04-13 -- Here, hold my beer while I add stuff for the SolidCell.
 
-import std.stdio;
-import std.conv;
-import std.string;
-import std.algorithm;
+module lmr.lua_helper;
 
-import util.lua;
-import ntypes.complex;
-import nm.number;
-import geom.luawrap;
-import gas;
+import std.algorithm;
+import std.conv;
+import std.stdio;
+import std.string;
+
 import gas.luagas_model;
+import gas;
+import gasdyn.luagasflow;
+import gasdyn.luaidealgasflow;
+import geom.luawrap;
+import geom: gridTypeName, Grid_t;
 // import kinetics;
 import kinetics.luaequilibrium_calculator;
 import nm.luabbla;
-import geom: gridTypeName, Grid_t;
+import nm.number;
+import ntypes.complex;
+import util.lua;
 
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fvinterface;
-import luaflowstate;
-import luaflowsolution;
-import gasdyn.luaidealgasflow;
-import gasdyn.luagasflow;
-import globalconfig;
-import globaldata;
-import solidfvcell;
-import ssolidblock;
-import sfluidblock;
-import ufluidblock;
-import fluidblock;
-import blockio : luafn_writeFluidMetadata,
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.luawrap.luaflowsolution;
+import lmr.luawrap.luaflowstate;
+import lmr.sfluidblock;
+import lmr.solid.solidfvcell;
+import lmr.solid.ssolidblock;
+import lmr.ufluidblock;
+import lmr.blockio : luafn_writeFluidMetadata,
     luafn_writeInitialFluidFile,
     luafn_writeSolidMetadata,
     luafn_writeInitialSolidFile;

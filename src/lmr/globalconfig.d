@@ -15,52 +15,52 @@
  *   2024-02-11: Moved to lmr5, introduced solver_mode as config option.
  */
 
-module globalconfig;
+module lmr.globalconfig;
 
+import core.stdc.stdlib : exit;
+import std.algorithm;
+import std.array;
 import std.conv;
+import std.file;
+import std.format;
+import std.json;
 import std.stdio;
 import std.string;
 import std.typecons;
-import core.stdc.stdlib : exit;
-import std.json;
-import std.file;
-import std.array;
-import std.format;
-import std.algorithm;
 
-import util.lua;
-import util.lua_service;
+import gas.luagas_model;
+import gas;
+import geom.luawrap;
+import geom;
+import kinetics;
+import lmr.lua_helper;
 import nm.luabbla;
 import nm.schedule;
-import lua_helper;
-import gas;
-import gas.luagas_model;
-import kinetics;
-import geom;
-import geom.luawrap;
+import util.json_helper;
+import util.lua;
+import util.lua_service;
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }
 version (cuda_gpu_chem) {
      import cuda_gpu_chem;
 }
-import lmrconfig;
-import util.json_helper;
-import globaldata;
-import flowstate;
-import conservedquantities;
-import fluidblock;
-import fluidblockarray;
-import sfluidblock: SFluidBlock;
-import ufluidblock: UFluidBlock;
-import ssolidblock;
-import bc;
-import user_defined_source_terms;
-import solid_udf_source_terms;
-import grid_motion;
-import grid_motion_udf;
-import mass_diffusion;
-import turbulence;
+import lmr.bc;
+import lmr.conservedquantities;
+import lmr.flowstate;
+import lmr.fluidblock;
+import lmr.fluidblockarray;
+import lmr.globaldata;
+import lmr.grid_motion;
+import lmr.grid_motion_udf;
+import lmr.lmrconfig;
+import lmr.mass_diffusion;
+import lmr.sfluidblock : SFluidBlock;
+import lmr.solid.solid_udf_source_terms;
+import lmr.solid.ssolidblock;
+import lmr.turbulence;
+import lmr.ufluidblock : UFluidBlock;
+import lmr.user_defined_source_terms;
 version(FSI) { import fsi; }
 
 // --------------------------------

@@ -5,22 +5,23 @@
  * Started: 2021-05-24
  */
 
-module efieldbc;
+module lmr.efield.efieldbc;
 
-import std.stdio;
-import std.math;
-import std.format;
 import std.conv;
+import std.format;
 import std.json;
+import std.math;
+import std.stdio;
 
-import lmr.fluidfvcell;
-import fvinterface;
 import geom;
-import util.json_helper;
 import nm.number;
-import efieldconductivity;
-import bc.boundary_condition;
-import bc.ghost_cell_effect.full_face_copy;
+import util.json_helper;
+
+import lmr.bc.boundary_condition;
+import lmr.bc.ghost_cell_effect.full_face_copy;
+import lmr.efield.efieldconductivity;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
 
 interface FieldBC {
     bool isShared() const;

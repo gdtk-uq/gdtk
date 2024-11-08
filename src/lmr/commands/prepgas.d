@@ -7,18 +7,18 @@
 
 module lmr.commands.prepgas;
 
-import std.getopt;
-import std.stdio : writeln, writefln;
-import std.string : toStringz;
 import std.conv : to;
-import std.path : dirName;
 import std.file : thisExePath, exists;
 import std.format : format;
+import std.getopt;
+import std.path : dirName;
+import std.stdio : writeln, writefln;
+import std.string : toStringz;
 
 import util.lua;
 
-import command;
-import lmrexceptions : LmrPreProcessingException;
+import lmr.commands.command;
+import lmr.lmrexceptions : LmrPreProcessingException;
 
 Command prepGasCmd;
 string cmdName = "prep-gas";

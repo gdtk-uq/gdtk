@@ -7,24 +7,26 @@
  * Version: 2015-22-04
  */
 
-module solidfvcell;
+module lmr.solid.solidfvcell;
 
-import std.conv;
-import std.string;
+import std.algorithm;
 import std.array;
+import std.conv;
 import std.format;
 import std.math;
-import std.algorithm;
-import ntypes.complex;
-import nm.number;
+import std.stdio;
+import std.string;
+
 import geom;
-import solidfvinterface;
-import solidfvvertex;
+import nm.number;
+import ntypes.complex;
+
+import lmr.fvcell : FVCell;
+import lmr.globalconfig;
+import lmr.solid.solidfvinterface;
+import lmr.solid.solidfvvertex;
 import lmr.solid.solidstate;
 import lmr.solid.solidthermalmodel;
-import std.stdio;
-import globalconfig;
-import lmr.fvcell : FVCell;
 
 class SolidFVCell : FVCell {
 public:

@@ -5,19 +5,19 @@
  * Version: 2015-22-04: initial cut
  */
 
-module solidfvinterface;
+module lmr.solid.solidfvinterface;
 
 import std.math;
 
-import ntypes.complex;
-import nm.number;
-
 import geom;
-import ssolidblock;
-import globaldata;
-import globalconfig;
-import solidfvcell;
+import nm.number;
+import ntypes.complex;
+
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.solid.solidfvcell;
 import lmr.solid.solidstate;
+import lmr.solid.ssolidblock;
 
 class SolidFVInterface {
 public:

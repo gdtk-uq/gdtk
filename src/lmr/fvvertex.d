@@ -6,20 +6,22 @@
  * Version: 2014-07-17: initial cut, to explore options.
  */
 
-module fvvertex;
+module lmr.fvvertex;
 
-import std.string;
 import std.conv;
-import geom;
+import std.string;
+
 import gas;
-import globalconfig;
-import flowstate;
-import flowgradients;
-import lmr.fluidfvcell : FluidFVCell;
-import fvinterface;
-import lsqinterp;
-import ntypes.complex;
+import geom;
 import nm.number;
+import ntypes.complex;
+
+import lmr.flowgradients;
+import lmr.flowstate;
+import lmr.fluidfvcell : FluidFVCell;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.lsqinterp;
 
 class FVVertex {
 public:
