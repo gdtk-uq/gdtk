@@ -37,7 +37,6 @@ import conservedquantities;
 import lua_helper;
 import util.json_helper;
 import grid_motion;
-import grid_utils.grid_deform;
 import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
 import block;

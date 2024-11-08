@@ -21,7 +21,6 @@ version(mpi_parallel) {
 import gas.luagas_model;
 import gas;
 import geom;
-import grid_utils.grid_deform;
 import kinetics;
 import nm.bbla;
 import nm.number;
