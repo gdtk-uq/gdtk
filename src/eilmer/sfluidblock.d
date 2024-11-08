@@ -83,7 +83,6 @@ public:
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     OneDInterpolator one_d;
-    ConservedQuantities flux;
 
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
@@ -2459,101 +2458,6 @@ public:
         }
         set_cell_dt_chem(-1.0);
     } // end propagate_inflow_data_west_to_east()
-
-    @nogc
-    void third_order_flux_calc(size_t gtl, size_t[] face_idxs)
-    {
-    /*
-        Experimental high-order parabolic reconstruction, using a 6 cell
-        symmetric stencil, and possibly the unusual ASF flux calculator.
-    */
-        immutable bool hpl = myConfig.apply_heuristic_pressure_based_limiting;
-        immutable size_t neq = myConfig.cqi.n;
-        immutable size_t nsp = myConfig.n_species;
-        immutable size_t nmodes = myConfig.n_modes;
-        immutable size_t nturb = myConfig.turb_model.nturb;
-        immutable bool is3D = (myConfig.dimensions == 3);
-        immutable bool MHD = myConfig.MHD;
-        immutable bool apply_limiter = myConfig.apply_limiter;
-        immutable bool extrema_clipping = myConfig.extrema_clipping;
-        immutable InterpolateOption ti = myConfig.thermo_interpolator;
-
-        number beta = 1.0;
-        Vector3 gvel;
-        gvel.clear();
-
-        foreach(idx; face_idxs){
-            size_t L2 = facedata.stencil_idxs[idx].L2;
-            size_t L1 = facedata.stencil_idxs[idx].L1;
-            size_t L0 = facedata.stencil_idxs[idx].L0;
-            size_t R0 = facedata.stencil_idxs[idx].R0;
-            size_t R1 = facedata.stencil_idxs[idx].R1;
-            size_t R2 = facedata.stencil_idxs[idx].R2;
-            if (hpl) beta =
-                compute_heuristic_pressure_limiter(celldata.flowstates[L2].gas.p,
-                                                   celldata.flowstates[L1].gas.p,
-                                                   celldata.flowstates[L0].gas.p,
-                                                   celldata.flowstates[R0].gas.p,
-                                                   celldata.flowstates[R1].gas.p,
-                                                   celldata.flowstates[R2].gas.p);
-
-            Lft.copy_values_from(celldata.flowstates[L0]);
-            Rght.copy_values_from(celldata.flowstates[R0]);
-
-            interp_l3r3(celldata.flowstates[L2], celldata.flowstates[L1],
-                        celldata.flowstates[L0], celldata.flowstates[R0],
-                        celldata.flowstates[R1], celldata.flowstates[R2],
-                        facedata.l3r3_interp_data[idx], nsp, nmodes, nturb,
-                        ti, MHD, apply_limiter, extrema_clipping,
-                        myConfig, *Lft, *Rght, beta);
-
-            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
-
-            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
-                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
-        }
-        return;
-    }
-
-    @nogc
-    void asf_flux_calc(size_t gtl, size_t[] face_idxs, bool adaptive=false)
-    {
-    /*
-        Low dissipation flux calculator, using the unusual ASF method.
-    */
-        immutable size_t neq = myConfig.cqi.n;
-        immutable size_t nsp = myConfig.n_species;
-        immutable size_t nmodes = myConfig.n_modes;
-        immutable size_t nturb = myConfig.turb_model.nturb;
-        immutable bool is3D = (myConfig.dimensions == 3);
-
-        number factor = 1.0;
-        foreach(idx; face_idxs){
-            size_t L1 = facedata.stencil_idxs[idx].L1;
-            size_t L0 = facedata.stencil_idxs[idx].L0;
-            size_t R0 = facedata.stencil_idxs[idx].R0;
-            size_t R1 = facedata.stencil_idxs[idx].R1;
-
-            facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[L0], celldata.flowstates[R0]);
-
-            if (adaptive) factor = 1.0 - facedata.flowstates[idx].S;
-
-            // This routine uses and reuses a "flux" vector that belongs to the SFluidBlock
-            // This is because we need to transform it to the global face, without messing
-            // with the components of facedata.fluxes
-            flux.clear();
-            ASF_242(celldata.flowstates[L1], celldata.flowstates[L0],
-                    celldata.flowstates[R0], celldata.flowstates[R1],
-                    myConfig, nsp, nmodes, nturb, 
-                    facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                    flux, factor);
-            foreach(i; 0 .. neq) {
-                facedata.fluxes[idx*neq +i] += flux[i];
-            }
-        }
-        return;
-    }
 
     @nogc
     override void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])

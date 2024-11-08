@@ -35,6 +35,7 @@ import fvcell;
 import lsqinterp;
 import fluidblock;
 import fluidblockio_old;
+import conservedquantities;
 import bc;
 import grid_motion;
 import grid_motion_udf;
@@ -332,6 +333,7 @@ public:
 
         allocate_dense_celldata(ncells, nghost, neq, nftl);
         allocate_dense_facedata(nfaces, nghost, neq, nftl);
+        flux = new_ConservedQuantities(neq);
 
         // We have some unstructured specific stuff that also needs to be allocated,
         // though only when using the fully unstructured convective gradients
@@ -1061,11 +1063,23 @@ public:
             if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
 
             bool second_order = allow_high_order_interpolation && (myConfig.interpolation_order == 2);
-            if (second_order) {
-                second_order_flux_calc(0, face_idxs);
-            } else {
-                first_order_flux_calc(0, face_idxs);
+            bool third_order = allow_high_order_interpolation && (myConfig.interpolation_order == 3);
+            bool pure_asf = myConfig.flux_calculator == FluxCalculator.asf;
+            bool adaptive_asf = myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf;
+
+            if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+
+            if (!pure_asf) {
+                if (second_order) {
+                    second_order_flux_calc(0, face_idxs);
+                } else if (third_order) {
+                    third_order_flux_calc(0, face_idxs);
+                } else {
+                    first_order_flux_calc(0, face_idxs);
+                }
             }
+
+            if (pure_asf || adaptive_asf) asf_flux_calc(0, face_idxs, adaptive_asf);
         } else {
             // Compute gradients of flow quantities for higher-order reconstruction, if required.
             // To be used, later, in the convective flux calculation.
