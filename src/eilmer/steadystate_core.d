@@ -331,8 +331,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     ConservedQuantities currResiduals = new_ConservedQuantities(nConserved);
     number mass_balance = 0.0;
     double omega = 1.0;                  // nonlinear update relaxation factor
-    double omega_allow_cfl_growth = 0.1; // we freeze the CFL for a relaxation factor below this value
-    double omega_min = 0.01;             // minimum allowable relaxation factor to accept an update
+    double omega_allow_cfl_growth = 0.9; // we freeze the CFL for a relaxation factor below this value
+    double omega_min = 1e-6;             // minimum allowable relaxation factor to accept an update
     double omega_reduction_factor = 0.7; // factor by which the relaxation factor is reduced during
                                          // the physicality check and line search
     double theta = GlobalConfig.sssOptions.physicalityCheckTheta;
