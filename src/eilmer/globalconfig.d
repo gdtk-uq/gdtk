@@ -43,7 +43,7 @@ version (opencl_gpu_chem) {
 version (cuda_gpu_chem) {
      import cuda_gpu_chem;
 }
-import json_helper;
+import util.json_helper;
 import globaldata;
 import flowstate;
 import conservedquantities;

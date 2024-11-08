@@ -8,7 +8,7 @@ import std.format;
 import util.lua;
 
 import simcore;
-import json_helper;
+import util.json_helper;
 import lua_helper;
 import geom;
 import globaldata;

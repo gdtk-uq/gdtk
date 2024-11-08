@@ -69,7 +69,7 @@ Example for reading an existing zip archive:
 ---
 import std.stdio : writeln, writefln;
 import std.file : read;
-import zip;
+import util.zip;
 
 void main(string[] args)
 {
@@ -95,7 +95,7 @@ Example for writing files into a zip archive:
 ---
 import std.file : write;
 import std.string : representation;
-import zip;
+import util.zip;
 
 void main()
 {
@@ -136,7 +136,7 @@ void main()
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module zip;
+module util.zip;
 
 import std.exception : enforce;
 

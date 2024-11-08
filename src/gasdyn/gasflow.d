@@ -24,7 +24,7 @@
  * [TODO] change to using Brent's function solver rather than Ridder's.
  */
 
-module gasflow;
+module gasdyn.gasflow;
 
 import std.conv;
 import std.math;
@@ -39,8 +39,9 @@ import nm.ridder;
 import nm.linesearch;
 import gas;
 import gas.cea_gas;
-import gasflowexception;
-import idealgasflow;
+import gas.gas_state;
+import gasdyn.gasflowexception;
+import gasdyn.idealgasflow;
 
 
 number[] shock_ideal(ref const(GasState) state1, number Vs, ref GasState state2, GasModel gm)

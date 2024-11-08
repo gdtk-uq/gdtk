@@ -14,7 +14,7 @@ import std.json;
 import ntypes.complex;
 import nm.number;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import globalconfig;
 import solidfvcell;

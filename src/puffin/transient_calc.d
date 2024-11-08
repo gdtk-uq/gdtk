@@ -18,7 +18,7 @@ import std.algorithm;
 import core.stdc.math: HUGE_VAL;
 import std.parallelism;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import gas;
 import kinetics;

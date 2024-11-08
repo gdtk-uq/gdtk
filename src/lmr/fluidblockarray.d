@@ -18,7 +18,7 @@ import nm.number;
 import geom;
 import globalconfig;
 import globaldata;
-import json_helper;
+import util.json_helper;
 version(mpi_parallel) {
     import mpi;
 }

@@ -21,7 +21,7 @@ import bc;
 
 import lmrconfig;
 import command;
-import json_helper : readJSONfile;
+import util.json_helper : readJSONfile;
 
 
 Command structured2unstructuredCmd;

@@ -40,7 +40,7 @@ import globalconfig;
 import bc;
 import onedinterp;
 import lsqinterp;
-import grid_deform;
+import grid_utils.grid_deform;
 import fileutil;
 import geom;
 import geom.luawrap;

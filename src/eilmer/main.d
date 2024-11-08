@@ -20,7 +20,7 @@ import std.parallelism;
 import std.algorithm;
 import std.math;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import gas;
 import gas.luagas_model;
@@ -39,8 +39,8 @@ import luaflowstate;
 import luaflowsolution;
 import luasolidprops;
 import postprocess;
-import luaidealgasflow;
-import luagasflow;
+import gasdyn.luaidealgasflow;
+import gasdyn.luagasflow;
 import turbulence;
 
 version(mpi_parallel) {

@@ -5,7 +5,7 @@
  * Date: 2017-04-02, just enough to begin the nenzfr2 demo
  */
 
-module luagasflow;
+module gasdyn.luagasflow;
 
 import std.stdio;
 import std.string;
@@ -18,8 +18,8 @@ import util.lua_service;
 import gas;
 import gas.cea_gas;
 import gas.luagas_model;
-import idealgasflow;
-import gasflow;
+import gasdyn.idealgasflow;
+import gasdyn.gasflow;
 
 // Name of metatable
 immutable string gasflowMT = "gasflow";

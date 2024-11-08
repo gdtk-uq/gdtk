@@ -20,7 +20,7 @@ import std.json;
 import util.lua;
 import nm.rsla;
 import nm.smla;
-import json_helper;
+import util.json_helper;
 import lua_helper;
 import gzip;
 import geom;

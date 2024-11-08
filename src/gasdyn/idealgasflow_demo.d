@@ -6,7 +6,7 @@
  */
 
 import std.stdio, std.math;
-import idealgasflow;
+import gasdyn.idealgasflow;
 
 void main(){
     writeln("Begin gasdynamic demo...");

@@ -16,11 +16,11 @@ import std.range;
 import std.math;
 import std.algorithm;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import gas;
 import kinetics;
-import gasflow;
+import gasdyn.gasflow;
 import config;
 import lcell;
 import piston;

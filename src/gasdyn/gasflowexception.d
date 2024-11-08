@@ -1,6 +1,6 @@
 // gasflowexception.d
 
-module gasflowexception;
+module gasdyn.gasflowexception;
 
 
 class GasFlowException : Exception {

@@ -10,7 +10,7 @@ import core.stdc.stdio: stdin, stdout, stderr;
 import std.string: toStringz;
 import core.time: dur;
 import core.thread: Thread;
-import libplot;
+import geom.misc.libplot;
 
 int main ()
 {

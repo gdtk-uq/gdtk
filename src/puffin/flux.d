@@ -10,7 +10,7 @@ import std.math;
 
 import geom;
 import gas;
-import gasflow;
+import gasdyn.gasflow;
 import config;
 import flow;
 import face;

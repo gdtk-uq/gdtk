@@ -11,7 +11,7 @@ import std.conv;
 
 import util.lua;
 import geom;
-import json_helper;
+import util.json_helper;
 import solid_ghost_cell;
 import solid_boundary_interface_effect;
 import solid_boundary_flux_effect;

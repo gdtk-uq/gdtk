@@ -5,7 +5,7 @@
  * Date: 2018-01-17
 **/
 
-module grid_deform;
+module grid_utils.grid_deform;
 
 import std.stdio;
 import fluidblock;

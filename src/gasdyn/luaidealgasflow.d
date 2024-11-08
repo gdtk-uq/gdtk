@@ -5,7 +5,7 @@
  * Date: 2016-10-16, just enough for the Billig shock shape correlation
  */
 
-module luaidealgasflow;
+module gasdyn.luaidealgasflow;
 
 import std.stdio;
 import std.string;
@@ -13,7 +13,7 @@ import std.conv;
 import std.algorithm;
 import util.lua;
 import util.lua_service;
-import idealgasflow;
+import gasdyn.idealgasflow;
 
 // Name of metatable
 immutable string idealgasflowMT = "idealgasflow";

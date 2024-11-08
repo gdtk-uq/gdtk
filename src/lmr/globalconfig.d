@@ -45,7 +45,7 @@ version (cuda_gpu_chem) {
      import cuda_gpu_chem;
 }
 import lmrconfig;
-import json_helper;
+import util.json_helper;
 import globaldata;
 import flowstate;
 import conservedquantities;

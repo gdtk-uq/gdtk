@@ -33,7 +33,7 @@
  * 2016-Nov-19: Port the conical flow functions
  */
 
-module idealgasflow;
+module gasdyn.idealgasflow;
 
 import std.conv;
 import std.math;
@@ -43,7 +43,7 @@ import nm.bbla;
 import nm.bracketing;
 import nm.ridder;
 import nm.linesearch;
-import gasflowexception;
+import gasdyn.gasflowexception;
 
 /// Isentropic flow
 

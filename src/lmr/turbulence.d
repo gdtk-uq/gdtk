@@ -11,7 +11,7 @@ import std.json;
 import flowstate;
 import flowgradients;
 import gas;
-import json_helper;
+import util.json_helper;
 import nm.number;
 import ntypes.complex;
 import globalconfig;

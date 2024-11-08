@@ -19,7 +19,7 @@ import std.math;
 import ntypes.complex;
 import nm.number;
 
-import json_helper;
+import util.json_helper;
 import gzip;
 import geom;
 import gas;
@@ -731,7 +731,7 @@ public:
         // Open filename and read the defining data in JSON format.
         auto gm = GlobalConfig.gmodel_master;
         import std.json;
-        import json_helper;
+        import util.json_helper;
         JSONValue jsonData = readJSONfile(fileName);
         //
         // Lachlan, you may decide what you want to do here and below in set_flowstate().

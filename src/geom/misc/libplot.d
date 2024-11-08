@@ -8,7 +8,7 @@
 // Peter J. 2018-03-11
 //
 
-module libplot;
+module geom.misc.libplot;
 import core.stdc.stdio;
 
 extern (C):

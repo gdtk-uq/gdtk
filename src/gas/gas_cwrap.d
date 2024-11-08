@@ -25,7 +25,7 @@ import kinetics.thermochemical_reactor;
 import kinetics.init_thermochemical_reactor;
 import kinetics.reaction_mechanism;
 
-import gasflow;
+import gasdyn.gasflow;
 
 
 // We will accumulate GasModel and GasState objects in these arrays

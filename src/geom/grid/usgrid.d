@@ -23,8 +23,8 @@ import nm.number;
 import geom.misc.kdtree;
 
 import geom;
-import paver: PavedGrid, POINT_LIST, FACE_LIST, CELL_LIST;
-import paver2d;
+import geom.grid.paver: PavedGrid, POINT_LIST, FACE_LIST, CELL_LIST;
+import paver2d = geom.grid.paver2d;
 
 //-----------------------------------------------------------------
 // For the USGCell types, we will have only the linear elements,

@@ -10,7 +10,7 @@ import ntypes.complex;
 import nm.number;
 
 import simcore;
-import json_helper;
+import util.json_helper;
 import geom;
 import globaldata;
 import globalconfig;

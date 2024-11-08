@@ -23,7 +23,7 @@ import std.math : FloatingPointControl;
 import std.conv : to;
 import dyaml;
 
-import json_helper : readJSONfile;
+import util.json_helper : readJSONfile;
 
 import lmrconfig;
 import globalconfig;

@@ -37,7 +37,7 @@ import geom;
 import gas;
 import gas.vib_specific_nitrogen;
 import globalconfig;
-import json_helper;
+import util.json_helper;
 import flowstate;
 import vtk_writer;
 import lmrconfig;
@@ -48,8 +48,8 @@ import geom.luawrap;
 import gas.luagas_model;
 import luaflowstate;
 import luaflowsolution;
-import luaidealgasflow;
-import luagasflow;
+import gasdyn.luaidealgasflow;
+import gasdyn.luagasflow;
 import geom.misc.kdtree;
 
 

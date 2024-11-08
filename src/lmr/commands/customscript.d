@@ -25,15 +25,15 @@ import gas;
 import gas.luagas_model;
 import nm.luabbla;
 
-import json_helper;
+import util.json_helper;
 import lua_helper : initLuaStateForPrep;
 import lmrconfig : lmrCfg;
 import command;
 import globalconfig;
 import luaflowsolution;
 import luaflowstate;
-import luaidealgasflow;
-import luagasflow;
+import gasdyn.luaidealgasflow;
+import gasdyn.luagasflow;
 import blockio : luafn_writeFluidMetadata, luafn_writeInitialFluidFile;
 
 Command customScriptCmd;

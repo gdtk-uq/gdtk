@@ -4,7 +4,7 @@
 // Author: Rowan G.
 // 2021-01-30: Extracted from luagas_model.d
 //
-module gas_calc;
+module gas.gas_calc;
 
 import std.stdio;
 import std.conv;
@@ -23,8 +23,8 @@ version (with_dvode)
 {
     import kinetics.luapseudo_species_kinetics;
 }
-import luaidealgasflow;
-import luagasflow;
+import gasdyn.luaidealgasflow;
+import gasdyn.luagasflow;
 import nm.luabbla;
 
 int main(string[] args) {

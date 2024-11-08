@@ -17,7 +17,7 @@ import std.math;
 import std.algorithm;
 import std.parallelism;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import config;
 import streamtube;

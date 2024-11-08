@@ -16,7 +16,7 @@ import std.json;
 import lmr.fluidfvcell;
 import fvinterface;
 import geom;
-import json_helper;
+import util.json_helper;
 import nm.number;
 import efieldconductivity;
 import bc.boundary_condition;

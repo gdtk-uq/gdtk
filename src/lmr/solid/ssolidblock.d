@@ -23,7 +23,7 @@ import util.lua_service;
 import nm.rsla;
 import nm.smla;
 import geom.luawrap.luasgrid : checkStructuredGrid;
-import json_helper;
+import util.json_helper;
 import lua_helper;
 import gzip;
 import geom;

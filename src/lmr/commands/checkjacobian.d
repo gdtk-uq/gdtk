@@ -32,7 +32,7 @@ import init : initConfiguration;
 import newtonkrylovsolver;
 import cmdhelper;
 import command;
-import json_helper;
+import util.json_helper;
 import lmrconfig;
 import blockio;
 import flowsolution;

@@ -12,7 +12,7 @@ import std.conv : to;
 import std.format : format;
 import std.process : environment;
 import std.json;
-import json_helper : readJSONfile;
+import util.json_helper : readJSONfile;
 
 import globalconfig;
 

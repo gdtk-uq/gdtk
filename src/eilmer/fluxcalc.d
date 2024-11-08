@@ -17,7 +17,7 @@ import nm.number;
 import geom;
 import gas;
 import flowstate;
-import gasflow: osher_riemann;
+import gasdyn.gasflow: osher_riemann;
 import conservedquantities;
 import fvinterface;
 import globalconfig;

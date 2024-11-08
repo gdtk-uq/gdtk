@@ -18,7 +18,7 @@ import geom;
 import fluidblock;
 import sfluidblock: SFluidBlock;
 import globaldata;
-import json_helper;
+import util.json_helper;
 import bc;
 
 BoundaryCellEffect make_BCE_from_json(JSONValue jsonData, int blk_id, int boundary)

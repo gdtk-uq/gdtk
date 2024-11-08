@@ -29,7 +29,7 @@ import ntypes.complex;
 import nm.number;
 
 import lmrconfig;
-import json_helper;
+import util.json_helper;
 import globalconfig;
 import globaldata;
 import fileutil;
