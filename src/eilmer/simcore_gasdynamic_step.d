@@ -295,34 +295,11 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     shared int ftl = 0; // time-level within the overall convective-update
     shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
 
-    // Preparation for the inviscid gas-dynamic flow update.
-    if (GlobalConfig.udf_source_terms) {
-        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-            if (!blk.active) continue;
-            int local_ftl = ftl;
-            int local_gtl = gtl;
-            double local_sim_time = SimState.time;
-            foreach (cell; blk.cells) {
-                size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                if (blk.grid_type == Grid_t.structured_grid) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                    i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                }
-                getUDFSourceTermsForCell(blk.myL, cell, local_gtl, local_sim_time,
-                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-            }
-        }
-    }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	if (blk.active) {
-	    blk.clear_fluxes_of_conserved_quantities();
-	    foreach (cell; blk.cells) {
-		cell.clear_source_vector();
-		cell.data_is_bad = false;
-	    }
-	}
+        if (blk.active) {
+            blk.clear_fluxes_of_conserved_quantities();
+            blk.clear_cell_source_vectors();
+        }
     }
     exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
     exchange_ghost_cell_gas_solid_boundary_data();
@@ -406,9 +383,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                 // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
                 // at the cell interfaces before the viscous flux calculation.
                 if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                    foreach(f; blk.faces) {
-                        f.average_cell_deriv_values(0);
-                    }
+                    blk.average_lsq_cell_derivs_to_faces();
                 }
             }
         }
@@ -439,23 +414,23 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
     } // end if viscous
     foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-	if (!blk.active) continue;
-	int blklocal_ftl = ftl;
-	int blklocal_gtl = gtl;
-	double dt = dt_global;
-	double blklocal_sim_time = SimState.time;
-	foreach (cell; blk.cells) {
-	    cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
-	    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-	    if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-	}
-    blk.time_derivatives(blklocal_gtl, blklocal_ftl);
-	if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
+        if (!blk.active) continue;
         auto cqi = blk.myConfig.cqi;
+        int blklocal_ftl = ftl;
+        int blklocal_gtl = gtl;
+        double dt = dt_global;
+        size_t ncq = cqi.n;
+
+        blk.eval_fluid_source_vectors(blk.omegaz);
+        blk.eval_udf_source_vectors(SimState.time);
+        blk.time_derivatives(blklocal_gtl, blklocal_ftl);
+        if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
+
         // Coefficients for the j=1 stage update.
         double s = SimState.s_RKL;
         double muj_tilde;
-        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
+        immutable bool is_single_step = (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step);
+        if (is_single_step) {
             // RKL1 (j=1)
             muj_tilde = 2.0/(s*s+s);
         } else {
@@ -463,22 +438,30 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             muj_tilde = 4.0/(3.0*(s*s+s-2.0));
         }
         // The update itself.
-	foreach (cell; blk.cells) {
-            auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto dUdt0 = cell.dUdt[0];
-            foreach (k; 0 .. cqi.n) {
-                U1[k] = U0[k] + muj_tilde*dt*dUdt0[k];
+        auto dUdt0 = blk.celldata.dUdt0;
+        auto U0 = blk.celldata.U0;
+        auto U1 = blk.celldata.U1;
+
+        foreach (k; 0 .. blk.ncells*ncq) {
+            U1[k] = U0[k] + muj_tilde*dt*dUdt0[k];
+        }
+
+        if (!is_single_step) {
+            // RKL2 (j=1)
+            // Make a copy of the initial conserved quantities.
+            // It will be used in the j > 1 stages.
+            foreach (k; 0 .. blk.ncells*ncq) {
+                blk.celldata.U3[k] = U0[k];
             }
-	    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
-                // RKL1 (j=1)
-                // Nothing more to do.
-            } else {
-                // RKL2 (j=1)
-                // Make a copy of the initial conserved quantities.
-                // It will be used in the j > 1 stages.
-                cell.U[3].copy_values_from(cell.U[0]);
-            }
-            cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
-	}
+        }
+
+        foreach (id; 0 .. blk.ncells) {
+            size_t idx = id*ncq;
+            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U1[idx .. idx+ncq],
+                                        blk.celldata.flowstates[id], blk.omegaz, id, blk.myConfig);
+            if (okay!=0) blk.celldata.data_is_bad[id] = true;
+        }
+
         try {
             local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
         }  catch (Exception e) {
@@ -563,36 +546,12 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     foreach (j; 2..SimState.s_RKL+1) {
         if (euler_step) { continue;}
         ftl = 1;
-
-        // Preparation for the inviscid gas-dynamic flow update.
-        if (GlobalConfig.udf_source_terms && GlobalConfig.eval_udf_source_terms_at_each_stage) {
-            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-                if (!blk.active) continue;
-                int blklocal_ftl = ftl;
-                int blklocal_gtl = gtl;
-                double blklocal_sim_time = SimState.time;
-                foreach (cell; blk.cells) {
-                    size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                    if (blk.grid_type == Grid_t.structured_grid) {
-                        auto sblk = cast(SFluidBlock) blk;
-                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                        i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                    }
-                    getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
-                                             blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                }
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                blk.clear_fluxes_of_conserved_quantities();
+                blk.clear_cell_source_vectors();
             }
         }
-	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) {
-		blk.clear_fluxes_of_conserved_quantities();
-		foreach (cell; blk.cells) {
-		    cell.clear_source_vector();
-		    cell.data_is_bad = false;
-		}
-	    }
-	}
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
         exchange_ghost_cell_gas_solid_boundary_data();
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -675,9 +634,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                     // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
                     // at the cell interfaces before the viscous flux calculation.
                     if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                        foreach(f; blk.faces) {
-                            f.average_cell_deriv_values(0);
-                        }
+                        blk.average_lsq_cell_derivs_to_faces();
                     }
                 }
             }
@@ -712,13 +669,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    int blklocal_ftl = ftl;
 	    int blklocal_gtl = gtl;
 	    double dt = dt_global;
-	    foreach (cell; blk.cells) {
-		cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
-		if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-		if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-	    }
-		blk.time_derivatives(blklocal_gtl, blklocal_ftl);
-	    if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
+        auto cqi = blk.myConfig.cqi;
+        size_t ncq = cqi.n;
+
+        blk.eval_fluid_source_vectors(blk.omegaz);
+        blk.eval_udf_source_vectors(SimState.time);
+        blk.time_derivatives(blklocal_gtl, blklocal_ftl);
+        if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
+
             //
             // Coefficients for the update, stage j.
             double s = SimState.s_RKL;
@@ -756,26 +714,33 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             }
             //
             // The update itself.
-            auto cqi = blk.myConfig.cqi;
-	    foreach (cell; blk.cells) {
-                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                    // RKL1
-                    auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto U2 = cell.U[2];
-                    auto dUdt0 = cell.dUdt[1];
-                    foreach (k; 0 .. cqi.n) {
-                        U2[k] = muj*U1[k] + vuj*U0[k] + muj_tilde*dt*dUdt0[k];
-                    }
-                } else {
-                    // RKL2
-                    auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto U2 = cell.U[2]; auto U3 = cell.U[3];
-                    auto dUdt0 = cell.dUdt[1]; auto dUdtO = cell.dUdt[0]; // Note the subtly-different names.
-                    foreach (k; 0 .. cqi.n) {
-                        U2[k] = muj*U1[k] + vuj*U0[k] + (1.0-muj-vuj)*U3[k] +
-                            muj_tilde*dt*dUdt0[k] + gam_tilde*dt*dUdtO[k];
-                    }
+            if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                auto dUdt0 = blk.celldata.dUdt1;
+                auto U0 = blk.celldata.U0;
+                auto U1 = blk.celldata.U1;
+                auto U2 = blk.celldata.U2;
+                foreach (k; 0 .. blk.ncells*ncq) {
+                    U2[k] = muj*U1[k] + vuj*U0[k] + muj_tilde*dt*dUdt0[k];
                 }
-		cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
-	    }
+            } else {
+                auto dUdt0 = blk.celldata.dUdt1;
+                auto dUdtO = blk.celldata.dUdt0; // Note the subtly-different names.
+                auto U0 = blk.celldata.U0;
+                auto U1 = blk.celldata.U1;
+                auto U2 = blk.celldata.U2;
+                auto U3 = blk.celldata.U3;
+                foreach (k; 0 .. blk.ncells*ncq) {
+                    U2[k] = muj*U1[k] + vuj*U0[k] + (1.0-muj-vuj)*U3[k] +
+                        muj_tilde*dt*dUdt0[k] + gam_tilde*dt*dUdtO[k];
+                }
+            }
+        foreach (id; 0 .. blk.ncells) {
+            size_t idx = id*ncq;
+            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U2[idx .. idx+ncq],
+                                        blk.celldata.flowstates[id], blk.omegaz, id, blk.myConfig);
+            if (okay!=0) blk.celldata.data_is_bad[id] = true;
+        }
+
             try {
                 local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
             }  catch (Exception e) {
