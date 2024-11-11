@@ -278,3 +278,23 @@ void predict_vertex_positions(SFluidBlock blk, double dt, int gtl)
     }
     return;
 } // end predict_vertex_positions()
+
+
+// In the steady-state solver, we don't have a physical time step to
+// predict the future position of the vertices, so we can't use the above
+// method of applying the GCL. Instead, the interface velocity
+// is the average of the vertex velocities, and we
+// use the GCL to get the time derivative of volume directly.
+@nogc
+void compute_avg_face_vel(FluidBlock blk, int gtl) {
+    foreach (face; blk.faces) {
+        Vector3 face_vel = Vector3(0.0, 0.0, 0.0);
+        foreach (vertex; face.vtx) {
+            face_vel.x += vertex.vel[gtl].x;
+            face_vel.y += vertex.vel[gtl].y;
+            face_vel.z += vertex.vel[gtl].z;
+        }
+        face_vel.scale(1.0 / face.vtx.length);
+        face.gvel.set(face_vel);
+    }
+}

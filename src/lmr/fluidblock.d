@@ -18,6 +18,10 @@ version(mpi_parallel) {
     import mpi;
 }
 
+import grid_motion;
+import grid_motion_udf;
+import grid_motion_shock_fitting;
+
 import gas.luagas_model;
 import gas;
 import geom;
@@ -1332,7 +1336,8 @@ public:
         auto cqi = myConfig.cqi;
         auto nConserved = cqi.n;
 
-        flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, nConserved, spatial_order_of_jacobian, ptJac.local.aa.length, ncells);
+        size_t n_vtx = (myConfig.grid_motion != GridMotion.none) ? vertices.length : 0;
+        flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, nConserved, spatial_order_of_jacobian, ptJac.local.aa.length, ncells, n_vtx);
         flowJacobian.local.ia[flowJacobian.ia_idx] = 0;
         flowJacobian.ia_idx += 1;
         size_t n = ptJac.local.ia.length-1;
@@ -1681,6 +1686,17 @@ public:
      *  Its effect should replicate evalRHS() in steadystatecore.d for a subset of cells.
      */
     {
+        // assume static grid for the preconditioner jacobian for the moment.
+        // if (GlobalConfig.grid_motion == GridMotion.shock_fitting) {
+        //     foreach (i, fba; fluidBlockArrays) {
+        //         if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba, ftl); }
+        //     }
+
+        //     foreach (blk; localFluidBlocksBySize) {
+        //         compute_avg_face_vel(blk, ftl);        
+        //     }
+        // }
+
 
         foreach(iface; iface_list) iface.F.clear();
         foreach(cell; cell_list) cell.clear_source_vector();
@@ -1782,6 +1798,13 @@ public:
 
         size_t m = to!size_t(maxLinearSolverIterations);
         size_t n = nConserved*cells.length;
+
+        // add the number of grid degrees of freedom to the total
+        // number of variables
+        if (myConfig.grid_motion != GridMotion.none) {
+            n += vertices.length * myConfig.dimensions;
+        }
+
         nvars = n;
         // Now allocate arrays and matrices
         R.length = n;

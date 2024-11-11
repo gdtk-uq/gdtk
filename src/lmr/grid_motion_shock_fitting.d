@@ -37,7 +37,7 @@ version(mpi_parallel) {
 }
 
 
-void compute_vtx_velocities_for_sf(FBArray fba)
+void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
 {
     // The shock-fitting is coordinated by the FBArray which has a global view
     // of the shock boundary.  The boundary may be composed of several blocks
@@ -134,7 +134,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                 // and also to compute the counter-kink velocities.
                 foreach (k; 0 .. blk.nkv) {
                     foreach (j; 0 .. blk.njv) {
-                        fba.vtx_pos[j0+j][k0+k] = blk.get_vtx(0,j,k).pos[0];
+                        fba.vtx_pos[j0+j][k0+k] = blk.get_vtx(0,j,k).pos[gtl];
                     }
                 }
             } // end if canFind
@@ -272,7 +272,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
         // The shock boundary is a line in 2D.
         int k = 0;
         // First vertex has only one face, so just use that velocity.
-        Vector3 v = fba.vtx_dir[0][k]; v.scale(fba.face_ws[0][k]); fba.vtx_vel[0][k].set(v);
+        Vector3 v = fba.vtx_dir[gtl][k]; v.scale(fba.face_ws[gtl][k]); fba.vtx_vel[gtl][k].set(v);
         // Do Ian's upwind weighting for vertices between faces.
         // I think that Ian used the post-shock flow properties.
         // Across the shock the tangential velocity will be unchanged, so we use that.
@@ -370,8 +370,8 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             bndry_vel.scale(blk.myConfig.shock_fitting_scale_factor);
                             foreach (i; 0 .. blk.niv) {
                                 auto vtx_vel = blk.get_vtx(i,j,k).vel;
-                                vtx_vel[0].set(bndry_vel);
-                                vtx_vel[0].scale(fba.velocity_weights[i0+i][j0+j][k0+k]);
+                                vtx_vel[gtl].set(bndry_vel);
+                                vtx_vel[gtl].scale(fba.velocity_weights[i0+i][j0+j][k0+k]);
                                 // Note that we set only the first element of the velocity array.
                             }
                         }
@@ -409,13 +409,15 @@ number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
         // Conservation of mass, equation 4.5 in Ian's thesis.
         number ws1 = (L0.gas.rho*dot(L0.vel,n) - R0.gas.rho*dot(R0.vel,n)) / (L0.gas.rho - R0.gas.rho);
         // Conservation of momentum, equation 4.6 in Ian's thesis.
-        double pRpL = R0.gas.p.re - L0.gas.p.re;
-        number ws2 = veln - sgn(pRpL)/L0.gas.rho * sqrt(fabs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
+        number pRpL = R0.gas.p - L0.gas.p;
+        number sgn_pRpL = sgn(R0.gas.p.re - L0.gas.p.re);
+        number ws2 = veln - sgn_pRpL/L0.gas.rho * sqrt(fabs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
         immutable double alpha = 0.5;
         return alpha*ws1 + (1.0-alpha)*ws2;
     } else {
         // Estimate shock-wave speed using local sound speed.
-        return veln - L0.gas.a;
+        // return veln - L0.gas.a;
+        return L0.gas.a;
     }
 } // end wave_speed()
 

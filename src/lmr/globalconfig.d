@@ -2521,15 +2521,17 @@ void configCheckPoint2()
     alias cfg = GlobalConfig;
     // More checking of constraints on the config parameters.
     version(nk_accelerator) {
-        if (cfg.grid_motion != GridMotion.none) {
-            throw new Error("Grid motion is not compatible e4-nk-dist.");
-        }
+        // if (cfg.grid_motion != GridMotion.none) {
+        //     throw new Error("Grid motion is not compatible e4-nk-dist.");
+        // }
+        // this is OK now
     }
     if (cfg.grid_motion != GridMotion.none) {
         if (cfg.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
             cfg.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage ||
             cfg.gasdynamic_update_scheme == GasdynamicUpdate.backward_euler ||
-            cfg.gasdynamic_update_scheme == GasdynamicUpdate.implicit_rk1) {
+            cfg.gasdynamic_update_scheme == GasdynamicUpdate.implicit_rk1 ||
+            cfg.solverMode == SolverMode.steady) {
             // pass, we have a consistent selection.
         } else {
             string msg = "We have some grid_motion but not a valid GasdynamicUpdate scheme for grid motion.";

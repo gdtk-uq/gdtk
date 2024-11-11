@@ -1431,7 +1431,10 @@ function InFlowBC_ShockFitting:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
-   o.ghost_cell_data_available = false
+   o.ghost_cell_data_available = true
+   o.preReconAction = {
+      FlowStateCopy:new{flowState=o.flowState, x0=o.x0, y0=o.y0, z0=o.z0, r=o.r}
+   }
    o.postConvFluxAction = { ConstFlux:new{flowState=o.flowState, x0=o.x0, y0=o.y0, z0=o.z0, r=o.r} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true

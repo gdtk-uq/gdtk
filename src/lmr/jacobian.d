@@ -43,13 +43,13 @@ public:
 
     Matrix!double D;
     Matrix!double Dinv;
-    this (double sigma, size_t dimensions, size_t nConserved, int spatial_order, size_t nentry, size_t ncells)
+    this (double sigma, size_t dimensions, size_t nConserved, int spatial_order, size_t nentry, size_t ncells, size_t n_vtx = 0)
     {
         this.spatial_order = (spatial_order > 1) ? 2 : 1;
         import std.stdio;
         eps = sigma;
 
-        size_local_matrix(nConserved, nentry, ncells);
+        size_local_matrix(nConserved, nentry, ncells, n_vtx * dimensions);
 
         dudU.length = nConserved;
         foreach (ref val; dudU) {val.length = nConserved; }
@@ -72,14 +72,14 @@ public:
         ia_idx += 1;
     } // end prepare_crs_indexes()
 
-    void size_local_matrix(size_t nConserved, size_t nentry, size_t ncells)
+    void size_local_matrix(size_t nConserved, size_t nentry, size_t ncells, size_t grid_dof=0)
     {
         // reserve memory for the local entries
         size_t size = nentry * nConserved * nConserved;
         local = new SMatrix!double();
-	local.aa.length = size;
-	local.ja.length = size;
-	local.ia.length = ncells * nConserved + 1;
+    	local.aa.length = size;
+    	local.ja.length = size;
+    	local.ia.length = ncells * nConserved + 1;
         D = new Matrix!double(nConserved,nConserved);
         Dinv = new Matrix!double(nConserved,nConserved);
     } // end size_local_matrix()
