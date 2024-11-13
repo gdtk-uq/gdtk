@@ -2277,7 +2277,7 @@ void applyPreconditioning()
     case PreconditionerType.ilu:
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.zed[] = blk.v[];
-            nm.smla.solve(blk.flowJacobian.local, blk.zed);
+            nm.smla.solve(blk.flowJacobian.local, blk.zed[0 .. nConserved * blk.cells.length]);
         }
         break;
     } // end switch
@@ -2314,7 +2314,7 @@ void removePreconditioning()
     case PreconditionerType.ilu:
         foreach(blk; parallel(localFluidBlocks,1)) {
             blk.dU[] = blk.zed[];
-            nm.smla.solve(blk.flowJacobian.local, blk.dU);
+            nm.smla.solve(blk.flowJacobian.local, blk.dU[0 .. nConserved * blk.cells.length]);
         }
         break;
     } // end switch
@@ -2460,7 +2460,7 @@ void evalJacobianVectorProduct(double sigma)
 void evalResidual(int ftl)
 {
     fnCount++;
-    int gtl = 0;
+    int gtl = (GlobalConfig.grid_motion != GridMotion.none) ? ftl : 0;
     double dummySimTime = -1.0;
 
     
@@ -2468,18 +2468,21 @@ void evalResidual(int ftl)
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
     }
-    exchange_ghost_cell_boundary_data(dummySimTime, 0, ftl);
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+        exchange_ghost_cell_geometry_data();
+    }
+    exchange_ghost_cell_boundary_data(dummySimTime, gtl, ftl);
     foreach (blk; localFluidBlocks) {
-        blk.applyPreReconAction(dummySimTime, 0, ftl);
+        blk.applyPreReconAction(dummySimTime, gtl, ftl);
     }
 
     if (GlobalConfig.grid_motion == GridMotion.shock_fitting) {
         foreach (i, fba; fluidBlockArrays) {
-            if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba, ftl); }
+            if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba, gtl); }
         }
 
         foreach (blk; localFluidBlocksBySize) {
-            compute_avg_face_vel(blk, ftl);        
+            compute_avg_face_vel(blk, gtl);        
         }
     }
 
@@ -2535,7 +2538,7 @@ void evalResidual(int ftl)
             blk.applyPreSpatialDerivActionAtBndryCells(dummySimTime, gtl, ftl);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.flow_property_spatial_derivatives(0);
+            blk.flow_property_spatial_derivatives(gtl);
         }
         // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
         // we need to transfer the viscous gradients before the flux calc
@@ -2545,7 +2548,7 @@ void evalResidual(int ftl)
             // at the cell interfaces before the viscous flux calculation.
             if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                 foreach(f; blk.faces) {
-                    f.average_cell_deriv_values(0);
+                    f.average_cell_deriv_values(gtl);
                 }
             }
             blk.estimate_turbulence_viscosity();
@@ -2559,7 +2562,7 @@ void evalResidual(int ftl)
             blk.viscous_flux();
         }
         foreach (blk; localFluidBlocks) {
-            blk.applyPostDiffFluxAction(dummySimTime, 0, ftl);
+            blk.applyPostDiffFluxAction(dummySimTime, gtl, ftl);
         }
     }
 
@@ -2573,7 +2576,7 @@ void evalResidual(int ftl)
             limit_factor = min(1.0, S);
         }
         foreach (i, cell; blk.cells) {
-            cell.add_inviscid_source_vector(0, 0.0);
+            cell.add_inviscid_source_vector(gtl, 0.0);
             if (blk.myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
@@ -2595,7 +2598,7 @@ void evalResidual(int ftl)
                 getUDFSourceTermsForCell(blk.myL, cell, 0, dummySimTime, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
                 cell.add_udf_source_vector();
             }
-            cell.time_derivatives(0, ftl);
+            cell.time_derivatives(gtl, ftl);
         }
     }
 }
@@ -2613,6 +2616,8 @@ void evalComplexMatVecProd(double sigma)
 {
     version(complex_numbers) {
         alias cfg = GlobalConfig;
+
+        int gtl = (GlobalConfig.grid_motion == GridMotion.none) ? 0 : 1;
 
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
         foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
@@ -2632,7 +2637,7 @@ void evalComplexMatVecProd(double sigma)
                 foreach (ivar; 0 .. nConserved) {
                     cell.U[1][ivar] += complex(0.0, sigma * blk.zed[startIdx+ivar].re);
                 }
-                cell.decode_conserved(0, 1, 0.0);
+                cell.decode_conserved(gtl, 1, 0.0);
                 startIdx += nConserved;
             }
 
@@ -2687,9 +2692,9 @@ void evalComplexMatVecProd(double sigma)
             if (blk.myConfig.grid_motion != GridMotion.none) {
                 foreach(vtx; blk.vertices) { 
                     vtx.pos[0].clear_imaginary_components();
-                    vtx.vel[0].clear_imaginary_components();
+                    // vtx.vel[0].clear_imaginary_components();
                     vtx.pos[1].clear_imaginary_components();
-                    vtx.vel[1].clear_imaginary_components();
+                    // vtx.vel[1].clear_imaginary_components();
                 }
             }
         }
@@ -3118,6 +3123,7 @@ void applyNewtonUpdate(double relaxationFactor)
                 }
             }
             blk.compute_primary_cell_geometric_data(0);
+            blk.compute_least_squares_setup(0);
         }
     }
 }
