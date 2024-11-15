@@ -47,6 +47,8 @@ import lmr.solid.solid_gas_full_face_copy;
 import lmr.solid.solidfvinterface : initPropertiesAtSolidInterfaces;
 import lmr.solid.ssolidblock : SSolidBlock;
 import lmr.ufluidblock : UFluidBlock;
+import ssolidblock : SSolidBlock;
+import blockio : BinaryBlockIO, GzipBlockIO;
 
 version(mpi_parallel) {
     import mpi;
@@ -548,6 +550,61 @@ void initMappedCellDataExchange()
             }
         }
     }
+}
+
+void initVertexPositionExchange()
+{
+    // Instantiate the exchangers. The vertex exchanger is instantiated for each
+    // GhostCellFullFaceCopy, and gets all the information it needs from the
+    // GhostCelLFullFaceCopy.
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) {
+                    bc.vertex_exchange = new BoundaryVertexFullFaceCopy(mygce.blk.id,
+                                                                        mygce.which_boundary, 
+                                                                        mygce.neighbourBlock.id,
+                                                                        mygce.neighbourFace);
+                    bc.vertex_exchange.setup_vertex_mapping_phase0();
+                }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) {
+            if (bc.vertex_exchange) bc.vertex_exchange.setup_vertex_mapping_phase1();
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) {
+            if (bc.vertex_exchange) bc.vertex_exchange.setup_vertex_mapping_phase2();
+        }
+    }
+}
+
+void initShockFitting()
+{
+    // For a simulation with shock fitting, the files defining the rails for
+    // vertex motion and the scaling of vertex velocities throughout the blocks
+    // will have been written by prep.lua + output.lua.
+    foreach (i, fba; fluidBlockArrays) {
+        if (fba.shock_fitting) {
+            version(mpi_parallel) {
+                // The MPI tasks associated with this FBArray will have
+                // their own communicator for synchronizing the content
+                // of their shock-fitting arrays.
+                // We don't care about the rank of each task within
+                // that communicator.
+                MPI_Comm_split(MPI_COMM_WORLD, to!int(i), 0, &(fba.mpicomm));
+            }
+            // FIX-ME 2024-02-28 PJ Make use of Rowan's config information to find files.
+            fba.read_rails_file(format("lmrsim/grid/gridarray-%04d.rails", i));
+            fba.read_velocity_weights(format("lmrsim/grid/gridarray-%04d.weights", i));
+        }
+    }
+
+    initVertexPositionExchange();
 }
 
 /**

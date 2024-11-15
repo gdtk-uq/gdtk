@@ -42,6 +42,31 @@ version(mpi_parallel) {
     import mpi;
 }
 
+void exchange_vertex_positions(int gtl)
+{
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) {
+            if (bc.vertex_exchange) {
+                bc.vertex_exchange.exchange_vertex_pos_phase0(gtl);
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) {
+            if (bc.vertex_exchange) {
+                bc.vertex_exchange.exchange_vertex_pos_phase1(gtl);
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) {
+            if (bc.vertex_exchange) {
+                bc.vertex_exchange.exchange_vertex_pos_phase2(gtl);
+            }
+        }
+    }
+}
+
 void exchange_ghost_cell_geometry_data()
 /*
     This routine copies the following cell geometric data from one block

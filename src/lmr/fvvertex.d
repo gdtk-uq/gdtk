@@ -38,6 +38,10 @@ public:
     WLSQGradWorkspace* ws_grad;
     LSQInterpGradients* gradients; // needed for the MLP limiter
 
+    // In steady-state shock-fitting sims, we only want to solve vertices on block-boundaries
+    // once, so some vertices should not be included in the system of equations.
+    bool solve_position = true;
+
     @disable this();
     
     this(LocalConfig myConfig,
@@ -67,6 +71,7 @@ public:
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();
         cloud_fs = other.cloud_fs.dup();
+        solve_position = other.solve_position;
     }
 
     @nogc
@@ -77,6 +82,7 @@ public:
             foreach (i; 0 .. pos.length) { pos[i].set(other.pos[i]); }
             foreach (i; 0 .. vel.length) { vel[i].set(other.vel[i]); }
             grad.copy_values_from(*(other.grad));
+            solve_position = other.solve_position;
             // omit ws_grad
         }
     } // end copy_values_from()
@@ -98,6 +104,7 @@ public:
         repr ~= ", grad=" ~ to!string(grad);
         repr ~= ", cloud_pos=" ~ to!string(cloud_pos);
         repr ~= ", cloud_fs=" ~ to!string(cloud_fs);
+        repr ~= ", solve_position=" ~ to!string(solve_position);
         // omit ws_grad
         repr ~= ")";
         return to!string(repr);

@@ -41,7 +41,8 @@ import lmr.sfluidblock;
 import lmr.solid.solidfvcell;
 import lmr.solid.solidfvinterface;
 import lmr.solid.ssolidblock;
-
+import grid_motion;
+import grid_motion_udf;
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -140,6 +141,10 @@ public:
     // We're going to store the JSONdata for the field boundaries, rather then the boundary objects themselves
     // TODO: In the future, rethink if this is a good idea. (NNG)
     JSONValue field_bc;
+
+    // for steady-state shock-fitting, we need to exchange vertex information
+    BoundaryVertexFullFaceCopy vertex_exchange;    
+
 private:
     // Working storage for boundary flux derivatives
     FlowState* _Lft, _Rght;

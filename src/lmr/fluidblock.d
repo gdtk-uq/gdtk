@@ -1802,7 +1802,9 @@ public:
         // add the number of grid degrees of freedom to the total
         // number of variables
         if (myConfig.grid_motion != GridMotion.none) {
-            n += vertices.length * myConfig.dimensions;
+            foreach (ref vtx; vertices) {
+                if (vtx.solve_position) { n += myConfig.dimensions; } 
+            }
         }
 
         nvars = n;
