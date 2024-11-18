@@ -197,6 +197,11 @@ NewtonKrylovPhaseDefaults = {
    auto_cfl_exponent = 0.75,
    limit_on_cfl_increase_ratio = 2.0,
    limit_on_cfl_decrease_ratio = 0.1,
+
+   -- shock-fitting
+   grid_motion_enabled = false,
+   shock_fitting_allow_interpolation = true,
+   shock_fitting_scale_factor = 0.5,
 }
 
 local NewtonKrylovPhases = {}
@@ -264,6 +269,9 @@ function NewtonKrylovPhase:tojson()
       str = str .. string.format('    "limit_on_cfl_increase_ratio": %.18e,\n', self.limit_on_cfl_increase_ratio)
       str = str .. string.format('    "limit_on_cfl_decrease_ratio": %.18e,\n', self.limit_on_cfl_decrease_ratio)
    end
+   str = str .. string.format('    "grid_motion_enabled": %s,\n', tostring(self.grid_motion_enabled))
+   str = str .. string.format('    "shock_fitting_allow_interpolation": %s,\n', tostring(self.shock_fitting_allow_interpolation))
+   str = str .. string.format('    "shock_fitting_scale_factor": %s,\n', tostring(self.shock_fitting_scale_factor))
    str = str .. '    "dummy_entry_without_trailing_comma": 0\n' -- no comma on last entry
    str = str .. '}'
    return str

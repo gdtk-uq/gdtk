@@ -270,6 +270,11 @@ struct NKPhaseConfig {
     double limitOnCFLIncreaseRatio = 2.0;
     double limitOnCFLDecreaseRatio = 0.1;
 
+    // Shock fitting settings
+    bool gridMotionEnabled = false;
+    int shockFittingAllowInterpolation = true;
+    double shockFittingScaleFactor = 0.5;
+
     void readValuesFromJSON(JSONValue jsonData)
     {
         useLocalTimestep = getJSONbool(jsonData, "use_local_timestep", useLocalTimestep);
@@ -291,6 +296,10 @@ struct NKPhaseConfig {
         autoCFLExponent = getJSONdouble(jsonData, "auto_cfl_exponent", autoCFLExponent);
         limitOnCFLIncreaseRatio = getJSONdouble(jsonData, "limit_on_cfl_increase_ratio", limitOnCFLIncreaseRatio);
         limitOnCFLDecreaseRatio = getJSONdouble(jsonData, "limit_on_cfl_decrease_ratio", limitOnCFLDecreaseRatio);
+
+        gridMotionEnabled = getJSONbool(jsonData, "grid_motion_enabled", gridMotionEnabled);
+        shockFittingAllowInterpolation = getJSONbool(jsonData, "shock_fitting_allow_interpolation", true);
+        shockFittingScaleFactor = getJSONdouble(jsonData, "shock_fitting_scale_factor", shockFittingScaleFactor);
     }
 }
 
@@ -745,6 +754,13 @@ void readNewtonKrylovConfig()
             errMsg ~= format("ERROR: incompatible settings in phase %d,\n", i+1);
             errMsg ~= "       frozen_limiter_for_jacobian cannot be false when frozen_limiter_for_residual is true.\n";
             throw new Error(errMsg);
+        }
+
+        // Check for nonsensical grid motion settings
+        if (cfg.is_master_task && (cfg.grid_motion == GridMotion.none) && phase.gridMotionEnabled) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: grid motion enabled in phase %d, but no globally selected grid motion", i+1);
         }
     }
 }
@@ -1366,6 +1382,15 @@ void setPhaseSettings(size_t phase)
     if (activePhase.frozenShockDetector) {
         cfg.frozen_shock_detector = true;
     }
+    if (cfg.grid_motion == GridMotion.shock_fitting) {
+        cfg.shock_fitting_allow_flow_reconstruction = (
+            (activePhase.residualInterpolationOrder == 2) && 
+            activePhase.shockFittingAllowInterpolation);
+
+        foreach (blk; parallel(localFluidBlocks, 1)) {
+            blk.myConfig.shock_fitting_scale_factor = activePhase.shockFittingScaleFactor;
+        }
+    }
 }
 
 void computeResiduals(ref ConservedQuantities residuals)
@@ -1736,7 +1761,7 @@ void setResiduals()
             startIdx += nConserved;
         }
 
-        if (GlobalConfig.grid_motion != GridMotion.none) {
+        if (GlobalConfig.grid_motion) {
             foreach (i, vtx; blk.vertices) {
                 if (!vtx.solve_position) continue;
                 blk.R[startIdx] = vtx.vel[0].x.re;
@@ -2470,8 +2495,18 @@ void evalResidual(int ftl)
     }
 
     if (GlobalConfig.grid_motion == GridMotion.shock_fitting) {
-        foreach (i, fba; fluidBlockArrays) {
-            if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba, gtl); }
+        if (activePhase.gridMotionEnabled) {
+            foreach (i, fba; fluidBlockArrays) {
+                if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba, gtl); }
+            }
+        } else {
+            foreach (blk; parallel(localFluidBlocks, 1)) {
+                foreach (ref v; blk.vertices) {
+                    v.vel[gtl].x = 0.0;
+                    v.vel[gtl].y = 0.0;
+                    v.vel[gtl].z = 0.0;
+                }
+            }
         }
 
         foreach (blk; localFluidBlocksBySize) {
@@ -2614,6 +2649,9 @@ void evalComplexMatVecProd(double sigma)
 
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
         foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
+        if (cfg.grid_motion == GridMotion.shock_fitting && activePhase.gridMotionEnabled) {
+            GlobalConfig.shock_fitting_allow_flow_reconstruction = (activePhase.shockFittingAllowInterpolation && (activePhase.jacobianInterpolationOrder == 2));
+        }
 
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
@@ -2694,7 +2732,11 @@ void evalComplexMatVecProd(double sigma)
             }
         }
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.residualInterpolationOrder); }
-        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual; }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual; }
+        if (cfg.grid_motion == GridMotion.shock_fitting && activePhase.gridMotionEnabled) {
+            GlobalConfig.shock_fitting_allow_flow_reconstruction = (activePhase.shockFittingAllowInterpolation && (activePhase.residualInterpolationOrder == 2));
+        }
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
     }
@@ -2730,7 +2772,7 @@ void evalRealMatVecProd(double sigma)
             startIdx += nConserved;
         }
 
-        if (blk.myConfig.grid_motion != GridMotion.none) {
+        if (blk.myConfig.grid_motion) {
             foreach (i, vtx; blk.vertices) {
                 if (!vtx.solve_position) continue;
                 vtx.pos[1].x = vtx.pos[0].x + sigma * blk.zed[startIdx];
@@ -2754,7 +2796,7 @@ void evalRealMatVecProd(double sigma)
             cell.decode_conserved(0, 0, 0.0);
             startIdx += nConserved;
         }
-        if (blk.myConfig.grid_motion != GridMotion.none) {
+        if (blk.myConfig.grid_motion) {
             foreach (vtx; blk.vertices) {
                 if (!vtx.solve_position) continue;
                 blk.zed[startIdx] = (vtx.vel[1].x.re - blk.R0[startIdx])/(sigma);
@@ -3105,7 +3147,7 @@ void applyNewtonUpdate(double relaxationFactor)
             startIdx += nConserved;
         }
 
-        if (GlobalConfig.grid_motion != GridMotion.none) {
+        if (GlobalConfig.grid_motion) {
             foreach (vtx; blk.vertices) {
                 if (!vtx.solve_position) { continue; }
                 vtx.pos[0].x += omega * blk.dU[startIdx];
@@ -3120,7 +3162,7 @@ void applyNewtonUpdate(double relaxationFactor)
         }
     }
 
-    if (GlobalConfig.grid_motion != GridMotion.none) {
+    if (GlobalConfig.grid_motion) {
         exchange_vertex_positions(0);
         foreach (blk; parallel(localFluidBlocks, 1)) {
             blk.compute_primary_cell_geometric_data(0);
