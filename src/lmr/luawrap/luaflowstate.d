@@ -38,7 +38,8 @@ immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
                                            "mu", "k",
                                            "velx", "vely", "velz",
                                            "Bx", "By", "Bz", "psi", "divB",
-                                           "turb", "mu_t", "k_t", "S"];
+                                           "turb", "mu_t", "k_t", "S",
+                                           "tke", "omega", "nu_hat"];
 static const(FlowState*)[] flowStateStore;
 
 FlowState* checkFlowState(lua_State* L, int index)
@@ -252,6 +253,7 @@ The value should be a number.`;
     double[] turb;
     lua_getfield(L, tblindx, "turb");
     if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
         auto tm = GlobalConfig.turb_model;
         turb.length = tm.nturb;
         foreach(it; 0 .. tm.nturb){
