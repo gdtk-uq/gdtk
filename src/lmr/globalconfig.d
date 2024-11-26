@@ -1174,7 +1174,7 @@ final class GlobalConfig {
     // Activate the electric field solver by Nick Gibbons
     shared static int electric_field_count = 1000000000;
     shared static bool solve_electric_field = false;
-    shared static string field_conductivity_model = "none";
+    shared static string conductivity_model_name = "none";
 
     // Parameters controlling viscous/molecular transport
     //
@@ -1469,7 +1469,7 @@ public:
     double divB_damping_length;
     int electric_field_count;
     bool solve_electric_field;
-    string field_conductivity_model;
+    string conductivity_model_name;
     //
     bool viscous;
     bool use_viscosity_from_cells;
@@ -1655,7 +1655,7 @@ public:
         divB_damping_length = cfg.divB_damping_length;
         electric_field_count = cfg.electric_field_count;
         solve_electric_field = cfg.solve_electric_field;
-        field_conductivity_model = cfg.field_conductivity_model;
+        conductivity_model_name = cfg.conductivity_model_name;
         //
         viscous = cfg.viscous;
         use_viscosity_from_cells = cfg.use_viscosity_from_cells;
@@ -2011,7 +2011,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("divB_damping_length", "divB_damping_length"));
     mixin(update_int("electric_field_count", "electric_field_count"));
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
-    mixin(update_string("field_conductivity_model", "field_conductivity_model"));
+    mixin(update_string("conductivity_model_name", "conductivity_model_name"));
 
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
@@ -2100,7 +2100,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  divB_damping_length: ", cfg.divB_damping_length);
         writeln("  electric_field_count: ", cfg.electric_field_count);
         writeln("  solve_electric_field: ", cfg.solve_electric_field);
-        writeln("  field_conductivity_model: ", cfg.field_conductivity_model);
+        writeln("  conductivity_model_name: ", cfg.conductivity_model_name);
     }
     configCheckPoint2();
     //
