@@ -369,6 +369,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     mixin(pushGasVar("rho"));
     mixin(pushGasVar("mu"));
     mixin(pushGasVar("k", "k"));
+    mixin(pushGasVar("sigma"));
     version(multi_T_gas) {
         mixin(pushGasVarArray("k_modes"));
     }
