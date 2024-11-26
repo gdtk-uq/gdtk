@@ -305,6 +305,15 @@ void update_ch_for_divergence_cleaning()
     }
 } // end update_ch_for_divergence_cleaning()
 
+void evaluate_electrical_conductivity()
+{
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        if (blk.active) {
+            blk.evaluate_electrical_conductivity();
+        }
+    }
+}
+
 void set_mu_and_k()
 {
     version(turbulence){

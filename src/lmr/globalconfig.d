@@ -61,6 +61,7 @@ import grid_motion;
 import grid_motion_udf;
 import mass_diffusion;
 import turbulence;
+import efieldconductivity;
 version(FSI) { import fsi; }
 
 // --------------------------------
@@ -1242,6 +1243,7 @@ final class GlobalConfig {
     shared static double transient_mu_t_factor = 1.0;
     shared static double freestream_turbulent_intensity = 0.01;
     static TurbulenceModel turb_model;
+    static ConductivityModel conductivity_model;
     static BlockZone[] turbulent_zones;
     //
     // Indicate presence of user-defined source terms
@@ -1509,6 +1511,7 @@ public:
     double transient_mu_t_factor;
     double freestream_turbulent_intensity;
     TurbulenceModel turb_model;
+    ConductivityModel conductivity_model;
     BlockZone[] turbulent_zones;
     //
     bool udf_source_terms;
@@ -1695,6 +1698,7 @@ public:
         transient_mu_t_factor = cfg.transient_mu_t_factor;
         freestream_turbulent_intensity = cfg.freestream_turbulent_intensity;
         turb_model = cfg.turb_model.dup;
+        conductivity_model = create_conductivity_model(cfg.conductivity_model_name, cfg.gmodel_master);
         foreach (bz; cfg.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
         //
         udf_source_terms = cfg.udf_source_terms;
@@ -2136,6 +2140,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("transient_mu_t_factor", "transient_mu_t_factor"));
     mixin(update_double("freestream_turbulent_intensity", "freestream_turbulent_intensity"));
     cfg.turb_model = init_turbulence_model(cfg.turbulence_model_name, jsonData);
+    cfg.conductivity_model =  create_conductivity_model(cfg.conductivity_model_name, cfg.gmodel_master);
     if (cfg.verbosity_level > 1) {
         writeln("  viscous: ", cfg.viscous);
         writeln("  use_viscosity_from_cells: ", cfg.use_viscosity_from_cells);
