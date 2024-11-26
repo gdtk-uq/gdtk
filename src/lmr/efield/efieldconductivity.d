@@ -123,7 +123,7 @@ ConductivityModel create_conductivity_model(string name, GasModel gm){
         conductivity_model = new DiffusionConductivity(gm);
         break;
     case "none":
-        throw new Error("User has asked for solve_electric_field but failed to specify a conductivity model.");
+        break; //throw new Error("User has asked for solve_electric_field but failed to specify a conductivity model.");
     default:
         string errMsg = format("The conductivity model '%s' is not available.", name);
         throw new Error(errMsg);

@@ -1128,6 +1128,13 @@ public:
         fs.mu_t = myConfig.turb_model.turbulent_viscosity(*fs, *grad, pos[0].y, dwall);
         fs.k_t = myConfig.turb_model.turbulent_conductivity(*fs, gmodel);
     }
+    
+    @nogc
+    void evaluate_electrical_conductivity()
+    {
+        auto gmodel = myConfig.gmodel;
+        fs.gas.sigma = myConfig.conductivity_model(fs.gas, pos[0], gmodel);
+    }
 
     /*
     Old k-omega stuff moved (see NNG 11/02/20)

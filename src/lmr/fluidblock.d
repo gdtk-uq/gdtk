@@ -516,6 +516,15 @@ public:
         }
         }
     } // end estimate_turbulence_viscosity()
+    
+    @nogc
+    void evaluate_electrical_conductivity(FluidFVCell[] cell_list = [])
+    {
+        if (cell_list.length == 0) { cell_list = cells; }
+        foreach (cell; cell_list) {
+            cell.evaluate_electrical_conductivity();
+        }
+    }
 
     @nogc
     void set_cell_dt_chem(double dt_chem)
@@ -1719,6 +1728,9 @@ public:
         if (myConfig.nsteps_of_chemistry_ramp > 0) {
             double S = SimState.step/to!double(myConfig.nsteps_of_chemistry_ramp);
             limit_factor = min(1.0, S);
+        }
+        if (myConfig.conductivity_model) {
+            foreach (cell; cell_list) cell.evaluate_electrical_conductivity();
         }
         foreach (i, cell; cell_list) {
             cell.add_inviscid_source_vector(gtl, 0.0);

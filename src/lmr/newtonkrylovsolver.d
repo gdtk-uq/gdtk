@@ -2488,6 +2488,7 @@ void evalResidual(int ftl)
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
+        if (blk.myConfig.conductivity_model) { blk.evaluate_electrical_conductivity(); }
         // the limit_factor is used to slowly increase the magnitude of the
         // thermochemical source terms from 0 to 1 for problematic reacting flows
         double limit_factor = 1.0;
