@@ -50,7 +50,13 @@ class RaizerConductivity : ConductivityModel{
     this() {}
     @nogc final number opCall(ref const(GasState) gs, const Vector3 pos, GasModel gm){
         version(multi_T_gas) {
-            double Tref = gs.T_modes[0].re; // Hmmm. This will crash in single temp
+            double Tref;
+            if (gm.n_modes == 0) {
+                Tref = gs.T.re;
+            } else {
+                size_t iTe = gm.n_modes-1;
+                Tref = gs.T_modes[iTe].re;
+            }
         } else {
             double Tref = gs.T.re;
         }
