@@ -46,7 +46,6 @@ version(mpi_parallel) {
 version(FSI) { import fsi; }
 import simcore_exchange;
 
-
 // To avoid race conditions, there are a couple of locations where
 // each block will put its result into the following arrays,
 // then we will reduce across the arrays.
@@ -302,6 +301,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
 
     // Preparation for the inviscid gas-dynamic flow update.
+    if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
     if (GlobalConfig.udf_source_terms) {
         foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
             if (!blk.active) continue;
@@ -575,6 +575,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         ftl = 1;
 
         // Preparation for the inviscid gas-dynamic flow update.
+        if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
         if (GlobalConfig.udf_source_terms && GlobalConfig.eval_udf_source_terms_at_each_stage) {
             foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
                 if (!blk.active) continue;
@@ -963,6 +964,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             default: throw new Error("Invalid state for explicit update.");
             }
             // Phase 01 LOCAL
+            if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
             if (GlobalConfig.udf_source_terms &&
                 ((stage == 1) || GlobalConfig.eval_udf_source_terms_at_each_stage)) {
                 foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
@@ -1499,6 +1501,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     shared int gtl = 0; // grid time-level
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     // Phase 00a LOCAL
+    if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
     if (GlobalConfig.udf_source_terms) {
         try {
             foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
@@ -2345,6 +2348,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
     immutable int gtl0 = 0; // grid time-level remains at zero for the non-moving grid
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     //
+    if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
     if (GlobalConfig.udf_source_terms) {
         // Phase 00 LOCAL
         try {
@@ -2699,6 +2703,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
     immutable int gtl1 = 1;
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     //
+    if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
     if (GlobalConfig.udf_source_terms) {
         // Phase 00 LOCAL
         try {
@@ -3109,6 +3114,16 @@ void gasdynamic_implicit_increment_with_moving_grid()
 
 
 //---------------------------------------------------------------------------
+
+
+void evaluate_electrical_conductivity()
+{
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        if (blk.active) {
+            blk.evaluate_electrical_conductivity();
+        }
+    }
+}
 
 void detect_shocks(int gtl, int ftl)
 // calculate if faces/cells are considered to be influenced by a discontinuity
