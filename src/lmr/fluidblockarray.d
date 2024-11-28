@@ -112,6 +112,7 @@ class FBArray {
                         n = max(n, (nj+1)*((GlobalConfig.dimensions == 2) ? 1 : nk+1));
                     }
                 }
+                version(complex_numbers) { n *= 2; }
                 this.buffer.length = n * 3;
                 // Note that the 3 represents the maximum number of items per point,
                 // to be sent in an MPI transfer.

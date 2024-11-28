@@ -163,13 +163,20 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     foreach (k; 0 .. blk.nkc) {
                         foreach (j; 0 .. blk.njc) {
                             fba.buffer[items++] = fba.face_ws[j0+j][k0+k].re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.face_ws[j0+j][k0+k].im;
+                            }
                             fba.buffer[items++] = fba.face_a[j0+j][k0+k].re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.face_a[j0+j][k0+k].im;
+                            }
                         }
                     }
                 } else {
                     // Local task does not own this block,
                     // but we need to know how many items are broadcast.
                     items = to!int(blk.nkc * blk.njc * 2);
+                    version(complex_numbers) { items *= 2; }
                 }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
@@ -180,8 +187,14 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     items = 0;
                     foreach (k; 0 .. blk.nkc) {
                         foreach (j; 0 .. blk.njc) {
-                            fba.face_ws[j0+j][k0+k] = fba.buffer[items++];
-                            fba.face_a[j0+j][k0+k] = fba.buffer[items++];
+                            fba.face_ws[j0+j][k0+k].re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.face_ws[j0+j][k0+k].im = fba.buffer[items++];
+                            }
+                            fba.face_a[j0+j][k0+k].re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.face_a[j0+j][k0+k].im = fba.buffer[items++];
+                            }
                         }
                     }
                 }
@@ -194,12 +207,22 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     foreach (k; 0 .. blk.nkc) {
                         foreach (j; 0 .. blk.njc) {
                             fba.buffer[items++] = fba.face_pos[j0+j][k0+k].x.re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.face_pos[j0+j][k0+k].x.im;
+                            }
                             fba.buffer[items++] = fba.face_pos[j0+j][k0+k].y.re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.face_pos[j0+j][k0+k].y.im;
+                            }
                             fba.buffer[items++] = fba.face_pos[j0+j][k0+k].z.re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.face_pos[j0+j][k0+k].z.im;
+                            }
                         }
                     }
                 } else {
                     items = to!int(blk.nkc * blk.njc * 3);
+                    version(complex_numbers) { items *= 2; }
                 }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
@@ -208,9 +231,21 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     items = 0;
                     foreach (k; 0 .. blk.nkc) {
                         foreach (j; 0 .. blk.njc) {
-                            fba.face_pos[j0+j][k0+k].set(fba.buffer[items++],
-                                                         fba.buffer[items++],
-                                                         fba.buffer[items++]);
+                            fba.face_pos[j0+j][k0+k].x.re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.face_pos[j0+j][k0+k].x.im = fba.buffer[items++];
+                            }
+                            fba.face_pos[j0+j][k0+k].y.re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.face_pos[j0+j][k0+k].y.im = fba.buffer[items++];
+                            }
+                            fba.face_pos[j0+j][k0+k].z.re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.face_pos[j0+j][k0+k].z.im = fba.buffer[items++];
+                            }
+                            // fba.face_pos[j0+j][k0+k].set(fba.buffer[items++],
+                            //                              fba.buffer[items++],
+                            //                              fba.buffer[items++]);
                         }
                     }
                 }
@@ -223,12 +258,22 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     foreach (k; 0 .. blk.nkv) {
                         foreach (j; 0 .. blk.njv) {
                             fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].x.re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].x.im;
+                            }
                             fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].y.re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].y.im;
+                            }
                             fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].z.re;
+                            version(complex_numbers) {
+                                fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].z.im;
+                            }
                         }
                     }
                 } else {
                     items = to!int(blk.nkv * blk.njv * 3);
+                    version(complex_numbers) { items *= 2; }
                 }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
@@ -237,9 +282,21 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     items = 0;
                     foreach (k; 0 .. blk.nkv) {
                         foreach (j; 0 .. blk.njv) {
-                            fba.vtx_pos[j0+j][k0+k].set(fba.buffer[items++],
-                                                        fba.buffer[items++],
-                                                        fba.buffer[items++]);
+                            fba.vtx_pos[j0+j][k0+k].x.re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.vtx_pos[j0+j][k0+k].x.im = fba.buffer[items++];
+                            }
+                            fba.vtx_pos[j0+j][k0+k].y.re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.vtx_pos[j0+j][k0+k].y.im = fba.buffer[items++];
+                            }
+                            fba.vtx_pos[j0+j][k0+k].z.re = fba.buffer[items++];
+                            version(complex_numbers) {
+                                fba.vtx_pos[j0+j][k0+k].z.im = fba.buffer[items++];
+                            }
+                            // fba.vtx_pos[j0+j][k0+k].set(fba.buffer[items++],
+                            //                             fba.buffer[items++],
+                            //                             fba.buffer[items++]);
                         }
                     }
                 } // end if !canFind

@@ -2482,11 +2482,11 @@ void evalResidual(int ftl)
 
     if (GlobalConfig.grid_motion != GridMotion.none) {
         exchange_vertex_positions(gtl);
+        // foreach (blk; parallel(localFluidBlocks,1)) {
+        //     blk.compute_primary_cell_geometric_data(gtl);
+        //     blk.compute_least_squares_setup(gtl);
+        // }
         exchange_ghost_cell_geometry_data();
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.compute_primary_cell_geometric_data(gtl);
-            blk.compute_least_squares_setup(gtl);
-        }
     }
 
     exchange_ghost_cell_boundary_data(dummySimTime, gtl, ftl);
@@ -3162,12 +3162,14 @@ void applyNewtonUpdate(double relaxationFactor)
         }
     }
 
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
     if (GlobalConfig.grid_motion) {
         exchange_vertex_positions(0);
-        foreach (blk; parallel(localFluidBlocks, 1)) {
-            blk.compute_primary_cell_geometric_data(0);
-            blk.compute_least_squares_setup(0);
-        }
+        // foreach (blk; parallel(localFluidBlocks, 1)) {
+        //     blk.compute_primary_cell_geometric_data(0);
+        //     blk.compute_least_squares_setup(0);
+        // }
     }
 }
 

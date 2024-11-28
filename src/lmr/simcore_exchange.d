@@ -44,26 +44,46 @@ version(mpi_parallel) {
 
 void exchange_vertex_positions(int gtl)
 {
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            if (bc.vertex_exchange) {
-                bc.vertex_exchange.exchange_vertex_pos_phase0(gtl);
+    bool mpi = GlobalConfig.in_mpi_context;
+    int n_ranks = (mpi) ? GlobalConfig.mpi_size : 1;
+    foreach (active_sending_rank; 0 .. n_ranks) {
+        foreach (blk; localFluidBlocks) {
+            foreach (bc; blk.bc) {
+                if (bc.vertex_exchange) {
+                    int other_block = bc.vertex_exchange.other_blk.id;
+                    int other_rank = (mpi) ? GlobalConfig.mpi_rank_for_block[other_block] : 0;
+                    if (other_rank == active_sending_rank) {
+                        bc.vertex_exchange.exchange_vertex_pos_phase0(gtl);
+                    }
+                }
             }
         }
+        foreach (blk; localFluidBlocks) {
+            int this_rank = (mpi) ? GlobalConfig.mpi_rank_for_block[blk.id] : 0;
+            if (this_rank != active_sending_rank) continue;
+            foreach (bc; blk.bc) {
+                if (bc.vertex_exchange) {
+                    bc.vertex_exchange.exchange_vertex_pos_phase1(gtl);
+                }
+            }
+        }
+        foreach (blk; localFluidBlocks) {
+            foreach (bc; blk.bc) {
+                if (bc.vertex_exchange) {
+                    int other_block = bc.vertex_exchange.other_blk.id;
+                    int other_rank = (mpi) ? GlobalConfig.mpi_rank_for_block[other_block] : 0;
+                    if (other_rank == active_sending_rank) {
+                        bc.vertex_exchange.exchange_vertex_pos_phase2(gtl);
+                    }
+                }
+            }
+        }
+        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     }
+
     foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            if (bc.vertex_exchange) {
-                bc.vertex_exchange.exchange_vertex_pos_phase1(gtl);
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            if (bc.vertex_exchange) {
-                bc.vertex_exchange.exchange_vertex_pos_phase2(gtl);
-            }
-        }
+        blk.compute_primary_cell_geometric_data(gtl);
+        blk.compute_least_squares_setup(gtl);
     }
 }
 

@@ -245,6 +245,11 @@ public:
         } else {
             // shared memory -- we can directly acces the memory in the last step
         }
+
+        // flag vertices not to be solved
+        if (incoming) {
+            foreach (ref v; this_vertices) v.solve_position = false;
+        }
     }
 
     void setup_vertex_mapping_phase1() {
@@ -309,12 +314,6 @@ public:
             foreach (i; 0 .. this_vertices.length) {
                 mapped_vertices ~= other_blk.vertices[mapped_vertex_ids[i]];
             }
-
-        }
-
-        // flag vertices not to be solved
-        if (incoming) {
-            foreach (v; this_vertices) v.solve_position = false;
         }
     }
 
@@ -382,7 +381,6 @@ public:
         if (!incoming) return; // we don't need to receive any data
 
         version(mpi_parallel) {
-
             if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 version(mpi_timeouts) {
                     MPI_Wait_a_while(&incoming_pos_request, &incoming_pos_status);
