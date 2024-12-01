@@ -6,25 +6,26 @@
  * Version: 2014-07-17: initial cut, to explore options.
  */
 
-module flowstate;
+module lmr.flowstate;
 
-import std.string;
-import std.conv;
 import std.algorithm;
-import std.json;
 import std.array;
+import std.conv;
 import std.format;
-import std.stdio;
+import std.json;
 import std.math;
-import ntypes.complex;
-import nm.number;
+import std.stdio;
+import std.string;
 
-import json_helper;
-import gzip;
-import geom;
 import gas;
-import fvcellio : scan_cell_data_from_fixed_order_string;
-import globalconfig;
+import geom;
+import gzip;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
+
+import lmr.fvcellio : scan_cell_data_from_fixed_order_string;
+import lmr.globalconfig;
 
 @nogc
 void into_rotating_frame(ref Vector3 v, ref const(Vector3) pos, double omegaz)
@@ -739,7 +740,7 @@ public:
         // Open filename and read the defining data in JSON format.
         auto gm = GlobalConfig.gmodel_master;
         import std.json;
-        import json_helper;
+        import util.json_helper;
         JSONValue jsonData = readJSONfile(fileName);
         //
         // Lachlan, you may decide what you want to do here and below in set_flowstate().

@@ -10,26 +10,25 @@
 
 module lmr.solid.solidthermalmodel;
 
-import std.stdio : File, writefln;
-import std.format : format;
-import std.typecons : Tuple;
 import std.algorithm : min, max;
-import std.conv : to;
 import std.array : split;
-import std.string : strip;
+import std.conv : to;
+import std.format : format;
 import std.json;
 import std.math;
+import std.stdio : File, writefln;
+import std.string : strip;
+import std.typecons : Tuple;
 
-import json_helper;
-import util.lua;
-import util.lua_service;
 import nm.number;
 import ntypes.complex;
+import util.json_helper;
+import util.lua;
+import util.lua_service;
 
-import lmr.solid.solidstate : SolidState;
-
-import lmrexceptions;
 import lmr.lmrerrors;
+import lmr.lmrexceptions;
+import lmr.solid.solidstate : SolidState;
 
 
 interface SolidThermalModel

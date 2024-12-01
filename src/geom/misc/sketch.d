@@ -29,9 +29,9 @@ import std.algorithm;
 import ntypes.complex;
 import nm.number;
 
-import svg;
+import geom.misc.svg;
 version(with_libplot) {
-    import libplot;
+    import geom.misc.libplot;
 }
 import geom;
 

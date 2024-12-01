@@ -18,24 +18,26 @@
  *          to remove dependencies on a tindx and times file.
  */
 
-module luaflowsolution;
+module lmr.luawrap.luaflowsolution;
 
+import core.memory : GC;
 import std.algorithm;
 import std.array;
+import std.conv;
 import std.format;
 import std.stdio;
 import std.string;
-import std.conv;
 import std.traits;
-import core.memory : GC;
+
+import geom.luawrap;
+import geom;
 import util.lua;
 import util.lua_service;
-import globalconfig;
-import lmrconfig;
-import cmdhelper : determineAvailableSnapshots;
-import geom;
-import geom.luawrap;
-import flowsolution;
+
+import lmr.commands.cmdhelper : determineAvailableSnapshots;
+import lmr.flowsolution;
+import lmr.globalconfig;
+import lmr.lmrconfig;
 
 /// name for FlowSolution object in Lua scripts.
 immutable string FlowSolutionMT = "FlowSolution";

@@ -10,7 +10,7 @@ import std.stdio;
 import std.conv;
 import std.string;
 import util.lua;
-import luaidealgasflow;
+import gasdyn.luaidealgasflow;
 
 void main()
 {

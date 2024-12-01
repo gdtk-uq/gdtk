@@ -7,24 +7,23 @@
 
 module lmr.commands.slicesolid;
 
-import std.stdio;
-import std.file;
-import std.string;
-import std.regex : regex, replaceAll;
+import std.algorithm;
 import std.array;
+import std.conv : to;
+import std.file;
 import std.format : format;
 import std.getopt;
-import std.conv : to;
-import std.algorithm;
+import std.regex : regex, replaceAll;
+import std.stdio;
+import std.string;
 
-import globalconfig;
-import fileutil;
-import solidsolution;
-import lmrconfig : lmrCfg;
-import init : initConfiguration;
-import cmdhelper;
-
-import command;
+import lmr.commands.cmdhelper;
+import lmr.commands.command;
+import lmr.fileutil;
+import lmr.globalconfig;
+import lmr.init : initConfiguration;
+import lmr.lmrconfig : lmrCfg;
+import lmr.solid.solidsolution;
 
 Command sliceSolidCmd;
 

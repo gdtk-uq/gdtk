@@ -5,6 +5,8 @@
     Version: 2022-08-01: Machine generated code from Maxima
 */
 
+module lmr.efield.efieldderivatives;
+
 import std.math;
 import std.stdio;
 

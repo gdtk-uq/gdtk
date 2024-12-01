@@ -3,7 +3,7 @@ module fsi.femconfig;
 import std.json;
 import std.stdio;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import fsi;
 

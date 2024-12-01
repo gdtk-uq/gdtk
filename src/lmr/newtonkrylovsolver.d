@@ -8,62 +8,61 @@
  *   2022-10-22 Reworked as part of lmr5
  */
 
-module newtonkrylovsolver;
+module lmr.newtonkrylovsolver;
 
-import core.stdc.stdlib : exit;
 import core.memory : GC;
+import core.stdc.stdlib : exit;
 import std.algorithm : min;
 import std.algorithm.searching : countUntil;
-import std.range : walkLength;
-import std.datetime : DateTime, Clock;
-import std.parallelism : parallel, defaultPoolThreads;
-import std.stdio : File, writeln, writefln, stdout;
-import std.file: copy, rename, dirEntries, SpanMode, DirEntry, readText, exists;
 import std.array : appender;
+import std.conv : to;
+import std.datetime : DateTime, Clock;
+import std.file: copy, rename, dirEntries, SpanMode, DirEntry, readText, exists;
 import std.format : formattedWrite;
 import std.json : JSONValue;
 import std.math;
+import std.parallelism : parallel, defaultPoolThreads;
+import std.range : walkLength;
+import std.stdio : File, writeln, writefln, stdout;
 import std.string;
-import std.conv : to;
 import std.typecons : Tuple, tuple;
 
-import ntypes.complex;
+import geom;
+import nm.bbla;
 import nm.number : number;
 import nm.smla;
-import nm.bbla;
-import util.time_utils : timeStringToSeconds;
+import ntypes.complex;
+import util.json_helper;
 import util.lua;
 import util.lua_service;
-import lua_helper;
-import json_helper;
-import geom;
+import util.time_utils : timeStringToSeconds;
 
-import lmrexceptions;
-import lmrconfig;
-import conservedquantities : ConservedQuantities, copy_values_from;
-import fileutil : ensure_directory_is_present;
-
-import globalconfig;
-import globaldata;
-import init;
-import simcore: compute_mass_balance;
-import simcore_gasdynamic_step : detect_shocks;
-import simcore_exchange;
-import bc;
-import fluidblock : FluidBlock;
-import sfluidblock : SFluidBlock;
-import ufluidblock : UFluidBlock;
-import user_defined_source_terms : getUDFSourceTermsForCell;
-import blockio;
-import fvcellio;
+import lmr.bc;
+import lmr.blockio;
+import lmr.conservedquantities : ConservedQuantities, copy_values_from;
+import lmr.fileutil : ensure_directory_is_present;
+import lmr.fluidblock : FluidBlock;
 import lmr.fvcell : FVCell;
-import lmr.loads : writeLoadsToFile;
-import lmr.loads : init_current_loads_indx_dir,
+import lmr.fvcellio;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.init;
+import lmr.lmrconfig;
+import lmr.lmrexceptions;
+import lmr.lmrwarnings;
+import lmr.lua_helper;
+import lmr.sfluidblock : SFluidBlock;
+import lmr.simcore : compute_mass_balance;
+import lmr.simcore_exchange;
+import lmr.simcore_gasdynamic_step : detect_shocks;
+import lmr.ufluidblock : UFluidBlock;
+import lmr.user_defined_source_terms : getUDFSourceTermsForCell;
+import lmr.loads : writeLoadsToFile,
+                   init_current_loads_indx_dir,
                    wait_for_current_indx_dir,
                    writeLoadsToFile,
                    count_written_loads,
                    update_loads_metadata_file;
-import lmr.lmrwarnings;
 
 version(mpi_parallel) {
     import mpi;

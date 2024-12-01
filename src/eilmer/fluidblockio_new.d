@@ -16,7 +16,7 @@ import std.typecons;
 import std.datetime.systime;
 import std.format;
 
-import zip;
+import util.zip;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;

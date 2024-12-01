@@ -4,24 +4,26 @@
 //
 // PJ, 2021-Feb
 
-module fluidblockarray;
+module lmr.fluidblockarray;
 
 import std.algorithm;
 import std.conv;
+import std.format;
+import std.json;
+import std.math;
 import std.stdio;
 import std.string;
-import std.math;
-import std.json;
-import std.format;
-import ntypes.complex;
-import nm.number;
-import geom;
-import globalconfig;
-import globaldata;
-import json_helper;
 version(mpi_parallel) {
     import mpi;
 }
+
+import geom;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
+
+import lmr.globalconfig;
+import lmr.globaldata;
 
 
 class FBArray {

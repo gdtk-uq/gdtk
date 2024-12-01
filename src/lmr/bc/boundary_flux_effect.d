@@ -8,37 +8,39 @@
  * 2021-07-29 PJ rework ConstFlux
  **/
 
-module bc.boundary_flux_effect;
+module lmr.bc.boundary_flux_effect;
 
-import std.stdio;
-import std.json;
-import std.string;
 import std.conv;
+import std.json;
 import std.math;
-import ntypes.complex;
-import nm.number;
-import nm.bbla;
-import nm.brent;
-import nm.bracketing;
+import std.stdio;
+import std.string;
 
-import geom;
-import json_helper;
-import globalconfig;
-import globaldata;
-import fluidblock;
-import sfluidblock;
-import ufluidblock;
-import lmr.fluidfvcell;
-import fvinterface;
-import solidfvcell;
-import solidfvinterface;
-import flowstate;
 import gas;
-import bc;
-import flowgradients;
-import mass_diffusion;
+import geom;
+import nm.bbla;
+import nm.bracketing;
+import nm.brent;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
 //import nm.ridder;
 //import nm.bracketing;
+
+import lmr.bc;
+import lmr.flowgradients;
+import lmr.flowstate;
+import lmr.fluidblock;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.mass_diffusion;
+import lmr.sfluidblock;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+import lmr.ufluidblock;
+
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {

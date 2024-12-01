@@ -7,21 +7,21 @@
  * Date: 2023-11-29
  */
 
-module structured2unstructured;
+module lmr.commands.structured2unstructured;
 
-import std.getopt;
-import std.stdio : writeln, writefln, File;
-import std.json;
-import std.format;
 import std.conv : to;
 import std.file : rename, exists, rmdirRecurse, mkdirRecurse;
+import std.format;
+import std.getopt;
+import std.json;
+import std.stdio : writeln, writefln, File;
 
 import geom;
-import bc;
+import util.json_helper : readJSONfile;
 
-import lmrconfig;
-import command;
-import json_helper : readJSONfile;
+import lmr.bc;
+import lmr.commands.command;
+import lmr.lmrconfig;
 
 
 Command structured2unstructuredCmd;

@@ -20,7 +20,7 @@ import gas.therm_perf_gas;
 import gas.equilibrium_gas;
 import gas.therm_perf_gas_equil;
 import kinetics;
-import gasflow;
+import gasdyn.gasflow;
 import configuration;
 
 // Storage for the calculated gas state at the end of the facility nozzle.

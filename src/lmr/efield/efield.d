@@ -5,29 +5,30 @@
  * Version: 2021-01-20: Prototyping
  */
 
-module efield;
+module lmr.efield.efield;
 
-import std.conv;
 import std.algorithm;
+import std.conv;
 import std.format;
-import std.stdio;
 import std.math;
-import ntypes.complex;
-import nm.number;
-
-import lmr.fluidfvcell;
-import fvinterface;
-import fluidblock;
-import geom;
-import globalconfig;
-import efieldbc;
-import efieldgmres;
-import efieldconductivity;
-import efieldexchange;
-import efieldderivatives;
+import std.stdio;
 version(mpi_parallel){
     import mpi;
 }
+
+import geom;
+import nm.number;
+import ntypes.complex;
+
+import lmr.efield.efieldbc;
+import lmr.efield.efieldconductivity;
+import lmr.efield.efieldderivatives;
+import lmr.efield.efieldexchange;
+import lmr.efield.efieldgmres;
+import lmr.fluidblock;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig;
 
 immutable uint ZNG_interior = 0b0000;
 immutable uint ZNG_north    = 0b0001;

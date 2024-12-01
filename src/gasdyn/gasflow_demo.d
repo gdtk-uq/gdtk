@@ -6,8 +6,8 @@
 
 import std.stdio, std.math;
 import gas;
-import gasflow;
-import idealgasflow; // for the oblique shock relations
+import gasdyn.gasflow;
+import gasdyn.idealgasflow; // for the oblique shock relations
 
 void main(){
     writeln("Begin gasflow demo (reflected-shock tunnel calculation)");

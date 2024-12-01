@@ -1,29 +1,30 @@
 // solid_full_face_copy.d
 
-module solid_full_face_copy;
+module lmr.solid.solid_full_face_copy;
 
-import std.json;
-import std.string;
-import std.conv;
-import std.stdio;
-import std.math;
-import std.file;
 import std.algorithm;
+import std.conv;
 import std.datetime;
+import std.file;
+import std.json;
+import std.math;
+import std.stdio;
+import std.string;
 version(mpi_parallel) {
     import mpi;
 }
 
-import simcore;
-import json_helper;
 import geom;
-import globaldata;
-import globalconfig;
-import solidfvinterface;
-import ssolidblock;
-import solidfvcell;
-import solidbc;
-import solid_ghost_cell;
+import util.json_helper;
+
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.simcore;
+import lmr.solid.solid_ghost_cell;
+import lmr.solid.solidbc;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+import lmr.solid.ssolidblock;
 
 // ----------------------------------------------------------------------------------
 // MPI-specific services.

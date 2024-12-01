@@ -1,4 +1,4 @@
-module command;
+module lmr.commands.command;
 
 import core.stdc.stdlib : system;
 import std.string;

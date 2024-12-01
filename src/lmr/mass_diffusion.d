@@ -8,21 +8,21 @@
  * Version: 2017-06-06, first cut
  *
  */
-module mass_diffusion;
+module lmr.mass_diffusion;
 
+import std.conv;
 import std.math;
 import std.stdio;
-import std.conv;
 import std.string;
 
-import ntypes.complex;
-import nm.number;
-import util.lua;
 import gas;
+import nm.number;
+import ntypes.complex;
+import util.lua;
 
-import globalconfig;
-import flowstate;
-import flowgradients;
+import lmr.flowgradients;
+import lmr.flowstate;
+import lmr.globalconfig;
 
 private immutable double SMALL_DIFFUSION_COEFFICIENT = 1.0e-20;
 

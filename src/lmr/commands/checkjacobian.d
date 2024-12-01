@@ -10,32 +10,32 @@
  *   2024-03-21 moved from the lmr commands to its own separate executable to allow for complex number version
  */
 
-module checkjacobian;
+module lmr.commands.checkjacobian;
 
-import std.stdio;
 import std.algorithm;
-import std.random;
-import std.getopt;
-import std.range : empty;
-import std.format : format;
 import std.conv : to;
-import std.math;
+import std.format : format;
+import std.getopt;
 import std.json : JSONValue;
+import std.math;
+import std.random;
+import std.range : empty;
+import std.stdio;
 
 import nm.number : number;
 import nm.smla;
 import ntypes.complex;
+import util.json_helper;
 
-import globalconfig;
-import globaldata : localFluidBlocks;
-import init : initConfiguration;
-import newtonkrylovsolver;
-import cmdhelper;
-import command;
-import json_helper;
-import lmrconfig;
-import blockio;
-import flowsolution;
+import lmr.blockio;
+import lmr.commands.cmdhelper;
+import lmr.commands.command;
+import lmr.flowsolution;
+import lmr.globalconfig;
+import lmr.globaldata : localFluidBlocks;
+import lmr.init : initConfiguration;
+import lmr.lmrconfig;
+import lmr.newtonkrylovsolver;
 
 string cmdName;
 Command checkJacCmd;

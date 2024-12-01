@@ -15,7 +15,7 @@ version(mpi_parallel) {
 }
 
 import simcore;
-import json_helper;
+import util.json_helper;
 import geom;
 import globaldata;
 import globalconfig;

@@ -1,33 +1,33 @@
+import std.algorithm;
 import std.getopt;
 import std.stdio;
-import std.algorithm;
 
-import lmrconfig;
-import command;
-import computenorms;
-import customscript;
-import probeflow;
-import sliceflow;
-import extractline;
-import limiter2vtk;
-import residual2vtk;
-import gradient2vtk;
+import lmr.commands.command;
+import lmr.commands.computenorms;
+import lmr.commands.customscript;
+import lmr.commands.extractline;
+import lmr.commands.gradient2vtk;
+import lmr.commands.limiter2vtk;
 import lmr.commands.listspecies;
 import lmr.commands.plotdiagnostics;
 import lmr.commands.prepenergyexchange;
 import lmr.commands.prepgas;
+import lmr.commands.prepgrids;
+import lmr.commands.prepmappedcells;
 import lmr.commands.prepreactions;
+import lmr.commands.prepsim;
+import lmr.commands.probeflow;
+import lmr.commands.residual2vtk;
+import lmr.commands.revisionid;
+import lmr.commands.sliceflow;
 import lmr.commands.slicesolid;
-import prepgrids;
-import prepsim;
-import prepmappedcells;
-import runsim;
-import snapshot2vtk;
-import structured2unstructured;
-import revisionid;
+import lmr.commands.snapshot2vtk;
+import lmr.commands.structured2unstructured;
+import lmr.lmrconfig;
+public import lmr.commands.runsim;
 
 // Eilmer4 imports
-import globalconfig : GlobalConfig;
+import lmr.globalconfig : GlobalConfig;
 
 Command[string] commands;
 Command helpCmd;
@@ -158,7 +158,7 @@ int main(string[] args)
     if (cmd == "run") {
         // We need to treat this one specially because of how delegation
         // is made based on number type (real or complex)
-        return runsim.delegateAndExecute(args, numberType);
+        return delegateAndExecute(args, numberType);
     }
 
     if (cmd in commands) {

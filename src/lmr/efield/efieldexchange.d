@@ -5,29 +5,30 @@
  * Version: 2021-08-03: Prototyping
  */
 
-module efieldexchange;
+module lmr.efield.efieldexchange;
 
-import std.stdio;
-import std.math;
 import std.algorithm;
 import std.conv;
+import std.math;
+import std.stdio;
 
-import fvinterface;
 import geom;
-import efieldbc;
+
+import lmr.efield.efieldbc;
+import lmr.fvinterface;
 
 version(mpi_parallel){
-import mpi;
+    import mpi;
 
-struct ExchangeData{
-    int sendtag, recvtag;
-    int nsend, nrecv;
-    int sendrank, recvrank;
-    double[] sendbuffer;
-    double[] recvbuffer;
-    int[] sendidxs, requestidxs;
-    MPI_Request sendrequest;
-    MPI_Status recvstatus;
+    struct ExchangeData{
+        int sendtag, recvtag;
+        int nsend, nrecv;
+        int sendrank, recvrank;
+        double[] sendbuffer;
+        double[] recvbuffer;
+        int[] sendidxs, requestidxs;
+        MPI_Request sendrequest;
+        MPI_Status recvstatus;
 }
 
 class Exchanger {

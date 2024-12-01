@@ -3,21 +3,27 @@ Modular Turbulence Modelling Interface
 
 @author: Nick N. Gibbons (n.gibbons@uq.edu.au)
 */
+
+module lmr.turbulence;
+
 import std.conv;
+import std.json;
 import std.math;
 import std.stdio;
 import std.string;
-import std.json;
-import flowstate;
-import flowgradients;
+
 import gas;
-import json_helper;
+import geom;
 import nm.number;
 import ntypes.complex;
-import globalconfig;
-import geom;
+import util.json_helper;
+
+import lmr.flowgradients;
+import lmr.flowstate;
 import lmr.fluidfvcell;
-import fvinterface;
+import lmr.fvinterface;
+import lmr.globalconfig;
+
 
 /*
 Abstract base class defines functions all turbulence models must have:

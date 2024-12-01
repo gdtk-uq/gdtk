@@ -16,7 +16,7 @@ import std.algorithm;
 import geom;
 import gas;
 import kinetics;
-import gasflow;
+import gasdyn.gasflow;
 import config;
 
 

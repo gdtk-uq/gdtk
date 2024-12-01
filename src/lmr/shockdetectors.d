@@ -2,20 +2,21 @@
 // Prototyping for modular shock detection
 // @author: Nick Gibbons (n.gibbons@uq.edu.au)
 
-module shockdetectors;
+module lmr.shockdetectors;
 
+import std.algorithm;
 import std.conv;
 import std.math;
 import std.stdio;
 
-import globalconfig;
 import gas;
 import geom;
-import flowstate;
-import fvinterface;
 import nm.number;
 import ntypes.complex;
-import std.algorithm;
+
+import lmr.flowstate;
+import lmr.fvinterface;
+import lmr.globalconfig;
 
 // Consider passing in lower level things to make testing easier
 @nogc number PJ_ShockDetector(const FVInterface iface, const number comp_tol, const number shear_tol){

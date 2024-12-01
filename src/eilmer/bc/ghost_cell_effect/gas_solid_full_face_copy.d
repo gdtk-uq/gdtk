@@ -17,7 +17,7 @@ version(mpi_parallel) {
 import nm.number;
 import ntypes.complex;
 import geom;
-import json_helper;
+import util.json_helper;
 import globalconfig;
 import globaldata;
 import flowstate;

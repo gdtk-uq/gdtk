@@ -15,7 +15,7 @@ import std.algorithm;
 import std.math;
 import core.stdc.math: HUGE_VAL;
 
-import json_helper;
+import util.json_helper;
 import gas;
 import config;
 import tube;

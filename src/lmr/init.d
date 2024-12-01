@@ -9,44 +9,44 @@
  *              eilmer/init_simulation.d
  **/
 
-module init;
+module lmr.init;
 
-import std.math: pow;
 import std.algorithm : min, sort, find;
 import std.conv : to;
-import std.parallelism : parallel, defaultPoolThreads;
 import std.file : rename, readText, dirEntries, SpanMode;
-import std.stdio : File, writeln, writefln, stdout;
 import std.format : format, formattedWrite;
+import std.json;
+import std.math: pow;
+import std.parallelism : parallel, defaultPoolThreads;
+import std.stdio : File, writeln, writefln, stdout;
 import std.string;
 import std.typecons : Tuple, tuple;
-import std.json;
 
+import util.json_helper;
 import util.lua;
 import util.lua_service;
-import lua_helper;
 
-import json_helper;
-import lmrexceptions : LmrException;
-import lmrconfig;
-import globalconfig;
-import globaldata;
-import simcore;
-import simcore_exchange : exchange_ghost_cell_geometry_data;
-import bc;
-import bc.ghost_cell_effect.gas_solid_full_face_copy;
-import solid_gas_full_face_copy;
-import solid_full_face_copy : SolidGCE_SolidGhostCellFullFaceCopy;
-import solidfvinterface : initPropertiesAtSolidInterfaces;
-import fluidblock : FluidBlock;
-import sfluidblock : SFluidBlock;
-import ufluidblock : UFluidBlock;
-import ssolidblock : SSolidBlock;
-import blockio : BinaryBlockIO, GzipBlockIO;
+import lmr.bc.ghost_cell_effect.gas_solid_full_face_copy;
+import lmr.bc;
+import lmr.blockio : BinaryBlockIO, GzipBlockIO;
+import lmr.fileutil : ensure_directory_is_present;
+import lmr.fluidblock : FluidBlock;
 import lmr.fvcell : FVCell;
-import fvcellio;
-import fileutil : ensure_directory_is_present;
+import lmr.fvcellio;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.lmrconfig;
+import lmr.lmrexceptions : LmrException;
 import lmr.loads : init_loads_metadata_file, initRunTimeLoads;
+import lmr.lua_helper;
+import lmr.sfluidblock : SFluidBlock;
+import lmr.simcore;
+import lmr.simcore_exchange : exchange_ghost_cell_geometry_data;
+import lmr.solid.solid_full_face_copy : SolidGCE_SolidGhostCellFullFaceCopy;
+import lmr.solid.solid_gas_full_face_copy;
+import lmr.solid.solidfvinterface : initPropertiesAtSolidInterfaces;
+import lmr.solid.ssolidblock : SSolidBlock;
+import lmr.ufluidblock : UFluidBlock;
 
 version(mpi_parallel) {
     import mpi;

@@ -5,16 +5,17 @@
  * Date: 2022-08-06
  */
 
-module lmrconfig;
+module lmr.lmrconfig;
 
-import std.stdio;
 import std.conv : to;
 import std.format : format;
-import std.process : environment;
 import std.json;
-import json_helper : readJSONfile;
+import std.process : environment;
+import std.stdio;
 
-import globalconfig;
+import util.json_helper : readJSONfile;
+
+import lmr.globalconfig;
 
 struct LmrCfg {
     shared immutable string simDir;

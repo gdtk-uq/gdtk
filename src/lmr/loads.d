@@ -14,37 +14,38 @@
 
 module lmr.loads;
 
+import std.algorithm;
+import std.array;
+import std.conv;
+import std.file;
+import std.format;
+import std.json;
+import std.math;
+import std.parallelism;
 import std.stdio;
 import std.string;
-import std.file;
-import std.array;
-import std.algorithm;
-import std.format;
-import std.parallelism;
-import std.math;
-import std.conv;
 import std.typecons : Tuple;
-import std.json;
-import ntypes.complex;
-import nm.number;
 
-import lmrconfig;
-import json_helper;
-import globalconfig;
-import globaldata;
-import fileutil;
-import solidfvcell;
-import solidblock;
-import flowstate;
-import flowgradients;
 import geom;
-import fluidblock;
-import sfluidblock: SFluidBlock;
-import ufluidblock: UFluidBlock;
-import fvinterface;
-import bc;
-import mass_diffusion;
-import conservedquantities;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
+
+import lmr.bc;
+import lmr.conservedquantities;
+import lmr.fileutil;
+import lmr.flowgradients;
+import lmr.flowstate;
+import lmr.fluidblock;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.lmrconfig;
+import lmr.mass_diffusion;
+import lmr.sfluidblock : SFluidBlock;
+import lmr.solid.solidblock;
+import lmr.solid.solidfvcell;
+import lmr.ufluidblock : UFluidBlock;
 
 version(mpi_parallel) {
     import mpi;

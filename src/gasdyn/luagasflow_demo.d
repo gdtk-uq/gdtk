@@ -11,8 +11,8 @@ import std.conv;
 import std.string;
 import util.lua;
 import gas.luagas_model;
-import luaidealgasflow;
-import luagasflow;
+import gasdyn.luaidealgasflow;
+import gasdyn.luagasflow;
 
 void main()
 {

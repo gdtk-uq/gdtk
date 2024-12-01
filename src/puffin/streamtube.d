@@ -15,7 +15,7 @@ import std.math;
 import std.algorithm;
 
 import nm.schedule;
-import json_helper;
+import util.json_helper;
 import geom;
 import gas;
 import kinetics;

@@ -5,23 +5,24 @@
  * Date: 2023-11-18
  */
 
-module prepmappedcells;
+module lmr.commands.prepmappedcells;
 
+import std.conv : to;
+import std.file : thisExePath;
 import std.getopt;
+import std.path : dirName;
 import std.stdio : writeln, writefln, File;
 import std.string : toStringz;
-import std.conv : to;
-import std.path : dirName;
-import std.file : thisExePath;
 
-import lmrconfig : lmrCfg;
-import command;
-import globalconfig;
-import globaldata;
-import fluidblock;
-import init;
 import geom;
-import bc;
+
+import lmr.bc;
+import lmr.commands.command;
+import lmr.fluidblock;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.init;
+import lmr.lmrconfig : lmrCfg;
 
 Command prepMappedCellsCmd;
 string cmdName = "prep-mapped-cells";

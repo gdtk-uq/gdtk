@@ -1,32 +1,34 @@
 // mapped_cell_copy.d
 
-module bc.ghost_cell_effect.mapped_cell_copy;
+module lmr.bc.ghost_cell_effect.mapped_cell_copy;
 
 import core.memory;
-import std.json;
-import std.string;
-import std.conv;
-import std.stdio;
-import std.math;
-import std.file;
 import std.algorithm;
-import ntypes.complex;
-import nm.number;
+import std.conv;
+import std.file;
+import std.json;
+import std.math;
+import std.stdio;
+import std.string;
+
 version(mpi_parallel) {
     import mpi;
 }
 
-import geom;
-import json_helper;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
+import lmr.bc;
+import lmr.flowstate;
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fluidblock;
-import sfluidblock;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.sfluidblock;
+
 import gas;
-import bc;
+import geom;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
 
 
 struct BlockAndCellId {

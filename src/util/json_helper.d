@@ -5,7 +5,7 @@
  * Initial code: 2015-02-05
  */
 
-module json_helper;
+module util.json_helper;
 
 import std.json;
 import std.file;

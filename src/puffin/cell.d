@@ -14,7 +14,7 @@ import std.array;
 import geom;
 import gas;
 import kinetics;
-import gasflow;
+import gasdyn.gasflow;
 import config;
 import flow;
 import face;

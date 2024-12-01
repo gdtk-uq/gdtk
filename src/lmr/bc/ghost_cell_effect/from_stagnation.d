@@ -1,28 +1,28 @@
 // from_stagnation.d
 
-module bc.ghost_cell_effect.from_stagnation;
+module lmr.bc.ghost_cell_effect.from_stagnation;
 
-import std.json;
-import std.string;
 import std.conv;
-import std.stdio;
+import std.json;
 import std.math;
-import ntypes.complex;
+import std.stdio;
+import std.string;
+
+import gas;
+import geom;
 import nm.number;
+import ntypes.complex;
 import util.lua;
 import util.lua_service;
 
-import geom;
-import globalconfig;
-import globaldata;
-import flowstate;
-import fvinterface;
+import lmr.bc;
+import lmr.flowstate;
+import lmr.fluidblock;
 import lmr.fluidfvcell;
-import fluidblock;
-import sfluidblock;
-import gas;
-import bc;
-
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.sfluidblock;
 
 class GhostCellFromStagnation : GhostCellEffect {
 public:

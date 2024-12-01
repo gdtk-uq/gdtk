@@ -13,30 +13,32 @@
 // using the file name that it possesses.  Thus, you need to have
 // all of your user-defined effects within the one file.
 
-module bc.user_defined_effects;
+module lmr.bc.user_defined_effects;
 
 import std.conv;
-import std.string;
 import std.stdio;
-import ntypes.complex;
+import std.string;
+
+import lmr.bc;
+import lmr.flowstate;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.luawrap.luaflowstate;
+import lmr.sfluidblock : SFluidBlock;
+import lmr.sfluidblock : cell_index_to_logical_coordinates;
+import lmr.simcore;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.luagas_model;
+import geom;
 import nm.number;
+import ntypes.complex;
 import util.lua;
 import util.lua_service;
-import gas.gas_model;
-import gas.luagas_model;
-import gas.gas_state;
 
-import geom;
-import simcore;
-import flowstate;
-import lmr.fluidfvcell;
-import fvinterface;
-import sfluidblock: SFluidBlock;
-import sfluidblock : cell_index_to_logical_coordinates;
-import globalconfig;
-import globaldata;
-import luaflowstate;
-import bc;
 
 class UserDefinedGhostCell : GhostCellEffect {
 public:

@@ -6,23 +6,25 @@
  * Version: 2014-07-23: initial cut, to explore options.
  */
 
-module fluxcalc;
+module lmr.fluxcalc;
 
-import std.math;
-import std.stdio;
 import std.conv;
 import std.format;
-import ntypes.complex;
-import nm.number;
+import std.math;
+import std.stdio;
 
-import geom;
+import nm.number;
+import ntypes.complex;
+
 import gas;
-import flowstate;
-import gasflow: osher_riemann;
-import gasflowexception: GasFlowException;
-import conservedquantities;
-import fvinterface;
-import globalconfig;
+import gasdyn.gasflow : osher_riemann;
+import gasdyn.gasflowexception : GasFlowException;
+import geom;
+
+import lmr.conservedquantities;
+import lmr.flowstate;
+import lmr.fvinterface;
+import lmr.globalconfig;
 
 /** Compute the inviscid fluxes (in 1D) across the cell interfaces.
  *

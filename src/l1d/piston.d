@@ -13,10 +13,10 @@ import std.format;
 import std.algorithm;
 import std.math;
 
-import json_helper;
+import util.json_helper;
 import geom;
 import gas;
-import gasflow;
+import gasdyn.gasflow;
 import config;
 import endcondition;
 import misc;

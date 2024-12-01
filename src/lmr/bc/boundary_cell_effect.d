@@ -6,20 +6,22 @@
  * Date: 2017-07-20
  */
 
-module bc.boundary_cell_effect;
+module lmr.bc.boundary_cell_effect;
 
 import std.json;
 import std.string;
 
-import globalconfig: FlowSolverException;
-import lmr.fluidfvcell;
-import fvinterface;
 import geom;
-import fluidblock;
-import sfluidblock: SFluidBlock;
-import globaldata;
-import json_helper;
-import bc;
+import util.json_helper;
+
+import lmr.bc;
+import lmr.fluidblock;
+import lmr.fluidfvcell;
+import lmr.fvinterface;
+import lmr.globalconfig : FlowSolverException;
+import lmr.globaldata;
+import lmr.sfluidblock : SFluidBlock;
+
 
 BoundaryCellEffect make_BCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {

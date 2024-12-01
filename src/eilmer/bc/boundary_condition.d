@@ -17,7 +17,7 @@ import util.lua_service;
 import gas;
 import gas.luagas_model;
 import nm.luabbla;
-import json_helper;
+import util.json_helper;
 import geom;
 import globalconfig;
 import globaldata;

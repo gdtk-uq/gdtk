@@ -18,7 +18,7 @@ import std.range;
 import util.lua;
 import util.lua_service;
 import gas.luagas_model;
-import json_helper;
+import util.json_helper;
 import lua_helper;
 import gzip;
 import geom;

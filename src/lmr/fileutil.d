@@ -3,14 +3,17 @@
 //
 // Extracted from e4_core.d 2015-02-28 so we can reuse them.
 
-import std.stdio;
-import std.file;
-import std.conv;
-import std.array;
-import std.format;
-import std.string;
-import globalconfig: FlowSolverException;
+module lmr.fileutil;
+
 import core.thread;
+import std.array;
+import std.conv;
+import std.file;
+import std.format;
+import std.stdio;
+import std.string;
+
+import lmr.globalconfig : FlowSolverException;
 
 string make_path_name(string mytype)(int tindx)
 // Build a pathname for "grid" and "flow" subdirectories.

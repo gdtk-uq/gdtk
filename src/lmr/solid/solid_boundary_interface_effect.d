@@ -1,23 +1,24 @@
-module solid_boundary_interface_effect;
+module lmr.solid.solid_boundary_interface_effect;
 
-import std.stdio;
-import std.json;
-import std.string;
 import std.format;
-import util.lua;
+import std.json;
 import std.math;
-import ntypes.complex;
-import nm.number;
+import std.stdio;
+import std.string;
 
-import simcore;
-import json_helper;
 import geom;
-import globaldata;
-import globalconfig;
-import solidfvinterface;
-import ssolidblock;
-import solidfvcell;
-import solidbc;
+import nm.number;
+import ntypes.complex;
+import util.json_helper;
+import util.lua;
+
+import lmr.globalconfig;
+import lmr.globaldata;
+import lmr.simcore;
+import lmr.solid.solidbc;
+import lmr.solid.solidfvcell;
+import lmr.solid.solidfvinterface;
+import lmr.solid.ssolidblock;
 
 SolidBoundaryInterfaceEffect makeSolidBIEfromJson(JSONValue jsonData, int blk_id, int boundary)
 {

@@ -18,7 +18,7 @@ import core.stdc.math: HUGE_VAL;
 import gzip;
 
 import nm.schedule;
-import json_helper;
+import util.json_helper;
 import geom;
 import gas;
 import kinetics;
