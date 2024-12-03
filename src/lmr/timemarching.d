@@ -27,6 +27,7 @@ import dyaml;
 import nm.number : number;
 import ntypes.complex;
 import util.time_utils : timeStringToSeconds;
+import nm.schedule : Schedule;
 
 import lmr.conservedquantities : new_ConservedQuantities;
 import lmr.fileutil : ensure_directory_is_present;
@@ -71,6 +72,23 @@ import lmr.simcore_gasdynamic_step :
 
 version(mpi_parallel) {
     import mpi;
+}
+
+double nextXxxxTime(double now, Schedule!double dt_schedule)
+{
+    // Returns the absolute simulation time at which the next snapshot should be made.
+    // Even if we have restarted the simulation from some intermediate time,
+    // we should continue to get the originally-requested instances.
+    double t = 0;
+    while (t <= now) { t += dt_schedule.get_value(now); }
+    return t;
+}
+
+double nextXxxxTime(double now, double dt)
+{
+    double t = 0;
+    while (t <= now) { t += dt; }
+    return t;
 }
 
 void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMPITask, string maxWallClock)
@@ -298,9 +316,9 @@ int integrateInTime(double targetTimeAsRequested)
     }
     SimState.target_time = (GlobalConfig.block_marching) ? targetTimeAsRequested : GlobalConfig.max_time;
     // The next time for output...
-    SimState.t_plot = SimState.time + GlobalConfig.dt_plot_schedule.get_value(SimState.time);
-    SimState.t_history = SimState.time + GlobalConfig.dt_history;
-    SimState.t_loads = SimState.time + GlobalConfig.dt_loads;
+    SimState.t_plot = nextXxxxTime(SimState.time, GlobalConfig.dt_plot_schedule);
+    SimState.t_history = nextXxxxTime(SimState.time, GlobalConfig.dt_history);
+    SimState.t_loads = nextXxxxTime(SimState.time, GlobalConfig.dt_loads);
     //
     if (GlobalConfig.viscous) {
         // We have requested viscous effects but their application may be delayed
@@ -577,7 +595,7 @@ int integrateInTime(double targetTimeAsRequested)
                 writeSnapshotFiles_timemarching();
                 if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
                 SimState.output_just_written = true;
-                SimState.t_plot = SimState.t_plot + GlobalConfig.dt_plot_schedule.get_value(SimState.time);
+                SimState.t_plot = nextXxxxTime(SimState.time, GlobalConfig.dt_plot_schedule);
                 GC.collect();
                 GC.minimize();
             }
@@ -608,7 +626,7 @@ int integrateInTime(double targetTimeAsRequested)
                 }
                 writeHistoryCellsToFiles(SimState.time);
                 SimState.history_just_written = true;
-                SimState.t_history = SimState.t_history + GlobalConfig.dt_history;
+                SimState.t_history = nextXxxxTime(SimState.time, GlobalConfig.dt_history);
                 GC.collect();
                 GC.minimize();
             }
@@ -619,7 +637,7 @@ int integrateInTime(double targetTimeAsRequested)
                 writeLoadsFiles_timemarching();
                 SimState.loads_just_written = true;
                 SimState.current_loads_tindx = SimState.current_loads_tindx + 1;
-                SimState.t_loads = SimState.t_loads + GlobalConfig.dt_loads;
+                SimState.t_loads = nextXxxxTime(SimState.time, GlobalConfig.dt_loads);
                 GC.collect();
                 GC.minimize();
             }
