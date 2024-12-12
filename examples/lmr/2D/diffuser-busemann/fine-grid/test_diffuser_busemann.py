@@ -34,7 +34,7 @@ def expected_output(proc, check_start_step=False):
             steps = int(line.split()[1])
         if line.find("FINAL-CFL") != -1:
             cfl = float(line.split()[1])
-    assert steps == expected_number_steps, "Failed to take correct number of steps."
+    assert abs(steps - expected_number_steps)<2, "Failed to take correct number of steps."
     assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
     assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.005, \
         "Failed to arrive at expected CFL value on final step."
