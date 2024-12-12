@@ -420,15 +420,22 @@ public:
         number delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
         number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         number delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
+
+        // Dimensionalise the smoothing parameter epsilon (NNG, Sept 23)
+        number qqL = fmax(1e-12, fabs(qL0));
+        number qqR = fmax(1e-12, fabs(qR0));
+        number qq = fmax(qqL, qqR);
+        number epsilon_van_albada = qq*myConfig.epsilon_van_albada*two_over_lenR0_plus_lenL0;
+
         // Presume unlimited high-order reconstruction.
         number sL = 1.0;
         number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
-            sL = (delLminus*del + fabs(delLminus*del) + myConfig.epsilon_van_albada) /
-                (delLminus*delLminus + del*del + myConfig.epsilon_van_albada);
-            sR = (del*delRplus + fabs(del*delRplus) + myConfig.epsilon_van_albada) /
-                (del*del + delRplus*delRplus + myConfig.epsilon_van_albada);
+            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
         }
         // The actual high-order reconstruction, possibly limited.
         qL = qL0 + beta * sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
