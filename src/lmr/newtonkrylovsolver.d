@@ -940,7 +940,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         // If values are very large, 1.0 makes no difference.
         // If values are zero, the 1.0 should mean the reference residual
         // asymptotes to an absolute residual.
-        referenceResiduals[] = referenceResiduals[] + to!number(1.0);
+        foreach (ref residual; referenceResiduals) residual += to!number(1.0);
 
         if (nkCfg.numberOfStepsForSettingReferenceResiduals == 0) {
             referenceResidualsAreSet = true;
