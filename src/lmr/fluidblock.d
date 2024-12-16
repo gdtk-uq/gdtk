@@ -143,6 +143,13 @@ public:
     double[] g0, g1;
     Matrix!double Q1;
     double[] VT;
+
+    // memory for fGMRES
+    double[] ZT; // the preconditioned Krylov vectors used by fGMRES
+    double[] VT_inner; // memory for the Krylov vectors used in the inner iterations of fGMRES
+    double[] inner_x0;
+    double[] inner_g1;
+    double[] inner_R;
     }
 
     this(int id, string label)
@@ -1823,6 +1830,51 @@ public:
         g1.length = m+1;
         VT.length = (m+1)*n;
         Q1 = new Matrix!double(m+1, m+1);
+    }
+
+    void allocate_FGMRES_workspace(int maxLinearSolverIterations,
+                                   int maxPreconditioningIterations,
+                                   bool useRealValuedFrechetDerivative)
+    {
+        size_t nConserved = GlobalConfig.cqi.n;
+        int n_species = GlobalConfig.gmodel_master.n_species();
+        int n_modes = GlobalConfig.gmodel_master.n_modes();
+        maxRate = new ConservedQuantities(nConserved);
+        residuals = new ConservedQuantities(nConserved);
+
+        size_t m = to!size_t(maxLinearSolverIterations);
+        size_t m_inner = to!size_t(maxPreconditioningIterations);
+        size_t n = nConserved*cells.length;
+
+        // add the number of grid degrees of freedom to the total
+        // number of variables
+        if (myConfig.grid_motion != GridMotion.none) {
+            foreach (ref vtx; vertices) {
+                if (vtx.solve_position) { n += myConfig.dimensions; } 
+            }
+        }
+
+        nvars = n;
+        // Now allocate arrays and matrices
+        R.length = n;
+        if (useRealValuedFrechetDerivative) { R0.length = n; }
+        dU.length = n; dU[] = 0.0;
+        r0.length = n;
+        x0.length = n;
+        DinvR.length = n;
+        rhs.length = n;
+        v.length = n;
+        w.length = n;
+        zed.length = n;
+        g0.length = m+1;
+        g1.length = m+1;
+        VT.length = (m+1)*n;
+        Q1 = new Matrix!double(m+1, m+1);
+
+        ZT.length = (m+1)*n;
+        VT_inner.length = (m_inner+1)*n;
+        inner_x0.length = n;
+        inner_g1.length = m_inner+1;
     }
 
     } // end version(newton_krylov)

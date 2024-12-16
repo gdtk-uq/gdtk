@@ -173,6 +173,8 @@ struct NKGlobalConfig {
     bool useRealValuedFrechetDerivative = false;
     double frechetDerivativePerturbation = 1.0e-30;
     bool usePreconditioner = true;
+    bool useFGMRES = false;
+    int maxFgmresPreconditioningIterations = 10;
     double preconditionerPerturbation = 1.0e-30;
     PreconditionerType preconditioner = PreconditionerType.ilu;
     // ILU setting
@@ -227,6 +229,9 @@ struct NKGlobalConfig {
         useRealValuedFrechetDerivative = getJSONbool(jsonData, "use_real_valued_frechet_derivative", useRealValuedFrechetDerivative);
         frechetDerivativePerturbation = getJSONdouble(jsonData, "frechet_derivative_perturbation", frechetDerivativePerturbation);
         usePreconditioner = getJSONbool(jsonData, "use_preconditioner", usePreconditioner);
+        useFGMRES = getJSONbool(jsonData, "use_fgmres", useFGMRES);
+        maxFgmresPreconditioningIterations = getJSONint(jsonData, "max_fgmres_preconditioning_iterations",
+            maxFgmresPreconditioningIterations);
         preconditionerPerturbation = getJSONdouble(jsonData, "preconditioner_perturbation", preconditionerPerturbation);
         auto pString = getJSONstring(jsonData, "preconditioner", "NO_SELECTION_SUPPLIED");
         preconditioner = preconditionerTypeFromName(pString);
@@ -261,6 +266,7 @@ struct NKPhaseConfig {
     bool frozenLimiterForResidual = false;
     bool frozenLimiterForJacobian = false;
     double linearSolveTolerance = 0.01;
+    double fgmresPreconditionSolveTolerance = 1e-2;
     // Auto CFL control
     bool useAutoCFL = false;
     double thresholdRelativeResidualForCFLGrowth = 0.99;
@@ -289,6 +295,9 @@ struct NKPhaseConfig {
         frozenLimiterForResidual = getJSONbool(jsonData, "frozen_limiter_for_residual", frozenLimiterForResidual);
         frozenLimiterForJacobian = getJSONbool(jsonData, "frozen_limiter_for_jacobian", frozenLimiterForJacobian);
         linearSolveTolerance = getJSONdouble(jsonData, "linear_solve_tolerance", linearSolveTolerance);
+        fgmresPreconditionSolveTolerance = getJSONdouble(jsonData,
+                                                        "fgmres_preconditioning_solve_tolerance",
+                                                        fgmresPreconditionSolveTolerance);
         useAutoCFL = getJSONbool(jsonData, "use_auto_cfl", useAutoCFL);
         thresholdRelativeResidualForCFLGrowth = getJSONdouble(jsonData, "threshold_relative_residual_for_cfl_growth", thresholdRelativeResidualForCFLGrowth);
         startCFL = getJSONdouble(jsonData, "start_cfl", startCFL);
@@ -443,6 +452,17 @@ Matrix!double H1;
 Matrix!double Gamma;
 Matrix!double Q0;
 Matrix!double Q1;
+
+// Module-local, global memory for the preconditioning iterations of fgmres
+double[] inner_g0;
+double[] inner_g1;
+double[] inner_h;
+double[] inner_hR;
+Matrix!double inner_H0;
+Matrix!double inner_H1;
+Matrix!double inner_Gamma;
+Matrix!double inner_Q0;
+Matrix!double inner_Q1;
 
 /*---------------------------------------------------------------------
  * Locally used data structures
@@ -697,6 +717,15 @@ void readNewtonKrylovConfig()
         throw new Error(errMsg);
     }
 
+    // fgmrs and matrix based preconditioners are not compatible
+    if (cfg.is_master_task && nkCfg.useFGMRES && nkCfg.usePreconditioner) {
+        string errMsg;
+        errMsg ~= "\n";
+        errMsg ~= "ERROR: fgmres and matrix based preconditioning are not compatible\n";
+        errMsg ~= "To use FGMRES, make sure to set 'use_preconditioner = false'\n";
+        throw new Error(errMsg);
+    }
+
     // we will allow the phase_changes_at_relative_residual list to be empty, if it is empty, we will only key the phase changes off of the steps
     if (nkCfg.phaseChangesAtRelativeResidual.length == 0) {
         size_t nentries = nkCfg.maxStepsInInitialPhases.length;
@@ -827,9 +856,19 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             gradBlkIO = new GzipBlockIO(gradCIO);
         gradBlkIO.writeMetadataToFile(lmrCfg.gradientMetadataFile);
     }
+
     allocateGlobalGMRESWorkspace();
+    if (nkCfg.useFGMRES) { allocateGlobalFGMRESWorkspace(); }
+
     foreach (blk; localFluidBlocks) {
-        blk.allocate_GMRES_workspace(nkCfg.maxLinearSolverIterations, nkCfg.useRealValuedFrechetDerivative);
+        if (nkCfg.useFGMRES) {
+            blk.allocate_FGMRES_workspace(nkCfg.maxLinearSolverIterations,
+                                          nkCfg.maxFgmresPreconditioningIterations,
+                                          nkCfg.useRealValuedFrechetDerivative);
+        } else {
+            blk.allocate_GMRES_workspace(nkCfg.maxLinearSolverIterations,
+                                         nkCfg.useRealValuedFrechetDerivative);
+        }
     }
     /* solid blocks don't work just yet.
     allocate_global_solid_workspace();
@@ -1111,7 +1150,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          *---
          */
         prevGlobalResidual = globalResidual;
-        solveNewtonStep(updatePreconditionerThisStep);
+        if (nkCfg.useFGMRES) {
+            solveNewtonStepFGMRES();
+        } else {
+            solveNewtonStep(updatePreconditionerThisStep);
+        }
 
 	/* 1a. perform a physicality check if required */
         omega = nkCfg.usePhysicalityCheck ? determineRelaxationFactor() : 1.0;
@@ -1351,6 +1394,20 @@ void allocateGlobalGMRESWorkspace()
     Gamma = new Matrix!double(m+1, m+1);
     Q0 = new Matrix!double(m+1, m+1);
     Q1 = new Matrix!double(m+1, m+1);
+}
+
+void allocateGlobalFGMRESWorkspace()
+{
+    size_t m = to!size_t(nkCfg.maxFgmresPreconditioningIterations);
+    inner_g0.length = m+1;
+    inner_g1.length = m+1;
+    inner_h.length = m+1;
+    inner_hR.length = m+1;
+    inner_H0 = new Matrix!double(m+1, m);
+    inner_H1 = new Matrix!double(m+1, m);
+    inner_Gamma = new Matrix!double(m+1, m+1);
+    inner_Q0 = new Matrix!double(m+1, m+1);
+    inner_Q1 = new Matrix!double(m+1, m+1);
 }
 
 /*---------------------------------------------------------------------
@@ -1673,7 +1730,8 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
             writeln(" calling performIterations.");
         }
         */
-        isConverged = performIterations(maxIterations, targetResidual, rowScale, colScale, iterationCount, linearSolveResidual);
+        isConverged = performIterations(maxIterations, targetResidual, rowScale,
+                                        colScale, iterationCount, linearSolveResidual);
         int m = iterationCount;
 
         /*
@@ -1735,6 +1793,151 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         writeln(" done restarted GMRES iterations.");
     }
     */
+
+    // Set some information before leaving. This might be used in diagnostics file.
+    gmresInfo.nRestarts = to!int(r_break);
+    gmresInfo.initResidual = beta0.re;
+    gmresInfo.finalResidual = linearSolveResidual.re;
+    gmresInfo.iterationCount = iterationCount;
+}
+
+
+void solveNewtonStepFGMRES()
+{
+    /*
+    debug {
+        writeln("DEBUG: solveNewtonStep()");
+        writeln(" entered function.");
+    }
+    */
+
+    double linearSolveResidual;
+    alias cfg = GlobalConfig;
+    size_t nConserved = cfg.cqi.n;
+
+    bool isConverged = false;
+    /*---
+     * 0. Preparation for iterations.
+     *---
+     */
+
+    evalResidual(0);
+
+    setResiduals();
+
+    if (nkCfg.useRealValuedFrechetDerivative) { setR0(); }
+
+    computeGlobalResidual();
+
+    determineScaleFactors(rowScale, colScale, nkCfg.useScaling);
+
+    if (nkCfg.useResidualSmoothing) {
+        evalResidualSmoothing();
+    	applyResidualSmoothing();
+    }
+
+    setInitialGuess();
+
+    /*---
+     * 1. Outer loop of restarted GMRES
+     *---
+     */
+
+    size_t r_break;
+    int maxIterations = nkCfg.maxLinearSolverIterations;
+    // We add one here because input is to do with number of *restarts*.
+    // We need at least one attempt (+1) plus the number of restarts chosen.
+    int nAttempts = nkCfg.maxLinearSolverRestarts + 1;
+    int iterationCount;
+
+    /*
+    debug {
+        writeln("DEBUG: solveNewtonStep()");
+        writeln(" starting restarted GMRES iterations.");
+    }
+    */
+
+    double beta, beta0, targetResidual;
+    foreach (r; 0 .. nAttempts) {
+        // Initialise some working arrays and matrices for this step.
+        g0[] = 0.0;
+        g1[] = 0.0;
+        H0.zeros();
+        H1.zeros();
+        Gamma.eye();
+
+        // r0 = b - A*x0
+        compute_r0();
+
+        // scale the r0 vector
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(rowScale, blk.r0, nConserved, blk.nvars);
+        }
+
+        // beta = ||r0||
+        beta = computeLinearSystemResidual();
+
+        // Set first residual entry.
+        g0[0] = beta;
+
+        // v = r0/beta
+        prepareKrylovSpace(beta);
+
+        // Compute target residual on first restart
+        if (r == 0) {
+            targetResidual = activePhase.linearSolveTolerance * beta;
+            beta0 = beta; // store a copy of the initial residual for the diagnostics output
+        }
+
+        // Delegate inner iterations
+        isConverged = performFGMRESIterations(maxIterations,
+                                              nkCfg.maxFgmresPreconditioningIterations,
+                                              targetResidual,
+                                              activePhase.fgmresPreconditionSolveTolerance,
+                                              rowScale, colScale,
+                                              iterationCount, linearSolveResidual);
+        int m = iterationCount;
+
+        // At end H := R up to row m
+        //        g := gm up to row m
+        upperSolve!double(H1, to!int(m), g1);
+        // In serial, distribute a copy of g1 to each block
+        foreach (blk; localFluidBlocks) blk.g1[] = g1[];
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            nm.bbla.transpose_and_dot!double(blk.ZT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
+        }
+
+        // At this point we have zed = Dc^(-1) * dU
+        // we need to prepare the dU values (for Newton update)
+
+        // We first multiply zed by the column scaling to recover zed *= Dc = dU
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(colScale, blk.zed, nConserved, blk.nvars);
+        }
+
+        // Next we remove preconditioner effect to finally recover dU
+        foreach(blk; parallel(localFluidBlocks,1)) {
+            blk.dU[] = blk.zed[];
+        }
+
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
+        }
+
+        if (isConverged || (r == nkCfg.maxLinearSolverRestarts)) {
+            // We are either converged, or
+            // we've run out of restart attempts.
+            // In either case, we can leave now.
+            r_break = r;
+            break;
+        }
+
+        // If we get here, we need to prepare for next restart by setting
+        // the initial guess to the current estimate of the solution
+        foreach (blk; parallel(localFluidBlocks, 1)) {
+            blk.x0[] = blk.dU[];
+        }
+    }
 
     // Set some information before leaving. This might be used in diagnostics file.
     gmresInfo.nRestarts = to!int(r_break);
@@ -1925,6 +2128,21 @@ void setInitialGuess()
 }
 
 /**
+ * Set initial inner guess vector for fGMRES, currently we set this to 0 (as is common)
+ *
+ * x0 = [0]
+ *
+ * Authors: RGW, KAD and RJG
+ * Date: 2022-03-02
+ */
+void setInitialInnerGuess()
+{
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.inner_x0[] = 0.0;
+    }
+}
+
+/**
  * Compute the initial residual vector for GMRES method for any arbitrary x0,
  *
  * r0 = b - A*x0
@@ -1951,6 +2169,36 @@ void compute_r0()
     // set r0 := R - A*zed
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) blk.r0[k] = blk.R[k] - blk.w[k];
+    }
+}
+
+/**
+ * Compute the initial residual vector for the inner fGMRES method for any arbitrary x0,
+ *
+ * r0 = b - A*x0
+ *
+ * where b is the residual vector R, and A is the augmented Jacobian (I/dt - J).
+ *
+ * Note that this routine expects the x0 vector to be set prior to calling.
+ *
+ * Authors: RGW, KAD and RJG
+ * Date: 2024-02-27
+ */
+void compute_inner_r0()
+{
+    size_t nConserved = GlobalConfig.cqi.n;
+
+    // place x0 in zed
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.zed[] = blk.inner_x0[];
+    }
+
+    // evaluate A*zed
+    evalAugmentedJacobianVectorProduct(true);
+
+    // set r0 := R - A*zed
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (k; 0 .. blk.nvars) blk.r0[k] = blk.v[k] - blk.w[k];
     }
 }
 
@@ -1984,6 +2232,24 @@ void prepareKrylovSpace(double beta)
         blk.v[] = (1./beta)*blk.r0[];
         foreach (k; 0 .. blk.nvars) {
             blk.VT[k] = blk.v[k];
+        }
+    }
+}
+
+
+/**
+ * Prepare the Krylov space for iterating.
+ *
+ * Authors: RGW, RJG and KAD
+ * Date: 2024-12-13
+ */
+void prepareInnerKrylovSpace(double beta)
+{
+    inner_g0[0] = beta;
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.v[] = (1./beta)*blk.r0[];
+        foreach (k; 0 .. blk.nvars) {
+            blk.VT_inner[k] = blk.v[k];
         }
     }
 }
@@ -2261,6 +2527,266 @@ bool performIterations(int maxIterations, double targetResidual,
     return isConverged;
 }
 
+/**
+ * Perform fGMRES iterations to fill Krylov subspace and get solution estimate.
+ *
+ * Returns boolean indicating converged or not.
+ *
+ * Authors: RGW, RJG and KAD
+ * Date: 2024-12-13
+ */
+bool performFGMRESIterations(int maxIterations, int maxPreconditioningIterations,
+                             double targetResidual,
+                             double targetPreconditionResidual,
+                             ref ConservedQuantities rowScale,
+                             ref ConservedQuantities colScale,
+                             ref int iterationCount,
+                             ref double resid)
+{
+    alias cfg = GlobalConfig;
+
+    bool isConverged = false;
+    size_t nConserved = cfg.cqi.n;
+
+    foreach (j; 0 .. maxIterations) {
+        iterationCount = j+1;
+
+        // 1. apply column scaling to v
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(colScale, blk.v, nConserved, blk.nvars);
+        }
+
+        // 2. Preconditioning
+        // 2a. Perform inner gmres to solve the preconditioning system
+        bool inner_converged = inner_gmres(maxPreconditioningIterations,
+                                           targetPreconditionResidual);
+
+        // 2b. Save the preconditioned Krylov vector
+        foreach (blk; parallel(localFluidBlocks, 1)) {
+            size_t offset = j * blk.nvars;
+            foreach (k; 0 .. blk.nvars) {
+                blk.ZT[offset + k] = blk.zed[k];
+            }
+        }
+
+        // 3. Jacobian-vector product
+        evalAugmentedJacobianVectorProduct();
+
+        // apply row scaling to w
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(rowScale, blk.w, nConserved, blk.nvars);
+        }
+
+        // 4. The remainder of the algorithm looks a lot like any standard
+        // GMRES implementation (for example, see smla.d)
+        foreach (i; 0 .. j+1) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                // Extract column 'i'
+                size_t offset = i*blk.nvars;
+                foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.VT[offset + k];
+            }
+            double H0_ij;
+            mixin(dotOverBlocks("H0_ij", "w", "v"));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            H0[i,j] = H0_ij;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k];
+            }
+        }
+        double H0_jp1j;
+        mixin(dotOverBlocks("H0_jp1j", "w", "w"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        H0_jp1j = sqrt(H0_jp1j);
+        H0[j+1,j] = H0_jp1j;
+
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t offset = (j+1)*blk.nvars;
+            foreach (k; 0 .. blk.nvars) {
+                blk.v[k] = blk.w[k]/H0_jp1j;
+                blk.VT[offset + k] = blk.v[k];
+            }
+        }
+
+        // Build rotated Hessenberg progressively
+        if (j != 0) {
+            // Extract final column in H
+            foreach (i; 0 .. j+1) h[i] = H0[i,j];
+            // Rotate column by previous rotations (stored in Q0)
+            nm.bbla.dot(Q0, j+1, j+1, h, hR);
+            // Place column back in H
+            foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+        }
+        // Now form new Gamma
+        Gamma.eye();
+        auto denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+        auto s_j = H0[j+1,j]/denom;
+        auto c_j = H0[j,j]/denom;
+        Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+        Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+        // Apply rotations
+        nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
+        nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+        // Accumulate Gamma rotations in Q.
+        if (j == 0) {
+            nm.bbla.copy(Gamma, Q1);
+        }
+        else {
+            nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
+        }
+
+        // Prepare for next step
+        nm.bbla.copy(H1, H0);
+        g0[] = g1[];
+        nm.bbla.copy(Q1, Q0);
+
+        // Get residual
+        resid = fabs(g1[j+1]);
+        if (resid <= targetResidual) {
+            isConverged = true;
+            break;
+        }
+    }
+
+    return isConverged;
+}
+
+/**
+ * Perform inner fGMRES iterations.
+ *
+ * Returns boolean indicating converged or not.
+ *
+ * Authors: RGW, RJG and KAD
+ * Date: 2024-12-13
+ */
+bool inner_gmres(int maxIterations, double targetResidual)
+{
+    alias cfg = GlobalConfig;
+
+    bool isConverged = false;
+
+    inner_g0[] = 0.0;
+    inner_g1[] = 0.0;
+    inner_H0.zeros();
+    inner_H1.zeros();
+    inner_Gamma.eye();
+
+    setInitialInnerGuess();
+    compute_inner_r0();
+    double beta = computeLinearSystemResidual();
+    prepareInnerKrylovSpace(beta);
+    int iterationCount = 0;
+
+    foreach (j; 0 .. maxIterations) {
+        iterationCount = j+1;
+
+        // no preconditioning here, so just copy v to zed
+        foreach (blk; parallel(localFluidBlocks, 1)) {
+            blk.zed[] = blk.v[];
+        }
+
+        // 2. Jacobian-vector product
+        evalAugmentedJacobianVectorProduct(true);
+
+        // 4. The remainder of the algorithm looks a lot like any standard
+        // GMRES implementation (for example, see smla.d)
+        foreach (i; 0 .. j+1) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                // Extract column 'i'
+                size_t offset = i*blk.nvars;
+                foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.VT_inner[offset + k];
+            }
+            double H0_ij;
+            mixin(dotOverBlocks("H0_ij", "w", "v"));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            inner_H0[i,j] = H0_ij;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k];
+            }
+        }
+        double H0_jp1j;
+        mixin(dotOverBlocks("H0_jp1j", "w", "w"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        H0_jp1j = sqrt(H0_jp1j);
+        inner_H0[j+1,j] = H0_jp1j;
+
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t offset = (j+1)*blk.nvars;
+            foreach (k; 0 .. blk.nvars) {
+                blk.v[k] = blk.w[k]/H0_jp1j;
+                blk.VT_inner[offset + k] = blk.v[k];
+            }
+        }
+
+        // Build rotated Hessenberg progressively
+        if (j != 0) {
+            // Extract final column in H
+            foreach (i; 0 .. j+1) inner_h[i] = inner_H0[i,j];
+            // Rotate column by previous rotations (stored in Q0)
+            nm.bbla.dot(inner_Q0, j+1, j+1, inner_h, inner_hR);
+            // Place column back in H
+            foreach (i; 0 .. j+1) inner_H0[i,j] = inner_hR[i];
+        }
+
+        // Now form new Gamma
+        inner_Gamma.eye();
+        auto denom = sqrt(inner_H0[j,j]*inner_H0[j,j] + inner_H0[j+1,j]*inner_H0[j+1,j]);
+        auto s_j = inner_H0[j+1,j]/denom;
+        auto c_j = inner_H0[j,j]/denom;
+        inner_Gamma[j,j] = c_j; inner_Gamma[j,j+1] = s_j;
+        inner_Gamma[j+1,j] = -s_j; inner_Gamma[j+1,j+1] = c_j;
+        // Apply rotations
+        nm.bbla.dot(inner_Gamma, j+2, j+2, inner_H0, j+1, inner_H1);
+        nm.bbla.dot(inner_Gamma, j+2, j+2, inner_g0, inner_g1);
+
+        // Accumulate Gamma rotations in Q.
+        if (j == 0) {
+            nm.bbla.copy(inner_Gamma, inner_Q1);
+        }
+        else {
+            nm.bbla.dot!double(inner_Gamma, j+2, j+2, inner_Q0, j+2, inner_Q1);
+        }
+
+        // Prepare for next step
+        nm.bbla.copy(inner_H1, inner_H0);
+        inner_g0[] = inner_g1[];
+        nm.bbla.copy(inner_Q1, inner_Q0);
+
+        // Get residual
+        double resid = fabs(g1[j+1]);
+        if (resid <= targetResidual) {
+            isConverged = true;
+            break;
+        }
+    }
+
+    int m = iterationCount;
+
+    // At end H := R up to row m
+    //        g := gm up to row m
+    upperSolve!double(inner_H1, to!int(m), inner_g1);
+
+    // In serial, distribute a copy of g1 to each block
+    foreach (blk; localFluidBlocks) blk.inner_g1[] = inner_g1[];
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        nm.bbla.transpose_and_dot!double(blk.VT_inner, blk.nvars, m, blk.nvars,
+                                         blk.inner_g1, blk.zed);
+    }
+
+    foreach (blk; parallel(localFluidBlocks, 1)) {
+        foreach (k; 0 .. blk.nvars) blk.zed[k] += blk.inner_x0[k];
+    }
+
+    return isConverged;
+}
+
 
 /**
  * Apply preconditioning to GMRES iterations.
@@ -2399,7 +2925,7 @@ double computePerturbationSize()
  * Authors: KAD and RJG
  * Date: 2023-02-27
  */
-void evalAugmentedJacobianVectorProduct()
+void evalAugmentedJacobianVectorProduct(bool for_preconditioning = false)
 {
     size_t nConserved = GlobalConfig.cqi.n;
 
@@ -2438,7 +2964,7 @@ void evalAugmentedJacobianVectorProduct()
     }
 
     // Evaluate Jz and place result in zed vector
-    evalJacobianVectorProduct(sigma);
+    evalJacobianVectorProduct(sigma, for_preconditioning);
 
     // Complete the calculation of w: (I/dt)z - Jz
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2454,17 +2980,17 @@ void evalAugmentedJacobianVectorProduct()
  * Authors: KAD and RJG
  * Date: 2022-03-02
  */
-void evalJacobianVectorProduct(double sigma)
+void evalJacobianVectorProduct(double sigma, bool for_preconditioning)
 {
     version (complex_numbers) {
         if (nkCfg.useRealValuedFrechetDerivative) {
-            evalRealMatVecProd(sigma);
+            evalRealMatVecProd(sigma, for_preconditioning);
         } else {
-            evalComplexMatVecProd(sigma);
+            evalComplexMatVecProd(sigma, for_preconditioning);
         }
     }
     else {
-        evalRealMatVecProd(sigma);
+        evalRealMatVecProd(sigma, for_preconditioning);
     }
 }
 
@@ -2632,6 +3158,40 @@ void evalResidual(int ftl)
     }
 }
 
+void setJacobianEvalSettings(bool for_preconditioning)
+{
+    alias cfg = GlobalConfig;
+    int spatial_order = (for_preconditioning) ? 1 : activePhase.jacobianInterpolationOrder;
+    foreach (blk; parallel(localFluidBlocks,1)) { 
+        blk.set_interpolation_order(spatial_order);
+    }
+
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian;
+    }
+
+    if (cfg.grid_motion == GridMotion.shock_fitting && activePhase.gridMotionEnabled) {
+        GlobalConfig.shock_fitting_allow_flow_reconstruction = ((spatial_order == 2) && (activePhase.jacobianInterpolationOrder == 2));
+    }
+}
+
+void setResidualEvalSettings()
+{
+    alias cfg = GlobalConfig;
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.set_interpolation_order(activePhase.residualInterpolationOrder);
+    }
+    
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual;
+    }
+
+    if (cfg.grid_motion == GridMotion.shock_fitting && activePhase.gridMotionEnabled) {
+        GlobalConfig.shock_fitting_allow_flow_reconstruction = (activePhase.shockFittingAllowInterpolation && (activePhase.residualInterpolationOrder == 2));
+    }
+    
+}
+
 
 /**
  * Evaluate J*v via a Frechet derivative with perturbation in imaginary plane.
@@ -2641,18 +3201,14 @@ void evalResidual(int ftl)
  * Authors: KAD and RJG
  * Date: 2022-03-03
  */
-void evalComplexMatVecProd(double sigma)
+void evalComplexMatVecProd(double sigma, bool for_preconditioning)
 {
     version(complex_numbers) {
         alias cfg = GlobalConfig;
 
         int gtl = (GlobalConfig.grid_motion == GridMotion.none) ? 0 : 1;
 
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
-        foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
-        if (cfg.grid_motion == GridMotion.shock_fitting && activePhase.gridMotionEnabled) {
-            GlobalConfig.shock_fitting_allow_flow_reconstruction = (activePhase.shockFittingAllowInterpolation && (activePhase.jacobianInterpolationOrder == 2));
-        }
+        setJacobianEvalSettings(for_preconditioning);
 
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
@@ -2732,12 +3288,7 @@ void evalComplexMatVecProd(double sigma)
                 }
             }
         }
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.residualInterpolationOrder); }
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            GlobalConfig.frozen_limiter = activePhase.frozenLimiterForResidual; }
-        if (cfg.grid_motion == GridMotion.shock_fitting && activePhase.gridMotionEnabled) {
-            GlobalConfig.shock_fitting_allow_flow_reconstruction = (activePhase.shockFittingAllowInterpolation && (activePhase.residualInterpolationOrder == 2));
-        }
+        setResidualEvalSettings();
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
     }
@@ -2751,7 +3302,7 @@ void evalComplexMatVecProd(double sigma)
  * Authors: KAD and RJG
  * Date: 2022-03-03
  */
-void evalRealMatVecProd(double sigma)
+void evalRealMatVecProd(double sigma, bool for_preconditioning)
 {
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
     foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = activePhase.frozenLimiterForJacobian; }
