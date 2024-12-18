@@ -17,6 +17,8 @@ include::2D/diffuser-busemann/README.adoc[tag=description]
 
 include::2D/turbulent-flat-plate/README.adoc[tag=description]
 
+include::2D/steepening-wave/README.adoc[tag=description]
+
 include::2D/reacting-ramp/README.adoc[tag=description]
 
 include::2D/cylinder-coupled-fluid-thermal/transient/README.adoc[tag=description]
