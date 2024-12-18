@@ -237,7 +237,6 @@ function makeFluidBlocks(bcDict, flowDict)
          connectBlocks(fluidBlocks[c.idA+1], c.faceA, fluidBlocks[c.idB+1], c.faceB, c.orientation)
       end
    end
-   print("Returning fluidblocks of length", #fluidBlocks)
    return fluidBlocks
 end
 
