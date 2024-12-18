@@ -19,6 +19,7 @@ import lmr.flowstate;
 import lmr.fluidfvcell;
 import lmr.fvinterface;
 import lmr.globalconfig;
+import geom.elements;
 
 //------------------------------------------------------------------------------
 
@@ -131,6 +132,428 @@ struct L3R3InterpData {
         wR_R2 = xL1*xL0*xR0*xR1/((xR2-xL1)*(xR2-xL0)*(xR2-xR0)*(xR2-xR1));
     }
 }
+
+pragma(inline, true)
+@nogc
+void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
+                        in L2R2InterpData idi, bool apply_limiter, bool extrema_clipping, double epsilon_van_albada,
+                        ref number qL, ref number qR, number beta)
+{
+    // Set up differences and limiter values.
+    number delLminus = (qL0 - qL1) * idi.two_over_lenL0_plus_lenL1;
+    number del = (qR0 - qL0) * idi.two_over_lenR0_plus_lenL0;
+    number delRplus = (qR1 - qR0) * idi.two_over_lenR1_plus_lenR0;
+
+    // Dimensionalise the smoothing parameter epsilon (NNG, Sept 23)
+    number qqL = fmax(1e-12, fabs(qL0));
+    number qqR = fmax(1e-12, fabs(qR0));
+    number qq = fmax(qqL, qqR);
+    number epsilon = qq*epsilon_van_albada*idi.two_over_lenR0_plus_lenL0;
+    // Presume unlimited high-order reconstruction.
+    number sL = 1.0;
+    number sR = 1.0;
+    if (apply_limiter) {
+        // val Albada limiter as per Ian Johnston's thesis.
+        sL = (delLminus*del + fabs(delLminus*del) + epsilon) /
+            (delLminus*delLminus + del*del + epsilon);
+        sR = (del*delRplus + fabs(del*delRplus) + epsilon) /
+            (del*del + delRplus*delRplus + epsilon);
+    }
+    // The actual high-order reconstruction, possibly limited.
+    qL = qL0 + beta * sL * idi.aL0 * (del * idi.two_lenL0_plus_lenL1 + delLminus * idi.lenR0_);
+    qR = qR0 - beta * sR * idi.aR0 * (delRplus * idi.lenL0_ + del * idi.two_lenR0_plus_lenR1);
+    if (extrema_clipping) {
+        // An extra limiting filter to ensure that we do not compute new extreme values.
+        // This was introduced to deal with very sharp transitions in species.
+        qL = clip_to_limits(qL, qL0, qR0);
+        qR = clip_to_limits(qR, qL0, qR0);
+    }
+} // end of interp_l2r2_scalar()
+
+pragma(inline, true)
+@nogc
+void interp_l3r3_scalar(number qL2, number qL1, number qL0,
+                        number qR0, number qR1, number qR2,
+                        in L3R3InterpData d, bool apply_limiter, bool extrema_clipping, double epsilon_van_albada,
+                        ref number qL, ref number qR, number beta)
+{
+    // Set up differences and limiter values.
+    number delLminus = (qL0 - qL1);
+    number del = (qR0 - qL0);
+    number delRplus = (qR1 - qR0);
+    // Dimensionalise the smoothing parameter epsilon (NNG, Sept 23)
+    number qqL = fmax(1e-12, fabs(qL0));
+    number qqR = fmax(1e-12, fabs(qR0));
+    number qq = fmax(qqL, qqR);
+    number epsilon = qq*epsilon_van_albada;
+    // Presume unlimited high-order reconstruction.
+    number sL = 1.0;
+    number sR = 1.0;
+    if (apply_limiter) {
+        // val Albada limiter as per Ian Johnston's thesis.
+        sL = (delLminus*del + fabs(delLminus*del) + epsilon) /
+            (delLminus*delLminus + del*del + epsilon);
+        sR = (del*delRplus + fabs(del*delRplus) + epsilon) /
+            (del*del + delRplus*delRplus + epsilon);
+    }
+    // The actual high-order reconstruction, possibly limited.
+    qL = qL0 + beta * sL * (d.wL_L2*qL2 + d.wL_L1*qL1 + (d.wL_L0-1.0)*qL0 + d.wL_R0*qR0 + d.wL_R1*qR1);
+    qR = qR0 + beta * sR * (d.wR_L1*qL1 + d.wR_L0*qL0 + (d.wR_R0-1.0)*qR0 + d.wR_R1*qR1 + d.wR_R2*qR2);
+    if (extrema_clipping) {
+        // An extra limiting filter to ensure that we do not compute new extreme values.
+        // This was introduced to deal with very sharp transitions in species.
+        qL = clip_to_limits(qL, qL0, qR0);
+        qR = clip_to_limits(qR, qL0, qR0);
+    }
+} // end of interp_l3r3_scalar()
+
+@nogc
+void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, ref FlowState cR1fs,
+                 Vector3 n, Vector3 t1, Vector3 t2,
+                 in L2R2InterpData idi, size_t nsp, size_t nmodes, size_t nturb,
+                 InterpolateOption thermo_interpolator, bool MHD, bool apply_limiter, bool extrema_clipping,
+                 LocalConfig myConfig, ref FlowState Lft, ref FlowState Rght, number beta){
+    // High-order reconstruction for some properties.
+
+    // Paul Petrie-Repar and Jason Qin have noted that the velocity needs
+    // to be reconstructed in the interface-local frame of reference so that
+    // the normal velocities are not messed up for mirror-image at walls.
+    // PJ 21-feb-2012
+    //if (myConfig.interpolate_in_local_frame) {
+    cL1fs.vel.transform_to_local_frame(n, t1, t2);
+    cL0fs.vel.transform_to_local_frame(n, t1, t2);
+    cR0fs.vel.transform_to_local_frame(n, t1, t2);
+    cR1fs.vel.transform_to_local_frame(n, t1, t2);
+    //}
+
+    GasModel gmodel = myConfig.gmodel;
+    double epsilon_van_albada = myConfig.epsilon_van_albada;
+
+    interp_l2r2_scalar(cL1fs.vel.x, cL0fs.vel.x, cR0fs.vel.x, cR1fs.vel.x,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                       Lft.vel.x, Rght.vel.x, beta);
+    interp_l2r2_scalar(cL1fs.vel.y, cL0fs.vel.y, cR0fs.vel.y, cR1fs.vel.y,
+                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                       Lft.vel.y, Rght.vel.y, beta);
+    interp_l2r2_scalar(cL1fs.vel.z, cL0fs.vel.z, cR0fs.vel.z, cR1fs.vel.z,
+                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                       Lft.vel.z, Rght.vel.z, beta);
+    version(MHD) {
+        if (MHD) {
+            interp_l2r2_scalar(cL1fs.B.x, cL0fs.B.x, cR0fs.B.x, cR1fs.B.x,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                               Lft.B.x, Rght.B.x, beta);
+            interp_l2r2_scalar(cL1fs.B.y, cL0fs.B.y, cR0fs.B.y, cR1fs.B.y,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                               Lft.B.y, Rght.B.y, beta);
+            interp_l2r2_scalar(cL1fs.B.z, cL0fs.B.z, cR0fs.B.z, cR1fs.B.z,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                               Lft.B.z, Rght.B.z, beta);
+            if (myConfig.divergence_cleaning) {
+                interp_l2r2_scalar(cL1fs.psi, cL0fs.psi, cR0fs.psi, cR1fs.psi,
+                                   idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                                   Lft.psi, Rght.psi, beta);
+            }
+        }
+    }
+    version(turbulence) {
+        foreach (it; 0 .. nturb){
+            interp_l2r2_scalar(cL1fs.turb[it], cL0fs.turb[it], cR0fs.turb[it], cR1fs.turb[it],
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                               Lft.turb[it], Rght.turb[it], beta);
+        }
+    }
+    auto gL1 = &(cL1fs.gas); // Avoid construction of another object.
+    auto gL0 = &(cL0fs.gas);
+    auto gR0 = &(cR0fs.gas);
+    auto gR1 = &(cR1fs.gas);
+    version(multi_species_gas) {
+        if (nsp > 1) {
+            // Multiple species.
+            if (myConfig.allow_reconstruction_for_species) {
+                foreach (isp; 0 .. nsp) {
+                    interp_l2r2_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                                       Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
+                }
+                if (myConfig.scale_species_after_reconstruction) {
+                    scale_mass_fractions(Lft.gas.massf);
+                    scale_mass_fractions(Rght.gas.massf);
+                }
+            } else {
+                Lft.gas.massf[] = gL0.massf[];
+                Rght.gas.massf[] = gR0.massf[];
+            }
+        } else {
+            // Only one possible mass-fraction value for a single species.
+            Lft.gas.massf[0] = 1.0;
+            Rght.gas.massf[0] = 1.0;
+        }
+    }
+    // Interpolate on two of the thermodynamic quantities,
+    // and fill in the rest based on an EOS call.
+    final switch (thermo_interpolator) {
+    case InterpolateOption.pt:
+        interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
+        interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l2r2_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
+                }
+            } else {
+                Lft.gas.T_modes[] = gL0.T_modes[];
+                Rght.gas.T_modes[] = gR0.T_modes[];
+            }
+        }
+        gmodel.update_thermo_from_pT(Lft.gas);
+        gmodel.update_thermo_from_pT(Rght.gas);
+        break;
+    case InterpolateOption.rhou:
+        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l2r2_scalar(gL1.u, gL0.u, gR0.u, gR1.u, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.u, Rght.gas.u, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l2r2_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                                       Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
+                }
+            } else {
+                Lft.gas.u_modes[] = gL0.u_modes[];
+                Rght.gas.u_modes[] = gR0.u_modes[];
+            }
+        }
+        gmodel.update_thermo_from_rhou(Lft.gas);
+        gmodel.update_thermo_from_rhou(Rght.gas);
+        break;
+    case InterpolateOption.rhop:
+        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l2r2_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                                       Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
+                }
+            } else {
+                Lft.gas.u_modes[] = gL0.u_modes[];
+                Rght.gas.u_modes[] = gR0.u_modes[];
+            }
+        }
+        gmodel.update_thermo_from_rhop(Lft.gas);
+        gmodel.update_thermo_from_rhop(Rght.gas);
+        break;
+    case InterpolateOption.rhot:
+        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T,idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l2r2_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
+                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
+                }
+            } else {
+                Lft.gas.T_modes[] = gL0.T_modes[];
+                Rght.gas.T_modes[] = gR0.T_modes[];
+            }
+        }
+        gmodel.update_thermo_from_rhoT(Lft.gas);
+        gmodel.update_thermo_from_rhoT(Rght.gas);
+        break;
+    } // end switch thermo_interpolator
+    //Lft.gas.a = gL0.a;
+    //Rght.gas.a = gR0.a;
+    //if (myConfig.interpolate_in_local_frame) {
+      // Undo the transformation made earlier. PJ 21-feb-2012
+      Lft.vel.transform_to_global_frame(n, t1, t2);
+      Rght.vel.transform_to_global_frame(n, t1, t2);
+      cL1fs.vel.transform_to_global_frame(n, t1, t2);
+      cL0fs.vel.transform_to_global_frame(n, t1, t2);
+      cR0fs.vel.transform_to_global_frame(n, t1, t2);
+      cR1fs.vel.transform_to_global_frame(n, t1, t2);
+    //}
+}
+
+@nogc
+void interp_l3r3(ref FlowState cL2fs, ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, ref FlowState cR1fs, ref FlowState cR2fs,
+                 Vector3 n, Vector3 t1, Vector3 t2,
+                 in L3R3InterpData idi, size_t nsp, size_t nmodes, size_t nturb,
+                 InterpolateOption thermo_interpolator, bool MHD, bool apply_limiter, bool extrema_clipping,
+                 LocalConfig myConfig, ref FlowState Lft, ref FlowState Rght, number beta){
+    // Paul Petrie-Repar and Jason Qin have noted that the velocity needs
+    // to be reconstructed in the interface-local frame of reference so that
+    // the normal velocities are not messed up for mirror-image at walls.
+    // PJ 21-feb-2012
+    //if (myConfig.interpolate_in_local_frame) {
+    cL2fs.vel.transform_to_local_frame(n, t1, t2);
+    cL1fs.vel.transform_to_local_frame(n, t1, t2);
+    cL0fs.vel.transform_to_local_frame(n, t1, t2);
+    cR0fs.vel.transform_to_local_frame(n, t1, t2);
+    cR1fs.vel.transform_to_local_frame(n, t1, t2);
+    cR2fs.vel.transform_to_local_frame(n, t1, t2);
+    //}
+
+    double epsilon_van_albada = myConfig.epsilon_van_albada;
+    GasModel gmodel = myConfig.gmodel;
+
+    interp_l3r3_scalar(cL2fs.vel.x, cL1fs.vel.x, cL0fs.vel.x, cR0fs.vel.x, cR1fs.vel.x, cR2fs.vel.x,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                       Lft.vel.x, Rght.vel.x, beta);
+    interp_l3r3_scalar(cL2fs.vel.y, cL1fs.vel.y, cL0fs.vel.y, cR0fs.vel.y, cR1fs.vel.y, cR2fs.vel.y,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                       Lft.vel.y, Rght.vel.y, beta);
+    interp_l3r3_scalar(cL2fs.vel.z, cL1fs.vel.z, cL0fs.vel.z, cR0fs.vel.z, cR1fs.vel.z, cR2fs.vel.z,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                       Lft.vel.z, Rght.vel.z, beta);
+    version(MHD) {
+        if (MHD) {
+            interp_l3r3_scalar(cL2fs.B.x, cL1fs.B.x, cL0fs.B.x, cR0fs.B.x, cR1fs.B.x, cR2fs.B.x,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                               Lft.B.x, Rght.B.x, beta);
+            interp_l3r3_scalar(cL2fs.B.y, cL1fs.B.y, cL0fs.B.y, cR0fs.B.y, cR1fs.B.y, cR2fs.B.y,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                               Lft.B.y, Rght.B.y, beta);
+            interp_l3r3_scalar(cL2fs.B.z, cL1fs.B.z, cL0fs.B.z, cR0fs.B.z, cR1fs.B.z, cR2fs.B.z,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                               Lft.B.z, Rght.B.z, beta);
+            if (myConfig.divergence_cleaning) {
+                interp_l3r3_scalar(cL2fs.psi, cL1fs.psi, cL0fs.psi, cR0fs.psi, cR1fs.psi, cR2fs.psi,
+                                   idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                                   Lft.psi, Rght.psi, beta);
+            }
+        }
+    }
+    version(turbulence) {
+        foreach (it; 0 .. nturb){
+            interp_l3r3_scalar(cL2fs.turb[it], cL1fs.turb[it], cL0fs.turb[it], cR0fs.turb[it], cR1fs.turb[it], cR2fs.turb[it],
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                               Lft.turb[it], Rght.turb[it], beta);
+        }
+    }
+    auto gL2 = &(cL2fs.gas); // Avoid construction of another object.
+    auto gL1 = &(cL1fs.gas); // Avoid construction of another object.
+    auto gL0 = &(cL0fs.gas);
+    auto gR0 = &(cR0fs.gas);
+    auto gR1 = &(cR1fs.gas);
+    auto gR2 = &(cR2fs.gas);
+    version(multi_species_gas) {
+        if (nsp > 1) {
+            // Multiple species.
+            if (myConfig.allow_reconstruction_for_species) {
+                foreach (isp; 0 .. nsp) {
+                    interp_l3r3_scalar(gL2.massf[isp], gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                                       Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
+                }
+                if (myConfig.scale_species_after_reconstruction) {
+                    scale_mass_fractions(Lft.gas.massf);
+                    scale_mass_fractions(Rght.gas.massf);
+                }
+            } else {
+                Lft.gas.massf[] = gL0.massf[];
+                Rght.gas.massf[] = gR0.massf[];
+            }
+        } else {
+            // Only one possible mass-fraction value for a single species.
+            Lft.gas.massf[0] = 1.0;
+            Rght.gas.massf[0] = 1.0;
+        }
+    }
+    // Interpolate on two of the thermodynamic quantities,
+    // and fill in the rest based on an EOS call.
+    final switch (thermo_interpolator) {
+    case InterpolateOption.pt:
+        interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
+        interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l3r3_scalar(gL2.T_modes[i], gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], gR2.T_modes[i],
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
+                }
+            } else {
+                Lft.gas.T_modes[] = gL0.T_modes[];
+                Rght.gas.T_modes[] = gR0.T_modes[];
+            }
+        }
+        gmodel.update_thermo_from_pT(Lft.gas);
+        gmodel.update_thermo_from_pT(Rght.gas);
+        break;
+    case InterpolateOption.rhou:
+        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l3r3_scalar(gL2.u, gL1.u, gL0.u, gR0.u, gR1.u, gR2.u, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.u, Rght.gas.u, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l3r3_scalar(gL2.u_modes[i], gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i], gR1.u_modes[i],
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                                       Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
+                }
+            } else {
+                Lft.gas.u_modes[] = gL0.u_modes[];
+                Rght.gas.u_modes[] = gR0.u_modes[];
+            }
+        }
+        gmodel.update_thermo_from_rhou(Lft.gas);
+        gmodel.update_thermo_from_rhou(Rght.gas);
+        break;
+    case InterpolateOption.rhop:
+        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l3r3_scalar(gL2.u_modes[i], gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i], gR2.u_modes[i],
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                                       Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
+                }
+            } else {
+                Lft.gas.u_modes[] = gL0.u_modes[];
+                Rght.gas.u_modes[] = gR0.u_modes[];
+            }
+        }
+        gmodel.update_thermo_from_rhop(Lft.gas);
+        gmodel.update_thermo_from_rhop(Rght.gas);
+        break;
+    case InterpolateOption.rhot:
+        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    interp_l3r3_scalar(gL2.T_modes[i], gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], gR2.T_modes[i],
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
+                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
+                }
+            } else {
+                Lft.gas.T_modes[] = gL0.T_modes[];
+                Rght.gas.T_modes[] = gR0.T_modes[];
+            }
+        }
+        gmodel.update_thermo_from_rhoT(Lft.gas);
+        gmodel.update_thermo_from_rhoT(Rght.gas);
+        break;
+    } // end switch thermo_interpolator
+    //Lft.gas.a = gL0.a;
+    //Rght.gas.a = gR0.a;
+    //if (myConfig.interpolate_in_local_frame) {
+      // Undo the transformation made earlier. PJ 21-feb-2012
+    Lft.vel.transform_to_global_frame(n, t1, t2);
+    Rght.vel.transform_to_global_frame(n, t1, t2);
+    cL2fs.vel.transform_to_global_frame(n, t1, t2);
+    cL1fs.vel.transform_to_global_frame(n, t1, t2);
+    cL0fs.vel.transform_to_global_frame(n, t1, t2);
+    cR0fs.vel.transform_to_global_frame(n, t1, t2);
+    cR1fs.vel.transform_to_global_frame(n, t1, t2);
+    cR2fs.vel.transform_to_global_frame(n, t1, t2);
+    //}
+} // end interp_l3r3()
 
 class OneDInterpolator {
 
@@ -1923,3 +2346,59 @@ public:
     }
 
 } // end class OneDInterpolator
+
+@nogc pure
+number compute_heuristic_pressure_limiter(number cL1p, number cL0p, number cR0p, number cR1p){
+    // Optional pressure-based augmentation factor on the base limiter value,
+    // intended for use on problems with strong bow shocks.
+    // The equations are taken from pg. 33-34 of
+    //     Simulation and Dynamics of Hypersonic Turbulent Combustion
+    //     N. Gibbons, University of Queensland, 2019
+    //
+    number pmin = cL1p;
+    number pmax = cL1p;
+
+    pmin = fmin(pmin, cL0p);
+    pmax = fmax(pmax, cL0p);
+
+    pmin = fmin(pmin, cR0p);
+    pmax = fmax(pmax, cR0p);
+
+    pmin = fmin(pmin, cR1p);
+    pmax = fmax(pmax, cR1p);
+
+    number alpha = fabs(pmax-pmin)/pmin;
+    number beta = 1.0/(1.0+alpha*alpha*alpha*alpha);
+    return beta;
+}
+
+@nogc pure
+number compute_heuristic_pressure_limiter(number cL2p, number cL1p, number cL0p, number cR0p, number cR1p, number cR2p){
+    // Optional pressure-based augmentation factor on the base limiter value,
+    // intended for use on problems with strong bow shocks.
+    // The equations are taken from pg. 33-34 of
+    //     Simulation and Dynamics of Hypersonic Turbulent Combustion
+    //     N. Gibbons, University of Queensland, 2019
+    //
+    number pmin = cL1p;
+    number pmax = cL1p;
+
+    pmin = fmin(pmin, cL2p);
+    pmax = fmax(pmax, cL2p);
+
+    pmin = fmin(pmin, cL0p);
+    pmax = fmax(pmax, cL0p);
+
+    pmin = fmin(pmin, cR0p);
+    pmax = fmax(pmax, cR0p);
+
+    pmin = fmin(pmin, cR1p);
+    pmax = fmax(pmax, cR1p);
+
+    pmin = fmin(pmin, cR2p);
+    pmax = fmax(pmax, cR2p);
+
+    number alpha = fabs(pmax-pmin)/pmin;
+    number beta = 1.0/(1.0+alpha*alpha*alpha*alpha);
+    return beta;
+}

@@ -331,6 +331,11 @@ public:
             area[gtl] = length; // Assume unit depth in the Z-direction.
         }
         pos.set(Xbar, Ybar, to!number(0.0));
+        fvid.areas[id] = area[gtl];
+        fvid.normals[id] = n;
+        fvid.tangents1[id] = t1;
+        fvid.tangents2[id] = t2;
+        fvid.positions[id] = pos;
     } // end update_2D_geometric_data()
 
     @nogc
@@ -354,6 +359,11 @@ public:
             debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvid.areas[id] = area[gtl];
+        fvid.normals[id] = n;
+        fvid.tangents1[id] = t1;
+        fvid.tangents2[id] = t2;
+        fvid.positions[id] = pos;
     } // end update_3D_geometric_data()
 
     @nogc

@@ -1651,7 +1651,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         // Phase 05a LOCAL
         try {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
+                if (blk.active) { blk.convective_flux_phase0_legacy(allow_high_order_interpolation, gtl); }
             }
         } catch (Exception e) {
             debug { writefln("Exception thrown in phase 05a of stage 1 of explicit update on moving grid: %s", e.msg); }
@@ -2003,7 +2003,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                 }
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, 0); } // note 0 rather then gtl
+                    if (blk.active) { blk.convective_flux_phase0_legacy(allow_high_order_interpolation, 0); } // note 0 rather then gtl
                 }
             } catch (Exception e) {
                 debug { writefln("Exception thrown in phase 03 of stage 2 of explicit update on moving grid: %s", e.msg); }

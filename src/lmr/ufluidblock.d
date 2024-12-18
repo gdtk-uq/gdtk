@@ -841,7 +841,13 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
+    {
+        convective_flux_phase0_legacy(allow_high_order_interpolation, gtl);
+    }
+
+    @nogc
+    override void convective_flux_phase0_legacy(bool allow_high_order_interpolation, size_t gtl=0,
                                          FluidFVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // These will be used, later, in the convective flux calculation.

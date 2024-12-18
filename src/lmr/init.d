@@ -578,6 +578,16 @@ void initLeastSquaresStencils()
 }
 
 /**
+ * Compute the structured interpolation data.
+ *
+ * Authors: NNG
+ * Date: 2024-11-06
+ */
+void initStructuredStencilData()
+{
+    foreach (blk; localFluidBlocks) blk.precompute_stencil_data(0);
+}
+/**
  * Initialise the unstructured grid limiters (for unstructured blocks).
  *
  * Authors: KAD
