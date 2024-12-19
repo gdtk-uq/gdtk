@@ -135,6 +135,7 @@ public:
     // GMRES iterative solver.
     SMatrix!double JcT; // transposed Jacobian (w.r.t conserved variables)
     ConservedQuantities maxRate, residuals;
+    number[] maxVel; // used for computing scale factors for steady-state shock-fitting
     double normAcc, dotAcc;
     size_t nvars;
     Matrix!number Minv;
@@ -1812,6 +1813,8 @@ public:
             foreach (ref vtx; vertices) {
                 if (vtx.solve_position) { n += myConfig.dimensions; } 
             }
+
+            maxVel.length = myConfig.dimensions;
         }
 
         nvars = n;
@@ -1852,6 +1855,8 @@ public:
             foreach (ref vtx; vertices) {
                 if (vtx.solve_position) { n += myConfig.dimensions; } 
             }
+
+            maxVel.length = myConfig.dimensions;
         }
 
         nvars = n;

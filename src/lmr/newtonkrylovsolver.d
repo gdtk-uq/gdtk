@@ -435,7 +435,8 @@ immutable double dummySimTime = -1.0;
 immutable double minScaleFactor = 1.0;
 immutable string refResidFname = "config/reference-residuals.saved";
 
-ConservedQuantities referenceResiduals, currentResiduals, rowScale, colScale;
+ConservedQuantities referenceResiduals, currentResiduals;
+ScaleFactors rowScale, colScale;
 double referenceGlobalResidual, globalResidual, prevGlobalResidual;
 bool residualsUpToDate = false;
 bool referenceResidualsAreSet = false;
@@ -794,6 +795,21 @@ void readNewtonKrylovConfig()
     }
 }
 
+class ScaleFactors {
+    ConservedQuantities fluidScaling;
+    number[] gridScaling;
+
+    this(size_t nConserved, int dim) {
+        fluidScaling = new ConservedQuantities(nConserved);
+        fluidScaling[] = to!number(1.0);
+
+        if (GlobalConfig.grid_motion != GridMotion.none) {
+            gridScaling.length = dim;
+            gridScaling[] = to!number(1.0);
+        }
+    }
+}
+
 /*---------------------------------------------------------------------
  * Main iteration algorithm
  *---------------------------------------------------------------------
@@ -822,11 +838,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
      */
     if (nkCfg.usePreconditioner) initPreconditioner();
     size_t nConserved = cfg.cqi.n;
-    size_t grid_dof = (cfg.grid_motion == GridMotion.shock_fitting) ? cfg.dimensions : 0;
     referenceResiduals = new ConservedQuantities(nConserved);
     currentResiduals = new ConservedQuantities(nConserved);
-    rowScale = new ConservedQuantities(nConserved + grid_dof);
-    colScale = new ConservedQuantities(nConserved + grid_dof);
+    rowScale = new ScaleFactors(nConserved, cfg.dimensions);
+    colScale = new ScaleFactors(nConserved, cfg.dimensions);
     if (nkCfg.writeLoads && (nWrittenLoads == 0)) {
         if (cfg.is_master_task) {
             initLoadsFiles();
@@ -1705,7 +1720,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
         // scale the r0 vector
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(rowScale, blk.r0, nConserved, blk.nvars);
+            scaleVector(rowScale, blk.r0, nConserved, blk.cells.length*nConserved);
         }
 
         // beta = ||r0||
@@ -1755,7 +1770,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
         // We first multiply zed by the column scaling to recover zed *= Dc = P * dU
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(colScale, blk.zed, nConserved, blk.nvars);
+            scaleVector(colScale, blk.zed, nConserved, blk.cells.length*nConserved);
         }
 
         // Next we remove preconditioner effect to finally recover dU
@@ -1871,7 +1886,7 @@ void solveNewtonStepFGMRES()
 
         // scale the r0 vector
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(rowScale, blk.r0, nConserved, blk.nvars);
+            scaleVector(rowScale, blk.r0, nConserved, blk.cells.length*nConserved);
         }
 
         // beta = ||r0||
@@ -2035,16 +2050,20 @@ void setR0()
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-void determineScaleFactors(ref ConservedQuantities rowScale, ref ConservedQuantities colScale, bool useScaling)
+void determineScaleFactors(ref ScaleFactors rowScale, ref ScaleFactors colScale, bool useScaling)
 {
     if (!useScaling) {
-        rowScale[] = to!number(1.0);
-        colScale[] = to!number(1.0);
         return;
     }
     // else we go ahead and determine the scale factors
-    rowScale[] = to!number(0.0);
-    colScale[] = to!number(0.0);
+    rowScale.fluidScaling[] = to!number(0.0);
+    colScale.fluidScaling[] = to!number(0.0);
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+
+        rowScale.gridScaling[] = to!number(0.0);
+        colScale.gridScaling[] = to!number(0.0);
+    }
+
     // First do this for each block.
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2054,28 +2073,67 @@ void determineScaleFactors(ref ConservedQuantities rowScale, ref ConservedQuanti
                 blk.maxRate[ivar] = fmax(blk.maxRate[ivar], fabs(cell.dUdt[0][ivar]));
             }
         }
+
+        if (GlobalConfig.grid_motion != GridMotion.none) {
+            foreach (i, vtx; blk.vertices) {
+                blk.maxVel[0] = fmax(blk.maxVel[0], fabs(vtx.vel[0].x));
+                blk.maxVel[1] = fmax(blk.maxVel[1], fabs(vtx.vel[0].y));
+                if (GlobalConfig.dimensions == 3) {
+                    blk.maxVel[2] = fmax(blk.maxVel[2], fabs(vtx.vel[0].z));
+                }
+            }
+        }
     }
+
     // Next, reduce that maxR information across all blocks and processes
     foreach (blk; localFluidBlocks) {
         foreach (ivar; 0 .. nConserved) {
-            colScale[ivar] = fmax(colScale[ivar], blk.maxRate[ivar]);
+            colScale.fluidScaling[ivar] = fmax(colScale.fluidScaling[ivar], blk.maxRate[ivar]);
+        }
+
+        if (GlobalConfig.grid_motion != GridMotion.none) {
+            colScale.gridScaling[0] = fmax(colScale.gridScaling[0], blk.maxVel[0]);
+            colScale.gridScaling[1] = fmax(colScale.gridScaling[1], blk.maxVel[1]);
+            if (GlobalConfig.dimensions == 3) {
+                colScale.gridScaling[2] = fmax(colScale.gridScaling[2], blk.maxVel[2]);
+            }
         }
     }
+
     // In distributed memory, reduce max values and make sure everyone has a copy.
     version(mpi_parallel) {
         foreach (ivar; 0 .. nConserved) {
-            MPI_Allreduce(MPI_IN_PLACE, &(colScale[ivar].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &(colScale.fluidScaling[ivar].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        }
+        
+        if (GlobalConfig.grid_motion != GridMotion.none) {
+            foreach (idim; 0 .. GlobalConfig.dimensions) {
+                MPI_Allreduce(MPI_IN_PLACE, &(colScale.gridScaling[idim].re), 1, MPI_DOUBLE,
+                              MPI_MAX, MPI_COMM_WORLD);
+            }
         }
     }
 
     // Use a guard on scale values if they get small
     foreach (ivar; 0 .. nConserved) {
-        colScale[ivar] = fmax(colScale[ivar], minScaleFactor);
+        colScale.fluidScaling[ivar] = fmax(colScale.fluidScaling[ivar], minScaleFactor);
+
+    }
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+        foreach (idim; 0 .. GlobalConfig.dimensions) {
+            colScale.gridScaling[idim] = fmax(colScale.gridScaling[idim], minScaleFactor);
+        }
     }
 
     // The row scaling is the reciprocal of the column scaling
     foreach (ivar; 0 .. nConserved) {
-        rowScale[ivar] = 1./colScale[ivar];
+        rowScale.fluidScaling[ivar] = 1./colScale.fluidScaling[ivar];
+
+    }
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+        foreach (idim; 0 .. GlobalConfig.dimensions) {
+            rowScale.gridScaling[idim] = 1. / colScale.gridScaling[idim];
+        }
     }
 
 }
@@ -2280,12 +2338,20 @@ void computePreconditioner()
  * Date: 2023-03-13
  */
 
-void scaleVector(ConservedQuantities scale, ref double[] vec, size_t nConserved, size_t nvars)
+void scaleVector(ScaleFactors scale, ref double[] vec, size_t nConserved,
+                 size_t nFluidVars)
 {
-    foreach (k, ref v; vec) {
-        if (k >= nvars) { break; }
+    foreach (k; 0 .. nFluidVars) {
         size_t ivar = k % nConserved;
-        v *= scale[ivar].re;
+        vec[k] *= scale.fluidScaling[ivar].re;
+    }
+
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+        int dim = GlobalConfig.dimensions;
+        foreach (k; nFluidVars .. vec.length) {
+            size_t ivar = k % dim;
+            vec[k] *= scale.gridScaling[ivar].re;
+        }
     }
 }
 
@@ -2350,7 +2416,7 @@ void applyResidualSmoothing()
  * Date: 2022-03-02
  */
 bool performIterations(int maxIterations, double targetResidual,
-                       ref ConservedQuantities rowScale, ref ConservedQuantities colScale,
+                       ref ScaleFactors rowScale, ref ScaleFactors colScale,
                        ref int iterationCount,
                        ref double resid)
 {
@@ -2386,7 +2452,7 @@ bool performIterations(int maxIterations, double targetResidual,
 
         // 1. apply column scaling to v
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(colScale, blk.v, nConserved, blk.nvars);
+            scaleVector(colScale, blk.v, nConserved, nConserved*blk.cells.length);
         }
 
         /*
@@ -2418,7 +2484,7 @@ bool performIterations(int maxIterations, double targetResidual,
 
         // apply row scaling to w
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(rowScale, blk.w, nConserved, blk.nvars);
+            scaleVector(rowScale, blk.w, nConserved, blk.cells.length*nConserved);
         }
 
         /*
@@ -2525,8 +2591,8 @@ bool performIterations(int maxIterations, double targetResidual,
 bool performFGMRESIterations(int maxIterations, int maxPreconditioningIterations,
                              double targetResidual,
                              double targetPreconditionResidual,
-                             ref ConservedQuantities rowScale,
-                             ref ConservedQuantities colScale,
+                             ref ScaleFactors rowScale,
+                             ref ScaleFactors colScale,
                              ref int iterationCount,
                              ref double resid)
 {
@@ -2540,7 +2606,7 @@ bool performFGMRESIterations(int maxIterations, int maxPreconditioningIterations
 
         // 1. apply column scaling to v
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(colScale, blk.v, nConserved, blk.nvars);
+            scaleVector(colScale, blk.v, nConserved, blk.cells.length*nConserved);
         }
 
         // 2. Preconditioning
@@ -2560,7 +2626,7 @@ bool performFGMRESIterations(int maxIterations, int maxPreconditioningIterations
 
         // apply row scaling to w
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(rowScale, blk.w, nConserved, blk.nvars);
+            scaleVector(rowScale, blk.w, nConserved, blk.cells.length*nConserved);
         }
 
         // 4. The remainder of the algorithm looks a lot like any standard
