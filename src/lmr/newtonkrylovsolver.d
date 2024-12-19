@@ -1907,21 +1907,8 @@ void solveNewtonStepFGMRES()
             nm.bbla.transpose_and_dot!double(blk.ZT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
         }
 
-        // At this point we have zed = Dc^(-1) * dU
-        // we need to prepare the dU values (for Newton update)
-
-        // We first multiply zed by the column scaling to recover zed *= Dc = dU
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(colScale, blk.zed, nConserved, blk.nvars);
-        }
-
-        // Next we remove preconditioner effect to finally recover dU
         foreach(blk; parallel(localFluidBlocks,1)) {
-            blk.dU[] = blk.zed[];
-        }
-
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
+            foreach (k; 0 .. blk.nvars) blk.dU[k] = blk.x0[k] + blk.zed[k];
         }
 
         if (isConverged || (r == nkCfg.maxLinearSolverRestarts)) {
@@ -2560,7 +2547,6 @@ bool performFGMRESIterations(int maxIterations, int maxPreconditioningIterations
         // 2a. Perform inner gmres to solve the preconditioning system
         bool inner_converged = inner_gmres(maxPreconditioningIterations,
                                            targetPreconditionResidual);
-
         // 2b. Save the preconditioned Krylov vector
         foreach (blk; parallel(localFluidBlocks, 1)) {
             size_t offset = j * blk.nvars;
@@ -2665,7 +2651,7 @@ bool performFGMRESIterations(int maxIterations, int maxPreconditioningIterations
 bool inner_gmres(int maxIterations, double targetResidual)
 {
     alias cfg = GlobalConfig;
-
+    size_t nConserved = cfg.cqi.n;
     bool isConverged = false;
 
     inner_g0[] = 0.0;
