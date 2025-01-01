@@ -1,6 +1,6 @@
 //tag::description[]
 = Verification via manufactured solutions (in 2D)
-`gdtk/examples/lmr/2D/manufactured solutions`
+`gdtk/examples/lmr/2D/manufactured-solutions`
 
 Rowan J. Gollan; Kyle A. Damm; Nick N. Gibbons; Peter A. Jacobs
 2023-07-18
