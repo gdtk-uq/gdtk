@@ -6,7 +6,7 @@ test:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTEST) -v
 
 examples-listing.adoc: elc.adoc
-	asciidoctor-reducer -o $@ $<
+	asciidoctor-reducer $< | awk -f insert-imagesdir.awk > $@
 
 examples-listing.html: examples-listing.adoc
 	asciidoctor $<
