@@ -29,7 +29,7 @@ This example:
 . Shows the use of the `ControlPointPatch` with a "channel" guide patch.
 ====
 
-image::2D/diffuser-busemann/fine-grid/mach-and-total-p-field.png[align="center", width=70%]
+image::fine-grid/mach-and-total-p-field.png[align="center", width=70%]
 
 The simulation is axisymmetric so only top-half of images is used in simulation in domain.
 The white mesh overlay are the control points of the `ControlPointPatch`, not the grid.

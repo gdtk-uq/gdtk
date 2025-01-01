@@ -13,7 +13,7 @@ This particular example was set up by Kyle Damm with conditions to match the exa
 M_{\infty} = 2.0; \quad \delta = -10.0^{\circ}; \quad \gamma = 1.4
 ++++
 
-image::2D/convex-corner/single-block/mach-field.png[align="center",width=60%]
+image::single-block/mach-field.png[align="center",width=60%]
 
 //end::description[]
 
