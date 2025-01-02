@@ -7,6 +7,35 @@ Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
 :toc-title: Examples
 :stem: latexmath
 
+[comment]
+--
+README: on adding examples to the catalogue
+
+1. READMEs for examples can/should be written as stand-alone
+   READMEs in appropriate sub-directories.
+   Think of these as self-contained documents.
+
+2. Adding to the catalogue is a manual process and is done
+   in this file. We gave it a somewhat cryptic name "elc.adoc"
+   to discourage the casual user from trying to read this.
+   This is a control document meant for processing with
+   asciidoctor-reducer.
+
+   In the catalogue, we want short descriptions.
+   We pull these short descriptions from the full READMEs
+   via asciidoctor's "tag" facility.
+
+   To mark a section for inclusion in the catalogue description,
+   enclose the section with markers:
+
+   //tag::description[]
+
+   //end::description[]
+
+   Then in this document, use an "include" directive.
+   There are examples of this below.
+--
+
 :leveloffset: +1
 
 include::2D/convex-corner/README.adoc[tag=description]
