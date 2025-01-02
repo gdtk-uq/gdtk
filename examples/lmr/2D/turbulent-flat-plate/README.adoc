@@ -12,10 +12,10 @@ leading edge. Both structured and unstructured variants are available, and
 the one equation "Edwards" variant of the Spalart-Allmaras turbulence model
 is used.
 
+image::figures/pmap.svg[width=100%,opts=inline,title="Pressure and turbulent viscosity color maps for the Mach 6.5 flat plate."]
 //end::description[]
 :stem:
 
-image::figures/pmap.svg[width=100%,opts=inline,title="Pressure and turbulent viscosity color maps for the Mach 6.5 flat plate."]
 
 The tests for this example have been configured to run multiple copies of the flow with different resolutions. Specifically, the clustering to the viscous wall is changed while the rest of the grid is held constant. This allows us to test the rate of convergence of the numerics. Clustering affects the solution A LOT. The figure below shows a slice through the boundary layer at x=400mm, for the coarsest (80 micron first cell height) and finest (1.25 micron first cell height). Note that in both cases the wall is set to 300K and no slip, but the coarse grid's first cell only manages to get down 500 m/s in the velocity and a wildly inaccurate 1600 K in the temperature.
 
