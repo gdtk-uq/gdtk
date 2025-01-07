@@ -1,4 +1,16 @@
 // coonspatch.d
+/*
+Reference:
+
+@techreport{coons_1967,
+  author = {Coons, S. A.},
+  title = {Surfaces for Computer-Aided Design of Space Forms},
+  institution = {Massachusetts Institute of Technolody},
+  type = {Project MAC Report},
+  number = {MAC-TR-41},
+  year = {1967}
+}
+*/
 
 module geom.surface.coonspatch;
 
