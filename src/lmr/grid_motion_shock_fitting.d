@@ -481,7 +481,8 @@ number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
     number ws_rh = alpha * ws1 + (1.0 - alpha) * ws2;
 
     // Estimate shock-wave speed using local sound speed.
-    number ws_signal = veln - L0.gas.a;
+    // number ws_signal = veln - L0.gas.a;
+    number ws_signal = L0.gas.a;
 
     return shock_weight * ws_rh + (1.0 - shock_weight) * ws_signal;
 } // end wave_speed()
