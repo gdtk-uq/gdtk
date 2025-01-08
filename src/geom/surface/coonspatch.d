@@ -5,7 +5,7 @@ Reference:
 @techreport{coons_1967,
   author = {Coons, S. A.},
   title = {Surfaces for Computer-Aided Design of Space Forms},
-  institution = {Massachusetts Institute of Technolody},
+  institution = {Massachusetts Institute of Technology},
   type = {Project MAC Report},
   number = {MAC-TR-41},
   year = {1967}
