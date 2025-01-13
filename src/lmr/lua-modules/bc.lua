@@ -83,9 +83,9 @@ function FlowStateCopy:tojson()
    return str
 end
 
-FlowStateCopyFromProfile = GhostCellEffect:new{filename=nil, match=nil}
-FlowStateCopyFromProfile.type = "flowstate_copy_from_profile"
-function FlowStateCopyFromProfile:tojson()
+FlowStateCopyFromStaticProfile = GhostCellEffect:new{filename=nil, match=nil}
+FlowStateCopyFromStaticProfile.type = "flowstate_copy_from_static_profile"
+function FlowStateCopyFromStaticProfile:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "filename": "%s",', self.filename)
    str = str .. string.format(' "match": "%s"', self.match)
@@ -275,9 +275,9 @@ function FlowStateCopyToInterface:tojson()
    return str
 end
 
-FlowStateCopyFromProfileToInterface = BoundaryInterfaceEffect:new{filename=nil, match=nil}
-FlowStateCopyFromProfileToInterface.type = "flow_state_copy_from_profile_to_interface"
-function FlowStateCopyFromProfileToInterface:tojson()
+FlowStateCopyFromStaticProfileToInterface = BoundaryInterfaceEffect:new{filename=nil, match=nil}
+FlowStateCopyFromStaticProfileToInterface.type = "flow_state_copy_from_static_profile_to_interface"
+function FlowStateCopyFromStaticProfileToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "filename": "%s",', self.filename)
    str = str .. string.format(' "match": "%s"', self.match)
@@ -1277,9 +1277,9 @@ function InFlowBC_StaticProfile:new(o)
    o.is_wall_with_viscous_effects = false
    o.match = o.match or "xyz-to-xyz"
    o.filename = o.filename or o.fileName
-   o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename, match=o.match} }
+   o.preReconAction = { FlowStateCopyFromStaticProfile:new{filename=o.filename, match=o.match} }
    o.preSpatialDerivActionAtBndryFaces = {
-      FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match}
+      FlowStateCopyFromStaticProfileToInterface:new{filename=o.filename, match=o.match}
    }
    o.is_configured = true
    return o

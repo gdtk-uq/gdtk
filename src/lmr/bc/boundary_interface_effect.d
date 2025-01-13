@@ -57,10 +57,10 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         double r = getJSONdouble(jsonData, "r", 0.0);
         newBIE = new BIE_FlowStateCopy(blk_id, boundary, flowstate, x0, y0, z0, r);
         break;
-    case "flow_state_copy_from_profile_to_interface":
+    case "flow_state_copy_from_static_profile_to_interface":
         string fname = getJSONstring(jsonData, "filename", "");
         string match = getJSONstring(jsonData, "match", "xyz");
-        newBIE = new BIE_FlowStateCopyFromProfile(blk_id, boundary, fname, match);
+        newBIE = new BIE_FlowStateCopyFromStaticProfile(blk_id, boundary, fname, match);
         break;
     case "flow_state_copy_from_history_to_interface":
         string fname = getJSONstring(jsonData, "filename", "");
@@ -371,17 +371,17 @@ private:
 } // end class BIE_FlowStateCopy
 
 
-class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
+class BIE_FlowStateCopyFromStaticProfile : BoundaryInterfaceEffect {
 public:
     this(int id, int boundary, string fileName, string match)
     {
-        super(id, boundary, "flowStateCopyFromProfile");
-        fprofile = new FlowProfile(fileName, match);
+        super(id, boundary, "flowStateCopyFromStaticProfile");
+        fprofile = new StaticFlowProfile(fileName, match);
     }
 
     override string toString() const
     {
-        return format("flowStateCopyFromProfile(filename=\"%s\", match=\"%s\")",
+        return format("flowStateCopyFromStaticProfile(filename=\"%s\", match=\"%s\")",
                       fprofile.fileName, fprofile.posMatch);
     }
 
@@ -425,9 +425,9 @@ public:
     } // end apply_structured_grid()
 
 private:
-    FlowProfile fprofile;
+    StaticFlowProfile fprofile;
 
-} // end class BIE_FlowStateCopyFromProfile
+} // end class BIE_FlowStateCopyFromStaticProfile
 
 
 class BIE_FlowStateCopyFromHistory : BoundaryInterfaceEffect {

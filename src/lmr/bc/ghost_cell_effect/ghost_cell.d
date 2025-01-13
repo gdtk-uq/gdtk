@@ -90,10 +90,10 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         double r = getJSONdouble(jsonData, "r", 0.0);
         newGCE = new GhostCellFlowStateCopy(blk_id, boundary, flowstate, x0, y0, z0, r);
         break;
-    case "flowstate_copy_from_profile":
+    case "flowstate_copy_from_static_profile":
         string fname = getJSONstring(jsonData, "filename", "");
         string match = getJSONstring(jsonData, "match", "xyz");
-        newGCE = new GhostCellFlowStateCopyFromProfile(blk_id, boundary, fname, match);
+        newGCE = new GhostCellFlowStateCopyFromStaticProfile(blk_id, boundary, fname, match);
         break;
     case "flowstate_copy_from_history":
         string fname = getJSONstring(jsonData, "filename", "");

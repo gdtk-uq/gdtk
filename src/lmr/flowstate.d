@@ -427,9 +427,9 @@ version(complex_numbers) {
 
 } // end class FlowState
 
-class FlowProfile {
+class StaticFlowProfile {
     // For use in the classes that implement the InflowBC_StaticProfile boundary condition.
-    // GhostCellFlowStateCopyFromProfile, BIE_FlowStateCopyFromProfile
+    // GhostCellFlowStateCopyFromStaticProfile, BIE_FlowStateCopyFromStaticProfile
     // There are non-obvious options for the match parameter in the constructor call.
     // See the switch statement in the compute_distance() function for some hints.
 
@@ -476,7 +476,7 @@ public:
             range.popFront();
             line = range.front;
         } // end while
-        // writefln("FlowProfile: file=\"%s\", match=\"%s\", npoints=%d", fileName, match, npoints);
+        // writefln("StaticFlowProfile: file=\"%s\", match=\"%s\", npoints=%d", fileName, match, npoints);
         //
         // The mapping of the nearest profile point to each ghost-cell or interface location
         // will be done as needed, at application time.
@@ -557,7 +557,7 @@ public:
     // not @nogc because of associative array lookup
     FlowState get_flowstate(size_t my_id, ref const(Vector3) my_pos)
     {
-        assert(fstate.length > 0, "FlowProfile is empty.");
+        assert(fstate.length > 0, "StaticFlowProfile is empty.");
         if (my_id in which_point) {
             return fstate[which_point[my_id]];
         } else {
@@ -607,7 +607,7 @@ public:
     {
         adjust_velocity(*fs, my_pos, omegaz);
     }
-} // end class FlowProfile
+} // end class StaticFlowProfile
 
 
 class FlowHistory {
