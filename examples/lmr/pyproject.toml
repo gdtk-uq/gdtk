@@ -3,3 +3,6 @@
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
+markers = [
+    "short: marks tests for inclusion in a short run"
+]
