@@ -47,7 +47,13 @@ function GridArray:new(o)
    gridArraysList[#gridArraysList+1] = o
    --
    assert(o.grid, "need to supply a grid")
+   -- Check the grid information.
    assert(o.grid:get_type() == "structured_grid", "supplied grid needs to be a structured grid")
+   if config.dimensions ~= o.grid:get_dimensions() then
+      local msg = string.format("Mismatch in geometric dimensions, config %d grid %d.",
+				config.dimensions, o.grid:get_dimensions())
+      error(msg)
+   end
    o.tag = o.tag or ""
    -- Typically, we expect a construction via registerFluidGridArray or registerSolidGridArray
    -- and these should set the field type correctly

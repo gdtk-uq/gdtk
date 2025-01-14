@@ -75,7 +75,7 @@ function RegisteredGrid:new(o)
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
    if config.dimensions ~= o.grid:get_dimensions() then
-      local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+      local msg = string.format("Mismatch in geometric dimensions, config %d grid %d.",
 				config.dimensions, o.grid:get_dimensions())
       error(msg)
    end
