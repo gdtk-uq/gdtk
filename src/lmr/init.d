@@ -27,6 +27,7 @@ import util.lua;
 import util.lua_service;
 
 import lmr.bc.ghost_cell_effect.gas_solid_full_face_copy;
+import lmr.bc.boundary_vertex_full_face_copy;
 import lmr.bc;
 import lmr.blockio : BinaryBlockIO, GzipBlockIO;
 import lmr.fileutil : ensure_directory_is_present;
@@ -47,8 +48,7 @@ import lmr.solid.solid_gas_full_face_copy;
 import lmr.solid.solidfvinterface : initPropertiesAtSolidInterfaces;
 import lmr.solid.ssolidblock : SSolidBlock;
 import lmr.ufluidblock : UFluidBlock;
-import ssolidblock : SSolidBlock;
-import blockio : BinaryBlockIO, GzipBlockIO;
+import lmr.blockio : BinaryBlockIO, GzipBlockIO;
 
 version(mpi_parallel) {
     import mpi;

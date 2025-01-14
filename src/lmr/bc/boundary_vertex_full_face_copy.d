@@ -1,22 +1,22 @@
-module bc.boundary_vertex_full_face_copy;
+module lmr.bc.boundary_vertex_full_face_copy;
 
 import std.algorithm;
 import std.conv;
 import std.math;
 import std.string;
 
-import fvvertex;
-import fluidblock;
-import sfluidblock;
-import globaldata;
-import globalconfig;
-import bc;
+import lmr.fvvertex;
+import lmr.fluidblock;
+import lmr.sfluidblock;
+import lmr.globaldata;
+import lmr.globalconfig;
+import lmr.bc;
 import geom;
-import bc.ghost_cell_effect.full_face_copy : make_mpi_tag;
+import lmr.bc.ghost_cell_effect.full_face_copy : make_mpi_tag;
 
 version(mpi_parallel) {
     import mpi;
-    import bc.ghost_cell_effect.full_face_copy : MPI_Wait_a_while;
+    import lmr.bc.ghost_cell_effect.full_face_copy : MPI_Wait_a_while;
 }
 
 // This class manages exchanging vertex positions along block boundaries.

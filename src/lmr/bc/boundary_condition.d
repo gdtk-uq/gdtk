@@ -25,6 +25,7 @@ import lmr.bc.boundary_flux_effect;
 import lmr.bc.boundary_interface_effect;
 import lmr.bc.ghost_cell_effect;
 import lmr.bc.user_defined_effects;
+import lmr.bc.boundary_vertex_full_face_copy;
 import lmr.flowstate;
 import lmr.fluidblock;
 import lmr.fluidfvcell;
@@ -41,8 +42,8 @@ import lmr.sfluidblock;
 import lmr.solid.solidfvcell;
 import lmr.solid.solidfvinterface;
 import lmr.solid.ssolidblock;
-import grid_motion;
-import grid_motion_udf;
+import lmr.grid_motion;
+import lmr.grid_motion_udf;
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {

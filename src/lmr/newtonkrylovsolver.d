@@ -63,9 +63,9 @@ import lmr.loads : writeLoadsToFile,
                    writeLoadsToFile,
                    count_written_loads,
                    update_loads_metadata_file;
-import grid_motion;
-import grid_motion_udf;
-import grid_motion_shock_fitting;
+import lmr.grid_motion;
+import lmr.grid_motion_udf;
+import lmr.grid_motion_shock_fitting;
 import lmr.lmrwarnings;
 
 version(mpi_parallel) {

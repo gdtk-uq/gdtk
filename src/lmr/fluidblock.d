@@ -18,9 +18,9 @@ version(mpi_parallel) {
     import mpi;
 }
 
-import grid_motion;
-import grid_motion_udf;
-import grid_motion_shock_fitting;
+import lmr.grid_motion;
+import lmr.grid_motion_udf;
+import lmr.grid_motion_shock_fitting;
 
 import gas.luagas_model;
 import gas;
