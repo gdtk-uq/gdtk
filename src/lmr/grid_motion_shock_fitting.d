@@ -440,88 +440,91 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
 } // end compute_vtx_velocities_for_sf()
 
 
-@nogc
-number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
-{
-    // Compute wave speed at the mid-point of the boundary face
-    // using the approach described in Ian Johnston's thesis.
-    // See PJ workbook pages 32-35, 2019-11-09.
-    //
-    //  west boundary
-    //       |
-    //       +------+------+
-    //   L0  |  R0  |  R1  |
-    //       +------+------+
-    //     n-->
-    //
-    // L0 is the free-stream
-    // R0 is post-shock, presumably.
-    // The face normal, n, is pointing into the domain (i.e. into cell R0).
-    //
-    number veln = dot(L0.vel, n);
-    // Ian's shock detector looks for a significan density difference, equation 4.23
-    immutable double kappa = 0.2;
-    number delta_rho = fabs(R0.gas.rho - L0.gas.rho) / R0.gas.rho;
-    number shock_weight = (tanh(1.0 / 1e-2 * (delta_rho - kappa)) + 1.0) / 2.0;
-    if (shock_weight < 0.0001) { shock_weight = 0.0; }
-    if (shock_weight > 0.999) { shock_weight = 1.0; }
+version(newton_krylov) {
+    @nogc
+    number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
+    {
+        // Compute wave speed at the mid-point of the boundary face
+        // using the approach described in Ian Johnston's thesis.
+        // See PJ workbook pages 32-35, 2019-11-09.
+        //
+        //  west boundary
+        //       |
+        //       +------+------+
+        //   L0  |  R0  |  R1  |
+        //       +------+------+
+        //     n-->
+        //
+        // L0 is the free-stream
+        // R0 is post-shock, presumably.
+        // The face normal, n, is pointing into the domain (i.e. into cell R0).
+        //
+        number veln = dot(L0.vel, n);
+        // Ian's shock detector looks for a significan density difference, equation 4.23
+        immutable double kappa = 0.2;
+        number delta_rho = fabs(R0.gas.rho - L0.gas.rho) / R0.gas.rho;
+        number shock_weight = (tanh(1.0 / 1e-2 * (delta_rho - kappa)) + 1.0) / 2.0;
+        if (shock_weight < 0.0001) { shock_weight = 0.0; }
+        if (shock_weight > 0.999) { shock_weight = 1.0; }
 
-    number ws1 = to!number(0.0);
-    number ws2 = to!number(0.0);
-    if (shock_weight > 0) {
-        // Estimate shock-wave speed from conservation equations.
-        // Conservation of mass, equation 4.5 in Ian's thesis.
-        ws1 = (L0.gas.rho*dot(L0.vel,n) - R0.gas.rho*dot(R0.vel,n)) / (L0.gas.rho - R0.gas.rho);
-        // Conservation of momentum, equation 4.6 in Ian's thesis.
-        number pRpL = R0.gas.p - L0.gas.p;
-        number sgn_pRpL = sgn(R0.gas.p.re - L0.gas.p.re);
-        ws2 = veln - sgn_pRpL/L0.gas.rho * sqrt(fabs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
-    }
-    immutable double alpha = 0.5;
-    number ws_rh = alpha * ws1 + (1.0 - alpha) * ws2;
+        number ws1 = to!number(0.0);
+        number ws2 = to!number(0.0);
+        if (shock_weight > 0) {
+            // Estimate shock-wave speed from conservation equations.
+            // Conservation of mass, equation 4.5 in Ian's thesis.
+            ws1 = (L0.gas.rho*dot(L0.vel,n) - R0.gas.rho*dot(R0.vel,n)) / (L0.gas.rho - R0.gas.rho);
+            // Conservation of momentum, equation 4.6 in Ian's thesis.
+            number pRpL = R0.gas.p - L0.gas.p;
+            number sgn_pRpL = sgn(R0.gas.p.re - L0.gas.p.re);
+            ws2 = veln - sgn_pRpL/L0.gas.rho * sqrt(fabs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
+        }
+        immutable double alpha = 0.5;
+        number ws_rh = alpha * ws1 + (1.0 - alpha) * ws2;
 
-    // Estimate shock-wave speed using local sound speed.
-    // number ws_signal = veln - L0.gas.a;
-    number ws_signal = L0.gas.a;
+        // Estimate shock-wave speed using local sound speed.
+        // number ws_signal = veln - L0.gas.a;
+        number ws_signal = L0.gas.a;
 
-    return shock_weight * ws_rh + (1.0 - shock_weight) * ws_signal;
-} // end wave_speed()
-
-// @nogc
-// number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
-// {
-//     // Compute wave speed at the mid-point of the boundary face
-//     // using the approach described in Ian Johnston's thesis.
-//     // See PJ workbook pages 32-35, 2019-11-09.
-//     //
-//     //  west boundary
-//     //       |
-//     //       +------+------+
-//     //   L0  |  R0  |  R1  |
-//     //       +------+------+
-//     //     n-->
-//     //
-//     // L0 is the free-stream
-//     // R0 is post-shock, presumably.
-//     // The face normal, n, is pointing into the domain (i.e. into cell R0).
-//     //
-//     number veln = dot(L0.vel, n);
-//     // Ian's shock detector looks for a significan density difference, equation 4.23
-//     immutable double kappa = 0.2;
-//     if ((R0.gas.rho - L0.gas.rho) > kappa*R0.gas.rho) {
-//         // Estimate shock-wave speed from conservation equations.
-//         // Conservation of mass, equation 4.5 in Ian's thesis.
-//         number ws1 = (L0.gas.rho*dot(L0.vel,n) - R0.gas.rho*dot(R0.vel,n)) / (L0.gas.rho - R0.gas.rho);
-//         // Conservation of momentum, equation 4.6 in Ian's thesis.
-//         number pRpL = R0.gas.p - L0.gas.p;
-//         number ws2 = veln - sgn(pRpL.re)/L0.gas.rho * sqrt(fabs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
-//         immutable double alpha = 0.5;
-//         return alpha*ws1 + (1.0-alpha)*ws2;
-//     } else {
-//         // Estimate shock-wave speed using local sound speed.
-//         return veln - L0.gas.a;
-//     }
-// } // end wave_speed()
+        return shock_weight * ws_rh + (1.0 - shock_weight) * ws_signal;
+    } // end wave_speed()
+}
+else {
+    @nogc
+    number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
+    {
+        // Compute wave speed at the mid-point of the boundary face
+        // using the approach described in Ian Johnston's thesis.
+        // See PJ workbook pages 32-35, 2019-11-09.
+        //
+        //  west boundary
+        //       |
+        //       +------+------+
+        //   L0  |  R0  |  R1  |
+        //       +------+------+
+        //     n-->
+        //
+        // L0 is the free-stream
+        // R0 is post-shock, presumably.
+        // The face normal, n, is pointing into the domain (i.e. into cell R0).
+        //
+        number veln = dot(L0.vel, n);
+        // Ian's shock detector looks for a significan density difference, equation 4.23
+        immutable double kappa = 0.2;
+        if ((R0.gas.rho - L0.gas.rho) > kappa*R0.gas.rho) {
+            // Estimate shock-wave speed from conservation equations.
+            // Conservation of mass, equation 4.5 in Ian's thesis.
+            number ws1 = (L0.gas.rho*dot(L0.vel,n) - R0.gas.rho*dot(R0.vel,n)) / (L0.gas.rho - R0.gas.rho);
+            // Conservation of momentum, equation 4.6 in Ian's thesis.
+            number pRpL = R0.gas.p - L0.gas.p;
+            number ws2 = veln - sgn(pRpL.re)/L0.gas.rho * sqrt(fabs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
+            immutable double alpha = 0.5;
+            return alpha*ws1 + (1.0-alpha)*ws2;
+        } else {
+            // Estimate shock-wave speed using local sound speed.
+            return veln - L0.gas.a;
+        }
+    } // end wave_speed()
+}
 
 @nogc
 number Mach_weighting(number M)
