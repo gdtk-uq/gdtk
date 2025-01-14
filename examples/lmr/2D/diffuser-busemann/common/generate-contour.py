@@ -1,10 +1,10 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 """
 Calls the busemann.py module to generate a contour file.
 
 Usage:
 
-  > ./generate-contour.py
+  > python generate-contour.py
 
 .. Author: RJG
 .. Date: 2024-07-06
@@ -21,7 +21,7 @@ bd = BusemannDiffuser(M2, theta_23)
 r = 1.0
 dtheta = 0.001
 bd.generate_contour(r, dtheta)
-npts = 50
+npts = 200
 bd.write_contour('bd-contour.dat', npts)
 
 props = bd.properties()
