@@ -726,10 +726,31 @@ public:
                 }
                 interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft);
             } else if (f.left_cells.length >= 2 && f.right_cells.length >= 2) {
-                // General symmetric reconstruction.
                 cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
                 cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lL0, lL1, lR0, lR1;
+                if (myConfig.grid_motion == GridMotion.shock_fitting) {
+                    // check for shock-fitting boundaries -- the cell exists but
+                    // shouldn't be used for interpolation as there may be a shock
+                    if (cL1.is_in_shock_fitting_boundary) {
+                        final switch (f.idir) {
+                            case IndexDirection.i:
+                                lL0 = cL0.iLength; lR0 = cR0.iLength; lR1 = cR1.iLength;
+                                break;
+                            case IndexDirection.j:
+                                lL0 = cL0.jLength; lR0 = cR0.jLength; lR1 = cR1.jLength;
+                                break;
+                            case IndexDirection.k:
+                                lL0 = cL0.kLength; lR0 = cR0.kLength; lR1 = cR1.kLength;
+                                break;
+                            case IndexDirection.none:
+                                throw new Error("Invalid index direction.");
+                        }
+                        interp_l1r2(f, cL0, cR0, cR1, lL0, lR0, lR1, Lft, Rght, beta);
+                        return;
+                    }
+                }
+                // General symmetric reconstruction.
                 final switch (f.idir) {
                 case IndexDirection.i:
                     lL0 = cL0.iLength; lL1 = cL1.iLength;

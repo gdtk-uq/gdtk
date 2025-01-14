@@ -485,48 +485,56 @@ public:
             int cell_id = to!int(nic*njc*nkc);
             // North and South boundaries.
             if (bc[Face.north].ghost_cell_data_available) {
+                bool shock_fitting = (bc[Face.north].type == "inflow_shock_fitting");
                 foreach (k; 0 .. nkc) {
                     foreach (i; 0 .. nic) {
                         auto f = get_ifj(i, njc, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost = true;
+                            if (shock_fitting) c.is_in_shock_fitting_boundary = true;
                             f.right_cells ~= c;
                         }
                     }
                 }
             }
             if (bc[Face.south].ghost_cell_data_available) {
+                bool shock_fitting = (bc[Face.south].type == "inflow_shock_fitting");
                 foreach (k; 0 .. nkc) {
                     foreach (i; 0 .. nic) {
                         auto f = get_ifj(i, 0, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost = true;
+                            if (shock_fitting) c.is_in_shock_fitting_boundary = true;
                             f.left_cells ~= c;
                         }
                     }
                 }
             }
             if (bc[Face.east].ghost_cell_data_available) {
+                bool shock_fitting = (bc[Face.east].type == "inflow_shock_fitting");
                 foreach (k; 0 .. nkc) {
                     foreach (j; 0 .. njc) {
                         auto f = get_ifi(nic, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost = true;
+                            if (shock_fitting) c.is_in_shock_fitting_boundary = true;
                             f.right_cells ~= c;
                         }
                     }
                 }
             }
             if (bc[Face.west].ghost_cell_data_available) {
+                bool shock_fitting = (bc[Face.west].type == "inflow_shock_fitting");
                 foreach (k; 0 .. nkc) {
                     foreach (j; 0 .. njc) {
                         auto f = get_ifi(0, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             auto c = new FluidFVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost = true;
+                            if (shock_fitting) c.is_in_shock_fitting_boundary = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -534,24 +542,28 @@ public:
             }
             if (myConfig.dimensions == 3) {
                 if (bc[Face.top].ghost_cell_data_available) {
+                    bool shock_fitting = (bc[Face.top].type == "inflow_shock_fitting");
                     foreach (j; 0 .. njc) {
                         foreach (i; 0 .. nic) {
                             auto f = get_ifk(i, j, nkc);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 auto c = new FluidFVCell(myConfig, &celldata, cell_id);
                                 ++cell_id; c.is_ghost = true;
+                                if (shock_fitting) c.is_in_shock_fitting_boundary = true;
                                 f.right_cells ~= c;
                             }
                         }
                     }
                 }
                 if (bc[Face.bottom].ghost_cell_data_available) {
+                bool shock_fitting = (bc[Face.bottom].type == "inflow_shock_fitting");
                     foreach (j; 0 .. njc) {
                         foreach (i; 0 .. nic) {
                             auto f = get_ifk(i, j, 0);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 auto c = new FluidFVCell(myConfig, &celldata, cell_id);
                                 ++cell_id; c.is_ghost = true;
+                                if (shock_fitting) c.is_in_shock_fitting_boundary = true;
                                 f.left_cells ~= c;
                             }
                         }

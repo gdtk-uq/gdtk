@@ -112,6 +112,7 @@ public:
     bool contains_flow_data;
     bool is_interior_to_domain; // true if the cell is interior to the flow domain
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
+    bool is_in_shock_fitting_boundary = false;
     FluidCellData* fvcd; // Pointer to block densified storage structure
     FlowState* fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
