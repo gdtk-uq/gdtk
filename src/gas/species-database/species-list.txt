@@ -53,6 +53,8 @@ CH3O.lua      :	CH3O	 : methoxide
 CH3OH.lua     :	CH3OH	 : methanol
 CH4.lua       :	CH4	 : methane
 CHO.lua       :	CHO	 : aldehyde (2)
+Cl2.lua       : Cl2  : diatomic chlorine
+Cl.lua        : Cl   : atomic chlorine
 CN.lua        :	CN	 : cyanide
 CO.lua        :	CO	 : carbon monoxide
 CO_plus.lua   : CO+  : carbon monoxide ion
