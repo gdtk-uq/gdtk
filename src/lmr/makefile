@@ -177,7 +177,13 @@ ifeq ($(DMD), ldc2)
     # llvm-profdata show -text -topn=10 <profraw-file>
     DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug
     PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_profile
-    FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
+    ifeq ($(PLATFORM), macosx)
+        # 2025-01-15: -O2 messes with the piston-in-tube example on MacOS so we back off to -O1
+        FAST_DFLAGS := -w -g -O1 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
+    else
+        # The usual FAST flags for linux.
+        FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
+    endif
     ifeq ($(PLATFORM), linux)
 	# Full link-time optimization does not play nicely on macOS
 	FAST_DFLAGS += -flto=full
