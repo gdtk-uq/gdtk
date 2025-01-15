@@ -7,7 +7,7 @@ gas:
 	lmr prep-gas -i ideal-air.inp -o ideal-air.lua
 
 grid:
-	cd ../common; ./generate-contour.py
+	cd ../common; ./generate-contour.py 200
 	mv ../common/bd-contour.dat .
 	mv ../common/bd-props.txt .
 	sed -i '1 s/./# &/' bd-contour.dat
