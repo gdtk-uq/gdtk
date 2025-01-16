@@ -60,7 +60,7 @@ assert(math.abs(V2g - V3g)/V3g < 1.0e-3, "mismatch in velocities")
 --
 -- Make a record for plotting against the Eilmer3 simulation data.
 -- We reconstruct the expected data along a tube 0.0 <= x <= 1.0
--- at t=100us, where the diaphragm is at x=0.5.
+-- at t=600us, where the diaphragm is at x=0.5.
 x_centre = 0.5 -- metres
 t = 600.0e-6 -- seconds
 f = io.open('analytic.data', 'w')
