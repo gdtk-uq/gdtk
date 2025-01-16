@@ -58,12 +58,12 @@ assert (abs(v2g - v3g)/v3g < 1.0e-3), "mismatch in velocities"
 #
 # Make a record for plotting against the Eilmer3 simulation data.
 # We reconstruct the expected data along a tube 0.0 <= x <= 1.0
-# at t=100us, where the diaphragm is at x=0.5.
+# at t=600us, where the diaphragm is at x=0.5.
 x_centre = 0.5 # metres
 t = 600.0e-6 # seconds
 f = open('analytic.data', 'w')
 f.write('# 1:x(m)  2:rho(kg/m**3) 3:p(Pa) 4:T(K) 5:V(m/s)\n')
-print('Left end')
+print('Right end')
 x = 1.0
 f.write('%g %g %g %g %g\n' % (x, states[4].rho, states[4].p, states[4].T, 0.0))
 print('Upstream head of the unsteady expansion.')
@@ -97,7 +97,7 @@ print('Shock front')
 x = x_centre - t * v1s  # should not have moved
 f.write('%g %g %g %g %g\n' % (x, states[2].rho, states[2].p, states[2].T, v2g))
 f.write('%g %g %g %g %g\n' % (x, states[1].rho, states[1].p, states[1].T, 0.0))
-print('Right end')
+print('Left end')
 x = 0.0
 f.write('%g %g %g %g %g\n' % (x, states[1].rho, states[1].p, states[1].T, 0.0))
 f.close()
