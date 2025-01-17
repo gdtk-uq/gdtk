@@ -83,7 +83,7 @@ public:
     @nogc @property ref double[] charge() { return _charge; }
     @nogc final string species_name(size_t i) const { return _species_names[i]; }
     final int species_index(string spName) const { return _species_indices.get(spName, -1); }
-    @nogc final string energy_mode_name(int i) const { return _energy_mode_names[i]; }
+    @nogc final string energy_mode_name(size_t i) const { return _energy_mode_names[i]; }
     final int energy_mode_index(string modeName) const {
         if (equilibriumEnergyModeNames.canFind(modeName)) {
             return -1;
