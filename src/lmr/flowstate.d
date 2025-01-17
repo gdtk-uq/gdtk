@@ -24,7 +24,7 @@ import nm.number;
 import ntypes.complex;
 import util.json_helper;
 
-import lmr.fvcellio : scan_cell_data_from_fixed_order_string;
+import lmr.lmrexceptions : LmrException;
 import lmr.globalconfig;
 
 @nogc
@@ -447,36 +447,88 @@ public:
     {
         this.fileName = fileName;
         this.posMatch = match;
+        //
+        // Some context for the expected flow data.
+        alias cfg = GlobalConfig;
+        GasModel gmodel = cfg.gmodel_master;
+        size_t n_species = gmodel.n_species;
+        size_t n_modes = gmodel.n_modes;
+        size_t n_turb = cfg.turb_model.nturb;
+        //
+        string[] expected_names = ["pos.x", "pos.y", "p", "T", "vel.x", "vel.y"];
+        if (cfg.dimensions == 3) { expected_names ~= ["pos.z", "vel.z"]; }
+        if (cfg.MHD) { expected_names ~= ["B.x", "B.y", "B.z"]; }
+        string[] speciesList;
+        if (n_species > 1) {
+            foreach (i; 0..n_species) { speciesList ~= "massf-" ~ gmodel.species_name(i); }
+        }
+        string[] TmodeList;
+        foreach (i; 0..n_modes) { TmodeList ~= "T-" ~ gmodel.energy_mode_name(to!int(i)); }
+        string[] turbList;
+        foreach (i; 0..n_turb) { turbList ~= "tq-" ~ cfg.turb_model.primitive_variable_name(i); }
+        //
         // Open filename and read all data points.
-        // Format will be sample point data as per the postprocessor.
+        // Format will be a header line followed by one sample point per line.
+        // The header line will specify the names of the columns and, at a minimum, be:
+        // pos.x pos.y p T vel.x vel.y
+        // The data lines will have numerical values for the corresponding quantities.
         auto f = new File(fileName);
         auto range = f.byLine();
+        //
+        // First line is expected to name the columns with the correct variable names.
+        // Assume that it does, and proceed to identify the columns.
         auto line = range.front;
-        int npoints = 0;
-        while (!line.empty) {
-            string txt = to!string(line);
-            if (!canFind(txt, "#") && !canFind(txt, "pos.x")) {
-                // Assume that we have a line of data rather than variable names.
-                fstate ~= FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
-                pos ~= Vector3();
-                number volume, Q_rad_org, f_rad_org, Q_rE_rad;
-                double dt_chem, dt_therm, dt_local;
-                scan_cell_data_from_fixed_order_string
-                    (txt, pos[$-1], volume, fstate[$-1],
-                     Q_rad_org, f_rad_org, Q_rE_rad,
-                     GlobalConfig.with_local_time_stepping,
-                     GlobalConfig.solverMode,
-                     dt_local, dt_chem, dt_therm,
-                     GlobalConfig.include_quality,
-                     GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-                     GlobalConfig.radiation,
-                     GlobalConfig.turb_model.nturb);
-                npoints += 1;
+        string txt = to!string(line);
+        txt = stripLeft(txt, "# ").stripRight();
+        string[] varnames = txt.split();
+        size_t[string] column_dict; foreach (i, varname; varnames) { column_dict[varname] = i; }
+        range.popFront();
+        foreach (name; expected_names) {
+            if (!canFind(varnames, name)) {
+                string msg = text("Did not find ", name, " in variables: ", varnames);
+                throw new LmrException(msg);
             }
+        }
+        // Start picking up the data lines.
+        line = range.front;
+        while (!line.empty) {
+            txt = to!string(line);
+            auto mypos = Vector3();
+            auto myfs = FlowState(gmodel, n_turb);
+            txt = stripLeft(txt).stripRight();
+            string[] items = txt.split();
+            mypos.x = to!number(items[column_dict["pos.x"]]);
+            mypos.y = to!number(items[column_dict["pos.y"]]);
+            mypos.z = (cfg.dimensions == 3) ? to!number(items[column_dict["pos.z"]]) : to!number(0.0);
+            myfs.gas.p = to!number(items[column_dict["p"]]);
+            myfs.gas.T = to!number(items[column_dict["T"]]);
+            foreach (i, name; TmodeList) {
+                myfs.gas.T_modes[i] = to!number(items[column_dict[name]]);
+            }
+            if (n_species > 1) {
+                foreach (i, name; speciesList) { myfs.gas.massf[i] = to!number(items[column_dict[name]]); }
+            } else {
+                myfs.gas.massf[0] = 1.0;
+            }
+            gmodel.update_thermo_from_pT(myfs.gas);
+            gmodel.update_sound_speed(myfs.gas);
+            gmodel.update_trans_coeffs(myfs.gas);
+            myfs.vel.x = to!number(items[column_dict["vel.x"]]);
+            myfs.vel.y = to!number(items[column_dict["vel.y"]]);
+            myfs.vel.z = (cfg.dimensions == 3) ? to!number(items[column_dict["vel.z"]]) : to!number(0.0);
+            foreach (i, name; turbList) { myfs.turb[i] = to!number(items[column_dict[name]]); }
+            if (cfg.MHD) {
+                myfs.B.x = to!number(items[column_dict["B.x"]]);
+                myfs.B.y = to!number(items[column_dict["B.y"]]);
+                myfs.B.z = to!number(items[column_dict["B.z"]]);
+            } else {
+                myfs.B.set(0.0, 0.0, 0.0);
+            }
+            fstate ~= myfs;
+            pos ~= mypos;
             range.popFront();
             line = range.front;
         } // end while
-        // writefln("StaticFlowProfile: file=\"%s\", match=\"%s\", npoints=%d", fileName, match, npoints);
         //
         // The mapping of the nearest profile point to each ghost-cell or interface location
         // will be done as needed, at application time.
