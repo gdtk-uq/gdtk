@@ -736,7 +736,13 @@ extern(C) int importPlot3DGrid(lua_State *L)
     if ( narg >= 3 ) {
         scale = luaL_checknumber(L, 3);
     }
-    auto sgrids = geom.grid.sgrid.importPlot3DGrid(fname, dim, scale);
+
+    bool is_gzipped = false;
+    if ( narg >= 4 ) {
+        is_gzipped = to!bool(lua_toboolean(L, 4));
+    }
+
+    auto sgrids = geom.grid.sgrid.importPlot3DGrid(fname, dim, scale, is_gzipped);
     lua_newtable(L);
     foreach (i, grid; sgrids) {
         structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);

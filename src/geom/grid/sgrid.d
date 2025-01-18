@@ -15,6 +15,7 @@ import std.stdio;
 import std.format;
 import std.math;
 import std.range : iota;
+import std.process : pipeShell;
 import gzip;
 import ntypes.complex;
 import nm.number;
@@ -1610,14 +1611,21 @@ to convert to metres for use in Eilmer.
     return grids;
 } // end import_gridpro_grid()
 
-StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
+StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0, bool is_gzipped=false)
 {
     if (dim != 2 && dim != 3) {
         string errMsg = "ERROR in importPlot3DGrids: 'dim' must be 2 or 3";
         throw new Error(errMsg);
     }
 
-    auto f = File(fileName, "r");
+    File f;
+    if (is_gzipped) {
+        auto pipe = pipeShell("gunzip -c " ~ fileName);
+        f = pipe.stdout;
+    }
+    else {
+        f = File(fileName, "r");
+    }
     // Determine if we have multiblock file, or not.
     // A multiblock file will have a single integer on line
     // to give the number of blocks.
