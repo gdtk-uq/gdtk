@@ -23,6 +23,7 @@ post:
 
 clean:
 	- rm -rf $(LMR_DIR)
-	- rm static-profile.data transient-profile.zip
+	- rm static-profile.data prepare-static-profile.transcript
+	- rm transient-profile.zip prepare-transient-profile.transcript
 	- rm *.eps eilmer.data analytic.data classic-shock-tube.transcript
 	- rm ideal-air.gas
