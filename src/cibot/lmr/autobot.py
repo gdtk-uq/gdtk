@@ -153,6 +153,12 @@ def installCode():
     subprocess.run(shlex.split(cmd), check=True)
     return
 
+def installGasModule():
+    os.chdir(cfg['gasDir'])
+    cmd = f"{cfg['buildGasCommand']} INSTALL_DIR={cfg['instDir']} install"
+    subprocess.run(shlex.split(cmd), check=True)
+    return
+
 def runTests(revid):
     os.chdir(cfg['testDir'])
     # 0. clean up
@@ -208,6 +214,7 @@ def buildAndTest(revid):
     isgood, out, err = buildCode()
     if isgood:
         installCode()
+        installGasModule()
         returncode = runTests(revid)
         subject, message = checkTests(returncode)
     else:
