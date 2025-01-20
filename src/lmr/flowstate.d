@@ -16,6 +16,9 @@ import std.json;
 import std.math;
 import std.stdio;
 import std.string;
+import std.file;
+import std.zip;
+import core.stdc.stdlib : exit;
 
 import gas;
 import geom;
@@ -664,8 +667,6 @@ public:
 
 
 class TransientFlowProfile {
-    // WIP: THIS IS THE STATIC VERSION IN TRANSIENT CLOTHES
-
     // For use in the classes that implement the InflowBC_TransientProfile boundary condition.
     // GhostCellFlowStateCopyFromTransientProfile, BIE_FlowStateCopyFromTransientProfile
     // There are non-obvious options for the match parameter in the constructor call.
@@ -705,68 +706,99 @@ public:
         string[] turbList;
         foreach (i; 0..n_turb) { turbList ~= "tq-" ~ cfg.turb_model.primitive_variable_name(i); }
         //
-        // Open filename and read all data points.
-        // Format will be a header line followed by one sample point per line.
-        // The header line will specify the names of the columns and, at a minimum, be:
-        // pos.x pos.y p T vel.x vel.y
-        // The data lines will have numerical values for the corresponding quantities.
-        auto f = new File(fileName);
-        auto range = f.byLine();
+        // Open zip archive and read the metadata and the profiles.
         //
-        // First line is expected to name the columns with the correct variable names.
-        // Assume that it does, and proceed to identify the columns.
-        auto line = range.front;
-        string txt = to!string(line);
-        txt = stripLeft(txt, "# ").stripRight();
-        string[] varnames = txt.split();
-        size_t[string] column_dict; foreach (i, varname; varnames) { column_dict[varname] = i; }
-        range.popFront();
+        // FIX-ME We just overwrite the same profile storage at each time instant.
+        // This makes for a static profile but with the transient boundary-condition plumbing code.
+        //
+        auto zip = new ZipArchive(read(fileName));
+        auto zipMembers = zip.directory;
+        foreach (name, member; zipMembers) { zip.expand(member); }
+        //
+        // The metadata comes as a JSON string that can be parsed for its values.
+        //
+        string metadataStr = assumeUTF(zipMembers["metadata.json"].expandedData);
+        JSONValue metadata = parseJSON(metadataStr);
+        //
+        int nspecies = getJSONint(metadata, "nspecies", 0);
+        if (nspecies != n_species) {
+            string msg = text("Expected nspecies:", n_species, " got:", nspecies);
+            throw new LmrException(msg);
+        }
+        int nmodes = getJSONint(metadata, "nmodes", 0);
+        if (nmodes != n_modes) {
+            string msg = text("Expected nmodes:", n_modes, " got:", nmodes);
+            throw new LmrException(msg);
+        }
+        int nvar = getJSONint(metadata, "nvar", 0);
+        string[] varnames; foreach (i; 0..nvar) { varnames ~= ""; }
+        varnames = getJSONstringarray(metadata, "varnames", varnames);
         foreach (name; expected_names) {
             if (!canFind(varnames, name)) {
                 string msg = text("Did not find ", name, " in variables: ", varnames);
                 throw new LmrException(msg);
             }
         }
-        // Start picking up the data lines.
-        line = range.front;
-        while (!line.empty) {
-            txt = to!string(line);
-            auto mypos = Vector3();
-            auto myfs = FlowState(gmodel, n_turb);
-            txt = stripLeft(txt).stripRight();
-            string[] items = txt.split();
-            mypos.x = to!number(items[column_dict["pos.x"]]);
-            mypos.y = to!number(items[column_dict["pos.y"]]);
-            mypos.z = (cfg.dimensions == 3) ? to!number(items[column_dict["pos.z"]]) : to!number(0.0);
-            myfs.gas.p = to!number(items[column_dict["p"]]);
-            myfs.gas.T = to!number(items[column_dict["T"]]);
-            foreach (i, name; TmodeList) {
-                myfs.gas.T_modes[i] = to!number(items[column_dict[name]]);
-            }
-            if (n_species > 1) {
-                foreach (i, name; speciesList) { myfs.gas.massf[i] = to!number(items[column_dict[name]]); }
-            } else {
-                myfs.gas.massf[0] = 1.0;
-            }
-            gmodel.update_thermo_from_pT(myfs.gas);
-            gmodel.update_sound_speed(myfs.gas);
-            gmodel.update_trans_coeffs(myfs.gas);
-            myfs.vel.x = to!number(items[column_dict["vel.x"]]);
-            myfs.vel.y = to!number(items[column_dict["vel.y"]]);
-            myfs.vel.z = (cfg.dimensions == 3) ? to!number(items[column_dict["vel.z"]]) : to!number(0.0);
-            foreach (i, name; turbList) { myfs.turb[i] = to!number(items[column_dict[name]]); }
-            if (cfg.MHD) {
-                myfs.B.x = to!number(items[column_dict["B.x"]]);
-                myfs.B.y = to!number(items[column_dict["B.y"]]);
-                myfs.B.z = to!number(items[column_dict["B.z"]]);
-            } else {
-                myfs.B.set(0.0, 0.0, 0.0);
-            }
-            fstate ~= myfs;
-            pos ~= mypos;
+        size_t[string] column_dict; foreach (i, varname; varnames) { column_dict[varname] = i; }
+        //
+        int ntimes = getJSONint(metadata, "ntimes", 0);
+        double[] times; foreach (i; 0..ntimes) { times ~= 0.0; }
+        times = getJSONdoublearray(metadata, "times", times);
+        //
+        int npoints = getJSONint(metadata, "npoints", 0);
+        foreach (i; 0..npoints) {
+            pos ~= Vector3();
+            fstate ~= FlowState(gmodel, n_turb);
+        }
+        //
+        foreach (k; 0..ntimes) {
+            string memberName = format("data.%d", k);
+            string contentStr = assumeUTF(zipMembers[memberName].expandedData);
+            // Format for each profile will be a header line followed by one sample point per line.
+            // The header line will specify the names of the columns and, at a minimum, be:
+            // pos.x pos.y p T vel.x vel.y
+            // The data lines will have numerical values for the corresponding quantities.
+            auto range = lineSplitter(contentStr);
+            // First line is expected to name the columns with the correct variable names.
+            // Just discard it..
+            auto line = range.front;
             range.popFront();
-            line = range.front;
-        } // end while
+            // Pick up the data lines and scan them.
+            foreach (j; 0..npoints) {
+                Vector3* mypos = &pos[j];
+                FlowState* myfs = &fstate[j];
+                string[] items = to!string(range.front).strip().split();
+                //
+                mypos.x = to!number(items[column_dict["pos.x"]]);
+                mypos.y = to!number(items[column_dict["pos.y"]]);
+                mypos.z = (cfg.dimensions == 3) ? to!number(items[column_dict["pos.z"]]) : to!number(0.0);
+                myfs.gas.p = to!number(items[column_dict["p"]]);
+                myfs.gas.T = to!number(items[column_dict["T"]]);
+                foreach (i, name; TmodeList) {
+                    myfs.gas.T_modes[i] = to!number(items[column_dict[name]]);
+                }
+                if (n_species > 1) {
+                    foreach (i, name; speciesList) { myfs.gas.massf[i] = to!number(items[column_dict[name]]); }
+                } else {
+                    myfs.gas.massf[0] = 1.0;
+                }
+                gmodel.update_thermo_from_pT(myfs.gas);
+                gmodel.update_sound_speed(myfs.gas);
+                gmodel.update_trans_coeffs(myfs.gas);
+                myfs.vel.x = to!number(items[column_dict["vel.x"]]);
+                myfs.vel.y = to!number(items[column_dict["vel.y"]]);
+                myfs.vel.z = (cfg.dimensions == 3) ? to!number(items[column_dict["vel.z"]]) : to!number(0.0);
+                foreach (i, name; turbList) { myfs.turb[i] = to!number(items[column_dict[name]]); }
+                if (cfg.MHD) {
+                    myfs.B.x = to!number(items[column_dict["B.x"]]);
+                    myfs.B.y = to!number(items[column_dict["B.y"]]);
+                    myfs.B.z = to!number(items[column_dict["B.z"]]);
+                } else {
+                    myfs.B.set(0.0, 0.0, 0.0);
+                }
+                range.popFront();
+            } // end foreach j
+        } // end foreach k
         //
         // The mapping of the nearest profile point to each ghost-cell or interface location
         // will be done as needed, at application time.

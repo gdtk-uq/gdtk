@@ -6,11 +6,19 @@ help:
 	@echo "   run"
 	@echo "   post"
 
-prep-A: ideal-air.lua grid.lua transient-A.lua
+prep-A: ideal-air.gas grid.lua transient-A.lua
 	prep-gas ideal-air.lua ideal-air.gas
 	python3 prepare-static-profile.py > prepare-static-profile.transcript
 	lmr prep-grid --job=grid.lua
 	lmr prep-sim --job=transient-A.lua
+
+prep-B: ideal-air.gas grid.lua transient-A.lua
+	python3 prepare-transient-profile.py > prepare-transient-profile.transcript
+	lmr prep-grid --job=grid.lua
+	lmr prep-sim --job=transient-B.lua
+
+ideal-air.gas: ideal-air.lua
+	prep-gas ideal-air.lua ideal-air.gas
 
 run:
 	lmr run
