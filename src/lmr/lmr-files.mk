@@ -57,6 +57,7 @@ LMR_BC_FILES = $(LMR)/bc/package.d \
 	$(LMR)/bc/ghost_cell_effect/internal_copy_then_reflect.d \
 	$(LMR)/bc/ghost_cell_effect/flow_state_copy.d \
 	$(LMR)/bc/ghost_cell_effect/flow_state_copy_from_static_profile.d \
+	$(LMR)/bc/ghost_cell_effect/flow_state_copy_from_transient_profile.d \
 	$(LMR)/bc/ghost_cell_effect/flow_state_copy_from_history.d \
 	$(LMR)/bc/ghost_cell_effect/synthesise_flow_state.d \
 	$(LMR)/bc/ghost_cell_effect/extrapolate_copy.d \

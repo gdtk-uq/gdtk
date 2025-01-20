@@ -427,6 +427,7 @@ version(complex_numbers) {
 
 } // end class FlowState
 
+
 class StaticFlowProfile {
     // For use in the classes that implement the InflowBC_StaticProfile boundary condition.
     // GhostCellFlowStateCopyFromStaticProfile, BIE_FlowStateCopyFromStaticProfile
@@ -660,6 +661,243 @@ public:
         adjust_velocity(*fs, my_pos, omegaz);
     }
 } // end class StaticFlowProfile
+
+
+class TransientFlowProfile {
+    // WIP: THIS IS THE STATIC VERSION IN TRANSIENT CLOTHES
+
+    // For use in the classes that implement the InflowBC_TransientProfile boundary condition.
+    // GhostCellFlowStateCopyFromTransientProfile, BIE_FlowStateCopyFromTransientProfile
+    // There are non-obvious options for the match parameter in the constructor call.
+    // See the switch statement in the compute_distance() function for some hints.
+
+public:
+    string fileName;
+    string posMatch;
+    FlowState[] fstate;
+    Vector3[] pos;
+    size_t[size_t] which_point; // A place to memoize the mapped indices and we find them.
+    // Below, we search for the profile point nearest to the initial position.
+    // This position will only change for moving-grid simulations and we will not try
+    // to deal with that complication.
+
+    this (string fileName, string match)
+    {
+        this.fileName = fileName;
+        this.posMatch = match;
+        //
+        // Some context for the expected flow data.
+        alias cfg = GlobalConfig;
+        GasModel gmodel = cfg.gmodel_master;
+        size_t n_species = gmodel.n_species;
+        size_t n_modes = gmodel.n_modes;
+        size_t n_turb = cfg.turb_model.nturb;
+        //
+        string[] expected_names = ["pos.x", "pos.y", "p", "T", "vel.x", "vel.y"];
+        if (cfg.dimensions == 3) { expected_names ~= ["pos.z", "vel.z"]; }
+        if (cfg.MHD) { expected_names ~= ["B.x", "B.y", "B.z"]; }
+        string[] speciesList;
+        if (n_species > 1) {
+            foreach (i; 0..n_species) { speciesList ~= "massf-" ~ gmodel.species_name(i); }
+        }
+        string[] TmodeList;
+        foreach (i; 0..n_modes) { TmodeList ~= "T-" ~ gmodel.energy_mode_name(to!int(i)); }
+        string[] turbList;
+        foreach (i; 0..n_turb) { turbList ~= "tq-" ~ cfg.turb_model.primitive_variable_name(i); }
+        //
+        // Open filename and read all data points.
+        // Format will be a header line followed by one sample point per line.
+        // The header line will specify the names of the columns and, at a minimum, be:
+        // pos.x pos.y p T vel.x vel.y
+        // The data lines will have numerical values for the corresponding quantities.
+        auto f = new File(fileName);
+        auto range = f.byLine();
+        //
+        // First line is expected to name the columns with the correct variable names.
+        // Assume that it does, and proceed to identify the columns.
+        auto line = range.front;
+        string txt = to!string(line);
+        txt = stripLeft(txt, "# ").stripRight();
+        string[] varnames = txt.split();
+        size_t[string] column_dict; foreach (i, varname; varnames) { column_dict[varname] = i; }
+        range.popFront();
+        foreach (name; expected_names) {
+            if (!canFind(varnames, name)) {
+                string msg = text("Did not find ", name, " in variables: ", varnames);
+                throw new LmrException(msg);
+            }
+        }
+        // Start picking up the data lines.
+        line = range.front;
+        while (!line.empty) {
+            txt = to!string(line);
+            auto mypos = Vector3();
+            auto myfs = FlowState(gmodel, n_turb);
+            txt = stripLeft(txt).stripRight();
+            string[] items = txt.split();
+            mypos.x = to!number(items[column_dict["pos.x"]]);
+            mypos.y = to!number(items[column_dict["pos.y"]]);
+            mypos.z = (cfg.dimensions == 3) ? to!number(items[column_dict["pos.z"]]) : to!number(0.0);
+            myfs.gas.p = to!number(items[column_dict["p"]]);
+            myfs.gas.T = to!number(items[column_dict["T"]]);
+            foreach (i, name; TmodeList) {
+                myfs.gas.T_modes[i] = to!number(items[column_dict[name]]);
+            }
+            if (n_species > 1) {
+                foreach (i, name; speciesList) { myfs.gas.massf[i] = to!number(items[column_dict[name]]); }
+            } else {
+                myfs.gas.massf[0] = 1.0;
+            }
+            gmodel.update_thermo_from_pT(myfs.gas);
+            gmodel.update_sound_speed(myfs.gas);
+            gmodel.update_trans_coeffs(myfs.gas);
+            myfs.vel.x = to!number(items[column_dict["vel.x"]]);
+            myfs.vel.y = to!number(items[column_dict["vel.y"]]);
+            myfs.vel.z = (cfg.dimensions == 3) ? to!number(items[column_dict["vel.z"]]) : to!number(0.0);
+            foreach (i, name; turbList) { myfs.turb[i] = to!number(items[column_dict[name]]); }
+            if (cfg.MHD) {
+                myfs.B.x = to!number(items[column_dict["B.x"]]);
+                myfs.B.y = to!number(items[column_dict["B.y"]]);
+                myfs.B.z = to!number(items[column_dict["B.z"]]);
+            } else {
+                myfs.B.set(0.0, 0.0, 0.0);
+            }
+            fstate ~= myfs;
+            pos ~= mypos;
+            range.popFront();
+            line = range.front;
+        } // end while
+        //
+        // The mapping of the nearest profile point to each ghost-cell or interface location
+        // will be done as needed, at application time.
+        // This way, all of the necessary cell and position data should be valid.
+    } // end this()
+
+    @nogc
+    double compute_distance(ref const(Vector3) my_pos, ref const(Vector3) other_pos)
+    {
+        double distance, other_r, my_r, dx, dy, dz, dr;
+        switch (posMatch) {
+        case "xyz-to-xyz":
+            // 2D or 3D, closest match on all components of position.
+            // In 2D all z-components are supposed to be zero (and so, not matter).
+            dx = my_pos.x.re - other_pos.x.re;
+            dy = my_pos.y.re - other_pos.y.re;
+            dz = my_pos.z.re - other_pos.z.re;
+            distance = sqrt(dx*dx + dy*dy + dz*dz);
+            break;
+        case "xyA-to-xyA":
+            // 2D or 3D; don't care about z-component of position.
+            dx = my_pos.x.re - other_pos.x.re;
+            dy = my_pos.y.re - other_pos.y.re;
+            distance = sqrt(dx^^2 + dy^^2);
+            break;
+        case "AyA-to-AyA":
+            // 2D or 3D; only care about the y-component of position.
+            dy = my_pos.y.re - other_pos.y.re;
+            distance = fabs(dy);
+            break;
+        case "xy-to-xR":
+            // Starting with a profile from a 2D simulation, map it to
+            // a radial profile in a 3D simulation, considering the x-component
+            // of the position of the ghost cells when computing distance and
+            // picking the nearest point in the profile.
+            dx = my_pos.x.re - other_pos.x.re;
+            other_r = sqrt(other_pos.y.re^^2 + other_pos.z.re^^2);
+            my_r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
+            dr = my_r - other_r;
+            distance = sqrt(dx*dx + dr*dr);
+            break;
+        case "Ay-to-AR":
+            // Starting with a profile from a 2D simulation, map it to
+            // a radial profile in a 3D simulation, ignoring the x-component
+            // of the position of the ghost cells when computing distance and
+            // picking the nearest point in the profile.
+            other_r = sqrt(other_pos.y.re^^2 + other_pos.z.re^^2);
+            my_r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
+            dr = my_r - other_r;
+            distance = fabs(dr);
+            break;
+        case "2Daxi-to-3D-rotating":
+            // Map the y axis of a 2D simulation to the x-y plane of a 3D
+            // simulation, ignoring the other axes. (NNG, June 2024)
+            other_r = sqrt(other_pos.y.re^^2);
+            my_r = sqrt(my_pos.y.re^^2 + my_pos.x.re^^2);
+            dr = my_r - other_r;
+            distance = fabs(dr);
+            break;
+        default:
+            throw new FlowSolverException("Invalid match option.");
+        }
+        return distance;
+    } // end compute_distance()
+
+    @nogc
+    size_t find_nearest_profile_point(ref const(Vector3) my_pos)
+    {
+        size_t ip = 0; // Start looking here, assuming that there is at least one point.
+        double min_distance = compute_distance(my_pos, pos[0]);
+        foreach (i; 1 .. pos.length) {
+            double new_distance = compute_distance(my_pos, pos[i]);
+            if (new_distance < min_distance) { ip = i; min_distance = new_distance; }
+        }
+        return ip;
+    } // end find_nearest_profile_point()
+
+    // not @nogc because of associative array lookup
+    FlowState get_flowstate(size_t my_id, ref const(Vector3) my_pos, double t)
+    {
+        assert(fstate.length > 0, "StaticFlowProfile is empty.");
+        if (my_id in which_point) {
+            return fstate[which_point[my_id]];
+        } else {
+            size_t ip = find_nearest_profile_point(my_pos);
+            which_point[my_id] = ip;
+            return fstate[ip];
+        }
+    } // end get_flowstate()
+
+    @nogc
+    void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos, double omegaz)
+    {
+        switch (posMatch) {
+        case "xyz-to-xyz": /* 3D, do nothing. */ break;
+        case "xyA-to-xyA": /* 3D, do nothing. */ break;
+        case "AyA-to-AyA": /* 3D, do nothing. */ break;
+        case "xy-to-xR": goto case "Ay-to-AR";
+        case "Ay-to-AR":
+            // We are assuming that the original 2D simulation had y>0.
+            double r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
+            double vel_yz = sqrt(fs.vel.y.re^^2 + fs.vel.z.re^^2);
+            double vely_sign = (fs.vel.y < 0.0) ? -1.0 : 1.0;
+            fs.vel.y = vely_sign * vel_yz * my_pos.y.re / r;
+            fs.vel.z = vely_sign * vel_yz * my_pos.z.re / r;
+            break;
+        case "2Daxi-to-3D-rotating":
+            double axi_vely = sqrt(fs.vel.y.re^^2);
+            double axi_velx = fs.vel.x.re;
+
+            double cyl_theta = atan2(my_pos.y.re, my_pos.x.re);
+            double cyl_vel_x = axi_vely*cos(cyl_theta);
+            double cyl_vel_y = axi_vely*sin(cyl_theta);
+            double cyl_vel_z = axi_velx;
+
+            fs.vel.x = cyl_vel_x;
+            fs.vel.y = cyl_vel_y;
+            fs.vel.z = cyl_vel_z;
+            if (omegaz != 0.0) { into_rotating_frame(fs.vel, my_pos, omegaz); }
+            break;
+        default:
+            throw new FlowSolverException("Invalid match option.");
+        }
+    }
+
+    @nogc
+    void adjust_velocity(FlowState* fs, ref const(Vector3) my_pos, double omegaz)
+    {
+        adjust_velocity(*fs, my_pos, omegaz);
+    }
+} // end class TransientFlowProfile
 
 
 class FlowHistory {
