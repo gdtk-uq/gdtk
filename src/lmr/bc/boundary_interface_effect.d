@@ -453,15 +453,17 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos, t));
+        fprofile.set_time_interpolation(t);
+        fprofile.set_flowstate(f.fs, f.id, f.pos);
         fprofile.adjust_velocity(f.fs, f.pos, blk.omegaz);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
+        fprofile.set_time_interpolation(t);
         foreach (i, f; bc.faces) {
-            f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos, t));
+            fprofile.set_flowstate(f.fs, f.id, f.pos);
             fprofile.adjust_velocity(f.fs, f.pos, blk.omegaz);
         }
     }
@@ -472,7 +474,8 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-        f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos, t));
+        fprofile.set_time_interpolation(t);
+        fprofile.set_flowstate(f.fs, f.id, f.pos);
         fprofile.adjust_velocity(f.fs, f.pos, blk.omegaz);
     }
 
@@ -482,8 +485,9 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
+        fprofile.set_time_interpolation(t);
         foreach (i, f; bc.faces) {
-            f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos, t));
+            fprofile.set_flowstate(f.fs, f.id, f.pos);
             fprofile.adjust_velocity(f.fs, f.pos, blk.omegaz);
         }
     } // end apply_structured_grid()

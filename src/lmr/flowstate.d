@@ -18,7 +18,6 @@ import std.stdio;
 import std.string;
 import std.file;
 import std.zip;
-import core.stdc.stdlib : exit;
 
 import gas;
 import geom;
@@ -675,12 +674,9 @@ class TransientFlowProfile {
 public:
     string fileName;
     string posMatch;
-    FlowState[] fstate;
+    double[] times;
     Vector3[] pos;
-    size_t[size_t] which_point; // A place to memoize the mapped indices and we find them.
-    // Below, we search for the profile point nearest to the initial position.
-    // This position will only change for moving-grid simulations and we will not try
-    // to deal with that complication.
+    FlowState[][] fstate;
 
     this (string fileName, string match)
     {
@@ -741,14 +737,23 @@ public:
         }
         size_t[string] column_dict; foreach (i, varname; varnames) { column_dict[varname] = i; }
         //
-        int ntimes = getJSONint(metadata, "ntimes", 0);
-        double[] times; foreach (i; 0..ntimes) { times ~= 0.0; }
+        ntimes = to!size_t(getJSONint(metadata, "ntimes", 0));
+        if (ntimes == 0) {
+            throw new LmrException("Expected at least one time instant in archive.");
+        }
+        foreach (k; 0..ntimes) { times ~= 0.0; }
         times = getJSONdoublearray(metadata, "times", times);
         //
         int npoints = getJSONint(metadata, "npoints", 0);
-        foreach (i; 0..npoints) {
-            pos ~= Vector3();
-            fstate ~= FlowState(gmodel, n_turb);
+        if (npoints == 0) {
+            throw new LmrException("Expected at least one sample point in profile.");
+        }
+        // Now that we know how much data is coming,
+        // we can allocate suitable storage.
+        foreach (j; 0..npoints) { pos ~= Vector3(); }
+        fstate.length = ntimes;
+        foreach (k; 0..ntimes) {
+            foreach (j; 0..npoints) { fstate[k] ~= FlowState(gmodel, n_turb); }
         }
         //
         foreach (k; 0..ntimes) {
@@ -765,13 +770,15 @@ public:
             range.popFront();
             // Pick up the data lines and scan them.
             foreach (j; 0..npoints) {
-                Vector3* mypos = &pos[j];
-                FlowState* myfs = &fstate[j];
                 string[] items = to!string(range.front).strip().split();
-                //
-                mypos.x = to!number(items[column_dict["pos.x"]]);
-                mypos.y = to!number(items[column_dict["pos.y"]]);
-                mypos.z = (cfg.dimensions == 3) ? to!number(items[column_dict["pos.z"]]) : to!number(0.0);
+                if (k == 0) {
+                    // We use the position data from the first time-instant only.
+                    Vector3* mypos = &pos[j];
+                    mypos.x = to!number(items[column_dict["pos.x"]]);
+                    mypos.y = to!number(items[column_dict["pos.y"]]);
+                    mypos.z = (cfg.dimensions == 3) ? to!number(items[column_dict["pos.z"]]) : to!number(0.0);
+                }
+                FlowState* myfs = &fstate[k][j];
                 myfs.gas.p = to!number(items[column_dict["p"]]);
                 myfs.gas.T = to!number(items[column_dict["T"]]);
                 foreach (i, name; TmodeList) {
@@ -876,18 +883,39 @@ public:
         return ip;
     } // end find_nearest_profile_point()
 
-    // not @nogc because of associative array lookup
-    FlowState get_flowstate(size_t my_id, ref const(Vector3) my_pos, double t)
+    @nogc
+    void set_time_interpolation(double t)
     {
-        assert(fstate.length > 0, "StaticFlowProfile is empty.");
-        if (my_id in which_point) {
-            return fstate[which_point[my_id]];
+        if (ntimes == 1) {
+            // Only one instance; much like a static profile.
+            it0 = 0;
+            it1 = 0;
+            w0 = 1.0;
         } else {
-            size_t ip = find_nearest_profile_point(my_pos);
-            which_point[my_id] = ip;
-            return fstate[ip];
+            // Search for the correct pair of instances.
+            it0 = ntimes - 2;
+            while (it0 > 0 && times[it0] > t) { it0 -= 1; }
+            it1 = it0 + 1;
+            // Clipped interpolation for the weight.
+            if (t < times[it0]) {
+                w0 = 1.0;
+            } else if (t > times[it1]) {
+                w0 = 0.0;
+            } else {
+                w0 = (times[it1] - t)/(times[it1] - times[it0]);
+            }
         }
-    } // end get_flowstate()
+        return;
+    } // end set_time_interpolation()
+
+    // not @nogc because of associative array lookup
+    void set_flowstate(FlowState* fs, size_t my_id, ref const(Vector3) my_pos)
+    {
+        assert(fstate.length > 0, "TransientFlowProfile is empty.");
+        size_t ip = (my_id in which_point) ? which_point[my_id] : find_nearest_profile_point(my_pos);
+        fs.copy_average_values_from(fstate[it0][ip], fstate[it1][ip], w0);
+        return;
+    } // end set_flowstate()
 
     @nogc
     void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos, double omegaz)
@@ -929,6 +957,16 @@ public:
     {
         adjust_velocity(*fs, my_pos, omegaz);
     }
+
+private:
+    size_t ntimes;
+    size_t it0 = 0;
+    size_t it1 = 0;
+    double w0 = 0.0;
+    size_t[size_t] which_point; // A place to memoize the mapped indices and we find them.
+    // Above, we search for the profile point nearest to the initial position.
+    // This position will only change for moving-grid simulations and we will not try
+    // to deal with that complication.
 } // end class TransientFlowProfile
 
 
