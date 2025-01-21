@@ -31,6 +31,6 @@ config.gasdynamic_update_scheme = "classic-rk3"
 config.flux_calculator = "ausmdv"
 config.max_time = 500.0e-6  -- seconds
 config.max_step = 3000
-config.cfl_value = 0.5
+config.cfl_schedule = {{0.0, 0.25}, {101.0e-6, 0.25}, {110.0e-6, 0.5}}
 config.dt_init = 1.0e-6
 config.dt_plot = 100.0e-6
