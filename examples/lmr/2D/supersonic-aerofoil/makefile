@@ -27,7 +27,7 @@ prep:
 	lmr prep-flow --job=af.lua
 
 post:
-	lmr snapshot2vtk
+	lmr snapshot2vtk --add-vars="mach"
 
 postall:
 	lmr snapshot2vtk --all

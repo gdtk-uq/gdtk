@@ -60,4 +60,6 @@ include::2D/supersonic-ramp/README.adoc[tag=description]
 
 include::2D/capsule-fire-II/README.adoc[tag=description]
 
+include::2D/supersonic-aerofoil/README.adoc[tag=description]
+
 include::3D/manufactured-solutions/README.adoc[tag=description]

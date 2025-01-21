@@ -141,7 +141,8 @@ patch7 = CoonsPatch:new{north=cq_, east=Qq_, south=CQ_, west=Cc_}
 patch8 = CoonsPatch:new{north=qd_, east=Dd_, south=QD_, west=Qq_}
 patch9 = CoonsPatch:new{north=de_, east=Ee_, south=DE_, west=Dd_}
 
-factor = 0.5
+--factor = 0.5
+factor = 2.0
 niv = 128*factor; njv=64*factor
 a = 0.0002/factor
 if factor==0.5 then
@@ -195,7 +196,7 @@ ugrid0:set_boundaryset_tag(WEST,  "inflow");  ugrid0:set_boundaryset_tag(NORTH, 
 ugrid1:set_boundaryset_tag(SOUTH, "wall");    ugrid1:set_boundaryset_tag(NORTH, "upper")
 ugrid2:set_boundaryset_tag(SOUTH, "wall");    ugrid2:set_boundaryset_tag(NORTH, "upper")
 ugrid3:set_boundaryset_tag(SOUTH, "wall");    ugrid3:set_boundaryset_tag(NORTH, "upper")
-ugrid4:set_boundaryset_tag(EAST,  "outflow"); ugrid0:set_boundaryset_tag(NORTH, "upper")
+ugrid4:set_boundaryset_tag(EAST,  "outflow"); ugrid4:set_boundaryset_tag(NORTH, "upper")
 
 ugrid5:set_boundaryset_tag(WEST, "inflow");  ugrid5:set_boundaryset_tag(SOUTH, "lower")
 ugrid6:set_boundaryset_tag(NORTH, "wall");    ugrid6:set_boundaryset_tag(SOUTH, "lower")

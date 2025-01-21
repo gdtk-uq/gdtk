@@ -1,12 +1,15 @@
 //tag::description[]
-= Supersonic turbulent flow over a diamond shaped aerofoil flat plate
-`gdtk/examples/lmr/2D/supersonic-aerofoil
+= Supersonic turbulent flow over a diamond shaped aerofoil
+`gdtk/examples/lmr/2D/supersonic-aerofoil`
 
 Nick N. Gibbons and Brittny Dunn
 2024-06-25
 
 This example is a turbulent, supersonic flow over a diamond shaped aerofoil
-with a small tail flap. It may be useful for developing surrogate models 
-for aerodynamic database calcualtion.
+with a small tail flap. It was used for developing surrogate models 
+for aerodynamic databases, and may be helpful for simulating turbulent
+aerodynamics over moderately complicated geometries.
+
+image::af_mach.svg[width=60%,align="center",opts=inline,title="Colormap of Mach 7 flow over a 100mm length diamond-shaped aerofoil in 2D."]
 
 //end::description[]

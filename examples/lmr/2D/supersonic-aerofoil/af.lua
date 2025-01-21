@@ -38,7 +38,7 @@ flowDict = {}
 flowDict["inflow"] = inflow
 
 bcDict = {inflow=InFlowBC_Supersonic:new{flowCondition=inflow},
-             upper=InFlowBC_Supersonic:new{flowCondition=inflow},
+             upper=OutFlowBC_Simple:new{},
              lower=InFlowBC_Supersonic:new{flowCondition=inflow},
              wall=WallBC_NoSlip_FixedT:new{Twall=300.0, group="wall"},
              outflow=OutFlowBC_Simple:new{},
