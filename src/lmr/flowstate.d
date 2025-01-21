@@ -703,10 +703,6 @@ public:
         foreach (i; 0..n_turb) { turbList ~= "tq-" ~ cfg.turb_model.primitive_variable_name(i); }
         //
         // Open zip archive and read the metadata and the profiles.
-        //
-        // FIX-ME We just overwrite the same profile storage at each time instant.
-        // This makes for a static profile but with the transient boundary-condition plumbing code.
-        //
         auto zip = new ZipArchive(read(fileName));
         auto zipMembers = zip.directory;
         foreach (name, member; zipMembers) { zip.expand(member); }
