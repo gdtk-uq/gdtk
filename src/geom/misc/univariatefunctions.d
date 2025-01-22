@@ -10,6 +10,8 @@ module geom.misc.univariatefunctions;
 import std.conv;
 import std.math;
 import std.stdio;
+import nm.brent;
+import std.format;
 
 // Base class for functions of one variable.
 class UnivariateFunction {
@@ -538,6 +540,219 @@ private:
         return xs;
     }
 }
+
+// Vinokur function playground
+class VinokurFunction : UnivariateFunction {
+/*
+   A cluster function with specified cell sizes on either end.
+   Note that the cell sizes aren't preserved exactly and can vary significantly
+   depending on the number of cells given.
+   Instead, the derivatives of the distribution function at the end of the first
+   and the last cell match the prescribed sizes exactly.
+   Pointwise's tanh distribution function uses this equation.
+   Source: https://ntrs.nasa.gov/citations/19800025680
+
+   Inputs:
+     n - The number of cells on the edge
+     s1 - The normalised size of the first cell
+     sn - The normalised size of the last cell
+
+   @author: Jens Kunze
+*/
+public:
+    this(int n, double s1, double sn)
+    {
+        this.n = n;
+        this.s1 = s1;
+        this.sn = sn;
+        this.A = sqrt(sn / s1);
+        double B = 1 / (n * sqrt(sn * s1));
+        this.B = B;
+        if (B<1.0)  {
+            string msg = "Problematic parameters in VinokurGeomHybridFunction B<1!, B= "~to!string(B);
+            msg ~= "\nnormalised first cell size: "~to!string(s1);
+            msg ~= "\nnormalised last cell size: "~to!string(sn);
+            msg ~= "\nnumber of cells: "~to!string(n);
+            throw new Error(msg);
+        }
+        const double beta_min = 1.0e-3;
+        const double beta_max = 200.0;
+        const double tol = 1.0e-11;
+        this.beta_min = beta_min;
+        this.beta_max = beta_max;
+        this.tol = tol;
+        double zeroFun(double beta){
+            /*
+                Find the vinokur stretch factor
+            */
+            return sinh(beta) / beta - B;
+        }
+        try {
+            this.beta = nm.brent.solve!(zeroFun,double)(beta_min, beta_max, tol);
+        }
+        catch (Exception e) {
+            string msg = "There was a problem iterating to find the vinokur function stretch factor\n";
+            debug {
+                msg ~= format("The minimum value of the bracket is: %12.6f\n", 1.0e-3);
+                msg ~= format("The maximum value of the bracket is: %12.6f\n", 200.0);
+                msg ~= "The message from the brent.solve function is:\n";
+                msg ~= e.msg;
+            }
+            throw new Exception(msg);
+        }
+    }
+
+    this(const VinokurFunction other)
+    {
+        n = other.n;
+        s1 = other.s1;
+        sn = other.sn;
+        A = other.A;
+        B = other.B;
+        beta = other.beta;
+    }
+
+    VinokurFunction dup() const
+    {
+        return new VinokurFunction(this);
+    }
+
+    override double opCall(double x) const
+    {
+        double u = 0.5*(1 + tanh(beta*(x - 0.5))/tanh(0.5*beta));
+        return u/(A + (1 - A)*u);
+    }
+
+private:
+    int n;
+    double s1,sn,A,B,beta_min,beta_max,tol,beta;
+} // end class VinokurFunction
+
+class VinokurGeomHybridFunction : UnivariateFunction {
+/*
+   A hybrid cluster function consisting of geometric series clustering at the ends
+   of the edge and a vinokur function in between.
+   The number of cells in the geometric layers is specified explicitly.
+   Setting it to 0 on one end creates a geometric series on one of the ends.
+   Setting it to 1 the vinokur function can be used with exact
+
+   Inputs:
+     n - The number of cells on the edge
+     s1 - The normalised size of the first cell
+     n1 - The number of cells in the geometric layer at the start of the edge
+     r1 - The size ratio between adjacent cells in the geometric layer
+     sn - The normalised size of the last cell
+     nn - The number of cells in the geometric layer at the end of the edge
+     rn - The size ratio between adjacent cells in the geometric layer
+
+   @author: Jens Kunze
+*/
+public:
+    this(int n=50, double s1=1.0e-2, int n1=0, double r1=1.2, double sn=1.0e-2, int nn=0, double rn=1.2)
+    {
+        this.n = n;
+        this.s1 = s1;
+        this.n1 = n1;
+        this.r1 = r1;
+        this.l1 = geometricSeriesLength(s1, r1, n1);
+        this.sn = sn;
+        this.nn = nn;
+        this.rn = rn;
+        this.ln = geometricSeriesLength(sn, rn, nn);
+        this.vs1 = s1*pow(r1,n1)/(1 - l1 - ln);
+        this.vsn = sn*pow(rn,nn)/(1 - l1 - ln);
+        this.vn = n - n1 - nn;
+        if (vn<1) {
+            string msg = "Problematic parameters in VinokurGeomHybridFunction vn= "~to!string(vn);
+            msg ~= "\nnumber of cells: "~to!string(n);
+            msg ~= "\nnumber geometric layers at start: "~to!string(n1);
+            msg ~= "\nnumber geometric layers at end: "~to!string(vn);
+            throw new Error(msg);
+        }
+        this.A = sqrt(vsn / vs1);
+        double B = 1 / (vn * sqrt(vsn * vs1));
+        this.B = B;
+        if (B<1.0) {
+            string msg = "Problematic parameters in VinokurGeomHybridFunction B<1!, B= "~to!string(B);
+            msg ~= "\nnormalised first cell size: "~to!string(vs1);
+            msg ~= "\nnormalised last cell size: "~to!string(vsn);
+            msg ~= "\nnumber of cells: "~to!string(vn);
+            throw new Error(msg);
+        }
+        const double beta_min = 1.0e-3;
+        const double beta_max = 200.0;
+        const double tol = 1.0e-11;
+        this.beta_min = beta_min;
+        this.beta_max = beta_max;
+        this.tol = tol;
+        double zeroFun(double beta){
+            /*
+                Find the vinokur stretch factor
+            */
+            return sinh(beta) / beta - B;
+        }
+        try {
+            this.beta = nm.brent.solve!(zeroFun,double)(beta_min, beta_max, tol);
+        }
+        catch (Exception e) {
+            string msg = "There was a problem iterating to find the vinokur function stretch factor\n";
+            debug {
+                msg ~= format("The minimum value of the bracket is: %12.6f\n", 1.0e-3);
+                msg ~= format("The maximum value of the bracket is: %12.6f\n", 200.0);
+                msg ~= "The message from the brent.solve function is:\n";
+                msg ~= e.msg;
+            }
+            throw new Exception(msg);
+        }
+    }
+
+    this(const VinokurGeomHybridFunction other)
+    {
+        n = other.n;
+        s1 = other.s1;
+        r1 = other.r1;
+        n1 = other.n1;
+        l1 = other.l1;
+        sn = other.sn;
+        rn = other.rn;
+        nn = other.nn;
+        ln = other.ln;
+        vs1 = other.vs1;
+        vsn = other.vsn;
+        vn = other.vn;
+        A = other.A;
+        B = other.B;
+        beta = other.beta;
+    }
+
+    VinokurGeomHybridFunction dup() const
+    {
+        return new VinokurGeomHybridFunction(this);
+    }
+
+    override double opCall(double x) const
+    {
+        if (x<=to!double(n1)/to!double(n)){
+            return geometricSeriesLength(s1, r1, to!int(round(x*n)));
+        }
+        if (x>1-to!double(nn)/to!double(n)){
+            return 1 - geometricSeriesLength(sn, rn, n - to!int(round(x*n)));
+        }
+        double xi = (x - to!double(n1)/to!double(n))/(1 - to!double(nn)/to!double(n) - to!double(n1)/to!double(n));
+        double u = 0.5*(1 + tanh(beta*(xi - 0.5))/tanh(0.5*beta));
+        return u/(A + (1 - A)*u)*(1 - ln - l1) + l1;
+    }
+
+private:
+    int n,n1,nn,vn;
+    double s1,r1,l1,sn,rn,ln,vs1,vsn,A,B,beta_min,beta_max,tol,beta;
+
+    const double geometricSeriesLength(double s, double r, int n) {
+        if (r==1.0){return s * n;}
+        return s * (pow(r, n) - 1)/(r - 1);
+    }
+} // end class VinokurGeomHybridFunction
+// end Vinokur function playground
 
 version(univariatefunctions_test) {
     import util.msg_service;

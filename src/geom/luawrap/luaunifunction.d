@@ -22,6 +22,8 @@ immutable string LuaFnClusteringMT = "LuaFnClustering";
 immutable string GeometricFunctionMT = "GeometricFunction";
 immutable string GaussianFunctionMT = "GaussianFunction";
 immutable string GaussGeomHybridFunctionMT = "GaussGeomHybridFunction";
+immutable string VinokurFunctionMT = "VinokurFunction";
+immutable string VinokurGeomHybridFunctionMT = "VinokurGeomHybridFunction";
 
 static const(UnivariateFunction)[] functionStore;
 
@@ -46,6 +48,12 @@ UnivariateFunction checkUnivariateFunction(lua_State* L, int index) {
     }
     if ( isObjType(L, index, GaussGeomHybridFunctionMT) ) {
         return checkObj!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT)(L, index);
+    }
+    if ( isObjType(L, index, VinokurFunctionMT) ) {
+        return checkObj!(VinokurFunction, VinokurFunctionMT)(L, index);
+    }
+    if ( isObjType(L, index, VinokurGeomHybridFunctionMT) ) {
+        return checkObj!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT)(L, index);
     }
     // if all else fails
     return null;
@@ -416,6 +424,96 @@ extern(C) int newGaussGeomHybridFunction(lua_State* L)
     return 1;
 }
 
+/**
+ * The Lua constructor for a VinokurFunction.
+ *
+ * Example construction in Lua:
+ * --------------------------------------------------------------
+ * f = VinokurFunction:new{n=50, s1=1.0e-5, sn=1.0e-3}
+ * --------------------------------------------------------------
+ */
+extern(C) int newVinokurFunction(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected VinokurFunction:new{}; ";
+        errMsg ~= "maybe you tried VinokurFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to VinokurFunction:new{}. ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["n", "s1", "sn"])) {
+        string errMsg = "Error in call to VinokurFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+     //
+    string errMsgTmpltNumber = "Error in call to VinokurFunction:new{}. ";
+    errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltNumber ~= "The value, if present, should be a number.";
+    string errMsgTmpltInt = "Error in call to VinokurFunction:new{}. ";
+    errMsgTmpltInt ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltInt ~= "The value, if present, should be an integer.";
+
+    int n = getIntegerFromTable(L, 1, "n", true, 50, true, format(errMsgTmpltInt, "n"));
+    double s1 = getNumberFromTable(L, 1, "s1", true, 1.0e-5, true, format(errMsgTmpltNumber, "s1"));
+    double sn = getNumberFromTable(L, 1, "sn", true, 1.0e-3, true, format(errMsgTmpltNumber, "sn"));
+    auto f = new VinokurFunction(n, s1, sn);
+    functionStore ~= pushObj!(VinokurFunction, VinokurFunctionMT)(L, f);
+    return 1;
+}
+
+/**
+ * The Lua constructor for a VinokurGeomHybridFunction.
+ *
+ * Example construction in Lua:
+ * --------------------------------------------------------------
+ * f = VinokurGeomHybridFunction:new{n=50, s1=1.0e-5, n1=5, r1=1.2, sn=1.0e-3, n1=3, rn=1.1}
+ * --------------------------------------------------------------
+ */
+extern(C) int newVinokurGeomHybridFunction(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected VinokurGeomHybridFunction:new{}; ";
+        errMsg ~= "maybe you tried VinokurGeomHybridFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to VinokurGeomHybridFunction:new{}. ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["n", "s1", "n1", "r1", "sn", "nn", "rn"])) {
+        string errMsg = "Error in call to VinokurGeomHybridFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+     //
+    string errMsgTmpltNumber = "Error in call to VinokurGeomHybridFunction:new{}. ";
+    errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltNumber ~= "The value, if present, should be a number.";
+    string errMsgTmpltInt = "Error in call to VinokurGeomHybridFunction:new{}. ";
+    errMsgTmpltInt ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltInt ~= "The value, if present, should be an integer.";
+
+    int n = getIntegerFromTable(L, 1, "n", true, 50, true, format(errMsgTmpltInt, "n"));
+    double s1 = getNumberFromTable(L, 1, "s1", true, 1.0e-5, true, format(errMsgTmpltNumber, "s1"));
+    int n1 = getIntegerFromTable(L, 1, "n1", true, 10, true, format(errMsgTmpltInt, "n1"));
+    double r1 = getNumberFromTable(L, 1, "r1", true, 1.2, true, format(errMsgTmpltNumber, "r1"));
+    double sn = getNumberFromTable(L, 1, "sn", true, 1.0e-3, true, format(errMsgTmpltNumber, "sn"));
+    int nn = getIntegerFromTable(L, 1, "nn", true, 10, true, format(errMsgTmpltInt, "nn"));
+    double rn = getNumberFromTable(L, 1, "rn", true, 1.1, true, format(errMsgTmpltNumber, "rn"));
+    auto f = new VinokurGeomHybridFunction(n, s1, n1, r1, sn, nn, rn);
+    functionStore ~= pushObj!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT)(L, f);
+    return 1;
+}
+
 void registerUnivariateFunctions(lua_State* L)
 {
     // Register the LinearFunction object
@@ -566,4 +664,46 @@ void registerUnivariateFunctions(lua_State* L)
     lua_setfield(L, -2, "copy");
 
     lua_setglobal(L, GaussGeomHybridFunctionMT.toStringz);
+
+    // Register the VinokurFunction object
+    luaL_newmetatable(L, VinokurFunctionMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newVinokurFunction);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(VinokurFunction, VinokurFunctionMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(VinokurFunction, VinokurFunctionMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(VinokurFunction, VinokurFunctionMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyUnivariateFunction!(VinokurFunction, VinokurFunctionMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, VinokurFunctionMT.toStringz);
+
+    // Register the VinokurGeomHybridFunction object
+    luaL_newmetatable(L, VinokurGeomHybridFunctionMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newVinokurGeomHybridFunction);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyUnivariateFunction!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, VinokurGeomHybridFunctionMT.toStringz);
 }
