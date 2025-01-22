@@ -141,8 +141,7 @@ patch7 = CoonsPatch:new{north=cq_, east=Qq_, south=CQ_, west=Cc_}
 patch8 = CoonsPatch:new{north=qd_, east=Dd_, south=QD_, west=Qq_}
 patch9 = CoonsPatch:new{north=de_, east=Ee_, south=DE_, west=Dd_}
 
---factor = 0.5
-factor = 2.0
+factor = 0.5
 niv = 128*factor; njv=64*factor
 a = 0.0002/factor
 if factor==0.5 then
