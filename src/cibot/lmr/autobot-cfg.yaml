@@ -4,6 +4,7 @@ devsOnReceiveList:
     - "r.gollan@uq.edu.au"
     - "kyle.damm@uqconnect.edu.au"
     - "p.jacobs@uq.edu.au"
+    - "r.otto@uq.edu.au"
 lmrDir: '/home/groups/gdtk-dev/gdtk/src/lmr'
 gasDir: '/home/groups/gdtk-dev/gdtk/src/gas'
 testDir: '/home/groups/gdtk-dev/lmr-test'
