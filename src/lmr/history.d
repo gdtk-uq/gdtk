@@ -63,7 +63,7 @@ void initHistoryCells()
         string fname = format("%s.%d", basicName, numberOfExistingHistFiles);
         auto f = File(fname, "w");
         writeln("Creating file: ", fname);
-        f.write("t");
+        f.write("time");
         foreach (i, var; varList) {
             f.write(format(" %s", var));
         }
