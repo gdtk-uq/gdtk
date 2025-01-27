@@ -521,8 +521,7 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(fstate, t, gmodel);
+        fhistory.set_flowstate(fstate, t, blk.myConfig);
         foreach (i, f; bc.faces) { f.fs.copy_values_from(fstate); }
     }
 
@@ -536,8 +535,7 @@ public:
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(fstate, t, gmodel);
+        fhistory.set_flowstate(fstate, t, blk.myConfig);
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fstate);

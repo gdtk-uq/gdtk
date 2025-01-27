@@ -46,8 +46,7 @@ public:
     {
         FluidFVCell ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
-        auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(my_fs, t, gmodel);
+        fhistory.set_flowstate(my_fs, t, blk.myConfig);
         foreach (i, f; bc.faces) {
             ghost0 = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
             ghost0.fs.copy_values_from(my_fs);
@@ -63,8 +62,7 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(my_fs, t, gmodel);
+        fhistory.set_flowstate(my_fs, t, blk.myConfig);
         foreach (i, f; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
                 auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];

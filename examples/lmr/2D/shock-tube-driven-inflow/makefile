@@ -17,6 +17,11 @@ prep-B: ideal-air.gas grid.lua transient-A.lua
 	lmr prep-grid --job=grid.lua
 	lmr prep-sim --job=transient-B.lua
 
+prep-C: ideal-air.gas grid.lua transient-C.lua
+	python3 prepare-transient-inflow.py > prepare-transient-inflow.transcript
+	lmr prep-grid --job=grid.lua
+	lmr prep-sim --job=transient-C.lua
+
 ideal-air.gas: ideal-air.lua
 	prep-gas ideal-air.lua ideal-air.gas
 
@@ -33,5 +38,6 @@ clean:
 	- rm -rf $(LMR_DIR)
 	- rm static-profile.data prepare-static-profile.transcript
 	- rm transient-profile.zip prepare-transient-profile.transcript
+	- rm transient-inflow.data prepare-transient-inflow.transcript
 	- rm *.eps eilmer.data analytic.data classic-shock-tube.transcript
 	- rm ideal-air.gas
