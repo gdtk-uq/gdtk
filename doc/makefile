@@ -41,7 +41,7 @@ EILMER_CATALOG_ENTRIES := \
 	$(EXAMPLES_DIR)/2D/moving-grid/piston-w-const-vel/simple/readme.adoc \
 	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc \
 	$(EXAMPLES_DIR)/2D/wall-catalysis/readme.adoc \
-	$(EXAMPLES_DIR)/2D/solid/hollow-cylinder/readme.adoc
+	$(EXAMPLES_DIR)/2D/cht-hollow-cylinder/transient-fluid-transient-solid/readme.adoc
 
 
 all: eilmer-reference-manual.html \
