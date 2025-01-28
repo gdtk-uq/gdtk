@@ -231,10 +231,24 @@ The actual flow state on the inflow faces is computed as a perturbation to this 
 
 is used where we want to specify an inflow condition that might vary
 in a complicated manner across the boundary.
-Data for the flow condition, on a per-cell basis, is contained in the specified file.
+Data for the flow condition, on a per-point basis, is contained in the specified file.
+Format will be a header line followed by one sample point per line.
+The header line will specify the names of the columns and, at a minimum, be
+
+`pos.x pos.y p T vel.x vel.y`
+
+The data lines will have numerical values for the corresponding quantities.
+This format should be compatible with that provided by the sliced output
+of the postprocessing programs and also be compatible with gnuplot.
+You need all the quanitiies to specify the flow condition from pressure and temperature.
 It may be that the file is obtained from an earlier simulation, with a post-processing
-option like `--extract-line` used to write the file entries.
-Matching of the ghost cells to particular entries in the data file is controlled by
+option like `--extract-line` used to write the file.
+For reference, see the constructor function for the `StaticFlowProfile` class
+in the `flowstate.d` module and the sample code `prepare-static-profile.py`
+in the `examples/lmr/2D/shock-tube-driven-inflow/` directory.
+The actual writing of the example file is only a five lines at the end of that Python script.
+
+Matching of the ghost cells to particular points in the data file is controlled by
 the `match` string value,
 where the default is to match to the nearest location on all three coordinates
 of the ghost-cell position `match="xyz-to-xyz"`.
@@ -250,6 +264,28 @@ of the ghost-cell position `match="xyz-to-xyz"`.
     of the position of the ghost cells.
 
 
+=== Transient profile
+
+  InFlowBC_TransientProfile:new{fileName, match}
+
+is used where we want to specify an inflow condition that might vary
+in a complicated manner across the boundary and also vary in time.
+The data is to be provided as a zip archive,
+with the archive containing a `metadata.json` file and one flow-profile file
+for each time instant that is specified as part of the metadata.
+These files are names `data.0`, `data.1`, etc, where the number represents
+the index of each time instant.
+The format for these individual flow profile files is the same as for the
+`InFlowBC_StaticProfile` boundary condition and is compatible with the sliced output
+of the postprocessing programs.
+For reference, see the constructor function for the `TransientFlowProfile` class
+in the `flowstate.d` module and the sample code `prepare-transient-profile.py`
+in the `examples/lmr/2D/shock-tube-driven-inflow/` directory.
+
+Matching of the ghost cells to particular points in the data file is controlled by
+the `match` string value, as per the `InFlowBC_StaticProfile` boundary condition.
+
+
 === Transient
 
   InFlowBC_Transient:new{fileName}
@@ -258,11 +294,13 @@ is used  where we want to specify the time-varying inflow condition at the bound
 Data for the inflow condition,
 at particular time instants and assumed uniform across the full boundary,
 is contained in the specified file.
-The user needs to write this file according to the expected format encoded
-in the `FlowHistory` class, found toward the end of the `flowstate.d` module.
-Each data line will have the following space-delimited items:
-
-  time velx vely velz p T mass-fractions Tmodes (if any)
+This file has a header line that names the columns with the expected names,
+as found in the files written for history points.
+The order of the columns is not important.
+The data lines follow and need to have sufficient information to be able to
+define a flow state from pressure and temperature.
+For reference, see the constructor function for the `FlowHistory` class,
+found toward the end of the `flowstate.d` module.
 
 
 === Constant flux
