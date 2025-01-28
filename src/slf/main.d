@@ -81,7 +81,7 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
 
     foreach(i; 0 .. N){
         double arg = erfc_inv(2.0*pm.Z[i]);
-        double chi = 0.5*exp(-2.0*arg*arg);
+        double chi = 25000.0*exp(-2.0*arg*arg);
         size_t idx = i*neq;
         bool verbose = v &&(i==15);
 
@@ -764,13 +764,13 @@ int main(string[] args)
     double GRmax = 0.0; foreach(Ri; R) GRmax += Ri.re*Ri.re;
     GRmax = sqrt(GRmax);
 
-    immutable int maxiters = 4000;
-    immutable double targetGRR = 1e-15;
+    immutable int maxiters = 8000;
+    immutable double targetGRR = 1e-12;
     double dt = 5e-7;
     bool verbose = false;
     double GRRold = 1.0;
     double GRold = 1e99;
-    double tau = 4e-2;
+    double tau = 1e-1;
     string[] log;
 
     sw.start();
@@ -782,7 +782,7 @@ int main(string[] args)
         foreach(i; 0 .. n) U[i] += dU[i];
 
         double GR = compute_global_residual(R);
-        if (iter<40) GRmax = fmax(GR, GRmax);
+        if (iter<150) GRmax = fmax(GR, GRmax);
         double GRR = GR/GRmax;
 
         string output = format("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
@@ -790,7 +790,7 @@ int main(string[] args)
         if (iter%50==0){
             writeln(output);
         }
-        if (GRR<tau){
+        if ((GRR<tau) && (iter>150)){
             dt = update_dt(GRRold, GRR, dt);
         }
         GRRold = GRR;
