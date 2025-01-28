@@ -14,3 +14,4 @@ public import bc.ghost_cell_effect.from_stagnation;
 public import bc.ghost_cell_effect.full_face_copy;
 public import bc.ghost_cell_effect.mapped_cell_copy;
 public import bc.ghost_cell_effect.porous_wall;
+public import bc.ghost_cell_effect.translating_solution_inflow;

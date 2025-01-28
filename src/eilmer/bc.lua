@@ -256,6 +256,16 @@ function PorousWallGhostCellEffect:tojson()
    return str
 end
 
+TranslatingSolutionInflowEffect = GhostCellEffect:new{fileName=nil, jsonFileName=nil}
+TranslatingSolutionInflowEffect.type = "translating_solution_inflow_effect"
+function TranslatingSolutionInflowEffect:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "file_name": "%s",', self.fileName)
+   str = str .. string.format(' "json_file_name": "%s"', self.jsonFileName)
+   str = str .. '}'
+   return str
+end
+
 UserDefinedGhostCell = GhostCellEffect:new{fileName='user-defined-bc.lua'}
 UserDefinedGhostCell.type = "user_defined"
 function UserDefinedGhostCell:tojson()
@@ -1416,6 +1426,30 @@ function InFlowBC_Synthetic:new(o)
    o.preSpatialDerivActionAtBndryFaces = {
       SynthesiseFlowStateToInterface:new{filename=o.filename}
    }
+   o.is_configured = true
+   return o
+end
+
+InFlowBC_Translating = BoundaryCondition:new()
+InFlowBC_Translating.type = "inflow_translating"
+function InFlowBC_Translating:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_translating'
+   if not flag then
+      error("Make sure that you are using InFlowBC_Translating:new{}"..
+               " and not InFlowBC_Translating.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"fileName", "jsonFileName", "label", "group","field_bc"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_Translating constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = { TranslatingSolutionInflowEffect:new{fileName=o.fileName,
+                                                            jsonFileName=o.jsonFileName}}
+   -- I don't think we want to copy the inflow to the interfaces. Let's let the
+   -- convective fluxes sort that out.
+   --o.preSpatialDerivActionAtBndryFaces = {}
    o.is_configured = true
    return o
 end
