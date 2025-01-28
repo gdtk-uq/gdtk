@@ -172,9 +172,9 @@ public:
             divB = getJSONdouble(json_data, "divB", 0.0);
         }
         version(turbulence) {
-            double[2] turb_in;
+            double[] turb_in;
             turb_in = getJSONdoublearray(json_data, "turb", [0.0, 1.0]);
-            foreach (i; 0 .. turb.length) turb[i] = turb_in[i];
+            foreach (i; 0 .. turb_in.length) turb[i] = turb_in[i];
         }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);
         k_t = getJSONdouble(json_data, "k_t", 0.0);
