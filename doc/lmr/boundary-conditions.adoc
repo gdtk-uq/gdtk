@@ -273,10 +273,10 @@ in a complicated manner across the boundary and also vary in time.
 The data is to be provided as a zip archive,
 with the archive containing a `metadata.json` file and one flow-profile file
 for each time instant that is specified as part of the metadata.
-These files are names `data.0`, `data.1`, etc, where the number represents
+These files are named `data.0`, `data.1`, etc, where the number represents
 the index of each time instant.
-The format for these individual flow profile files is the same as for the
-`InFlowBC_StaticProfile` boundary condition and is compatible with the sliced output
+The format for these individual flow-profile files is the same as for the
+<<_static_profile,`InFlowBC_StaticProfile`>> boundary condition and is compatible with the sliced output
 of the postprocessing programs.
 For reference, see the constructor function for the `TransientFlowProfile` class
 in the `flowstate.d` module and the sample code `prepare-transient-profile.py`
