@@ -172,9 +172,9 @@ public:
             double gcy = ghost.pos[0].y.re;
             double gcz = ghost.pos[0].z.re;
 
-            double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x - translation_velocity*t;
-            double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y;
-            double gcz_prime = gcz - upstream_grid_shift.z;
+            double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x.re - translation_velocity*t;
+            double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y.re;
+            double gcz_prime = gcz - upstream_grid_shift.z.re;
             int ibin = get_bin_that_ghost_cells_are_inside_of(gcx_prime, xs0, xs1, niv);
             ghost.fs.copy_values_from(fss[i][ibin]);
         }
@@ -195,9 +195,9 @@ public:
                 double gcy = ghost.pos[0].y.re;
                 double gcz = ghost.pos[0].z.re;
 
-                double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x - translation_velocity*t;
-                double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y;
-                double gcz_prime = gcz - upstream_grid_shift.z;
+                double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x.re - translation_velocity*t;
+                double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y.re;
+                double gcz_prime = gcz - upstream_grid_shift.z.re;
                 int ibin = get_bin_that_ghost_cells_are_inside_of(gcx_prime, xs0, xs1, niv);
                 ghost.fs.copy_values_from(fss[ighost][ibin]);
                 ighost += 1;
