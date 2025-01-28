@@ -3114,7 +3114,11 @@ void evalResidual(int ftl)
 
     bool allow_high_order_interpolation = true;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
+        if (GlobalConfig.grid_motion == GridMotion.shock_fitting) {
+            blk.convective_flux_phase0_legacy(allow_high_order_interpolation, gtl);
+        } else {
+            blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
+        }
     }
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
