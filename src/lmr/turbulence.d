@@ -329,7 +329,7 @@ class kwTurbulenceModel : TurbulenceModel {
         P_W = alpha * omega / fmax(tke, small_tke) * P_K +
             sigma_d * fs.gas.rho / fmax(omega, small_omega) * cross_diff;
 
-        X_w = fabs(WWS / pow(beta_star*omega, 3)) ;
+        X_w = fabs(WWS / pow(beta_star*fmax(omega, small_omega), 3)) ;
         f_beta = (1.0 + 85.0 * X_w) / (1.0 + 100.0 * X_w) ;
         beta = beta_0 * f_beta;
         D_W = beta * fs.gas.rho * omega * omega;
