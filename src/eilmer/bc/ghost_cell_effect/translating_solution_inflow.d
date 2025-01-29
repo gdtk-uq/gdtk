@@ -100,9 +100,6 @@ public:
         this.upstream_grid_rotation= getJSONdouble(jsondata, "upstream_grid_rotation", -1.0);
         this.upstream_grid_shift   = Vector3(getJSONdoublearray(jsondata, "upstream_grid_shift", []));
 
-        double upstream_frame_velx = cos(upstream_grid_rotation)*translation_velocity;
-        double upstream_frame_vely = sin(upstream_grid_rotation)*translation_velocity;
-
         FluidBlockLite fbl = new FluidBlockLite(fileName, 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
 
         // TODO: We need to make sure that the ordering of faces in eilmer matches the order we assumed
@@ -113,9 +110,6 @@ public:
             int k = kbins[fidx];
             foreach(i; 0 .. fbl.nic){
                 fss[fidx] ~= FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
-                fss[fidx][i].vel.x   = fbl["vel.x",i,j,k];
-                fss[fidx][i].vel.y   = fbl["vel.y",i,j,k];
-                fss[fidx][i].vel.z   = fbl["vel.z",i,j,k];
                 fss[fidx][i].gas.p   = fbl["p",i,j,k];
                 fss[fidx][i].gas.T   = fbl["T",i,j,k];
                 fss[fidx][i].gas.rho = fbl["rho",i,j,k];
@@ -130,9 +124,14 @@ public:
                     string sp_name = GlobalConfig.gmodel_master.species_name(sp);
                     fss[fidx][i].gas.massf[sp] = fbl[format("massf[%d]-%s", sp, sp_name),i,j,k];
                 }
-                // Change reference frame of velocity vector
-                fss[fidx][i].vel.x += upstream_frame_velx;
-                fss[fidx][i].vel.y += upstream_frame_vely;
+                // Change reference frame of velocity vector. Does the order of shift and rotation matter?
+                double velx  = fbl["vel.x",i,j,k];
+                double vely  = fbl["vel.y",i,j,k];
+                double velz  = fbl["vel.z",i,j,k];
+                velx += translation_velocity;
+                fss[fidx][i].vel.x = velx*cos(upstream_grid_rotation) - vely*sin(upstream_grid_rotation);
+                fss[fidx][i].vel.y = velx*sin(upstream_grid_rotation) + vely*cos(upstream_grid_rotation);
+                fss[fidx][i].vel.z = velz;
             }
         }
     }
@@ -187,6 +186,8 @@ public:
         double c = cos(-1.0*upstream_grid_rotation);
         double s = sin(-1.0*upstream_grid_rotation);
 
+        // TODO: Add a check for to make sure the arrays are in bounds. It turns out it's very
+        // easy to forget to rerun the python script that makes this inflow...
         size_t ighost = 0;
         foreach (i, f; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
