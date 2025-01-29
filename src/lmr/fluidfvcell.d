@@ -861,11 +861,10 @@ public:
                 number area = outsign[i] * iface[i].area[gtl];
                 surface_integral -= iface[i].F[j] * area;
 
-                version (newton_krylov) {
-                    // GCL for steady-state
-                    if (myConfig.grid_motion != GridMotion.none) {
-                        surface_integral -= U[ftl][j] * dot(iface[i].n, iface[i].gvel) * area;
-                    }
+                // GCL for steady-state
+                if ((myConfig.solverMode == SolverMode.steady) &&
+                    (myConfig.grid_motion != GridMotion.none)) {
+                    surface_integral -= U[ftl][j] * dot(iface[i].n, iface[i].gvel) * area;
                 }
             }
             // Then evaluate the derivatives of conserved quantities.

@@ -440,25 +440,25 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
 } // end compute_vtx_velocities_for_sf()
 
 
-version(newton_krylov) {
-    @nogc
-    number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
-    {
-        // Compute wave speed at the mid-point of the boundary face
-        // using the approach described in Ian Johnston's thesis.
-        // See PJ workbook pages 32-35, 2019-11-09.
-        //
-        //  west boundary
-        //       |
-        //       +------+------+
-        //   L0  |  R0  |  R1  |
-        //       +------+------+
-        //     n-->
-        //
-        // L0 is the free-stream
-        // R0 is post-shock, presumably.
-        // The face normal, n, is pointing into the domain (i.e. into cell R0).
-        //
+@nogc
+number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
+{
+    // Compute wave speed at the mid-point of the boundary face
+    // using the approach described in Ian Johnston's thesis.
+    // See PJ workbook pages 32-35, 2019-11-09.
+    //
+    //  west boundary
+    //       |
+    //       +------+------+
+    //   L0  |  R0  |  R1  |
+    //       +------+------+
+    //     n-->
+    //
+    // L0 is the free-stream
+    // R0 is post-shock, presumably.
+    // The face normal, n, is pointing into the domain (i.e. into cell R0).
+    //
+    if (GlobalConfig.solverMode == SolverMode.steady) {
         number veln = dot(L0.vel, n);
         // Ian's shock detector looks for a significan density difference, equation 4.23
         immutable double kappa = 0.2;
@@ -484,29 +484,8 @@ version(newton_krylov) {
         // Estimate shock-wave speed using local sound speed.
         // number ws_signal = veln - L0.gas.a;
         number ws_signal = L0.gas.a;
-
         return shock_weight * ws_rh + (1.0 - shock_weight) * ws_signal;
-    } // end wave_speed()
-}
-else {
-    @nogc
-    number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
-    {
-        // Compute wave speed at the mid-point of the boundary face
-        // using the approach described in Ian Johnston's thesis.
-        // See PJ workbook pages 32-35, 2019-11-09.
-        //
-        //  west boundary
-        //       |
-        //       +------+------+
-        //   L0  |  R0  |  R1  |
-        //       +------+------+
-        //     n-->
-        //
-        // L0 is the free-stream
-        // R0 is post-shock, presumably.
-        // The face normal, n, is pointing into the domain (i.e. into cell R0).
-        //
+    } else {
         number veln = dot(L0.vel, n);
         // Ian's shock detector looks for a significan density difference, equation 4.23
         immutable double kappa = 0.2;
@@ -523,8 +502,8 @@ else {
             // Estimate shock-wave speed using local sound speed.
             return veln - L0.gas.a;
         }
-    } // end wave_speed()
-}
+    }
+} // end wave_speed()
 
 @nogc
 number Mach_weighting(number M)
