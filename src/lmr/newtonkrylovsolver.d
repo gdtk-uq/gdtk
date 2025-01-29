@@ -3032,7 +3032,7 @@ void evalAugmentedJacobianVectorProduct(bool for_preconditioning = false)
  * Authors: KAD and RJG
  * Date: 2022-03-02
  */
-void evalJacobianVectorProduct(double sigma, bool for_preconditioning)
+void evalJacobianVectorProduct(double sigma, bool for_preconditioning=false)
 {
     version (complex_numbers) {
         if (nkCfg.useRealValuedFrechetDerivative) {
