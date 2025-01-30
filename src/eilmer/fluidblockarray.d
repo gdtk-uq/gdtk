@@ -19,6 +19,7 @@ import geom;
 import globalconfig;
 import globaldata;
 import json_helper;
+import flowstate;
 version(mpi_parallel) {
     import mpi;
 }
@@ -36,6 +37,7 @@ class FBArray {
     bool shock_fitting; // Flag to indicate that we want to do shock fitting and move the grid.
     //
     // Shock-fitting data storage follows.
+    FlowState nominal_inflow;
     double[][][] velocity_weights; // Fraction of shock-front velocity.
     Vector3[][] p_east; // East-most point on rail.
     Vector3[][] p_west; // West-most point on rail.
@@ -115,6 +117,7 @@ class FBArray {
                 // to be sent in an MPI transfer.
             }
         }
+        nominal_inflow = FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
     }
     this(const(FBArray) other)
     {
@@ -201,4 +204,24 @@ class FBArray {
             }
         }
     } // end read_rails_file()
+
+    void read_shockfitting_inflow(string filename, size_t fbaID)
+    {
+    /*
+        Get the nominal preshock flow state from disk by reading the config
+        file. All of the processes in MPI will need this, but only some of them
+        have the boundary condition initialised.
+
+        @author: Nick Gibbons
+    */
+        JSONValue jsonData = readJSONfile(filename);
+        auto jsonDataFBA = jsonData["fluid_block_array_"~to!string(fbaID)];
+        int[] blockIds = getJSONintarray(jsonDataFBA, "blockIds", []);
+
+        auto jsonData0= jsonData["block_"~to!string(blockIds[0])];
+        auto jsonData1= jsonData0["boundary_west"];
+        auto jsonData2= jsonData1["post_conv_flux_action"].array;
+        auto jsonData3= jsonData2[0]["flowstate"];
+        nominal_inflow = FlowState(jsonData3, GlobalConfig.gmodel_master);
+    }
 } // end class FBArray

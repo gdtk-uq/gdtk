@@ -549,6 +549,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
                 }
                 fba.read_rails_file(format("config/fba-%04d.rails", i));
                 fba.read_velocity_weights(format("config/fba-%04d.weights", i));
+                fba.read_shockfitting_inflow("config/"~GlobalConfig.base_file_name~".config", i);
             }
         }
     }
