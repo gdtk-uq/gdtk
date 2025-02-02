@@ -267,6 +267,16 @@ class GasModel
     if flag < 0 then raise "could not compute molecular mass." end
     return valuep[0, valuep.size].unpack("d")[0]
   end
+  def binary_diffusion_coefficients(gstate)
+    nsp = Gas.gas_model_n_species(@id)
+    rowsize = Fiddle::SIZEOF_DOUBLE*nsp
+    dij = Fiddle::Pointer.malloc(rowsize*nsp)
+    Gas.gas_model_gas_state_binary_diffusion_coefficients(@id, gstate.id, dij)
+    if flag < 0 then raise "could not compute binary diffusion coefficients." end
+    coeffs = []
+    nsp.times do |i| coeffs << dij[rowsize*i, rowsize*(i+1)].unpack("d*") end
+    return coeffs
+  end
 
   def enthalpy_isp(gstate, isp)
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
@@ -435,6 +445,14 @@ class GasState
     if flag < 0 then raise "could not get mass-fractions." end
     return mf[0, mf.size].unpack("d*")
   end
+  def massf_as_dict()
+    nsp = @gmodel.n_species
+    names = @gmodel.species_names
+    mf = massf
+    result = {}
+    nsp.times do |i| result[names[i]] = mf[i] end
+    return result
+  end
   def massf=(mf_given)
     nsp = @gmodel.n_species
     if mf_given.class == [].class then
@@ -466,6 +484,14 @@ class GasState
     if flag < 0 then raise "could not get mole-fractions." end
     return mf[0, mf.size].unpack("d*")
   end
+  def massf_as_dict()
+    nsp = @gmodel.n_species
+    names = @gmodel.species_names
+    mf = molef
+    result = {}
+    nsp.times do |i| result[names[i]] = mf[i] end
+    return result
+  end
   def molef=(molef_given)
     nsp = @gmodel.n_species
     mf_array = @gmodel.molef2massf(molef_given)
@@ -482,6 +508,14 @@ class GasState
     flag = Gas.gas_model_gas_state_get_conc(@gmodel.id, @id, mc)
     if flag < 0 then raise "could not get concentrations." end
     return mc[0, mc.size].unpack("d*")
+  end
+  def conc_as_dict()
+    nsp = @gmodel.n_species
+    names = @gmodel.species_names
+    conc_list = conc
+    result = {}
+    nsp.times do |i| result[names[i]] = conc_list[i] end
+    return result
   end
 
   def u_modes()
@@ -649,6 +683,66 @@ class ThermochemicalReactor
                                                        t_interval, dt_suggestp)
     if flag < 0 then raise "could not update state." end
     return dt_suggestp[0, dt_suggestp.size].unpack("d")[0]
+  end
+
+  def source_terms(gstate)
+    nsp = @gmodel.n_species
+    nmodes = @gmodel.n_modes
+    source = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*(nsp+nmodes))
+    flag = Gas.thermochemical_reactor_eval_source_terms(@id, @gmodel.id, gstate.id, nsp, nmodes, source)
+    if flag < 0 then raise "could not compute source terms." end
+    return source[0, source.size].unpack("d*")
+  end
+end
+
+
+class ReactionMechanism
+  include Gas
+  attr_reader :id
+
+  def initialize(gmodel, filename)
+    @filename = filename
+    @gmodel = gmodel
+    @id = Gas.reaction_mechanism_new(gmodel.id, filename)
+  end
+
+  def to_s()
+    text = "ReactionMechanism(id=#{@id}, gmodel.id=#{@gmodel.id}, file=#{@filename})"
+  end
+
+  def n_reactions()
+    Gas.reaction_mechanism_n_reactions(@id)
+  end
+
+  def reaction_tickrates(gstate)
+    nr = n_reactions
+    forwardrates = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nr)
+    backwardrates = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nr)
+    flag = Gas.reaction_mechanism_tickrates(@id, @gmodel.id, gstate.id, forwardrates, backwardrates)
+    if flag < 0 then raise "could not compute reaction tickrates." end
+    fr = forwardrates[0, forwardrates.size].unpack("d*")
+    br = backwardrates[0, backwardrates.size].unpack("d*")
+    tr = []
+    nr.times do |i| tr << fr[i] - br[i] end
+    return tr
+  end
+
+  def forward_tickrates(gstate)
+    nr = n_reactions
+    forwardrates = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nr)
+    backwardrates = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nr)
+    flag = Gas.reaction_mechanism_tickrates(@id, @gmodel.id, gstate.id, forwardrates, backwardrates)
+    if flag < 0 then raise "could not compute reaction tickrates." end
+    return forwardrates[0, forwardrates.size].unpack("d*")
+  end
+
+  def backward_tickrates(gstate)
+    nr = n_reactions
+    forwardrates = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nr)
+    backwardrates = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nr)
+    flag = Gas.reaction_mechanism_tickrates(@id, @gmodel.id, gstate.id, forwardrates, backwardrates)
+    if flag < 0 then raise "could not compute reaction tickrates." end
+    return backwardrates[0, backwardrates.size].unpack("d*")
   end
 end
 

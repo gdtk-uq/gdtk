@@ -1089,11 +1089,12 @@ class ThermochemicalReactor(object):
         return self.dt_suggestp[0]
 
     def source_terms(self, gstate):
-        source = ffi.new("double[]", [0.0]*(self.gmodel.n_species + self.gmodel.n_modes))
-        flag = so.thermochemical_reactor_eval_source_terms(self.id, self.gmodel.id, gstate.id,
-                                                           self.gmodel.n_species, self.gmodel.n_modes, source)
+        nsp = self.gmodel.n_species
+        nmodes = self.gmodel.n_modes
+        source = ffi.new("double[]", [0.0]*(nsp+nmodes))
+        flag = so.thermochemical_reactor_eval_source_terms(self.id, self.gmodel.id, gstate.id, nsp, nmodes, source)
         if flag < 0: raise Exception("Could not compute source terms.")
-        return [source[i] for i in range(self.gmodel.n_species+self.gmodel.n_modes)]
+        return [source[i] for i in range(nsp+nmodes)]
 
 
 # -----------------------------------------------------------------------------------
