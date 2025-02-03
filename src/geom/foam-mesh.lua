@@ -62,7 +62,7 @@ function checkCompressible(compressible,compressibleList)
    end
 end
 
-
+--[[
 faceMap = {
    north=0,
    east=1,
@@ -70,6 +70,16 @@ faceMap = {
    west=3,
    top=4,
    bottom=5
+}
+--]]
+
+faceMap = {
+   west=0,
+   east=1,
+   south=2,
+   north=3,
+   bottom=4,
+   top=5
 }
 
 function checkAllowedNames(myTable, allowedNames)
@@ -99,7 +109,7 @@ function checkBndryLabels(bndryList)
    for k,v in pairs(bndryList) do
       local labelOK = false
       for _,allowedPrefix in ipairs(bndryLabelPrefixes) do
-	 pattern = string.gsub(allowedPrefix, "%-", "%%%-")
+	 pattern = string.gsub(allowedPrefix, "%%-", "%%%%-")
 	 i, j = string.find(v, pattern)
 	 if (i == 1) then
 	    labelOK = true
@@ -328,7 +338,7 @@ function runCreatePatchDict()
       print("Running OpenFOAM command: createPatchDict.")
    end
    local flag = os.execute("createPatch -overwrite")
-   assert((flag == 0),"Cannot find command createPatch, check that OpenFOAM environment has been loaded.")
+   assert(flag, "Cannot find command createPatch, check that OpenFOAM environment has been loaded.")
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: createPatch.")
    end
@@ -352,7 +362,7 @@ function runCreatePatchDict_empty()
       print("Running OpenFOAM command: createPatchDict.")
    end
    local flag = os.execute("createPatch -overwrite")
-   assert((flag == 0),"Cannot find command createPatch, check that OpenFOAM environment has been loaded.")
+   assert(flag, "Cannot find command createPatch, check that OpenFOAM environment has been loaded.")
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: createPatch.")
    end
@@ -901,7 +911,7 @@ function runRenumberMesh()
       end
    else
       local flag = os.execute("renumberMesh -overwrite -noZero")
-      assert((flag == 0),"Cannot find command renumberMesh, check that OpenFOAM environment has been loaded.")
+      assert(flag, "Cannot find command renumberMesh, check that OpenFOAM environment has been loaded.")
       if (vrbLvl >= 1) then
          print("   DONE: Running OpenFOAM command: renumberMesh.")
       end
@@ -913,7 +923,7 @@ function runCheckMesh()
       print("Running OpenFOAM command: checkMesh.")
    end
    local flag = os.execute("checkMesh")
-   assert((flag == 0),"Cannot find command checkMesh, check that OpenFOAM environment has been loaded.")
+   assert(flag, "Cannot find command checkMesh, check that OpenFOAM environment has been loaded.")
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: checkMesh.")
    end
