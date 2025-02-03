@@ -61,6 +61,19 @@ public:
         this.fileName = fileName;
         this.jsonFileName = jsonFileName;
 
+        // We're going to load in FluidBlockLites, as if they were ordinary fluid blocks
+        // The FluidBlockLite constructor expects a json table, so we make a nearby empty
+        // one to keep it happy.
+        JSONValue fakeJsonData;
+        try {
+            fakeJsonData = parseJSON!string(fakejsoncontent);
+        } catch (Exception e) {
+            writeln("Message is: ", e.msg);
+            throw new Error(text("Failed to parse dummy JSON content "));
+        }
+
+        // This json file has specific data needed for this boundary condition. It's created
+        // by the python script that prepared the stream files for reading in.
         string content;
         try {
             content = readText(jsonFileName);
@@ -76,62 +89,55 @@ public:
             throw new Error(text("Failed to parse JSON from file: ", jsonFileName));
         }
 
-        JSONValue blkjson = jsondata["block_" ~ to!string(blk.id)];
-        jbins = getJSONintarray(blkjson, "jbins", []);
-        if (jbins.length==0) throw new Error("Failed to find jbins array for block");
-        kbins = getJSONintarray(blkjson, "kbins", []);
-        if (jbins.length==0) throw new Error("Failed to find kbins array for block");
-
-        writefln("mpi %d blk %d read in %d jbins %s and %d kbins", GlobalConfig.mpi_rank_for_local_task, blk.id, jbins.length, jbins, kbins.length);
-
-        JSONValue fakeJsonData;
-        try {
-            fakeJsonData = parseJSON!string(fakejsoncontent);
-        } catch (Exception e) {
-            writeln("Message is: ", e.msg);
-            throw new Error(text("Failed to parse dummy JSON content "));
-        }
-
         this.xs0  = getJSONdouble(jsondata, "xs0", -1.0);
         this.xs1  = getJSONdouble(jsondata, "xs1", -1.0);
-        this.niv  = getJSONint(jsondata, "niv", 0);
+        this.nic  = getJSONint(jsondata, "nic", 0);
 
         this.translation_velocity  = getJSONdouble(jsondata, "translation_velocity", -1.0);
         this.upstream_grid_rotation= getJSONdouble(jsondata, "upstream_grid_rotation", -1.0);
         this.upstream_grid_shift   = Vector3(getJSONdoublearray(jsondata, "upstream_grid_shift", []));
 
-        FluidBlockLite fbl = new FluidBlockLite(fileName, 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
+        double c = cos(-1.0*upstream_grid_rotation);
+        double s = sin(-1.0*upstream_grid_rotation);
 
-        // TODO: We need to make sure that the ordering of faces in eilmer matches the order we assumed
-        // in the code that builds the jbins and kbins array
-        fss.length = jbins.length;
-        foreach(fidx; 0 .. jbins.length){
-            int j = jbins[fidx];
-            int k = kbins[fidx];
-            foreach(i; 0 .. fbl.nic){
-                fss[fidx] ~= FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
-                fss[fidx][i].gas.p   = fbl["p",i,j,k];
-                fss[fidx][i].gas.T   = fbl["T",i,j,k];
-                fss[fidx][i].gas.rho = fbl["rho",i,j,k];
-                fss[fidx][i].gas.a   = fbl["a",i,j,k];
-                fss[fidx][i].gas.u   = fbl["u",i,j,k];
-                fss[fidx][i].gas.mu  = fbl["mu",i,j,k];
-                fss[fidx][i].gas.k   = fbl["k",i,j,k];
-                fss[fidx][i].S       = fbl["S",i,j,k];
-                fss[fidx][i].mu_t    = fbl["mu_t",i,j,k];
-                fss[fidx][i].k_t     = fbl["k_t",i,j,k];
-                foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
-                    string sp_name = GlobalConfig.gmodel_master.species_name(sp);
-                    fss[fidx][i].gas.massf[sp] = fbl[format("massf[%d]-%s", sp, sp_name),i,j,k];
+        JSONValue blkjson = jsondata["block_" ~ to!string(blk.id)];
+        nfaces = getJSONint(blkjson, "nfaces", 0);
+        nghost = getJSONint(blkjson, "nghost", 0);
+
+        fss.length = nfaces*nghost;
+
+        size_t ighost = 0;
+        foreach (fidx; 0 .. nfaces) {
+            foreach (n; 0 .. nghost) {
+                string fname = format(fileName, blk.id, ighost);
+                FluidBlockLite fbl = new FluidBlockLite(fname, 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
+                assert (fbl.nic == nic);
+                foreach (i; 0 .. fbl.nic) {
+                    fss[ighost] ~= FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
+                    fss[ighost][i].gas.p   = fbl["p",i,0,0];
+                    fss[ighost][i].gas.T   = fbl["T",i,0,0];
+                    fss[ighost][i].gas.rho = fbl["rho",i,0,0];
+                    fss[ighost][i].gas.a   = fbl["a",i,0,0];
+                    fss[ighost][i].gas.u   = fbl["u",i,0,0];
+                    fss[ighost][i].gas.mu  = fbl["mu",i,0,0];
+                    fss[ighost][i].gas.k   = fbl["k",i,0,0];
+                    fss[ighost][i].S       = fbl["S",i,0,0];
+                    fss[ighost][i].mu_t    = fbl["mu_t",i,0,0];
+                    fss[ighost][i].k_t     = fbl["k_t",i,0,0];
+                    foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
+                        string sp_name = GlobalConfig.gmodel_master.species_name(sp);
+                        fss[ighost][i].gas.massf[sp] = fbl[format("massf[%d]-%s", sp, sp_name),i,0,0];
+                    }
+                    // Change reference frame of velocity vector. Does the order of shift and rotation matter?
+                    double velx  = fbl["vel.x",i,0,0];
+                    double vely  = fbl["vel.y",i,0,0];
+                    double velz  = fbl["vel.z",i,0,0];
+                    velx += translation_velocity;
+                    fss[ighost][i].vel.x = velx*cos(upstream_grid_rotation) - vely*sin(upstream_grid_rotation);
+                    fss[ighost][i].vel.y = velx*sin(upstream_grid_rotation) + vely*cos(upstream_grid_rotation);
+                    fss[ighost][i].vel.z = velz;
                 }
-                // Change reference frame of velocity vector. Does the order of shift and rotation matter?
-                double velx  = fbl["vel.x",i,j,k];
-                double vely  = fbl["vel.y",i,j,k];
-                double velz  = fbl["vel.z",i,j,k];
-                velx += translation_velocity;
-                fss[fidx][i].vel.x = velx*cos(upstream_grid_rotation) - vely*sin(upstream_grid_rotation);
-                fss[fidx][i].vel.y = velx*sin(upstream_grid_rotation) + vely*cos(upstream_grid_rotation);
-                fss[fidx][i].vel.z = velz;
+                ighost += 1;
             }
         }
     }
@@ -164,8 +170,11 @@ public:
         double c = cos(-1.0*upstream_grid_rotation);
         double s = sin(-1.0*upstream_grid_rotation);
 
+        int l,u;
+        double w0;
         foreach (n; 0 .. blk.n_ghost_cell_layers) {
             size_t i = f.i_bndry;
+            size_t ighost = i*blk.n_ghost_cell_layers + n;
             auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
             double gcx = ghost.pos[0].x.re;
             double gcy = ghost.pos[0].y.re;
@@ -174,8 +183,10 @@ public:
             double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x.re - translation_velocity*t;
             double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y.re;
             double gcz_prime = gcz - upstream_grid_shift.z.re;
-            int ibin = get_bin_that_ghost_cells_are_inside_of(gcx_prime, xs0, xs1, niv);
-            ghost.fs.copy_values_from(fss[i][ibin]);
+
+            get_interp_idxs_and_weight(gcx_prime, l, u, w0);
+            ghost.fs.copy_average_values_from(fss[ighost][l], fss[ighost][u], w0);
+            ighost += 1;
         }
     } // end apply_for_interface_structured_grid()
 
@@ -186,12 +197,15 @@ public:
         double c = cos(-1.0*upstream_grid_rotation);
         double s = sin(-1.0*upstream_grid_rotation);
 
-        // TODO: Add a check for to make sure the arrays are in bounds. It turns out it's very
-        // easy to forget to rerun the python script that makes this inflow...
+        assert(nfaces==bc.faces.length);
+        assert(nghost==blk.n_ghost_cell_layers);
+
         size_t ighost = 0;
-        foreach (i, f; bc.faces) {
+        int l,u;
+        double w0;
+        foreach (fidx, f; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
-                auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
+                auto ghost = (bc.outsigns[fidx] == 1) ? f.right_cells[n] : f.left_cells[n];
                 double gcx = ghost.pos[0].x.re;
                 double gcy = ghost.pos[0].y.re;
                 double gcz = ghost.pos[0].z.re;
@@ -199,8 +213,9 @@ public:
                 double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x.re - translation_velocity*t;
                 double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y.re;
                 double gcz_prime = gcz - upstream_grid_shift.z.re;
-                int ibin = get_bin_that_ghost_cells_are_inside_of(gcx_prime, xs0, xs1, niv);
-                ghost.fs.copy_values_from(fss[ighost][ibin]);
+
+                get_interp_idxs_and_weight(gcx_prime, l, u, w0);
+                ghost.fs.copy_average_values_from(fss[ighost][l], fss[ighost][u], w0);
                 ighost += 1;
             }
         }
@@ -208,21 +223,26 @@ public:
 
 private:
     string fileName, jsonFileName;
-    int niv;
-    double xs1, xs0;
+    int nfaces,nghost; // These are for this current block
+    int nic;          // This is for the upstream sim
+    double xs1, xs0;  // These are also the upstream sim
     double upstream_grid_rotation, translation_velocity;
     Vector3 upstream_grid_shift;
     FlowState[][] fss;
-    int[] jbins, kbins;
 
-    int get_bin_that_ghost_cells_are_inside_of(double gcx, double llim, double ulim, int n){
+    void get_interp_idxs_and_weight(double gcxp, out int l, out int u, out double w0){
     /*
-        Taking a ghost cell position in the sim 1 reference frame, figure out which of
-        sim 1's cells that ghost cell would be inside of.
-    */ 
-        double float_idx = (gcx - llim)/(ulim-llim)*(n-1);
-        int int_idx = to!int(floor(float_idx));
-        int wrap_idx = mod(int_idx, n-1);
-        return wrap_idx;
+        We're given a position in the x direction, and need to figure out the two
+        flowstates on either side of us, as well as a weight parameter to help
+        interpolate between them.
+    */
+        double float_idx = (gcxp - xs0)/(xs1-xs0)*(nic-1);
+        int int_l = to!int(floor(float_idx));
+        int int_u = to!int(floor(float_idx))+1;
+        l = mod(int_l, nic);
+        u = mod(int_u, nic);
+        double w1 = float_idx-int_l;
+        w0 = 1.0-w1;
     }
+
 }
