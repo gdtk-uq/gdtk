@@ -23,7 +23,7 @@ function checkTurbulenceModel(turbulenceModel)
    local labelOK = false
    for _,allowed in ipairs(turbulenceModelList) do
       if (turbulenceModel == allowed) then
-	       labelOK = true
+         labelOK = true
       end
    end
    -- If labelOK is still false at end, then this particular
@@ -47,7 +47,7 @@ function checkCompressible(compressible,compressibleList)
    local labelOK = false
    for _,allowed in ipairs(compressibleList) do
       if (compressible == allowed) then
-	    labelOK = true
+         labelOK = true
       end
    end
    -- If labelOK is still false at end, then this particular
@@ -79,8 +79,8 @@ function checkAllowedNames(myTable, allowedNames)
    end
    for k,v in pairs(myTable) do
       if not setOfNames[k] then
-	       print("Warning: Invalid name: ", k)
-	       namesOk = false
+         print("Warning: Invalid name: ", k)
+         namesOk = false
       end
    end
    return namesOk
@@ -99,21 +99,21 @@ function checkBndryLabels(bndryList)
    for k,v in pairs(bndryList) do
       local labelOK = false
       for _,allowedPrefix in ipairs(bndryLabelPrefixes) do
-	       pattern = string.gsub(allowedPrefix, "%%-", "%%%%-")
-	       i, j = string.find(v, pattern)
-	       if (i == 1) then
-	          labelOK = true
-	       end
+         pattern = string.gsub(allowedPrefix, "%%-", "%%%%-")
+          i, j = string.find(v, pattern)
+          if (i == 1) then
+             labelOK = true
+          end
       end
       -- If labelOK is still false at end, then this particular
       -- label was badly formed.
       if not labelOK then
-	       print(string.format("The boundary label '%s' is not allowed.", v))
-	       print("Allowed label names start with the following prefixes:")
-	       for _,allowedPrefix in ipairs(bndryLabelPrefixes) do
-	          print(allowedPrefix)
-	       end
-	       os.exit(1)
+         print(string.format("The boundary label '%s' is not allowed.", v))
+         print("Allowed label names start with the following prefixes:")
+         for _,allowedPrefix in ipairs(bndryLabelPrefixes) do
+            print(allowedPrefix)
+         end
+         os.exit(1)
       end
    end
 end
@@ -196,11 +196,11 @@ end
 function markInternalBoundaries(grid, blks)
    for ib, blk in ipairs(blks) do
       for bndry,_ in pairs(blk.bndry_labels) do
-	       -- Convert to boundaryset in master grid
-	       iBndry = (ib-1)*6 + faceMap[bndry]
-	       if grid:is_boundaryset_empty(iBndry) then
-	          blk.bndry_labels[bndry] = "internal"
-	       end
+         -- Convert to boundaryset in master grid
+         iBndry = (ib-1)*6 + faceMap[bndry]
+         if grid:is_boundaryset_empty(iBndry) then
+            blk.bndry_labels[bndry] = "internal"
+         end
       end
    end
 end
@@ -270,29 +270,29 @@ function writeCreatePatchDict(grid, blks)
    for label,_ in pairs(globalBndryLabels) do
       bType = "patch"
       if label == "FrontAndBack" then
-	       bType = "empty"
+         bType = "empty"
       end
       if label == "wedge-front" or label == "wedge-rear" then
-	       bType = "symmetry"
+         bType = "symmetry"
       end
       if label == "unassigned" then
-	       bType = "unassigned"
+         bType = "unassigned"
       end
       labelPrefix = string.sub(label, 1, 2)
       if labelPrefix == "w-" then
-	       bType = "wall"
+         bType = "wall"
       end
       if labelPrefix == "i-" then
-	       bType = "patch"
+         bType = "patch"
       end
       if labelPrefix == "o-" then
-	       bType = "patch"
+         bType = "patch"
       end
       if labelPrefix == "s-" then
-	       bType = "symmetry"
+         bType = "symmetry"
       end
       if labelPrefix == "p-" then
-	       bType = "patch"
+         bType = "patch"
       end
       f:write("    {\n")
       f:write(string.format("        name %s;\n", label))
@@ -303,15 +303,15 @@ function writeCreatePatchDict(grid, blks)
       f:write("        constructFrom patches;\n")
       f:write("        patches (\n")
       for ib, blk in ipairs(blks) do
-	       for bndry, bndryLabel in pairs(blk.bndry_labels) do
-	          if (bndryLabel == label) then
-	             iBndry = 6*(ib-1) + faceMap[bndry]
-	             tag = grid:get_boundaryset_tag(iBndry)
-	             if (not grid:is_boundaryset_empty(iBndry)) then
-	                f:write(string.format("            %s \n", tag))
-	             end
-	          end
-	       end
+         for bndry, bndryLabel in pairs(blk.bndry_labels) do
+            if (bndryLabel == label) then
+               iBndry = 6*(ib-1) + faceMap[bndry]
+               tag = grid:get_boundaryset_tag(iBndry)
+               if (not grid:is_boundaryset_empty(iBndry)) then
+                  f:write(string.format("            %s \n", tag))
+               end
+            end
+         end
       end
       f:write("        );\n")
       f:write("    }\n")
@@ -983,10 +983,10 @@ function main(verbosityLevel)
    local unassigned = false
    for ib, blk in ipairs(blks) do
       for bndry, bndryLabel in pairs(blk.bndry_labels) do
-	     if (bndryLabel == "unassigned") then
-	        unassigned = true
-	        break
-	     end
+         if (bndryLabel == "unassigned") then
+            unassigned = true
+            break
+         end
       end
       if unassigned == true then break end
    end
@@ -996,11 +996,11 @@ function main(verbosityLevel)
                " (Note: Counter starts from 1)")
       print("The following boundaries are unassigned.")
       for ib, blk in ipairs(blks) do
-	     for bndry, bndryLabel in pairs(blk.bndry_labels) do
-	        if (bndryLabel == "unassigned") then
-	           print("   blk: ", ib, " bndry: ", bndry)
-	        end
-	     end
+         for bndry, bndryLabel in pairs(blk.bndry_labels) do
+            if (bndryLabel == "unassigned") then
+               print("   blk: ", ib, " bndry: ", bndry)
+            end
+         end
       end
    end
 end
