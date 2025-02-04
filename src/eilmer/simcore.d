@@ -26,6 +26,7 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 import lua_helper;
+import json_helper;
 import fileutil;
 import geom;
 import geom.misc.kdtree;
@@ -228,6 +229,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // the grid and flow arrays for blocks that are in the current
     // MPI-task or process, only.
     foreach (myblk; localFluidBlocks) {
+        myblk.init_boundary_conditions(config_jsonData["block_" ~ to!string(myblk.id)]);
         myblk.myConfig.init_gas_model_bits();
         myblk.init_workspace();
         myblk.init_lua_globals();
@@ -342,21 +344,14 @@ int init_simulation(int tindx, int nextLoadsIndx,
                     // The local block thinks that it has an exchange boundary with another block,
                     // so we need to check the ghost-cell effects of the other block's face to see
                     // that it points back to the local block face.
-                    auto other_blk = my_gce.neighbourBlock;
-                    bool ok = false;
-                    auto other_blk_bc = other_blk.bc[my_gce.neighbourFace];
-                    foreach (gce2; other_blk_bc.preReconAction) {
-                        auto other_gce = cast(GhostCellFullFaceCopy)gce2;
-                        if (other_gce &&
-                            (other_gce.neighbourBlock.id == my_blk.id) &&
-                            (other_gce.neighbourFace == j)) {
-                            ok = true;
-                        }
-                    }
+
+                    size_t other_blk_id   = my_gce.neighbourBlock.id;
+                    size_t other_blk_bndy = my_gce.neighbourFace;
+                    bool ok = check_full_face_copy(my_blk.id, j, other_blk_id, other_blk_bndy, config_jsonData);
                     if (!ok) {
                         string msg = format("FullFaceCopy for local blk_id=%d face=%d", my_blk.id, j);
                         msg ~= format(" is not correctly paired with other block id=%d face=%d.",
-                                      other_blk.id, my_gce.neighbourFace);
+                                      other_blk_id, other_blk_bndy);
                         writeln(msg);
                         any_block_fail = true;
                     }
@@ -1841,3 +1836,34 @@ void compute_wall_distances() {
         }
     }
 } // end compute_wall_distances()
+
+bool check_full_face_copy(size_t blk_id, size_t blk_bndy, size_t oblk_id, size_t oblk_bndy, JSONValue config_jsonData)
+{
+/*
+    Previously, we checked the actual other block to make sure our full face copy had the
+    correct parameters. With the move to initialisating BCs on local blocks only, we need
+    to check the config json instead, which is effectively the same thing.
+
+    @author: Nick Gibbons
+*/
+
+    string oblk_face_string = face_name[oblk_bndy];
+
+    auto oblk_json      = config_jsonData["block_" ~ to!string(oblk_id)];
+    auto oblk_bndy_json = oblk_json["boundary_" ~ oblk_face_string];
+    auto oblk_bces      = oblk_bndy_json["pre_recon_action"].array;
+
+    if (oblk_bces.length != 1) return false;
+    auto oblk_bce = oblk_bces[0];
+
+    string oblk_bce_type = getJSONstring(oblk_bce, "type", "");
+    if (oblk_bce_type != "full_face_copy") return false;
+
+    int oblk_oblk = getJSONint(oblk_bce, "other_block", -1);
+    if (oblk_oblk != blk_id) return false;
+
+    string oblk_oface = getJSONstring(oblk_bce, "other_face", "");
+    if (face_index(oblk_oface) != blk_bndy) return false;
+
+    return true;
+}
