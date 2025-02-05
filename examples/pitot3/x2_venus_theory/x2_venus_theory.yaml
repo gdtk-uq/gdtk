@@ -1,0 +1,35 @@
+# x2_venus_theory.yaml: 
+# This is a simple config file to run a fully theoretical
+# PITOT3 case for the 2mm driver A condition from Table 6.1 in 
+# Guerric Guerric de Crombrugghe de Looringhe's PhD thesis
+# I did this condition as we fired it recently on X2.
+# On Binary Scaling, and Ground-to-Flight Extrapolation in High-Enthalpy Facilities
+# It seems to match the experimental shock speeds pretty well.
+# Just a small note too that Guerric used a freestream composition of
+# 97%CO2/3%N2 (by volume) but PITOT3 is now using the more accurate
+# 96.5%CO2/3.5%N2 (by volume) in its default CEA Venus entry mixture.
+# Chris James (c.james4@uq.edu.au) - 05/02/25
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_venus_theory'
+
+# facility set up
+facility : 'x2_nozzle'
+driver_condition : 'x2-lwp-2.0mm-100He-0'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'venus-with-ions'
+p1 : 3600.0 # Pa
+
+# acceleration tube
+p5 : 40.0 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees
