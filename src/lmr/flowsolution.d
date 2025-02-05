@@ -610,12 +610,17 @@ public:
         bool add_mach = canFind(addVarsList, "mach");
         bool add_pitot_p = canFind(addVarsList, "pitot");
         bool add_total_p = canFind(addVarsList, "total-p");
+        add_total_p = canFind(addVarsList, "total-pressure"); // alias: total-pressure (allow long form)
         bool add_total_h = canFind(addVarsList, "total-h");
+        add_total_h = canFind(addVarsList, "total-enthalpy"); // alias: total-enthalpy (for symmetry with static enthalpy)
         bool add_total_T = canFind(addVarsList, "total-T");
+        add_total_T = canFind(addVarsList, "total-temperature"); // alias: total-temperature (allow long forms)
         bool add_enthalpy = canFind(addVarsList, "enthalpy");
         bool add_entropy = canFind(addVarsList, "entropy");
         bool add_molef = canFind(addVarsList, "molef");
+        add_molef = canFind(addVarsList, "mole-fractions"); // alias: mole-fractions
         bool add_conc = canFind(addVarsList, "conc"); // concentrations
+        add_conc = canFind(addVarsList, "concentrations"); // alias: concentrations
         VibSpecificNitrogen gmodel2 = cast(VibSpecificNitrogen) gmodel;
         bool add_Tvib = gmodel2 && canFind(addVarsList, "Tvib");
         //
