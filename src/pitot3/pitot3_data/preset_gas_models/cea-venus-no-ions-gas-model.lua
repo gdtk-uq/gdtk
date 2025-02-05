@@ -1,4 +1,4 @@
--- Venus (C02,N2) with ions CEA backed gas model
+-- Venus (C02,N2) WITHOUT ions CEA backed gas model
 -- This composition (96.5%CO2/3.5%N2, by volume) is used in Cruden et al. (2012):
 -- Absolute Radiation Measurement in Venus and Mars Entry Conditions
 -- Journal of Spacecraft and Rockets
@@ -17,9 +17,9 @@ model = "CEAGas"
 
 CEAGas = {
   mixtureName = 'venus-with-ions',
-  speciesList = {'CO2','C3O2','C2O','CO','CN','NO','NO2','O3','O2','O','C3','C2','C','N2','N','O2+','C2+','CO+','NO+','C+','C-','O+','O-','N+','e-'},
+  speciesList = {'CO2','C3O2','C2O','CO','CN','NO','NO2','O3','O2','O','C3','C2','C','N2','N'},
   reactants = {CO2=0.965,N2=0.035},
   inputUnits = "moles",
-  withIons = true,
+  withIons = false,
   trace = 1.0e-10
 }

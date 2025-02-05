@@ -1,4 +1,4 @@
--- Mars (C02,N2) with ions CEA backed gas model
+-- Mars (C02,N2) WITHOUT ions CEA backed gas model
 -- This is a simpler Mars entry gas composition which is normally used in our lab,
 -- and was also used in the old PITOT code which just used CO2 and N2.
 -- This composition is used in Cruden et al. (2012):
@@ -17,9 +17,9 @@ model = "CEAGas"
 
 CEAGas = {
   mixtureName = 'mars-c02-n2-with-ions',
-  speciesList = {'CO2','C3O2','C2O','CO','CN','NO','NO2','O3','O2','O','C3','C2','C','N2','N','O2+','C2+','CO+','NO+','C+','C-','O+','O-','N+','e-'},
+  speciesList = {'CO2','C3O2','C2O','CO','CN','NO','NO2','O3','O2','O','C3','C2','C','N2','N'},
   reactants = {CO2=0.96,N2=0.04},
   inputUnits = "moles",
-  withIons = true,
+  withIons = false,
   trace = 1.0e-10
 }
