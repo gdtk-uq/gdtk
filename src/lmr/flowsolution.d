@@ -778,7 +778,7 @@ public:
                 foreach (isp; 0 .. Q.massf.length) {
                     Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
                 }
-                Q.p = p; Q.T = T; Q.rho = rho; Q.u = _data[i][variableIndex["u"]];
+                Q.p = p; Q.T = T; Q.rho = rho; Q.u = _data[i][variableIndex["e"]];
                 double enthalpy = gmodel.enthalpy(Q).re;
                 _data[i] ~= enthalpy;
             }
