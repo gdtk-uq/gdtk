@@ -11,7 +11,7 @@ The ramp has been discretised by a grid of unstructured triangular elements.
 The example was set up with the following conditions:
 [stem]
 ++++
-M_{\infty} = 2.0; \quad \rho_{\infty} = 1.0 ~~ kg\cdot m^{-3};  \quad T_{\infty} = 300.0 ~~ K; \quad \gamma = 1.4
+M_{\infty} = 2.0; \quad \rho_{\infty} = 1.0\, \text{kg/m}^{3}; \quad T_{\infty} = 300.0\,\text{K}; \quad \gamma = 1.4
 ++++
 
 image::mach-field.png[align="center",width=95%]

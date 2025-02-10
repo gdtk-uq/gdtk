@@ -10,7 +10,7 @@ Phoebus reentry capsule. The free-stream properties are based on the P20
 conditions from Bianchi et. al.:
 [stem]
 ++++
-u_{\infty} = 927 ~~ m/s; \quad T_{\infty} = 59.4 ~~ K; \quad p_{\infty} = 1.30 ~~ kPa
+u_{\infty} = 927\,\text{m/s}; \quad T_{\infty} = 59.4\,\text{K}; \quad p_{\infty} = 1.30\,\text{kPa}
 ++++
 [stem]
 

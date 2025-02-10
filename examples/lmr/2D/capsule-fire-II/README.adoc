@@ -10,7 +10,7 @@ at the 1636s point on the trajectory, at an altitude of 71 km.
 The free stream conditions are:
 [stem]
 ++++
-u_{\infty} = 11.3 km/s; T_{\infty} = 210 K; \rho_{\infty} = 8.57e-5 kg/m^3
+u_{\infty} = 11.3\,\text{km/s}; \quad T_{\infty} = 210\,\text{K}; \quad \rho_{\infty} = 8.57 \times 10^{-5}\,\text{kg/m}^3
 ++++
 [stem]
 

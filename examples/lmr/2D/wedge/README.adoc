@@ -10,7 +10,7 @@ It is test case B.2 "Steady-state Oblique Shock Wave" in the paper by Ghia et al
 This particular example was set up by Kyle Damm with conditions to match the example in Ghia et al.:
 [stem]
 ++++
-M_{\infty} = 3.0; \delta = 15.0^{\circ}; \gamma = 1.4
+M_{\infty} = 3.0; \quad \delta = 15.0^{\circ}; \quad \gamma = 1.4
 ++++
 
 [TIP]
