@@ -1115,8 +1115,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 foreach ( iSnap; 2 .. nTotalSnapshots+1) {
                     foreach (blk; localFluidBlocks) {
                         if (legacy) {
-                            auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
-                            auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, "gz");
+                            auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, GlobalConfig.flowFileExt);
+                            auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, GlobalConfig.flowFileExt);
                             rename(fromName, toName);
                         } else {
                             foreach (io; io_list) {
@@ -1130,7 +1130,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // ... and add the new fluid snapshot.
                 foreach (blk; localFluidBlocks) {
                     if (legacy) {
-                        auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");
+                        auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, GlobalConfig.flowFileExt);
                         blk.write_solution(fileName, pseudoSimTime);
                     } else {
                         foreach(io; blk.block_io) {
