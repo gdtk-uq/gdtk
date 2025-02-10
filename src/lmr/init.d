@@ -601,6 +601,7 @@ void initShockFitting()
             // FIX-ME 2024-02-28 PJ Make use of Rowan's config information to find files.
             fba.read_rails_file(format("lmrsim/grid/gridarray-%04d.rails", i));
             fba.read_velocity_weights(format("lmrsim/grid/gridarray-%04d.weights", i));
+            fba.read_shockfitting_inflow("lmrsim/config", i);
         }
     }
 

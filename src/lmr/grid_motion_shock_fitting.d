@@ -62,19 +62,9 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
     bool allow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
     double filter_scale = GlobalConfig.shock_fitting_filter_velocity_scale;
     bool assume_symmetry = GlobalConfig.shock_fitting_assume_symmetry_at_first_point;
-    int blkId = fba.blockArray[0][0][0];
-    auto blk = cast(SFluidBlock) globalBlocks[blkId];
-    auto bc = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
-    if (!bc) { throw new Error("Did not find an appropriate boundary-face effect."); }
-    auto nominal_inflow = bc.fstate;
-    auto inflow = bc.fstate.dup(); // Start with a copy that we will partially overwrite.
+
+    FlowState nominal_inflow = fba.nominal_inflow;
     SourceFlow sourceFlow;
-    if (bc.r > 0.0) {
-        if (GlobalConfig.dimensions == 2 && !GlobalConfig.axisymmetric) {
-            throw new Error("In a 2D shock-fitted flow, conical inflow is only for axisymmetric flows.");
-        }
-        sourceFlow = bc.sflow;
-    }
     //
     // Start by computing wave speeds and rail directions at all west-most faces.
     //
@@ -83,19 +73,21 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
         int j0 = 0; if (jb > 0) { foreach(j; 0 .. jb) { j0 += fba.njcs[j]; } }
         foreach (kb; 0 .. fba.nkb) {
             int k0 = 0; if (kb > 0) { foreach(k; 0 .. kb) { k0 += fba.nkcs[k]; } }
-            blkId = fba.blockArray[0][jb][kb];
+            int blkId = fba.blockArray[0][jb][kb];
             if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
-                blk = cast(SFluidBlock) globalBlocks[blkId];
+                auto blk = cast(SFluidBlock) globalBlocks[blkId];
+                auto bc = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
+                if (bc.r > 0.0) {
+                    sourceFlow = bc.sflow;
+                    if (GlobalConfig.dimensions == 2 && !GlobalConfig.axisymmetric) {
+                        throw new Error("In a 2D shock-fitted flow, conical inflow is only for axisymmetric flows.");
+                    }
+                }
                 FlowState Rght = FlowState(blk.myConfig.gmodel, blk.myConfig.turb_model.nturb);
                 foreach (k; 0 .. blk.nkc) {
                     foreach (j; 0 .. blk.njc) {
                         auto f = blk.get_ifi(0,j,k);
-                        inflow.gas.p = nominal_inflow.gas.p;
-                        inflow.gas.rho = nominal_inflow.gas.rho;
-                        inflow.gas.u = nominal_inflow.gas.u;
-                        inflow.vel.x = nominal_inflow.vel.x;
-                        inflow.vel.y = nominal_inflow.vel.y;
-                        inflow.vel.z = nominal_inflow.vel.z;
+                        FlowState inflow = nominal_inflow.dup();
                         if (bc.r > 0.0) {
                             // We want to adjust the inflow velocities to be conical.
                             double dx = f.pos.x.re - bc.x0;
@@ -148,8 +140,8 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
             int j0 = 0; if (jb > 0) { foreach(j; 0 .. jb) { j0 += fba.njcs[j]; } }
             foreach (kb; 0 .. fba.nkb) {
                 int k0 = 0; if (kb > 0) { foreach(k; 0 .. kb) { k0 += fba.nkcs[k]; } }
-                blkId = fba.blockArray[0][jb][kb];
-                blk = cast(SFluidBlock) globalBlocks[blkId];
+                int blkId = fba.blockArray[0][jb][kb];
+                auto blk = cast(SFluidBlock) globalBlocks[blkId];
                 int src_task = GlobalConfig.mpi_rank_for_block[blkId];
                 int items;
                 //
@@ -372,11 +364,11 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     //
                     // Start with rail direction and scale with local sound speed.
                     Vector3 v_inc = fba.vtx_dir[j+1][k];
-                    v_inc.scale(dot(v_inc, dp1)*filter_scale*inflow.gas.a/L);
+                    v_inc.scale(dot(v_inc, dp1)*filter_scale*nominal_inflow.gas.a/L);
                     fba.vtx_vel[j+1][k].add(v_inc);
                     //
                     v_inc = fba.vtx_dir[j+2][k];
-                    v_inc.scale(dot(v_inc, dp2)*filter_scale*inflow.gas.a/L);
+                    v_inc.scale(dot(v_inc, dp2)*filter_scale*nominal_inflow.gas.a/L);
                     fba.vtx_vel[j+2][k].add(v_inc);
                 }
             }
@@ -399,7 +391,7 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
                     number xstar = (Sxy2*Sy2 - Sx*Sy4)/denom;
                     number L = distance_between(fba.vtx_pos[0][k], fba.vtx_pos[1][k]);
                     Vector3 v_inc = fba.vtx_dir[0][k];
-                    v_inc.scale((xstar - x0)*filter_scale*inflow.gas.a/L);
+                    v_inc.scale((xstar - x0)*filter_scale*nominal_inflow.gas.a/L);
                     fba.vtx_vel[0][k].add(v_inc);
                 } // else, we cannot solve for xstar so leave the velocity untouched.
             }
@@ -417,9 +409,9 @@ void compute_vtx_velocities_for_sf(FBArray fba, int gtl=0)
         foreach (kb; 0 .. fba.nkb) {
             int k0 = 0; if (kb > 0) { foreach(k; 0 .. kb) { k0 += fba.nkcs[k]; } }
             foreach (ib; 0 .. fba.nib) {
-                blkId = fba.blockArray[ib][jb][kb];
+                int blkId = fba.blockArray[ib][jb][kb];
                 if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
-                    blk = cast(SFluidBlock) globalBlocks[blkId];
+                    auto blk = cast(SFluidBlock) globalBlocks[blkId];
                     int i0 = 0; if (ib > 0) { foreach(i; 0 .. ib) { i0 += fba.nics[i]; } }
                     foreach (k; 0 .. blk.nkv) {
                         foreach (j; 0 .. blk.njv) {

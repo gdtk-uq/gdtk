@@ -24,7 +24,7 @@ import util.json_helper;
 
 import lmr.globalconfig;
 import lmr.globaldata;
-
+import lmr.flowstate;
 
 class FBArray {
     // Shock fitting is coordinated across arrays of FluidBlock objects.
@@ -38,6 +38,7 @@ class FBArray {
     bool shock_fitting; // Flag to indicate that we want to do shock fitting and move the grid.
     //
     // Shock-fitting data storage follows.
+    FlowState nominal_inflow;
     double[][][] velocity_weights; // Fraction of shock-front velocity.
     Vector3[][] p_east; // East-most point on rail.
     Vector3[][] p_west; // West-most point on rail.
@@ -89,6 +90,7 @@ class FBArray {
         foreach (i; 0 .. nkcs.length) { this.nkcs[i] = nkcs[i]; }
         // Other bits.
         this.shock_fitting = sf_flag;
+        nominal_inflow = FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
         if (sf_flag) {
             // Make space for the shock-fitting intermediate data.
             int njc = sum(njcs); int nkc = sum(nkcs);
@@ -204,4 +206,24 @@ class FBArray {
             }
         }
     } // end read_rails_file()
+
+    void read_shockfitting_inflow(string filename, size_t fbaID)
+    {
+    /*
+        Get the nominal preshock flow state from disk by reading the config
+        file. All of the processes in MPI will need this, but only some of them
+        have the boundary condition initialised.
+
+        @author: Nick Gibbons
+    */
+        JSONValue jsonData = readJSONfile(filename);
+        auto jsonDataFBA = jsonData["fluid_block_array_"~to!string(fbaID)];
+        int[] blockIds = getJSONintarray(jsonDataFBA, "idflatlist", []);
+
+        auto jsonData0= jsonData["block_"~to!string(blockIds[0])];
+        auto jsonData1= jsonData0["boundary_west"];
+        auto jsonData2= jsonData1["post_conv_flux_action"].array;
+        auto jsonData3= jsonData2[0]["flowstate"];
+        nominal_inflow = FlowState(jsonData3, GlobalConfig.gmodel_master);
+    } // end read_shockfitting_inflow()
 } // end class FBArray
