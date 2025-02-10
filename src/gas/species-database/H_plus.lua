@@ -1,6 +1,7 @@
 db['H+'] = {}
 db['H+'].atomicConstituents = {H=1}
 db['H+'].charge = 1
+db['H+'].type = "atom"
 db['H+'].M = {
    value = 1.0073914e-3,
    units = 'kg/mol',

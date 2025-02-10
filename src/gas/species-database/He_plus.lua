@@ -3,6 +3,7 @@
 db['He+'] = {}
 db['He+'].atomicConstituents = {He=1,}
 db['He+'].charge = 1
+db["He+"].type = "atom"
 db['He+'].M = {
    value = 4.0020534e-3,
    units = 'kg/mol',

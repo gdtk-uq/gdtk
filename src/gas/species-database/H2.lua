@@ -1,5 +1,15 @@
 db.H2 = {}
 db.H2.atomicConstituents = {H=2,}
+db.H2.type = "molecule"
+db.H2.molecule_type = "linear"
+db.H2.theta_v = {
+   -- Characteristic vibrational temperature of 5989K (Assessment of Vibrational Non-Equilibrium Eﬀect on Detonation Cell Size, 
+   -- Shi et al. 2017)
+   value = 5989,
+   units = 'K',
+   description = 'charateristic vibrational temperature',
+   reference = 'Shi et al (2017)'
+}
 db.H2.charge = 0
 db.H2.M = {
    value = 0.00201588,

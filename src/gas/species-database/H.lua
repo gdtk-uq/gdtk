@@ -1,6 +1,7 @@
 db.H = {}
 db.H.atomicConstituents = {H=1,}
 db.H.charge = 0
+db.H.type = "atom"
 db.H.M = {
    value = 0.00100794,
    units = 'kg/mol',
