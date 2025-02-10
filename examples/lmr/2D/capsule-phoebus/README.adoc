@@ -22,7 +22,7 @@ This example demonstrates how to:
 . Use a `ControlPointPatch` and manipulate some control points for fine-tuning of the grid
 ====
 
-image::phoebus-shock-fit.gif[width=100%,title="Shock-fitted flow domain developing over the Phoebus capsule."]
+image::phoebus-shock-fit.gif[width=40%,align="center",title="Shock-fitted flow domain developing over the Phoebus capsule."]
 
 //end::description[]
 
