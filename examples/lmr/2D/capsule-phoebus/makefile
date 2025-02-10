@@ -11,10 +11,10 @@ flow: sim.lua
 
 prep: gas grid flow
 
-run:
+run-shared:
 	lmr run
 
-run-mpi:
+run:
 	mpirun --use-hwthread-cpus -np 8 lmrZ-mpi-run
 
 plot-diagnostics:

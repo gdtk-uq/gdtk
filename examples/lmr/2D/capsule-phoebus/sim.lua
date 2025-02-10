@@ -74,7 +74,7 @@ NewtonKrylovGlobalConfig{
   number_of_steps_for_setting_reference_residuals = 2,
   max_consecutive_bad_steps = 10,
   max_newton_steps = 3000,
-  stop_on_relative_residual = 1.0e-13,
+  stop_on_relative_residual = 1.0e-9,
   inviscid_cfl_only = true,
   use_line_search = false,
   use_physicality_check = true,
