@@ -1,8 +1,9 @@
 model = "TwoTemperatureGas"
--- Revert to including the He species when the collision integral data is resolved.
--- species = {'CO2', 'O2', 'CO', 'C', 'O', 'He'}
--- For the moment, build the simulation without He
-species = {'CO2', 'O2', 'CO', 'C', 'O'}
+species = {'CO2', 'O2', 'CO', 'C', 'O', 'He'}
 options = {
-  ci_database = "wright"
+   ci_database = "wright",
+   -- There are some collision integral pairs that we do not have input data for.
+   -- These are mostly the interactions with He.
+   -- This below sets a default for missing collision integrals.
+   CI_default = "O2:O2"
 }
