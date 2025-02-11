@@ -10,7 +10,7 @@ PLATFORM ?= linux
 
 PROGRAMS := slf
 
-SLF_FILES := main.d
+SLF_FILES := io.d linalg.d misc.d
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -180,7 +180,7 @@ slf: main.d $(SLF_FILES) \
 	$(DMD) $(DFLAGS) $(OF)slf \
 		$(DVERSION)complex_numbers \
 		main.d \
-		$(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
