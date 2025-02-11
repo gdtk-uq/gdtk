@@ -81,7 +81,7 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
 
     foreach(i; 0 .. N){
         double arg = erfc_inv(2.0*pm.Z[i]);
-        double chi = 25000.0*exp(-2.0*arg*arg);
+        number chi = pm.D*exp(-2.0*arg*arg);
         size_t idx = i*neq;
         bool verbose = v &&(i==15);
 
@@ -350,6 +350,7 @@ struct Config {
     string gas_file_name;
     string reaction_file_name;
     size_t N;
+    double D;
     double p;
     double T0;
     double T1;
@@ -362,6 +363,7 @@ struct Parameters {
         nsp = gm.n_species;
         neq = nsp+1;
 
+        D = config.D;
         p = config.p;
         N = config.N;
         n = N*neq;
@@ -390,6 +392,7 @@ struct Parameters {
     size_t N;
     size_t n;
 
+    number D;
     number p;
     double dZ;
     double T0;
@@ -428,6 +431,7 @@ void write_solution_to_file(ref const Parameters pm, double[] U, string filename
     ibuff[0] = pm.N;    outfile.rawWrite(ibuff);
     ibuff[0] = pm.n;    outfile.rawWrite(ibuff);
 
+    dbuff[0] = pm.D.re; outfile.rawWrite(dbuff);
     dbuff[0] = pm.p.re; outfile.rawWrite(dbuff);
     dbuff[0] = pm.dZ;   outfile.rawWrite(dbuff);
     dbuff[0] = pm.T0;   outfile.rawWrite(dbuff);
@@ -451,6 +455,7 @@ void write_solution_to_file(ref const Parameters pm, number[] U, string filename
     ibuff[0] = pm.N;    outfile.rawWrite(ibuff);
     ibuff[0] = pm.n;    outfile.rawWrite(ibuff);
 
+    dbuff[0] = pm.D.re; outfile.rawWrite(dbuff);
     dbuff[0] = pm.p.re; outfile.rawWrite(dbuff);
     dbuff[0] = pm.dZ;   outfile.rawWrite(dbuff);
     dbuff[0] = pm.T0;   outfile.rawWrite(dbuff);
@@ -475,6 +480,7 @@ void read_solution_from_file(ref const Parameters pm, number[] U, string filenam
     infile.rawRead(ibuff); if (pm.n   != ibuff[0]) throw new Error(format("Sim n   %d does not match file %d", pm.n,   ibuff[0]));
 
     // Let's not bother checking these. It's kind of whatever.
+    infile.rawRead(dbuff); //if (pm.D   != dbuff[0]) throw new Error(format("Sim D   %e does not match file %e", pm.D,   dbuff[0]));
     infile.rawRead(dbuff); //if (pm.p   != dbuff[0]) throw new Error(format("Sim p   %e does not match file %e", pm.p,   dbuff[0]));
     infile.rawRead(dbuff); //if (pm.dZ  != dbuff[0]) throw new Error(format("Sim dZ  %e does not match file %e", pm.dZ,  dbuff[0]));
     infile.rawRead(dbuff); //if (pm.T0  != dbuff[0]) throw new Error(format("Sim T0  %e does not match file %e", pm.T0,  dbuff[0]));
@@ -515,6 +521,7 @@ Config read_config_from_file(string filename){
     cfg.reaction_file_name = data["reaction_file_name"].as!string;
 
     cfg.N  = to!size_t(data["N"].as!string);
+    cfg.D  = to!double(data["D"].as!string);
     cfg.p  = to!double(data["p"].as!string);
     cfg.T0 = to!double(data["T0"].as!string);
     cfg.T1 = to!double(data["T1"].as!string);
