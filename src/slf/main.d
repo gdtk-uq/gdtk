@@ -22,6 +22,135 @@ import nm.bbla;
 import nm.number;
 import nm.complex;
 
+class Flame {
+    this(string name){
+        this.name = name;
+        config = read_config_from_file(format("%s.yaml", name));
+
+        gm = init_gas_model(config.gas_file_name);
+        reactor = init_thermochemical_reactor(gm, config.reaction_file_name, "");
+        gs = GasState(gm);
+        pm = Parameters(config, gm);
+
+        neq = pm.neq;
+        N = pm.N;
+        n = pm.n;
+        nsp = pm.nsp;
+
+        U.length = neq*N;
+        Up.length = neq*N;
+        dU.length = neq*N;
+        U2nd.length = neq*N;
+        R.length = (neq)*N;
+        Rp.length = (neq)*N;
+        Ua.length = (neq)*N;
+        Ub.length = (neq)*N;
+        Uc.length = (neq)*N;
+        Ra.length = (neq)*N;
+        Rb.length = (neq)*N;
+        Rc.length = (neq)*N;
+        omegaMi.length = pm.nsp;
+
+        // Set up Jacobian. We have a tridiagonal block matrix
+        foreach(cell; 0 .. N) {
+            auto Jc0 = new Matrix!double(neq, neq);
+            auto Jc1 = new Matrix!double(neq, neq);
+            auto Jc2 = new Matrix!double(neq, neq);
+            J2 ~= [Jc0, Jc1, Jc2];
+            auto Unew = new Matrix!double(neq);
+            U2 ~= Unew;
+            auto Rnew = new Matrix!double(neq);
+            R2 ~= Rnew;
+        }
+
+        tdws = TridiagonalSolveWorkspace(neq);
+        return;
+    }
+
+    void set_init_condition(){
+        gaussian_initial_condition(pm, U);
+    }
+
+    int run(){
+        int exitFlag = 0;
+        immutable int maxiters = 8000;
+        immutable double targetGRR = 1e-12;
+        double dt = 5e-7;
+        bool verbose = false;
+        double GRRold = 1.0;
+        double GRold = 1e99;
+        double tau = 1e-1;
+        string[] log;
+
+        StopWatch sw;
+        sw.start();
+
+        second_derivs_from_cent_diffs(pm, U, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
+        double GRmax = 0.0; foreach(Ri; R) GRmax += Ri.re*Ri.re;
+        GRmax = sqrt(GRmax);
+
+        foreach(iter; 0 .. maxiters) {
+
+            //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+            Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+
+            foreach(i; 0 .. n) U[i] += dU[i];
+
+            double GR = compute_global_residual(R);
+            if (iter<150) GRmax = fmax(GR, GRmax);
+            double GRR = GR/GRmax;
+
+            string output = format("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
+            log ~= output;
+            if (iter%50==0){
+                writeln(output);
+            }
+            if ((GRR<tau) && (iter>150)){
+                dt = update_dt(GRRold, GRR, dt);
+            }
+            GRRold = GRR;
+            GRold = GR;
+
+            if (GRR<targetGRR) {
+                writefln("Reached target residual %e (%e), stopping...", targetGRR, GRR);
+                break;
+            }
+            if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
+        }
+        sw.stop();
+        long wall_clock_elapsed = sw.peek.total!"seconds";
+
+        write_solution_to_file(pm, U, format("%s.sol", name));
+        write_log_to_file(log, format("%s.log", name));
+
+        //double[] dUdp;
+        //dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+        //write_solution_to_file(pm, dUdp, format("%s-derivatives.sol", name));
+        writefln("Done simulation in %d seconds.", wall_clock_elapsed);
+        return exitFlag;
+    }
+private:
+    string name;
+    Config config;
+    GasModel gm;
+    ThermochemicalReactor reactor;
+    GasState gs;
+    Parameters pm;
+
+    size_t neq, N, n, nsp;
+    number[] U,Up,dU;
+    number[] Ua,Ub,Uc,Ra,Rb,Rc;
+    number[] R,Rp;
+    number[] U2nd;
+    number[] omegaMi;
+
+    Matrix!(double)[3][] J2;
+    Matrix!(double)[] U2;
+    Matrix!(double)[] R2;
+
+    TridiagonalSolveWorkspace tdws;
+}
 
 @nogc
 void second_derivs_from_cent_diffs(ref const Parameters pm, number[] U, number[] U2nd){
@@ -317,115 +446,9 @@ int main(string[] args)
     string name = "slf";
     if (args.length>1) name = args[1];
 
-    Config config = read_config_from_file(format("%s.yaml", name));
-
-    GasModel gm = init_gas_model(config.gas_file_name);
-    ThermochemicalReactor reactor = init_thermochemical_reactor(gm, config.reaction_file_name, "");
-    GasState gs = GasState(gm);
-
-    Parameters pm = Parameters(config, gm);
-    StopWatch sw;
-
-
-    size_t neq = pm.neq;
-    size_t N = pm.N;
-    size_t n = pm.n;
-    size_t nsp = pm.nsp;
-
-    // Initial Guess
-    number[] U,Up,dU;
-    number[] Ua,Ub,Uc,Ra,Rb,Rc;
-    number[] R,Rp;
-    number[] U2nd;
-
-    U.length = neq*N;
-    Up.length = neq*N;
-    dU.length = neq*N;
-    U2nd.length = neq*N;
-    R.length = (neq)*N;
-    Rp.length = (neq)*N;
-    Ua.length = (neq)*N;
-    Ub.length = (neq)*N;
-    Uc.length = (neq)*N;
-    Ra.length = (neq)*N;
-    Rb.length = (neq)*N;
-    Rc.length = (neq)*N;
-    number[] omegaMi; omegaMi.length = pm.nsp;
-
-    // Set up Jacobian. We have a tridiagonal block matrix
-    Matrix!(double)[3][] J2;
-    Matrix!(double)[] U2;
-    Matrix!(double)[] R2;
-
-    foreach(cell; 0 .. N) {
-        auto Jc0 = new Matrix!double(neq, neq);
-        auto Jc1 = new Matrix!double(neq, neq);
-        auto Jc2 = new Matrix!double(neq, neq);
-        J2 ~= [Jc0, Jc1, Jc2];
-        auto Unew = new Matrix!double(neq);
-        U2 ~= Unew;
-        auto Rnew = new Matrix!double(neq);
-        R2 ~= Rnew;
-    }
-
-    TridiagonalSolveWorkspace tdws = TridiagonalSolveWorkspace(neq);
-
-    gaussian_initial_condition(pm, U);
-    second_derivs_from_cent_diffs(pm, U, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
-
-    double GRmax = 0.0; foreach(Ri; R) GRmax += Ri.re*Ri.re;
-    GRmax = sqrt(GRmax);
-
-    immutable int maxiters = 8000;
-    immutable double targetGRR = 1e-12;
-    double dt = 5e-7;
-    bool verbose = false;
-    double GRRold = 1.0;
-    double GRold = 1e99;
-    double tau = 1e-1;
-    string[] log;
-
-    sw.start();
-    foreach(iter; 0 .. maxiters) {
-
-        //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
-        Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
-
-        foreach(i; 0 .. n) U[i] += dU[i];
-
-        double GR = compute_global_residual(R);
-        if (iter<150) GRmax = fmax(GR, GRmax);
-        double GRR = GR/GRmax;
-
-        string output = format("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
-        log ~= output;
-        if (iter%50==0){
-            writeln(output);
-        }
-        if ((GRR<tau) && (iter>150)){
-            dt = update_dt(GRRold, GRR, dt);
-        }
-        GRRold = GRR;
-        GRold = GR;
-
-        if (GRR<targetGRR) {
-            writefln("Reached target residual %e (%e), stopping...", targetGRR, GRR);
-            break;
-        }
-        if (iter==maxiters-1) writefln("Warning: Simulation timed out at %d iterations with GRR %e", iter, GRR);
-    }
-    sw.stop();
-    long wall_clock_elapsed = sw.peek.total!"seconds";
-
-    write_solution_to_file(pm, U, format("%s.sol", name));
-    write_log_to_file(log, format("%s.log", name));
-
-    //double[] dUdp;
-    //dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
-    //write_solution_to_file(pm, dUdp, format("%s-derivatives.sol", name));
-    writefln("Done simulation in %d seconds.", wall_clock_elapsed);
-
+    auto flame = new Flame(name);
+    flame.set_init_condition();
+    exitFlag = flame.run();
 
     return exitFlag;
 } // end main()
