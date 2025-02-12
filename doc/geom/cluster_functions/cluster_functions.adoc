@@ -13,6 +13,9 @@ This example clusters toward the beginning of a block boundary, with a relativel
 cf = RobertsFunction:new{end0=true, end1=false, beta=1.01}
 ----
 
+image::roberts-cf-images.png[width=100%, align="center"]
+
+
 == Geometric Function
 
 The geometric function uses a geometric series to grow the cell sizes, starting from a small cell of size `a` and increasing to a second cell of size `ar`, then to a third size of `ar^2`, etc. Eventually, when the cluster function detects that the cells have grown large enough, it switches to a constant cell spacing for the rest of the block. The following example begins with a spacing of one-thousandth the block edge length, and grows by a factor of 1.2 with each step.
@@ -23,6 +26,8 @@ cf = GeometricFunction:new{a=0.001, r=1.2, N=60, reverse=false}
 
 Note that the function needs the `N` argument, which is the number of nodes along the block boundary that is to be clustered, in this case 60. The function also takes a boolean parameter `reverse`, which can be used to start clustering on the other side of the block.
 
+image::geometric-cf-images.png[width=100%, align="center"]
+
 == Gaussian Function
 
 The gaussian function applies a bell-curve shaped compression that can be useful for clustering in the middle of a block, perhaps to resolve a shockwave or other feature of interest. The function takes a nondimensional parameter `m` which can range from 0.0 to 1.0, defining the position of the clustered band; a nondimensional parameter `s` which defines the width of the band, and a parameter `ratio` which controls the tightness of the clustering, where smaller numbers are tighter. In the following example, the clustering is positioned at the 80% mark of the block boundary, using a narrow width of 0.2 and a fairly tight ratio of 0.1:
@@ -30,6 +35,8 @@ The gaussian function applies a bell-curve shaped compression that can be useful
 ----
 cf = GaussianFunction:new{m=0.8, s=0.1, ratio=0.1}
 ----
+
+image::gaussian-cf-images.png[width=100%, align="center"]
 
 == Vinokur Function
 
@@ -41,6 +48,7 @@ The example below specifies a cell size of ten millionths of the edge length at 
 cf = VinokurFunction:new{n=50, s1=1e-5, sn=1e-6}
 ----
 
+image::vinokur-cf-images.png[width=100%, align="center"]
 
 == Vinokur-Geometric Function Hybrid
 
@@ -51,4 +59,5 @@ This function can also be used to achieve a Vinokur function distribution with e
 cf = VinokurGeomHybridFunction:new{n=50, s1=1e-5, n1=5, r1=1.2, sn=1e-6, nn=10, rn=1.1}
 ----
 
+image::vin-geom-cf-images.png[width=100%, align="center"]
 
