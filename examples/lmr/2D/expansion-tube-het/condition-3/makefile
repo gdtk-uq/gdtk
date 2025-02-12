@@ -21,8 +21,8 @@ gas2T: co2-he-2T.lua
 # For a 1T simulation, we will still use Rowan's 2T chemical reactions file.
 gas1T: co2-he-1T.lua
 	prep-gas co2-he-1T.lua co2-he-1T.gas
-	cp $(DGD_REPO)/examples/kinetics/co2-chemistry-neutrals-2T/co2-5sp-2T-chemistry.lua .
-	prep-chem co2-he-1T.gas co2-5sp-2T-chemistry.lua co2-he-1T-chemistry.chem
+	cp $(DGD_REPO)/examples/kinetics/co2-chemistry-neutrals-1T/co2-5sp-1T-chemistry.lua .
+	prep-chem co2-he-1T.gas co2-5sp-1T-chemistry.lua co2-he-1T-chemistry.chem
 
 grid: grid.lua
 	lmr prep-grid --job=grid.lua
@@ -31,8 +31,8 @@ init-sim: het.lua
 	lmr prep-sim --job=het.lua
 
 run:
-	# lmr run
-	mpirun -np 14 --oversubscribe lmr-mpi-run
+	lmr run
+	# mpirun -np 14 --oversubscribe lmr-mpi-run
 
 post: vtk xtdiagram
 
