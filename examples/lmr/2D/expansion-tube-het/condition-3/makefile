@@ -34,14 +34,14 @@ run:
 	# lmr run
 	mpirun -np 14 --oversubscribe lmr-mpi-run
 
-post: vtk
+post: vtk xtdiagram
 
 vtk:
 	lmr snapshot2vtk --all
 
-# Should pick a good snapshot to extract the slice (and write it to a file).
-slice:
-	lmr slice-flow --slice-list=":,:,0,0"
+xtdiagram:
+	./lmr-xtdata.rb --output=xtlogp.data --log10
+	gnuplot < contour.gnuplot
 
 clean:
 	- rm -rf $(LMR_DIR)

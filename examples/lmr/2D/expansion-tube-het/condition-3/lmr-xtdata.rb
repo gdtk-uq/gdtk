@@ -12,8 +12,7 @@ require 'yaml'
 
 opts = GetoptLong.new(
   ["--job", "-j", GetoptLong::REQUIRED_ARGUMENT],
-  ["--vcolumn", "-v", GetoptLong::REQUIRED_ARGUMENT],
-  ["--xcolumn", "-x", GetoptLong::REQUIRED_ARGUMENT],
+  ["--var", "-v", GetoptLong::REQUIRED_ARGUMENT],
   ["--log10", "-l", GetoptLong::NO_ARGUMENT],
   ["--output", "-o", GetoptLong::REQUIRED_ARGUMENT],
   ["--slice", "-s", GetoptLong::REQUIRED_ARGUMENT],
@@ -24,8 +23,7 @@ puts "xtdata"
 puts "Accumulate x,t,var data over the saved solutions."
 
 # Default values for parameters
-x_column = "pos.x"
-var_column = "p"
+var_name = "p"
 take_log10 = false
 output_name = "xt.data"
 slice_str = ":,:,0,0"
@@ -34,8 +32,7 @@ opts.each do |opt, arg|
   case opt
   when /-h/
     puts "Usage:"
-    puts "$ xtdata.rb ?--vcolumn=p? ?--xcolumn=pos.x?"
-    puts "    ?--log10? ?--output=xt.data? ?--slice=:,:,0,0?"
+    puts "$ xtdata.rb ?--var=p? ?--log10? ?--output=xt.data? ?--slice=:,:,0,0?"
     puts "The default slice string assumes that all blocks are in a single line"
     puts "along the x-axis and, for each block, you want to select the full i-range"
     puts "of cells with j=0 and k=0 cell indices."
@@ -43,9 +40,7 @@ opts.each do |opt, arg|
   when /-j/
     job_name = arg.inspect.gsub('"', '')
   when /-v/
-    var_column = arg.inspect.gsub('"', '')
-  when /-x/
-    x_column = arg.inspect.gsub('"', '')
+    var_name = arg.inspect.gsub('"', '')
   when /-l/
     take_log10 = true
   when /-o/
@@ -55,8 +50,7 @@ opts.each do |opt, arg|
   end
 end
 
-puts "    x_column=#{x_column} var_column=#{var_column}"
-puts "    output=#{output_name} slice_str=#{slice_str}"
+puts "    var_name=#{var_name} output=#{output_name} slice_str=#{slice_str}"
 if take_log10 then
   puts "    Will take logarithm of variable values."
 end
@@ -70,8 +64,8 @@ fout = File.new(output_name, "w")
 fout.puts "# x t var"
 
 snaps.each do |snap|
-  cmd = "lmr slice-flow --snapshot=#{snap} --slice-list=#{slice_str} --names=#{var_column}"
-  puts "cmd= #{cmd}"
+  cmd = "lmr slice-flow --snapshot=#{snap} --slice-list=#{slice_str} --names=#{var_name}"
+  # puts "cmd= #{cmd}"
   o, e, s = Open3.capture3(*cmd.split)
   if s.success? then
     t = times_metadata[snap]["time"]
@@ -83,9 +77,9 @@ snaps.each do |snap|
       if line.match("pos.x") then
         found_labels = true
         labels = line.split
-        x_index= labels.index(x_column)
-        var_index= labels.index(var_column)
-        puts "    x_index=#{x_index} var_index=#{var_index}"
+        x_index= labels.index("pos.x")
+        var_index= labels.index(var_name)
+        # puts "    x_index=#{x_index} var_index=#{var_index}"
         next
       end
       if found_labels then
