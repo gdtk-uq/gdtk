@@ -30,3 +30,25 @@ The gaussian function applies a bell-curve shaped compression that can be useful
 ----
 cf = GaussianFunction:new{m=0.8, s=0.1, ratio=0.1}
 ----
+
+== Vinokur Function
+
+The Vinokur function is designed to produce a smooth cell size distribution on an edge which has a constrained cell size at both ends. The function requires the number of cells on the edge `n`, the normalised cell size at the start of the edge `s1` and the normalised cell size `sn` at the end of the edge as arguments. Note, that the cell sizes are not preserved exactly and can vary significantly, in particular if the cell size varies strongly along the edge.
+Should the grid generation fail with an error message saying `B<1!` it means that the specified cell sizes are too large to produce a smooth distribution. Increasing either cell size or reducing the number of cells will solve the problem. 
+The example below specifies a cell size of ten millionths of the edge length at the start and one millionth of the edge length at its end and a total of 50 cells.
+
+----
+cf = VinokurFunction:new{n=50, s1=1e-5, sn=1e-6}
+----
+
+
+== Vinokur-Geometric Function Hybrid
+
+The Vinokur-Geometric Hybrid adds geometric series at either end of the cell distribution and uses the Vinokur function for the cell size distribution in between. Geometric layers are useful to resolve boundary layers and are specified by a normalised starting cell size, a number of cells and a growth rate. In the example below, the first cell is ten millionths of the edge length long and cells two to five are larger than their predecessor by a factor of 1.2. The last cell is one millionths of the edge length long and the nine preceding cells are each larger than the next cell by a factor of 1.1. 
+This function can also be used to achieve a Vinokur function distribution with exact cell sizes at the ends by setting `n1` and `r1` to one. With zero cells in either geometric series the result of the hybrid is the same as the Vinokur function.
+
+----
+cf = VinokurGeomHybridFunction:new{n=50, s1=1e-5, n1=5, r1=1.2, sn=1e-6, nn=10, rn=1.1}
+----
+
+
