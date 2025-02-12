@@ -92,8 +92,8 @@ class Flame {
 
         foreach(iter; 0 .. maxiters) {
 
-            //RK4_explicit_time_increment(U,  U2nd,  R,  Ua,  Ub,  Uc, Ra,  Rb,  Rc, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
-            Euler_implicit_time_increment(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
+            //RK4_explicit_time_increment(dt, verbose);
+            Euler_implicit_time_increment(dt, verbose);
 
             foreach(i; 0 .. n) U[i] += dU[i];
 
@@ -130,7 +130,60 @@ class Flame {
         writefln("Done simulation in %d seconds.", wall_clock_elapsed);
         return exitFlag;
     }
-private:
+
+    void RK4_explicit_time_increment(double dt, bool verbose){
+
+        size_t n = pm.n;
+        second_derivs_from_cent_diffs(pm, U, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
+
+        foreach(i; 0 .. n) Ua[i] = U[i] + dt/2.0*R[i];
+        second_derivs_from_cent_diffs(pm, Ua, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Ua, U2nd, Ra, false);
+
+        foreach(i; 0 .. n) Ub[i] = U[i] + dt/2.0*Ra[i];
+        second_derivs_from_cent_diffs(pm, Ub, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Ub, U2nd, Rb, false);
+
+        foreach(i; 0 .. n) Uc[i] = U[i] + dt*Rb[i];
+        second_derivs_from_cent_diffs(pm, Uc, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, Uc, U2nd, Rc, false);
+
+        foreach(i; 0 .. n) dU[i] = dt/6.0*(R[i] + 2.0*Ra[i] + 2.0*Rb[i] + Rc[i]);
+        return;
+    }
+
+    void Euler_implicit_time_increment(double dt, bool verbose){
+        size_t neq = pm.neq;
+        size_t N = pm.N;
+        size_t n = pm.n;
+
+
+        second_derivs_from_cent_diffs(pm, U, U2nd);
+        compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
+
+        compute_sparse_jacobian(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J2);
+
+        // Get put into [I/dt - J] U = R form, for the Euler/Newton update
+        foreach(cell; 0 .. N){
+            J2[cell][0]._data[] *= -1.0; 
+            J2[cell][1]._data[] *= -1.0; 
+            J2[cell][2]._data[] *= -1.0; 
+            foreach(i; 0 .. neq) J2[cell][1][i, i] += 1.0/dt;
+            foreach(i; 0 .. neq) R2[cell][i, 0] = R[cell*neq + i].re;
+        }
+
+        solve_tridigonal_block_matrix(pm, tdws, J2, U2, R2);
+
+        foreach(cell; 0 .. N){
+            foreach(j; 0 .. neq){
+                dU[cell*neq +  j] = U2[cell][j, 0];
+            }
+        }
+
+        return;
+    }
+public:
     string name;
     Config config;
     GasModel gm;
@@ -288,70 +341,7 @@ void compute_sparse_jacobian(GasModel gm, ThermochemicalReactor reactor, GasStat
 }
 
 
-void RK4_explicit_time_increment(number[] U, number[] U2nd, number[] R,
-                                 number[] Ua, number[] Ub, number[] Uc,
-                                 number[] Ra, number[] Rb, number[] Rc,
-                                 number[] omegaMi, GasState gs,
-                                 number[] dU,
-                                 double dt, GasModel gm, ThermochemicalReactor reactor, Parameters pm, bool verbose){
 
-    size_t n = pm.n;
-    second_derivs_from_cent_diffs(pm, U, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, verbose);
-
-    foreach(i; 0 .. n) Ua[i] = U[i] + dt/2.0*R[i];
-    second_derivs_from_cent_diffs(pm, Ua, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, pm, Ua, U2nd, Ra, false);
-
-    foreach(i; 0 .. n) Ub[i] = U[i] + dt/2.0*Ra[i];
-    second_derivs_from_cent_diffs(pm, Ub, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, pm, Ub, U2nd, Rb, false);
-
-    foreach(i; 0 .. n) Uc[i] = U[i] + dt*Rb[i];
-    second_derivs_from_cent_diffs(pm, Uc, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, pm, Uc, U2nd, Rc, false);
-
-    foreach(i; 0 .. n) dU[i] = dt/6.0*(R[i] + 2.0*Ra[i] + 2.0*Rb[i] + Rc[i]);
-    return;
-}
-
-void Euler_implicit_time_increment(number[] U, number[] U2nd, number[] R, number[] Up, number[] Rp,
-                                   Matrix!(double)[3][] J2, Matrix!(double)[] U2, Matrix!(double)[] R2,
-                                   ref TridiagonalSolveWorkspace tdws,
-                                   number[] omegaMi, GasState gs,
-                                   number[] dU,
-                                   double dt, GasModel gm, ThermochemicalReactor reactor, ref const Parameters pm, bool verbose){
-
-
-    size_t neq = pm.neq;
-    size_t N = pm.N;
-    size_t n = pm.n;
-
-
-    second_derivs_from_cent_diffs(pm, U, U2nd);
-    compute_residual(gm, reactor, gs, omegaMi, pm, U, U2nd, R, false);
-
-    compute_sparse_jacobian(gm, reactor, gs, pm, omegaMi, Up, U, U2nd, R,  Rp, J2);
-
-    // Get put into [I/dt - J] U = R form, for the Euler/Newton update
-    foreach(cell; 0 .. N){
-        J2[cell][0]._data[] *= -1.0; 
-        J2[cell][1]._data[] *= -1.0; 
-        J2[cell][2]._data[] *= -1.0; 
-        foreach(i; 0 .. neq) J2[cell][1][i, i] += 1.0/dt;
-        foreach(i; 0 .. neq) R2[cell][i, 0] = R[cell*neq + i].re;
-    }
-
-    solve_tridigonal_block_matrix(pm, tdws, J2, U2, R2);
-
-    foreach(cell; 0 .. N){
-        foreach(j; 0 .. neq){
-            dU[cell*neq +  j] = U2[cell][j, 0];
-        }
-    }
-
-    return;
-}
 
 double compute_line_search(GasModel gm, ThermochemicalReactor reactor, GasState gs, ref const Parameters pm, number[] omegaMi, number[] dU, number[] Up, number[] U, number[] U2nd, number[] R, number[] Rp, double GRold){
 /*
