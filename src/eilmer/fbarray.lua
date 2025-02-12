@@ -20,7 +20,7 @@ function FBArray:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"grid", "gridArray", "initialState", "fillCondition",
 				      "active", "label", "omegaz", "may_be_turbulent",
-                                      "bcList", "nib", "njb", "nkb", "xforceList"})
+                                      "bcList", "nib", "njb", "nkb", "xforceList", "connectionTolerance"})
    if not flag then
       error("Invalid name for item supplied to FBArray constructor.", 2)
    end
@@ -60,6 +60,7 @@ function FBArray:new(o)
    end
    o.shock_fitting = (o.bcList["west"].type == "inflow_shock_fitting")
    o.xforceList = o.xforceList or {}
+   o.connectionTolerance = o.connectionTolerance or nil
    if (not o.grid) and (not o.gridArray) then
       error("You need to supply a grid or gridArray to FBArray constructor.", 2)
    end
@@ -187,7 +188,7 @@ function FBArray:new(o)
    end -- ib loop
    -- Make the inter-subblock connections
    if #o.blockCollection > 1 then
-      identifyBlockConnections(o.blockCollection)
+      identifyBlockConnections(o.blockCollection, nil, o.connectionTolerance)
    end
    --
    -- Retain meta-information about the new FluidBlockArray
