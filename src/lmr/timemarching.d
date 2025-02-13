@@ -15,6 +15,7 @@ import std.array : appender, split;
 import std.conv : to;
 import std.datetime : DateTime, Clock;
 import std.file;
+import std.json : JSONValue;
 import std.format : format, formattedWrite;
 import std.math : FloatingPointControl;
 import std.math;
@@ -103,7 +104,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     SimState.wall_clock_start = Clock.currTime();
 
     // Initialise baseline configuration
-    initConfiguration();
+    JSONValue cfgData= initConfiguration();
     if (cfg.nFluidBlocks == 0 && cfg.is_master_task) {
         throw new NewtonKrylovException("No FluidBlocks; no point in continuing with simulation initialisation.");
     }
@@ -138,7 +139,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initFluidBlocksZones();
     initFluidBlocksFlowField(snapshotStart);
 
-    initFullFaceDataExchange();
+    initFullFaceDataExchange(cfgData);
     initMappedCellDataExchange();
     initGhostCellGeometry();
     initLeastSquaresStencils();
@@ -186,7 +187,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
                 // FIX-ME 2024-02-28 PJ Make use of Rowan's config information to find files.
                 fba.read_rails_file(format("lmrsim/grid/gridarray-%04d.rails", i));
                 fba.read_velocity_weights(format("lmrsim/grid/gridarray-%04d.weights", i));
-                fba.read_shockfitting_inflow("lmrsim/config", i);
+                fba.read_shockfitting_inflow(cfgData, i);
             }
         }
     }

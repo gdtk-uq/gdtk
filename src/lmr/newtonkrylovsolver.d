@@ -612,7 +612,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     SimState.wall_clock_start = Clock.currTime();
 
     // Initialise baseline configuration
-    initConfiguration();
+    JSONValue cfgData= initConfiguration();
     // After loading configuration, we can check if there are any settings
     // that are not particularly appropriate for the steady-state solver.
     if (cfg.extrema_clipping) {
@@ -645,7 +645,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
-    initFullFaceDataExchange();
+    initFullFaceDataExchange(cfgData);
     initMappedCellDataExchange();
     initGhostCellGeometry();
     initLeastSquaresStencils();
@@ -666,7 +666,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     }
 
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
-        initShockFitting();
+        initShockFitting(cfgData);
     }
 
     orderBlocksBySize();

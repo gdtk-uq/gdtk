@@ -207,7 +207,7 @@ class FBArray {
         }
     } // end read_rails_file()
 
-    void read_shockfitting_inflow(string filename, size_t fbaID)
+    void read_shockfitting_inflow(JSONValue config, size_t fbaID)
     {
     /*
         Get the nominal preshock flow state from disk by reading the config
@@ -216,11 +216,10 @@ class FBArray {
 
         @author: Nick Gibbons
     */
-        JSONValue jsonData = readJSONfile(filename);
-        auto jsonDataFBA = jsonData["fluid_block_array_"~to!string(fbaID)];
+        auto jsonDataFBA = config["fluid_block_array_"~to!string(fbaID)];
         int[] blockIds = getJSONintarray(jsonDataFBA, "idflatlist", []);
 
-        auto jsonData0= jsonData["block_"~to!string(blockIds[0])];
+        auto jsonData0= config["block_"~to!string(blockIds[0])];
         auto jsonData1= jsonData0["boundary_west"];
         auto jsonData2= jsonData1["post_conv_flux_action"].array;
         auto jsonData3= jsonData2[0]["flowstate"];
