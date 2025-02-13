@@ -18,7 +18,7 @@ gas2T: co2-he-2T.lua
 	cp $(DGD_REPO)/examples/kinetics/co2-chemistry-neutrals-2T/co2-mixture-energy-exchange.lua .
 	prep-kinetics co2-he-2T.gas co2-he-2T-chemistry.chem co2-mixture-energy-exchange.lua co2-mixture-energy-exchange.kin
 
-# For a 1T simulation, we will still use Rowan's 2T chemical reactions file.
+# For a 1T simulation, we use the reactions file with Park's rates, as prepared by Rowan.
 gas1T: co2-he-1T.lua
 	prep-gas co2-he-1T.lua co2-he-1T.gas
 	cp $(DGD_REPO)/examples/kinetics/co2-chemistry-neutrals-1T/park-co2-neutrals-5sp-1T-chemistry.lua .
