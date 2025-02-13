@@ -6,7 +6,7 @@ print("Hypervelocity Expansion Tube, Caltech")
 config.dimensions = 2
 config.axisymmetric = true
 -- config.viscous = true
-config.viscous = false -- TEMPORARY
+config.viscous = true
 config.grid_format = 'rawbinary'
 --
 xA = 0.0  -- Upstream end of driver
@@ -49,7 +49,7 @@ print("nxcells in int.: ", nxcells_i)
 print("nxcells in acc.: ", nxcells_a)
 print("total= ", nxcells_d + nxcells_i + nxcells_a)
 --
-nycells = math.floor(factor*3) -- TEMPORARY should be 30 rather than 3
+nycells = math.floor(factor*30)
 beta = 1.1
 --
 clusterToWall = RobertsFunction:new{end0=false, end1=true, beta=beta}
