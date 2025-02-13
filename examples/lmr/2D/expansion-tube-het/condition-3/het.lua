@@ -25,7 +25,7 @@ print("number_species = ",nsp)
 print("number_modes = ",nmodes)
 print("gas_model = ",gmodel)
 config.reactions_file = 'co2-he-1T-chemistry.chem'
-config.reacting = false -- TEMPORARY
+config.reacting = true
 T_init = 289.85 -- 16.5 degrees C
 molef_driver = {He=1.0}
 molef_driven = {CO2=1.0}
@@ -61,7 +61,7 @@ config.max_time = 6.0e-3 -- s
 config.max_step = 1000000
 config.gasdynamic_update_scheme = "predictor-corrector"
 config.dt_init = 1.0e-9
-config.cfl_value = 0.50
+config.cfl_value = 0.5
 config.flux_calculator = "ausmdv"
 config.cfl_count = 3
 config.suppress_radial_reconstruction_at_xaxis = true
