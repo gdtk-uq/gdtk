@@ -554,24 +554,24 @@ class VinokurFunction : UnivariateFunction {
 
    Inputs:
      n - The number of cells on the edge
-     s1 - The normalised size of the first cell
-     sn - The normalised size of the last cell
+     s0 - The normalised size of the cell at end0
+     s1 - The normalised size of the cell at end1
 
    @author: Jens Kunze
 */
 public:
-    this(int n, double s1, double sn)
+    this(int n, double s0, double s1)
     {
         this.n = n;
+        this.s0 = s0;
         this.s1 = s1;
-        this.sn = sn;
-        this.A = sqrt(sn / s1);
-        double B = 1 / (n * sqrt(sn * s1));
+        this.A = sqrt(s1 / s0);
+        double B = 1 / (n * sqrt(s1 * s0));
         this.B = B;
         if (B<1.0)  {
             string msg = "Problematic parameters in VinokurGeomHybridFunction B<1!, B= "~to!string(B);
-            msg ~= "\nnormalised first cell size: "~to!string(s1);
-            msg ~= "\nnormalised last cell size: "~to!string(sn);
+            msg ~= "\nnormalised end0 cell size: "~to!string(s0);
+            msg ~= "\nnormalised end1 cell size: "~to!string(s1);
             msg ~= "\nnumber of cells: "~to!string(n);
             throw new Error(msg);
         }
@@ -605,8 +605,8 @@ public:
     this(const VinokurFunction other)
     {
         n = other.n;
+        s0 = other.s0;
         s1 = other.s1;
-        sn = other.sn;
         A = other.A;
         B = other.B;
         beta = other.beta;
@@ -625,7 +625,7 @@ public:
 
 private:
     int n;
-    double s1,sn,A,B,beta_min,beta_max,tol,beta;
+    double s0,s1,A,B,beta_min,beta_max,tol,beta;
 } // end class VinokurFunction
 
 class VinokurGeomHybridFunction : UnivariateFunction {
@@ -638,44 +638,44 @@ class VinokurGeomHybridFunction : UnivariateFunction {
 
    Inputs:
      n - The number of cells on the edge
-     s1 - The normalised size of the first cell
-     n1 - The number of cells in the geometric layer at the start of the edge
-     r1 - The size ratio between adjacent cells in the geometric layer
-     sn - The normalised size of the last cell
-     nn - The number of cells in the geometric layer at the end of the edge
-     rn - The size ratio between adjacent cells in the geometric layer
+     s0 - The normalised size of the cell at end0
+     n0 - The number of cells in the geometric layer at the start of the edge (end0)
+     r0 - The size ratio between adjacent cells in the geometric layer growing from end0
+     s1 - The normalised size of the cell at end1
+     n1 - The number of cells in the geometric layer at the end of the edge (end1)
+     r1 - The size ratio between adjacent cells in the geometric layer growing from end1
 
    @author: Jens Kunze
 */
 public:
-    this(int n=50, double s1=1.0e-2, int n1=0, double r1=1.2, double sn=1.0e-2, int nn=0, double rn=1.2)
+    this(int n, double s0, int n0, double r0, double s1, int n1, double r1)
     {
         this.n = n;
+        this.s0 = s0;
+        this.n0 = n0;
+        this.r0 = r0;
+        this.l0 = geometricSeriesLength(s0, r0, n0);
         this.s1 = s1;
         this.n1 = n1;
         this.r1 = r1;
         this.l1 = geometricSeriesLength(s1, r1, n1);
-        this.sn = sn;
-        this.nn = nn;
-        this.rn = rn;
-        this.ln = geometricSeriesLength(sn, rn, nn);
-        this.vs1 = s1*pow(r1,n1)/(1 - l1 - ln);
-        this.vsn = sn*pow(rn,nn)/(1 - l1 - ln);
-        this.vn = n - n1 - nn;
+        this.vs0 = s0*pow(r0,n0)/(1 - l0 - l1);
+        this.vs1 = s1*pow(r1,n1)/(1 - l0 - l1);
+        this.vn = n - n0 - n1;
         if (vn<1) {
             string msg = "Problematic parameters in VinokurGeomHybridFunction vn= "~to!string(vn);
             msg ~= "\nnumber of cells: "~to!string(n);
-            msg ~= "\nnumber geometric layers at start: "~to!string(n1);
+            msg ~= "\nnumber geometric layers at start: "~to!string(n0);
             msg ~= "\nnumber geometric layers at end: "~to!string(vn);
             throw new Error(msg);
         }
-        this.A = sqrt(vsn / vs1);
-        double B = 1 / (vn * sqrt(vsn * vs1));
+        this.A = sqrt(vs1 / vs0);
+        double B = 1 / (vn * sqrt(vs1 * vs0));
         this.B = B;
         if (B<1.0) {
             string msg = "Problematic parameters in VinokurGeomHybridFunction B<1!, B= "~to!string(B);
-            msg ~= "\nnormalised first cell size: "~to!string(vs1);
-            msg ~= "\nnormalised last cell size: "~to!string(vsn);
+            msg ~= "\nnormalised first cell size: "~to!string(vs0);
+            msg ~= "\nnormalised last cell size: "~to!string(vs1);
             msg ~= "\nnumber of cells: "~to!string(vn);
             throw new Error(msg);
         }
@@ -709,16 +709,16 @@ public:
     this(const VinokurGeomHybridFunction other)
     {
         n = other.n;
+        s0 = other.s0;
+        r0 = other.r0;
+        n0 = other.n0;
+        l0 = other.l0;
         s1 = other.s1;
         r1 = other.r1;
         n1 = other.n1;
         l1 = other.l1;
-        sn = other.sn;
-        rn = other.rn;
-        nn = other.nn;
-        ln = other.ln;
+        vs0 = other.vs0;
         vs1 = other.vs1;
-        vsn = other.vsn;
         vn = other.vn;
         A = other.A;
         B = other.B;
@@ -732,20 +732,20 @@ public:
 
     override double opCall(double x) const
     {
-        if (x<=to!double(n1)/to!double(n)){
-            return geometricSeriesLength(s1, r1, to!int(round(x*n)));
+        if (x<=to!double(n0)/to!double(n)){
+            return geometricSeriesLength(s0, r0, to!int(round(x*n)));
         }
-        if (x>1-to!double(nn)/to!double(n)){
-            return 1 - geometricSeriesLength(sn, rn, n - to!int(round(x*n)));
+        if (x>1-to!double(n1)/to!double(n)){
+            return 1 - geometricSeriesLength(s1, r1, n - to!int(round(x*n)));
         }
-        double xi = (x - to!double(n1)/to!double(n))/(1 - to!double(nn)/to!double(n) - to!double(n1)/to!double(n));
+        double xi = (x - to!double(n0)/to!double(n))/(1 - to!double(n1)/to!double(n) - to!double(n0)/to!double(n));
         double u = 0.5*(1 + tanh(beta*(xi - 0.5))/tanh(0.5*beta));
-        return u/(A + (1 - A)*u)*(1 - ln - l1) + l1;
+        return u/(A + (1 - A)*u)*(1 - l1 - l0) + l0;
     }
 
 private:
-    int n,n1,nn,vn;
-    double s1,r1,l1,sn,rn,ln,vs1,vsn,A,B,beta_min,beta_max,tol,beta;
+    int n,n0,n1,vn;
+    double s0,r0,l0,s1,r1,l1,vs0,vs1,A,B,beta_min,beta_max,tol,beta;
 
     const double geometricSeriesLength(double s, double r, int n) {
         if (r==1.0){return s * n;}

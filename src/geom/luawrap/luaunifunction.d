@@ -429,7 +429,7 @@ extern(C) int newGaussGeomHybridFunction(lua_State* L)
  *
  * Example construction in Lua:
  * --------------------------------------------------------------
- * f = VinokurFunction:new{n=50, s1=1.0e-5, sn=1.0e-3}
+ * f = VinokurFunction:new{n=50, s0=1.0e-5, s1=1.0e-3}
  * --------------------------------------------------------------
  */
 extern(C) int newVinokurFunction(lua_State* L)
@@ -447,7 +447,7 @@ extern(C) int newVinokurFunction(lua_State* L)
         errMsg ~= "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["n", "s1", "sn"])) {
+    if (!checkAllowedNames(L, 1, ["n", "s0", "s1"])) {
         string errMsg = "Error in call to VinokurFunction:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -460,9 +460,9 @@ extern(C) int newVinokurFunction(lua_State* L)
     errMsgTmpltInt ~= "The value, if present, should be an integer.";
 
     int n = getIntegerFromTable(L, 1, "n", true, 50, true, format(errMsgTmpltInt, "n"));
-    double s1 = getNumberFromTable(L, 1, "s1", true, 1.0e-5, true, format(errMsgTmpltNumber, "s1"));
-    double sn = getNumberFromTable(L, 1, "sn", true, 1.0e-3, true, format(errMsgTmpltNumber, "sn"));
-    auto f = new VinokurFunction(n, s1, sn);
+    double s0 = getNumberFromTable(L, 1, "s0", true, 1.0e-5, true, format(errMsgTmpltNumber, "s0"));
+    double s1 = getNumberFromTable(L, 1, "s1", true, 1.0e-3, true, format(errMsgTmpltNumber, "s1"));
+    auto f = new VinokurFunction(n, s0, s1);
     functionStore ~= pushObj!(VinokurFunction, VinokurFunctionMT)(L, f);
     return 1;
 }
@@ -472,7 +472,7 @@ extern(C) int newVinokurFunction(lua_State* L)
  *
  * Example construction in Lua:
  * --------------------------------------------------------------
- * f = VinokurGeomHybridFunction:new{n=50, s1=1.0e-5, n1=5, r1=1.2, sn=1.0e-3, n1=3, rn=1.1}
+ * f = VinokurGeomHybridFunction:new{n=50, s0=1.0e-5, n0=5, r0=1.2, s1=1.0e-3, n1=3, r1=1.1}
  * --------------------------------------------------------------
  */
 extern(C) int newVinokurGeomHybridFunction(lua_State* L)
@@ -490,7 +490,7 @@ extern(C) int newVinokurGeomHybridFunction(lua_State* L)
         errMsg ~= "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["n", "s1", "n1", "r1", "sn", "nn", "rn"])) {
+    if (!checkAllowedNames(L, 1, ["n", "s0", "n0", "r0", "s1", "n1", "r1"])) {
         string errMsg = "Error in call to VinokurGeomHybridFunction:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -503,13 +503,13 @@ extern(C) int newVinokurGeomHybridFunction(lua_State* L)
     errMsgTmpltInt ~= "The value, if present, should be an integer.";
 
     int n = getIntegerFromTable(L, 1, "n", true, 50, true, format(errMsgTmpltInt, "n"));
-    double s1 = getNumberFromTable(L, 1, "s1", true, 1.0e-5, true, format(errMsgTmpltNumber, "s1"));
+    double s0 = getNumberFromTable(L, 1, "s0", true, 1.0e-5, true, format(errMsgTmpltNumber, "s0"));
+    int n0 = getIntegerFromTable(L, 1, "n0", true, 10, true, format(errMsgTmpltInt, "n0"));
+    double r0 = getNumberFromTable(L, 1, "r0", true, 1.2, true, format(errMsgTmpltNumber, "r0"));
+    double s1 = getNumberFromTable(L, 1, "s1", true, 1.0e-3, true, format(errMsgTmpltNumber, "s1"));
     int n1 = getIntegerFromTable(L, 1, "n1", true, 10, true, format(errMsgTmpltInt, "n1"));
-    double r1 = getNumberFromTable(L, 1, "r1", true, 1.2, true, format(errMsgTmpltNumber, "r1"));
-    double sn = getNumberFromTable(L, 1, "sn", true, 1.0e-3, true, format(errMsgTmpltNumber, "sn"));
-    int nn = getIntegerFromTable(L, 1, "nn", true, 10, true, format(errMsgTmpltInt, "nn"));
-    double rn = getNumberFromTable(L, 1, "rn", true, 1.1, true, format(errMsgTmpltNumber, "rn"));
-    auto f = new VinokurGeomHybridFunction(n, s1, n1, r1, sn, nn, rn);
+    double r1 = getNumberFromTable(L, 1, "r1", true, 1.1, true, format(errMsgTmpltNumber, "r1"));
+    auto f = new VinokurGeomHybridFunction(n, s0, n0, r0, s1, n1, r1);
     functionStore ~= pushObj!(VinokurGeomHybridFunction, VinokurGeomHybridFunctionMT)(L, f);
     return 1;
 }
