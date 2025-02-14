@@ -1,0 +1,29 @@
+# x3r_560kg_full_pressure_design_condition.yaml: 
+# Fully theoretical input config for PITOT3 simulating the 
+# x3R 560kg piston design condition
+# Shock tube fill pressure is from Table 7.11 of
+# Stennett (2020) Development of an Extended Test Time Operating Mode
+# for a Large Reflected Shock Tunnel Facility
+#
+# Chris James (c.james4@uq.edu.au) - 01/07/24
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x3r_560kg_full_pressure_design_condition'
+
+# facility set up
+facility : 'x3r_Mach_7_nozzle'
+driver_condition : 'x3r-560kg-piston-70pc-He-30pc-Ar-CR10-empirical'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'air13species'
+p1 : 66.2e3 # Pa
+
+vs1_guess_1 : 1000.0 #m/s
+vs1_guess_2 : 1200.0 #m/s
+
+vs1_tolerance :  5.0e-5
+
+
+

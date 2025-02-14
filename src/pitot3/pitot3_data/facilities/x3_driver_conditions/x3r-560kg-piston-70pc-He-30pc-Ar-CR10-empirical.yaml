@@ -1,0 +1,33 @@
+# x3r-560kg-piston-70pc-He-30pc-Ar-CR9-isentropic.yaml
+# the X3R 560 kg piston design condition
+# I wasn't really sure about the naming convention
+# I should use as X3/X3R has so many conditions,
+# but I figured that composition, piston mass, and CR are
+# good things to do.
+# driver condition details from Table 7.11 of
+# Stennett (2020) Development of an Extended Test Time Operating Mode
+# for a Large Reflected Shock Tunnel Facility
+# 
+# While this is 'nominally' a CR of 10 (see the isentropic version
+# of this driver condition). This is the CR which matched the 
+# measured shock speed for experiment x3s721 of 1450 m/s
+# (see Table 7.15 of the thesis).
+
+# Chris James (c.james4@uq.edu.au) - 01/07/24
+
+driver_condition_name : 'x3r-560kg-piston-70pc-He-30pc-Ar-CR10-empirical'
+driver_condition_type : 'isentropic-compression-compression-ratio'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':0.7,'Ar':0.3} 
+driver_speciesList : ['He','Ar']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+driver_p : 300.0e3 # driver fill pressure, Pa
+driver_T : 298.15 # driver fill temperature, K
+
+compression_ratio : 7.05
+
+D_throat : 0.16 # m (160 mm)
+

@@ -1,0 +1,29 @@
+# x3_hayabusa_condition_air_theory.yaml: 
+# This is a simple config file to run a fully theoretical
+# PITOT3 case for Andreas Andrianatos' X3 Hayabusa condition
+# from his PhD thesis
+# Ground Testing at Superorbital Flight Conditions in a Large Scale Expansion Tube
+# The driver condition is what he himself estimated worked best to re-create his 
+# shock tube shock speed using PITOT2 in the past
+# Chris James (c.james4@uq.edu.au) - 14/02/25
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x3_hayabusa_condition_air_theory'
+
+# facility set up
+facility : 'x3_LongShockTube_Mach_12_nozzle'
+driver_condition : 'lwp-28-MPa-pure-helium-60-pc-compression'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'n2-o2-with-ions'
+p1 : 2500.0 # Pa
+
+# acceleration tube
+p5 : 3.5 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees

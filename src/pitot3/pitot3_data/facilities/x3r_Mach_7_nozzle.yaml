@@ -1,0 +1,35 @@
+# x3r_Mach_7_nozzle.yaml: 
+# X3R with its Mach 7 nozzle RST config for PITOT3.
+#
+# X3R geometry and sensor locations from
+# Stennett, S. et al. (2024) Large-scale free-piston-driven multi-mode shock expansion tunnel. 
+# Experiments in Fluids, 65(2), p.16.
+# doi: https://link.springer.com/article/10.1007/s00348-023-03756-y
+#
+# Chris James (c.james4@uq.edu.au) - 30/06/24
+
+facility_name : 'X3R'
+facility_type : 'reflected_shock_tunnel'
+secondary_driver : False
+nozzle : True
+
+# From Table 1 of the paper
+shock_tube_length : 22.9 # m
+shock_tube_diameter : 200.0e-3 # m
+
+# From Table 3 of the paper. I didn't include the b locations (as the locations are the same)
+shock_tube_sensors : ['st1','st2', 'st3', 'st4', 'st4.5', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12']
+
+# From Table 2 in the paper the nozzle exit diameter is 768 mm
+# the nozzle throat diameter is 60 mm (from Stennett et al. (2020) 
+#The X3R Free-Piston Reflected Shock Tunnel: Australia's New Large-Scale, 
+# Long-Duration Hypersonic Testing Capability.
+# 23rd AIAA International Space Planes and Hypersonic Systems and Technologies Conference.
+# https://arc.aiaa.org/doi/abs/10.2514/6.2020-2447
+# 768.0**2.0/60.0**2.0 = 163.84
+nozzle_geometric_area_ratio : 163.84
+
+# From Table 3 of the paper.
+sensor_locations : {'st1':1.649, 'st2':3.383, 'st3':6.504, 'st4':7.955, 'st4.5':9.519, 'st5':12.665, 'st6':14.068, 'st7':15.468, 'st8':19.217, 'st9':19.966, 'st10':20.715, 'st11':22.206, 'st12':22.868}
+
+driver_conditions_folder : 'x3_driver_conditions' #inside the facilities folder, same as the X3 driver conditions as they obviously shared the driver
