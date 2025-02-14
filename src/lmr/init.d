@@ -260,13 +260,14 @@ void initThreadPool(int maxCPUs, int threadsPerMPITask)
  * Authors: RJG and PAJ
  * Date: 2023-05-07
  */
-void initFluidBlocksBasic(bool withUserPad=false)
+void initFluidBlocksBasic(JSONValue cfgData, bool withUserPad=false)
 {
     foreach (myblk; localFluidBlocks) {
         myblk.myConfig.init_gas_model_bits();
         myblk.init_workspace();
         myblk.init_lua_globals();
-        foreach (bci; myblk.bc) { bci.post_bc_construction(); }
+        myblk.init_boundary_conditions(cfgData["block_" ~ to!string(myblk.id)]);
+        foreach (bci; myblk.bc) { bci.post_bc_construction(); } // TODO: Possible remove this.
         if (withUserPad && GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(myblk.myL, GlobalConfig.userPad, "userPad");
             foreach (bci; myblk.bc) {

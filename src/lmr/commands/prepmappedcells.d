@@ -13,6 +13,7 @@ import std.getopt;
 import std.path : dirName;
 import std.stdio : writeln, writefln, File;
 import std.string : toStringz;
+import std.json;
 
 import geom;
 
@@ -76,7 +77,7 @@ int main_(string[] args)
 
     alias cfg = GlobalConfig;
 
-    initConfiguration();
+    JSONValue cfgData= initConfiguration();
     if (cfg.nFluidBlocks == 0 && cfg.is_master_task) {
         throw new Error("No FluidBlocks; no point in continuing with mapped cell search.");
     }
@@ -86,7 +87,7 @@ int main_(string[] args)
 
     initThreadPool(1, 1);
 
-    initFluidBlocksBasic();
+    initFluidBlocksBasic(cfgData);
     initFluidBlocksMemoryAllocation();
     initFluidBlocksGlobalCellIDStarts();
     initFluidBlocksZones();

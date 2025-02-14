@@ -130,7 +130,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     initLocalBlocks();
     initThreadPool(maxCPUs, threadsPerMPITask);
-    initFluidBlocksBasic(true);
+    initFluidBlocksBasic(cfgData, true);
     initFluidBlocksMemoryAllocation();
     // [TODO] RJG, 2024-04-07
     // Add Lachlan's FSI initialisation here.

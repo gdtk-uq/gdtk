@@ -2445,12 +2445,7 @@ void set_config_for_blocks(JSONValue jsonData)
             initUDFSolidSourceTerms(sblk.myL, cfg.udfSolidSourceTermsFile);
         }
     }
-    foreach (blk; globalBlocks) {
-        auto myblk = cast(FluidBlock) blk;
-        if (myblk) {
-            myblk.init_boundary_conditions(jsonData["block_" ~ to!string(myblk.id)]);
-        }
-    }
+    // Removed globalBlocks boundary condition init here. NNG (Feb 2025)
     // [TODO] RJG, 2024-02-11
     // This code here has a dependency on base_file_name. Need to clean this up.
     /*

@@ -637,7 +637,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
      */
     initThreadPool(1, 1);
 
-    initFluidBlocksBasic();
+    initFluidBlocksBasic(cfgData);
     initFluidBlocksMemoryAllocation();
     initFluidBlocksGlobalCellIDStarts();
     initFluidBlocksZones();
