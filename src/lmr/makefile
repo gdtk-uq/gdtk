@@ -295,6 +295,7 @@ clean:
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_mpi.d
 	- rm -f gdtk-module
+	- rm -f lmr-check-jacobian lmrZ-check-jacobian
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
 	- cd $(LUA_DIR); make clean
