@@ -32,9 +32,9 @@ expected_final_cfl = 1.000e+03
 # Compiler: LLVM D Compiler v1.40.0 with LLVM 19.1.6
 # CPU: Apple M2 Pro
 if (sys.platform == 'linux'):
-    expected_number_steps = 39
+    expected_number_steps = 49
 else:
-    expected_number_steps = 46
+    expected_number_steps = 60
 
 def expected_output(proc, check_start_step=False):
     steps = 0

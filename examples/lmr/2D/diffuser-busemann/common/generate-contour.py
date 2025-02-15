@@ -14,7 +14,7 @@ Usage:
 """
 
 from gdtk.busemann import BusemannDiffuser
-from math import asin
+from math import asin, pi
 import sys
 
 if len(sys.argv) != 2:
@@ -31,9 +31,13 @@ k = 1.4
 theta_23 = asin(k/M2)
 bd = BusemannDiffuser(M2, theta_23)
 
+theta_1 = 2.9673531127718715
+theta_2 = 0.3026840705911106
+
 r = 1.0
-dtheta = 0.001
-bd.generate_contour(r, dtheta)
+dtheta_max = (theta_1 - theta_2)/1000.0
+bd.generate_contour(r, dtheta_max)
+print(bd._thetas[0], bd._thetas[-1])
 bd.write_contour('bd-contour.dat', npts)
 
 props = bd.properties()
@@ -41,7 +45,4 @@ props = bd.properties()
 with open('bd-props.txt', "w") as f:
     for k, v in zip(props._fields, props):
         f.write(f"{k} = {v:.6f}\n")
-
-  
-  
 
