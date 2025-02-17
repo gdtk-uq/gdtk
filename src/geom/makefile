@@ -118,13 +118,14 @@ test: $(TEST_PROGRAMS)
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
 
-install: foamMesh foam-mesh.lua
+install: foamMesh foam-mesh.lua openfoam.lua
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp foamMesh $(BUILD_DIR)/bin/
 	cp foam-mesh.lua $(BUILD_DIR)/bin/
+	cp openfoam.lua $(BUILD_DIR)/lib/
 	cp -r foamMesh-templates $(BUILD_DIR)/share/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
@@ -136,6 +137,7 @@ clean:
 	- rm -f $(TEST_PROGRAMS)
 	- rm -f gpgrid*.vtk test*.vtk test*.stl test*.gz test*.svg test*.su2 test*.bin
 	- rm -rf test_openFoam
+	- rm $(BUILD_DIR)/lib/openfoam.lua
 	- cd $(LUA_DIR); make clean
 
 all-clean:
