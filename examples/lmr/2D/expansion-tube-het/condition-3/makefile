@@ -34,7 +34,7 @@ run:
 	# lmr run
 	mpirun -np 14 --oversubscribe lmr-mpi-run
 
-post: vtk xtdiagram
+post: vtk xtdiagram histories
 
 vtk:
 	lmr snapshot2vtk --all
@@ -42,6 +42,13 @@ vtk:
 xtdiagram:
 	./lmr-xtdata.rb --output=xtlogp.data --log10
 	gnuplot < contour.gnuplot
+
+histories:
+	gnuplot < plot-p-history.gnuplot
+	gnuplot < plot-T-history.gnuplot
+	gnuplot < plot-rv2-history.gnuplot
+	gnuplot < plot-velx-history.gnuplot
+	gnuplot < plot-species-history.gnuplot
 
 clean:
 	- rm -rf $(LMR_DIR)

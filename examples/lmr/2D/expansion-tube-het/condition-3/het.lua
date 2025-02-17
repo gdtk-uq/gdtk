@@ -54,8 +54,8 @@ makeFluidBlocks(bcDict, flowDict)
 -- simulation settings
 -- config.viscous = true
 config.viscous = true
-config.spatial_deriv_locn = 'vertices'
-config.spatial_deriv_calc = 'divergence'
+-- config.spatial_deriv_locn = 'vertices'
+-- config.spatial_deriv_calc = 'divergence'
 config.viscous_signal_factor = 0.1
 config.max_time = 5.0e-3 -- s
 config.max_step = 1000000

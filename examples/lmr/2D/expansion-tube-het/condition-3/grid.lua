@@ -39,7 +39,7 @@ quad2 = CoonsPatch:new{p00=C0, p10=D0, p11=D1, p01=C1}
 -- Distribute the cells between the three segments of the tube.
 -- Use factor to scale the numbers of cells in the simulation.
 -- A factor of 1 is a low-resolution calculation.
-factor = 1
+factor = 2
 nxcells_total = math.floor(factor*2406)
 nxcells_d = math.floor((xB/xD)*nxcells_total + 0.5)
 nxcells_i = math.floor(((xC-xB)/xD)*nxcells_total + 0.5)
