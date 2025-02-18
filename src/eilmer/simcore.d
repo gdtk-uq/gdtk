@@ -1853,7 +1853,7 @@ bool check_full_face_copy(size_t blk_id, size_t blk_bndy, size_t oblk_id, size_t
     auto oblk_bndy_json = oblk_json["boundary_" ~ oblk_face_string];
     auto oblk_bces      = oblk_bndy_json["pre_recon_action"].array;
 
-    if (oblk_bces.length != 1) return false;
+    if (oblk_bces.length == 0) return false;
     auto oblk_bce = oblk_bces[0];
 
     string oblk_bce_type = getJSONstring(oblk_bce, "type", "");
