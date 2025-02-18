@@ -653,22 +653,13 @@ public:
     } // end set_up_workspace_leastsq_via_qr_factorization()
 
     @nogc
-    void gradients_leastsq(in LocalConfig myConfig, ref FlowState*[] cloud_fs, ref Vector3*[] cloud_pos,
-                           ref WLSQGradWorkspace ws)
+    void gradients_leastsq(in LocalConfig myConfig, ref FlowState*[] cloud_fs, ref WLSQGradWorkspace ws)
     // Evaluate the gradients using the precomputed weights.
     {
-        if (&ws is null) {
-            debug {
-                writeln("Attempt to do a least-squares gradients calculation " ~
-                        "without the workspace being initialized.");
-                if (cloud_pos.length > 0) {
-                    writeln("Point positions in cloud are:");
-                    foreach (i, pp; cloud_pos) { writeln("  cloud_pos[%d]=%s", i, *pp); }
-                } else {
-                    writeln("Unsurprisingly, there are no points in the cloud.");
-                }
+        debug {
+            if (&ws is null) {
+                throw new Error("Uninitialized workspace for least-squares gradient calculation.");
             }
-            throw new Error("Uninitialized workspace for least-squares gradient calculation.");
         }
         size_t loop_init = ws.loop_init;
         size_t n = ws.n;

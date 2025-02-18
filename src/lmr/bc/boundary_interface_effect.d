@@ -1886,7 +1886,7 @@ protected:
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
 
-        cell.grad.gradients_leastsq(blk.myConfig, cell.cloud_fs, cell.cloud_pos, *(cell.ws_grad));
+        cell.grad.gradients_leastsq(blk.myConfig, cell.cloud_fs, *(cell.ws_grad));
         IFace.grad.copy_values_from(*(cell.grad));
         number qx = IFace.fs.gas.k*cell.grad.T[0];
         number qy = IFace.fs.gas.k*cell.grad.T[1];
