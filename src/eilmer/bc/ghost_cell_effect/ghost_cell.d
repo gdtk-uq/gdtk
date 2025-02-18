@@ -212,7 +212,6 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
     case "translating_solution_inflow_effect":
         string fileName = getJSONstring(jsonData, "file_name", "");
         string jsonFileName = getJSONstring(jsonData, "json_file_name", "");
-        writefln("Creating TSIE: ! fname is %s and jfile is %s", fileName, jsonFileName);
         newGCE = new TranslatingSolutionInflowEffect(blk_id, boundary, fileName, jsonFileName);
         break;
     case "user_defined":
