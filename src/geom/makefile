@@ -118,15 +118,15 @@ test: $(TEST_PROGRAMS)
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
 
-install: foamMesh foam-mesh.lua openfoam.lua
+install: foamMesh $(GEOM_LUA_FILES)
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp foamMesh $(BUILD_DIR)/bin/
-	cp foam-mesh.lua $(BUILD_DIR)/bin/
-	cp openfoam.lua $(BUILD_DIR)/lib/
-	cp -r foamMesh-templates $(BUILD_DIR)/share/
+	cp $(OPENFOAM_DIR)/foam-mesh.lua $(BUILD_DIR)/bin/
+	cp $(OPENFOAM_DIR)/openfoam.lua $(BUILD_DIR)/lib/
+	cp -r $(OPENFOAM_DIR)/foamMesh-templates $(BUILD_DIR)/share/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
@@ -142,7 +142,7 @@ clean:
 
 all-clean:
 	- make clean
-	- rm -rf foamMesh foamMesh_with_rev_string.d
+	- rm -rf foamMesh $(OPENFOAM_DIR)/foamMesh_with_rev_string.d
 	- rm -rf $(BUILD_DIR)
 
 # Specific targets, for individual artefacts.
@@ -150,10 +150,10 @@ all-clean:
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
-foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' foamMesh.d > foamMesh_with_rev_string.d
+foamMesh: $(OPENFOAM_DIR)/foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' $(OPENFOAM_DIR)/foamMesh.d > $(OPENFOAM_DIR)/foamMesh_with_rev_string.d
 
-	$(DMD) $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
+	$(DMD) $(DFLAGS_LUA) $(OPENFOAM_DIR)/foamMesh_with_rev_string.d $(OF)foamMesh \
 	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 # The test artefacts.

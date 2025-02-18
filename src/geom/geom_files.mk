@@ -89,5 +89,6 @@ GEOM_LUAWRAP_FILES := \
 
 GEOM_FILES := $(GEOM_D_FILES) $(GEOM_LUAWRAP_FILES)
 
-GEOM_LUA_FILES := $(GEOM_DIR)/foam-mesh.lua
+OPENFOAM_DIR := $(GEOM_DIR)/openfoam
+GEOM_LUA_FILES := $(OPENFOAM_DIR)/foam-mesh.lua $(OPENFOAM_DIR)/openfoam.lua
 
