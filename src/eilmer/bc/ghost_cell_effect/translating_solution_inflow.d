@@ -133,9 +133,9 @@ public:
                     double vely  = fbl["vel.y",i,0,0];
                     double velz  = fbl["vel.z",i,0,0];
                     velx += translation_velocity;
-                    fss[ighost][i].vel.x = velx*cos(upstream_grid_rotation) - vely*sin(upstream_grid_rotation);
-                    fss[ighost][i].vel.y = velx*sin(upstream_grid_rotation) + vely*cos(upstream_grid_rotation);
-                    fss[ighost][i].vel.z = velz;
+                    fss[ighost][i].vel.x = velx*cos(upstream_grid_rotation) - velz*sin(upstream_grid_rotation);
+                    fss[ighost][i].vel.y = vely;
+                    fss[ighost][i].vel.z = velx*sin(upstream_grid_rotation) + velz*cos(upstream_grid_rotation);
                 }
                 ighost += 1;
             }
@@ -180,9 +180,9 @@ public:
             double gcy = ghost.pos[0].y.re;
             double gcz = ghost.pos[0].z.re;
 
-            double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x.re - translation_velocity*t;
-            double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y.re;
-            double gcz_prime = gcz - upstream_grid_shift.z.re;
+            double gcx_prime = gcx*c - gcz*s - upstream_grid_shift.x.re - translation_velocity*t;
+            //double gcy_prime = gcy - upstream_grid_shift.y.re;
+            //double gcz_prime = gcx*s + gcz*c - upstream_grid_shift.z.re;
 
             get_interp_idxs_and_weight(gcx_prime, l, u, w0);
             ghost.fs.copy_average_values_from(fss[ighost][l], fss[ighost][u], w0);
@@ -210,9 +210,9 @@ public:
                 double gcy = ghost.pos[0].y.re;
                 double gcz = ghost.pos[0].z.re;
 
-                double gcx_prime = gcx*c - gcy*s - upstream_grid_shift.x.re - translation_velocity*t;
-                double gcy_prime = gcx*s + gcy*c - upstream_grid_shift.y.re;
-                double gcz_prime = gcz - upstream_grid_shift.z.re;
+                double gcx_prime = gcx*c - gcz*s - upstream_grid_shift.x.re - translation_velocity*t;
+                //double gcy_prime = gcy - upstream_grid_shift.y.re;
+                //double gcz_prime = gcx*s + gcz*c - upstream_grid_shift.z.re;
 
                 get_interp_idxs_and_weight(gcx_prime, l, u, w0);
                 ghost.fs.copy_average_values_from(fss[ighost][l], fss[ighost][u], w0);
