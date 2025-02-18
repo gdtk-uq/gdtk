@@ -8,6 +8,18 @@
 -- These definitions were moved from foam-mesh.lua to facilitate grid 
 -- generation for PATO.
 
+-- naming conventions
+constantDir = "constant"
+systemDir = "system"
+noughtDir = "0"
+
+function makeDir(dirName)
+   retVal = os.execute(string.format("test -d %s", dirName))
+   if retVal ~= 0 then
+      os.execute(string.format("mkdir %s", dirName))
+   end
+end
+
 -- Global settings
 axisymmetric = false -- Options are: "true" and "false".
 collapseEdges = false -- Options are: "true" and "false".
@@ -49,9 +61,10 @@ bndryLabelPrefixes = {
 }
 
 patoBcPrefixes = {
-   "w-", -- for walls
+   "w-", -- for ablating walls
    "a-", -- for adiabatic boundaries
    "s-", -- for symmetry
+   "i-", -- for isothermal boundaries
 }
 
 function checkBndryLabels(bndryList, bcPrefixes)
@@ -87,7 +100,7 @@ blks = {}
 FoamBlock = {}
 function FoamBlock:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"grid", "bndry_labels"})
+   local flag = checkAllowedNames(o, {"grid", "bndry_labels", "pato"})
    assert(flag, "Invalid name for item supplied to FoamBlock:new().")
    setmetatable(o, self)
    self.__index = self
@@ -129,6 +142,11 @@ function FoamBlock:new(o)
    -- and then convert to unstructured
    o.ugrid = UnstructuredGrid:new{sgrid=newGrid}
 
+   -- initialise PATO flag if not already set
+   if o.pato == nil then
+      o.pato = false
+   end
+   
    -- Now look over the boundary labels.
    if o.pato then
       bcPrefixes = patoBcPrefixes
@@ -155,6 +173,34 @@ function FoamBlock:new(o)
       globalBndryLabels[bl] = true
    end
    return o
+end
+
+function checkFoamBlocks(blks, vrbLvl)
+   if (vrbLvl >= 1) then
+      print("Number of blocks defined: ", #blks)
+   end
+   if #blks == 0 then
+      error("WARNING: No FoamBlocks were defined.")
+   end
+end
+
+function mergeBlocks(blks, vrbLvl)
+   if (vrbLvl >= 1) then
+      print("Joining all grids together.")
+   end
+   myMesh = blks[1].ugrid
+   for ib=2,#blks do
+      if (vrbLvl >= 2) then
+	 print("Joining blk ", ib, " to master mesh.")
+      end
+      -- joinGrid and pass openFoamDimensions. For 2-D this excludes top and
+      -- bottom boundaries when searching for ways to join grids.
+      myMesh:joinGrid(blks[ib].ugrid, 1.0e-6, 1.0e-9, true, true, openFoamDimensions)
+   end
+   if (vrbLvl >= 1) then
+      print("   DONE: Joining all grids together.")
+   end
+   return myMesh
 end
 
 function markInternalBoundaries(grid, blks)
@@ -184,7 +230,10 @@ function amendTags(grid, blks)
    end
 end
 
-function runCollapseEdges()
+function runCollapseEdges(dirName)
+   -- set default value for pato flag if not provided
+   pato = pato or false
+   
    if (vrbLvl >= 1) then
       print("Running OpenFOAM command: collapseEdges.")
    end
@@ -192,11 +241,8 @@ function runCollapseEdges()
    -- 1. Place the collapseDict file in place.
    dgdDir = os.getenv("DGD")
    collapseDictFile = string.format("%s/share/foamMesh-templates/collapseDict", dgdDir)
-   retVal = os.execute("test -d system")
-   if retVal ~= 0 then
-      os.execute("mkdir system")
-   end
-   cmd = string.format("cp %s system/", collapseDictFile)
+   makeDir(dirName)
+   cmd = string.format("cp %s %s/", collapseDictFile, dirName)
    os.execute(cmd)
    -- 2. Run the collapeEdges command
    cmd = "collapseEdges -overwrite -noZero"
@@ -256,23 +302,23 @@ function writeFoamHeader(f)
    f:write("    format      ascii;\n")
 end
 
-function writeStandardBC(f)
+function writeStandardBC(f, label)
       if label == "FrontAndBack" then
          f:write("    frontAndBack \n")
          f:write("    { \n")
-         f:write("    empty,\n")
+         f:write("        empty;\n")
          f:write("    }\n")
       end
       if label == "wedge-front" then
          f:write("    wedge-front \n")
          f:write("    { \n")
-         f:write("    symmetry;\n")
+         f:write("        type    symmetry;\n")
          f:write("    }\n")
       end
       if label == "wedge-rear" then
          f:write("    wedge-rear \n")
          f:write("    { \n")
-         f:write("    symmetry;\n")
+         f:write("        type    symmetry;\n")
          f:write("    }\n")
       end
       if label == "unassigned" then
@@ -280,13 +326,14 @@ function writeStandardBC(f)
       end
 end
 
-function writeMesh()
+function writeMesh(dirName)
+   gridDir = string.format("%s/polyMesh/", dirName)
    if (vrbLvl >= 1) then
-      print("Writing out grid into 'constant/polyMesh/'")
+      print(string.format("Writing out grid into '%s'", gridDir))
    end
-   myMesh:writeOpenFoamPolyMesh("constant")
+   myMesh:writeOpenFoamPolyMesh(dirName)
    if (vrbLvl >= 1) then
-      print("   DONE: Writing out grid into 'constant/polyMesh/'")
+      print(string.format("   DONE: Writing out grid into '%s'", gridDir))
    end
 end
 
@@ -322,16 +369,46 @@ function runCheckMesh()
    end
 end
 
-function clearPolyMesh()
+function clearPolyMesh(dirName)
    if (vrbLvl >= 1) then
       print("Clearing PolyMesh folder.")
    end
    -- Check if constant/polyMesh exists.
-   retVal = os.execute("test -d constant/polyMesh")
+   print(dirName)
+   gridDir = dirName.."/polyMesh"
+   retVal = os.execute(string.format("test -d %s", gridDir))
    if retVal == 0 then
-       os.execute("rm -r constant/polyMesh")
+       os.execute(string.format("rm -r %s"), gridDir)
    end
    if (vrbLvl >= 1) then
       print("   DONE: existing polyMesh folder deleted.")
+   end
+end
+
+function checkUnassignedBoundaries(blks)
+   -- Print a warning at end if there are unassigned boundary labels
+   -- First do a re-sweep for any 'unassigned' boundaries.
+   local unassigned = false
+   for ib, blk in ipairs(blks) do
+      for bndry, bndryLabel in pairs(blk.bndry_labels) do
+         if (bndryLabel == "unassigned") then
+            unassigned = true
+            break
+         end
+      end
+      if unassigned == true then break end
+   end
+   if unassigned == true then
+      print("WARNING: Not all boundary faces defined."..
+               " Undefined boundaries have been grouped in the boundary patch 'unassigned'."..
+               " (Note: Counter starts from 1)")
+      print("The following boundaries are unassigned.")
+      for ib, blk in ipairs(blks) do
+         for bndry, bndryLabel in pairs(blk.bndry_labels) do
+            if (bndryLabel == "unassigned") then
+               print("   blk: ", ib, " bndry: ", bndry)
+            end
+         end
+      end
    end
 end
