@@ -722,4 +722,60 @@ public:
         }
     } // end gradients_leastsq()
 
+    @nogc
+    void gradients_at_cells_leastsq(in FlowState fs, FlowState[] fss, size_t[] cloud_idxs, in WLSQGradWorkspace ws,
+                                    size_t n, bool is3d, size_t nsp, size_t nmodes, size_t nturb, bool doSpecies)
+    /*
+        Faster variant of the least-squares gradient code, for working with the dense data structures.
+        @author: NNG (Feb 25)
+    */
+    {
+        number q0;
+        string codeForGradients(string qname, string gname)
+        {
+            string code = "
+            q0 = fs."~qname~";
+            "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
+            foreach (i; 0 .. n) {
+                size_t io = cloud_idxs[i];
+                number dq = fss[io]."~qname~" - q0;
+                "~gname~"[0] += ws.wx[i+1] * dq;
+                "~gname~"[1] += ws.wy[i+1] * dq;
+                if (is3d) { "~gname~"[2] += ws.wz[i+1] * dq; }
+            }";
+            return code;
+        }
+        mixin(codeForGradients("vel.x", "vel[0]"));
+        mixin(codeForGradients("vel.y", "vel[1]"));
+        if (is3d) {
+            mixin(codeForGradients("vel.z", "vel[2]"));
+        } else {
+            // 2D z-velocity
+            vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0;
+        }
+        mixin(codeForGradients("gas.T", "T"));
+        version(multi_T_gas) {
+            // T_modes
+            foreach (imode; 0 .. nmodes) {
+                mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]"));
+            }
+        }
+        version(multi_species_gas) {
+            if (doSpecies) {
+                foreach(isp; 0 .. nsp) {
+                    mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
+                }
+            } else {
+                foreach(isp; 0 .. nsp) {
+                    massf[isp][0] = 0.0; massf[isp][1] = 0.0; massf[isp][2] = 0.0;
+                }
+            }
+        }
+        version(turbulence) {
+            foreach(tidx; 0 .. nturb){
+                mixin(codeForGradients("turb[tidx]", "turb[tidx]"));
+            }
+        }
+    } // end gradients_leastsq()
+
 } // end struct FlowGradients

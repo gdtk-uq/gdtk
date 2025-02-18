@@ -47,6 +47,7 @@ import lmr.globalconfig;
 import lmr.globaldata;
 import lmr.grid_motion;
 import lmr.jacobian;
+import lmr.mass_diffusion : MassDiffusionModel;
 import lmr.lua_helper;
 import lmr.sfluidblock; // needed for some special-case processing, below
 import lmr.shockdetectors;
@@ -833,9 +834,7 @@ public:
         case SpatialDerivLocn.cells:
             final switch (myConfig.spatial_deriv_calc) {
             case SpatialDerivCalc.least_squares:
-                foreach(cell; cells) {
-                    cell.grad.gradients_leastsq(myConfig, cell.cloud_fs, *(cell.ws_grad));
-                }
+                compute_gradients_at_cells_leastsq();
                 break;
             case SpatialDerivCalc.divergence:
                 foreach(iface; faces) {
@@ -847,6 +846,24 @@ public:
             //
         } // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_spatial_derivatives()
+
+    @nogc
+    void compute_gradients_at_cells_leastsq(size_t[] cell_idxs=[])
+    {
+        immutable bool is3D = (myConfig.dimensions == 3);
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
+
+        if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
+        foreach(idx; cell_idxs){
+            celldata.gradients[idx].gradients_at_cells_leastsq(
+                celldata.flowstates[idx], facedata.flowstates, celldata.c2f[idx],
+                celldata.workspaces[idx], celldata.nfaces[idx],
+                is3D, nsp, nmodes, nturb, doSpecies);
+        }
+    }
 
     @nogc
     void clear_fluxes_of_conserved_quantities()
