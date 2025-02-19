@@ -130,16 +130,17 @@ default: $(PROGRAMS) $(SLF_FILES)
 	@echo "slf code built."
 
 install: $(PROGRAMS)
-	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
-	- mkdir -p $(BUILD_DIR)/share
-	cp $(PROGRAMS) $(BUILD_DIR)/bin
+	- mkdir -p $(BUILD_DIR)/lib/gdtk
+	- cp slf $(BUILD_DIR)/bin
+	- cp libslf.so $(BUILD_DIR)/lib
+	- cp slf.py $(BUILD_DIR)/lib/gdtk
 	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
-	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	@echo "Installing to $(INSTALL_DIR)"
+	- mkdir -p $(INSTALL_DIR)
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
@@ -177,3 +178,25 @@ slf: slf.d $(SLF_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
+libslf: cwrap.d slf.d $(SLF_FILES) \
+	$(DYAML_FILES) $(TINYENDIAN_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES)
+	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op \
+		$(DVERSION)complex_numbers \
+		slf.d \
+		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)libslf.so cwrap.o $(PIC) $(DFLAGS) -op -shared \
+		$(DVERSION)complex_numbers \
+		slf.d \
+		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)

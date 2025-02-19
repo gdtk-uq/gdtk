@@ -9,6 +9,8 @@ import std.format;
 import std.string;
 import std.conv;
 import std.datetime.stopwatch : StopWatch;
+import core.thread;
+import core.sys.posix.signal;
 
 // slf specific modules
 import io;
@@ -22,11 +24,35 @@ import nm.bbla;
 import nm.number;
 import nm.complex;
 
+bool endFlag;
+extern(C) void handler(int num) nothrow @nogc @system
+/*
+     When running slf from the python interface, the python interpreter will
+     hand over execution to the druntime in a way that ignores signal
+     interupts, including Ctrl-C.
+
+     This solution, from the d forums, adds an interupt handler to the run()
+     loop that can be used to exit early.
+
+     With help from:
+     forum.dlang.org/post/ovsuuu$2ofo$1@digitalmars.com
+     @author: Nick Gibbons
+*/
+{
+    //printf("Caught signal %d\n",num);
+    endFlag = true;
+}
+
+
 class Flame {
     this(string name){
         this.name = name;
         config = read_config_from_file(format("%s.yaml", name));
+        this(config);
+    }
 
+    this(Config config){
+        this.config = config;
         gm = init_gas_model(config.gas_file_name);
         reactor = init_thermochemical_reactor(gm, config.reaction_file_name, "");
         gs = GasState(gm);
@@ -67,7 +93,7 @@ class Flame {
         return;
     }
 
-    void set_init_condition(){
+    void set_initial_condition(){
         gaussian_initial_condition(pm, U);
     }
 
@@ -90,7 +116,12 @@ class Flame {
         double GRmax = 0.0; foreach(Ri; R) GRmax += Ri.re*Ri.re;
         GRmax = sqrt(GRmax);
 
+		signal(SIGINT, &handler);
         foreach(iter; 0 .. maxiters) {
+            if (endFlag) {
+                sw.stop();
+                return 1;
+			}
 
             //RK4_explicit_time_increment(dt, verbose);
             Euler_implicit_time_increment(dt, verbose);
@@ -437,7 +468,7 @@ int main(string[] args)
     if (args.length>1) name = args[1];
 
     auto flame = new Flame(name);
-    flame.set_init_condition();
+    flame.set_initial_condition();
     exitFlag = flame.run();
 
     return exitFlag;
