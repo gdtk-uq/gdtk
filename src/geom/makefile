@@ -118,7 +118,7 @@ test: $(TEST_PROGRAMS)
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
 
-install: foamMesh $(GEOM_LUA_FILES)
+install: foamMesh grid2pato $(GEOM_LUA_FILES)
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -127,6 +127,9 @@ install: foamMesh $(GEOM_LUA_FILES)
 	cp $(OPENFOAM_DIR)/foam-mesh.lua $(BUILD_DIR)/bin/
 	cp $(OPENFOAM_DIR)/openfoam.lua $(BUILD_DIR)/lib/
 	cp -r $(OPENFOAM_DIR)/foamMesh-templates $(BUILD_DIR)/share/
+	cp $(OPENFOAM_DIR)/grid2pato.lua $(BUILD_DIR)/bin/
+	cp grid2pato $(BUILD_DIR)/bin/
+	cp -r $(OPENFOAM_DIR)/pato-templates $(BUILD_DIR)/share/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
@@ -143,6 +146,7 @@ clean:
 all-clean:
 	- make clean
 	- rm -rf foamMesh $(OPENFOAM_DIR)/foamMesh_with_rev_string.d
+	- rm -rf grid2pato $(OPENFOAM_DIR)/grid2pato_with_rev_string.d
 	- rm -rf $(BUILD_DIR)
 
 # Specific targets, for individual artefacts.
@@ -154,6 +158,12 @@ foamMesh: $(OPENFOAM_DIR)/foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' $(OPENFOAM_DIR)/foamMesh.d > $(OPENFOAM_DIR)/foamMesh_with_rev_string.d
 
 	$(DMD) $(DFLAGS_LUA) $(OPENFOAM_DIR)/foamMesh_with_rev_string.d $(OF)foamMesh \
+	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
+
+grid2pato: $(OPENFOAM_DIR)/grid2pato.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' $(OPENFOAM_DIR)/grid2pato.d > $(OPENFOAM_DIR)/grid2pato_with_rev_string.d
+
+	$(DMD) $(DFLAGS_LUA) $(OPENFOAM_DIR)/grid2pato_with_rev_string.d $(OF)grid2pato \
 	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 # The test artefacts.
