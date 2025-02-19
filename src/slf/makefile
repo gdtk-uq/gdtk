@@ -18,21 +18,12 @@ include $(UTIL_DIR)/util_files.mk
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
-NML_DIR := ../lib
-include $(NML_DIR)/nml_files.mk
-
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
 LIBGASF := $(GAS_DIR)/libgasf.a
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
-
-GEOM_DIR := ../geom
-include $(GEOM_DIR)/geom_files.mk
-
-GASDYN_DIR := ../gasdyn
-include $(GASDYN_DIR)/gasdyn_files.mk
 
 CEQ_DIR := ../extern/ceq/source
 LIBCEQ := $(CEQ_DIR)/libceq.a
@@ -171,29 +162,18 @@ $(LIBGASF):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-slf: main.d $(SLF_FILES) \
-	$(GEOM_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+slf: slf.d $(SLF_FILES) \
+	$(DYAML_FILES) $(TINYENDIAN_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	$(NM_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS) $(OF)slf \
 		$(DVERSION)complex_numbers \
-		main.d \
+		slf.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
-		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
-
-prep-chem:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
-
-chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
