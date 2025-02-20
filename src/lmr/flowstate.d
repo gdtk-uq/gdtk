@@ -472,11 +472,14 @@ public:
         string[] speciesList;
         if (n_species > 1) {
             foreach (i; 0..n_species) { speciesList ~= "massf-" ~ gmodel.species_name(i); }
+            expected_names ~= speciesList;
         }
         string[] TmodeList;
         foreach (i; 0..n_modes) { TmodeList ~= "T-" ~ gmodel.energy_mode_name(to!int(i)); }
+        expected_names ~= TmodeList;
         string[] turbList;
         foreach (i; 0..n_turb) { turbList ~= "tq-" ~ cfg.turb_model.primitive_variable_name(i); }
+        expected_names ~= turbList;
         //
         // Open filename and read all data points.
         auto f = new File(fileName);
@@ -492,7 +495,8 @@ public:
         range.popFront();
         foreach (name; expected_names) {
             if (!canFind(varnames, name)) {
-                string msg = text("Did not find ", name, " in variables: ", varnames);
+                string msg = format("Could not find required variable \"%s\" in file: %s", name, fileName);
+                msg ~= format("\nFile header consisted of the following variables:\n %s", varnames);
                 throw new LmrException(msg);
             }
         }
@@ -713,11 +717,14 @@ public:
         string[] speciesList;
         if (n_species > 1) {
             foreach (i; 0..n_species) { speciesList ~= "massf-" ~ gmodel.species_name(i); }
+            expected_names ~= speciesList;
         }
         string[] TmodeList;
         foreach (i; 0..n_modes) { TmodeList ~= "T-" ~ gmodel.energy_mode_name(to!int(i)); }
+        expected_names ~= TmodeList;
         string[] turbList;
         foreach (i; 0..n_turb) { turbList ~= "tq-" ~ cfg.turb_model.primitive_variable_name(i); }
+        expected_names ~= turbList;
         //
         // Open zip archive and read the metadata and the profiles.
         auto zip = new ZipArchive(read(fileName));
@@ -744,7 +751,8 @@ public:
         varnames = getJSONstringarray(metadata, "varnames", varnames);
         foreach (name; expected_names) {
             if (!canFind(varnames, name)) {
-                string msg = text("Did not find ", name, " in variables: ", varnames);
+                string msg = format("Could not find required variable \"%s\" in file: %s", name, fileName);
+                msg ~= format("\nFile header consisted of the following variables:\n %s", varnames);
                 throw new LmrException(msg);
             }
         }
