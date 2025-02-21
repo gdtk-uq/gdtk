@@ -3043,7 +3043,7 @@ class Tube(object):
             for filename in cwd_files:
                 print(filename)
 
-            raise Exception(f"Tube: Specified fille gas filename for the {self.tube_name} does not exist in the location the user has specified.")
+            raise Exception(f"Tube: Specified fill gas filename for the {self.tube_name} does not exist in the location the user has specified.")
 
         else:
             raise Exception(f"Tube: There is some issue loading the gas model for the {self.tube_name}.")
@@ -3074,6 +3074,15 @@ class Tube(object):
 
             else:
                 raise Exception("Tube(): Setting the initial gas state in the tube failed.")
+
+        # very rarely, CEA will allow the gas state to be set, so in that case we probably want this state made here
+        # in case we end up needing it later on...
+        if self.fill_gas_model == 'CEAGas' and 'CO2' in fill_state_gas_object.ceaSavedData['massf']:
+            random_object, room_temperature_only_gmodel = \
+                room_temperature_only_gas_model_gas_state_setter(gas_state=fill_state_gas_object,
+                                                                 p=self.fill_pressure, T=self.fill_temperature,
+                                                                 original_gmodel_location=fill_gmodel_location,
+                                                                 room_temperature_only_gmodel=None)
 
         if 'room_temperature_only_gmodel' not in locals():
             room_temperature_only_gmodel = None
@@ -4270,8 +4279,11 @@ def state_output_for_final_output(facility_state):
         output_line += "{0:<7.2f}".format(p0/1.0e6) # to get MPa
     elif 1000.0 <= p0/1.0e6 < 10000.0:
         output_line += "{0:<7.1f}".format(p0 / 1.0e6)  # to get MPa
-    else:
+    elif 10000.0 <= p0 / 1.0e6 < 1000000.0:
         output_line += "{0:<7.0f}".format(p0 / 1.0e6)  # to get MPa
+    else:
+        # this is for very big numbers...
+        output_line += "{0:<7.1e}".format(p0 / 1.0e6)  # to get MPa
     if Ht == '-':
         output_line += "{0:<6}".format(Ht)
     else:
