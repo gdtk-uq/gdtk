@@ -6,3 +6,7 @@ addopts = "--import-mode=importlib"
 markers = [
     "short: marks tests for inclusion in a short run"
 ]
+# 2025-02-24, RJG
+# Disable busemann test while ldc version is being sorted
+# on the testing machine, rangpur
+norecursedirs = "2D/diffuser-busemann"
