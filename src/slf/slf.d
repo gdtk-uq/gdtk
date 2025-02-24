@@ -106,8 +106,8 @@ class Flame {
         double GRRold = 1.0;
         double GRold = 1e99;
         double tau = 1e-1;
-        string[] log;
 
+        log.length = 0;
         StopWatch sw;
         sw.start();
 
@@ -151,9 +151,6 @@ class Flame {
         }
         sw.stop();
         long wall_clock_elapsed = sw.peek.total!"seconds";
-
-        write_solution_to_file(pm, U, format("%s.sol", name));
-        write_log_to_file(log, format("%s.log", name));
 
         //double[] dUdp;
         //dUdp = get_derivatives_from_adjoint(U,  U2nd,  R,  Up,  Rp, J2, U2, R2, tdws, omegaMi, gs, dU, dt, gm, reactor, pm, verbose);
@@ -214,6 +211,16 @@ class Flame {
 
         return;
     }
+    void save_solution(string filename=""){
+        if (filename.length==0) filename = name;
+        write_solution_to_file(pm, U, format("%s.sol", filename));
+    }
+
+    void save_log(string filename=""){
+        if (filename.length==0) filename = name;
+        write_log_to_file(log, format("%s.log", filename));
+    }
+
 public:
     string name;
     Config config;
@@ -234,6 +241,7 @@ public:
     Matrix!(double)[] R2;
 
     TridiagonalSolveWorkspace tdws;
+    string[] log;
 }
 
 @nogc
@@ -469,7 +477,11 @@ int main(string[] args)
 
     auto flame = new Flame(name);
     flame.set_initial_condition();
+
     exitFlag = flame.run();
+
+    flame.save_solution();
+    flame.save_log();
 
     return exitFlag;
 } // end main()

@@ -13,6 +13,8 @@ header = """
     int init_slf(const char* file_name);
     int set_initial_condition();
     int run();
+    int save_solution();
+    int save_log();
 
     int get_nsp();
     int get_neq();
@@ -63,6 +65,16 @@ class Flame(object):
     def run(self):
         result = self.lib.run()
         return result
+
+    def save_solution(self):
+        result = self.lib.save_solution()
+        if result!=0: raise Exception("Failed to save slf solution to disk")
+        return
+
+    def save_log(self):
+        result = self.lib.save_log()
+        if result!=0: raise Exception("Failed to save slf log file to disk")
+        return
 
     @property
     def nsp(self):

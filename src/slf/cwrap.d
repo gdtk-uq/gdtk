@@ -48,7 +48,6 @@ extern (C) int set_initial_condition()
 }
 
 extern (C) int run()
-
 {
     int exitCode = 0;
 
@@ -64,6 +63,39 @@ extern (C) int run()
     stdout.flush();
     return exitCode;
 }
+
+extern (C) int save_solution()
+{
+    int exitCode = 0;
+    try{
+        flame.save_solution();
+    }
+    catch(Exception e) {
+        writeln("Caught exception in cwrap.save_solution, message was:");
+        writeln(e.msg);
+        exitCode = 1;
+    }
+
+    stdout.flush();
+    return exitCode;
+}
+
+extern (C) int save_log()
+{
+    int exitCode = 0;
+    try{
+        flame.save_log();
+    }
+    catch(Exception e) {
+        writeln("Caught exception in cwrap.save_log, message was:");
+        writeln(e.msg);
+        exitCode = 1;
+    }
+
+    stdout.flush();
+    return exitCode;
+}
+
 
 extern (C) int get_nsp() { return to!int(flame.nsp); }
 extern (C) int get_neq() { return to!int(flame.neq); }
