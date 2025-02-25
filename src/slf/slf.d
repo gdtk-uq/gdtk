@@ -100,7 +100,7 @@ class Flame {
     int run(){
         int exitFlag = 0;
         immutable int maxiters = 8000;
-        immutable double targetGRR = 1e-12;
+        immutable double targetGRR = 4e-12;
         double dt = 5e-7;
         bool verbose = false;
         double GRRold = 1.0;
@@ -301,7 +301,6 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
         number cp = gm.Cp(gs);
 
         R[idx+nsp] = chi/2.0*U2nd[idx+nsp];
-        number asdf = 0.0;
         for(int isp=0; isp<nsp; isp++){
             double Mi = gm.mol_masses[isp];
             number hi = gm.enthalpy(gs, isp);
@@ -309,13 +308,11 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
             R[idx+isp] = chi/2.0*U2nd[idx+isp] + omegaMi[isp]/gs.rho;
             debug { if (verbose) writefln("   chi/2.0*U2nd[idx+isp] %e U2nd[idx+isp] %e omegaMi[isp]/gs.rho %e", chi/2.0*U2nd[idx+isp], U2nd[idx+isp], omegaMi[isp]/gs.rho); }
             R[idx+nsp] -= 1.0/gs.rho/cp*omegaMi[isp]*hi;
-            asdf -= 1.0/gs.rho/cp*omegaMi[isp]*hi;
         }
         debug{
             if (verbose) writefln("   T= chi/2.0*U2nd[idx+nsp] %e chi %e U2nd %e", chi/2.0*U2nd[idx+nsp], chi, U2nd[idx+nsp]);
             if (verbose) writefln("Computing residual for cell %d Z %e T %e", i, pm.Z[i], gs.T);
             if (verbose) writefln(" Y: %s ", gs.massf);
-            if (verbose) writefln("   asdf= %e", asdf);
         }
     }
 }

@@ -108,6 +108,8 @@ extern (C) double get_dZ()   { return to!double(flame.pm.dZ.re); }
 extern (C) double get_T0()   { return to!double(flame.pm.T0.re); }
 extern (C) double get_T1()   { return to!double(flame.pm.T1.re); }
 
+extern (C) void set_D(double D) { flame.pm.D.re = D; }
+extern (C) void set_p(double p) { flame.pm.p.re = p; }
 
 immutable string get_array_function_def = "
 extern (C) int get_%s(double* %s) {

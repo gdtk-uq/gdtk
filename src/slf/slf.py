@@ -27,6 +27,9 @@ header = """
     double get_T0();
     double get_T1();
 
+    void set_D(double D);
+    void set_p(double p);
+
     int get_Z(double*);
     int get_Y0(double*);
     int get_Y1(double*);
@@ -64,6 +67,7 @@ class Flame(object):
 
     def run(self):
         result = self.lib.run()
+        if result!=0: raise Exception("Run failed for some reason.")
         return result
 
     def save_solution(self):
@@ -92,14 +96,21 @@ class Flame(object):
     def n(self):
         return self.lib.get_n()
 
-    # Put some setters for these, I think
     @property
     def D(self):
         return self.lib.get_D()
 
+    @D.setter
+    def D(self, value):
+        self.lib.set_D(value)
+
     @property
     def p(self):
         return self.lib.get_p()
+
+    @p.setter
+    def p(self, value):
+        self.lib.set_p(value)
 
     @property
     def dZ(self):
