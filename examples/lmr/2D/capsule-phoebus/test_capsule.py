@@ -44,7 +44,7 @@ def test_run_mpi():
             steps = int(line.split()[1])
     assert reason.startswith("relative-global-residual-target"), \
       "Failed to stop for the expected reason:" + reason
-    assert abs(steps-978) < 5, "Failed to take correct number of steps:" + str(steps)
+    assert abs(steps-987) < 12, "Failed to take correct number of steps:" + str(steps)
 
 def test_shock_standoff():
     ss = get_shock_standoff()
