@@ -49,7 +49,6 @@ import lmr.solid.solid_gas_full_face_copy;
 import lmr.solid.solidfvinterface : initPropertiesAtSolidInterfaces;
 import lmr.solid.ssolidblock : SSolidBlock;
 import lmr.ufluidblock : UFluidBlock;
-import lmr.blockio : BinaryBlockIO, GzipBlockIO;
 
 version(mpi_parallel) {
     import mpi;
