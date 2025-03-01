@@ -2,6 +2,7 @@ import std.algorithm;
 import std.getopt;
 import std.stdio;
 
+import force_tuple_instantiation;
 import lmr.commands.command;
 import lmr.commands.computenorms;
 import lmr.commands.customscript;
