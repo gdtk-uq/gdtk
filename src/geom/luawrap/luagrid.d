@@ -143,6 +143,14 @@ extern(C) int rotate(T, string MTname)(lua_State* L)
         luaL_error(L, errMsg.toStringz);
     }
 
+    if (!checkAllowedNames(L, 2, ["q",
+                                  "rotation_angle",
+                                  "rotation_axis",
+                                  "rotation_centre"])) {
+        string errMsg = "Error in call to rotate() method. Invalid key for named parameter argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+
     // There are two ways to call the rotate function:
     // (a) with a unit quaternion and centre of rotation; and
     // (b) with an angle of rotation, axis of rotation, and centre of rotation.
@@ -154,7 +162,7 @@ extern(C) int rotate(T, string MTname)(lua_State* L)
         Quaternion q;
         auto n = to!int(lua_objlen(L, -1));
         if (n != 4) {
-            string errMsg = "Error in arguments to grid:rotate{}\n";
+            string errMsg = "Error in arguments to rotate{}\n";
             errMsg ~= "The quaternion parameter 'q' must have exactly four entries.";
             luaL_error(L, errMsg.toStringz);
         }
@@ -169,7 +177,7 @@ extern(C) int rotate(T, string MTname)(lua_State* L)
         Vector3 ctr = Vector3(0.0, 0.0, 0.0);
         lua_getfield(L, 2, "rotation_centre");
         if (!lua_isnil(L, -1)) {
-            ctr = toVector3(L, -1);
+            ctr = toVector3(L, -1, "rotation_centre");
         }
         lua_pop(L, 1);
         grid.rotate(q, ctr);
@@ -179,12 +187,18 @@ extern(C) int rotate(T, string MTname)(lua_State* L)
         lua_pop(L, 1);
         auto theta = getDouble(L, 2, "rotation_angle");
         lua_getfield(L, 2, "rotation_axis");
-        auto rot_axis = toVector3(L, -1);
+        if (lua_isnil(L, -1)) {
+            string errMsg = "Error in 'rotation_angle' argument to rotate{} method.\n";
+            errMsg ~= "Perhaps this argument is missing or has been set to nil.\n";
+            errMsg ~= "Try setting 'rotation_angle' with Vector3 object.\n";
+            luaL_error(L, errMsg.toStringz);
+        }
+        auto rot_axis = toVector3(L, -1, "rotation_angle");
         lua_pop(L, 1);
         auto ctr = Vector3(0.0, 0.0, 0.0);
         lua_getfield(L, 2, "rotation_centre");
         if (!lua_isnil(L, -1)) {
-            ctr = toVector3(L, -1);
+            ctr = toVector3(L, -1, "rotation_centre");
         }
         lua_pop(L, 1);
         grid.rotate(theta, rot_axis, ctr);

@@ -43,8 +43,14 @@ int pushVector3(lua_State *L, Vector3 vec)
  * Returns a Vector3 constructed from the item on the Lua stack.
  * This item may be a true Vector3 pointer (to userdata) or it
  * may be a table with suitable fields, x, y, z.
+ *
+ * This function will error and exit if not given an appropriate
+ * object at 'index' to interpret as a Vector3. Caller may provide
+ * a key (as string) that is associated with object at 'index'.
+ * This is provide the user with information about a possible
+ * named table entry that was the cause of the error.
  */
-Vector3 toVector3(lua_State *L, int index)
+Vector3 toVector3(lua_State *L, int index, string key="")
 {
     // First, see if it is a udata blob of Vector3 type.
     if (lua_isuserdata(L, index)) {
@@ -53,8 +59,11 @@ Vector3 toVector3(lua_State *L, int index)
     // If we arrive here, see if we have a table with x,y,z fields.
     Vector3 vec = Vector3(0.0, 0.0, 0.0);
     if (!lua_istable(L, index)) {
-        luaL_error(L, "Did not get a Vector3 udata object nor a table.");
-        return vec;
+        string errMsg = "Did not get a Vector3 object nor a table.\n";
+        if (key != "") {
+            errMsg ~= format("This appears to be when attempting to set: '%s'\n", key);
+        }
+        luaL_error(L, errMsg.toStringz);
     }
     // Have table, now look for named fields containing coordinate values.
     lua_getfield(L, index, "x");

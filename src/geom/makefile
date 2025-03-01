@@ -75,6 +75,7 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 NM_DIR := ../nm
 NM_FILES := $(NM_DIR)/ridder.d \
 	$(NM_DIR)/bbla.d \
+	$(NM_DIR)/brent.d \
 	$(NM_DIR)/linesearch.d \
 	$(NM_DIR)/spline.d \
 	$(NM_DIR)/splinelsq.d \
