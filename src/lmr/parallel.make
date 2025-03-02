@@ -4,6 +4,7 @@ GPP ?= g++
 OPT_OUT_MPI ?= 0
 MPI_IMPLEMENTATION := OpenMPI
 WITH_MPICH ?= 0
+BUILD_DIR = ./build
 
 FLAVOUR ?= debug
 WITH_FPE ?= 1
@@ -29,30 +30,66 @@ WITH_CHECK_JAC ?= 0
 WITH_THREAD_SANITIZER ?= 0
 WITH_ADDRESS_SANITIZER ?= 0
 
-OPENMPI_DIR := ../extern/OpenMPI
+INSTALL_DIR ?= $(HOME)/gdtkinst
+LMR_BUILD_DIR := $(abspath $(BUILD_DIR))
+LMR_OBJ_DIR := $(abspath $(LMR_BUILD_DIR)/src)
+BUILD_DATE := $(shell date)
+REVISION_STRING := $(shell git rev-parse --short HEAD)
+FULL_REVISION_STRING := $(shell git rev-parse HEAD)
+REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
+REVISION_DATE := $(shell git log -1 --format=%cd)
+REPO_DIR := $(shell cd ../../; pwd)
+
+OPENMPI_SRC_DIR := ../extern/OpenMPI
+OPENMPI_DIR := $(LMR_OBJ_DIR)/extern/OpenMPI
 OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d
-MPI_DIR = $(OPENMPI_DIR)
-MPI_FILES = $(OPENMPI_FILES)
-MPICH_DIR := ../extern/cray-mpich
+
+MPI_SRC_DIR = $(abspath $(OPENMPI_SRC_DIR))
+MPI_DIR = $(abspath $(OPENMPI_DIR))
+MPI_FILES = $(abspath $(OPENMPI_FILES))
+MPI_INC_DIR = $(abspath $(OPENMPI_FILES)/../..)
+
+MPICH_SRC_DIR := ../extern/cray-mpich
+MPICH_DIR := $(LMR_OBJ_DIR)/extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
 PROGRAMS := lmr lmr-debug gdtk-module
 SUB_PROGRAMS := lmr-run lmrZ-run
-ifeq ($(OPT_OUT_MPI), 0)
-	SUB_PROGRAMS += lmr-mpi-run lmrZ-mpi-run
-endif
+
 ifeq ($(WITH_MPICH),1)
-    MPI_LIBRARY_DIRS = $(shell mpicc -link_info | cut -d' ' -f 3)
-    MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L$$d)
-    MPI_DIR = $(MPICH_DIR)
-    MPI_FILES = $(MPICH_FILES)
-	MPI_IMPLEMENTATION := MPICH
-endif
-ifeq ($(WITH_CHECK_JAC), 1)
-	SUB_PROGRAMS += lmr-check-jacobian lmrZ-check-jacobian
+  MPI_LIBRARY_DIRS = $(shell mpicc -link_info | cut -d' ' -f 3)
+  MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L$$d)
+  MPI_SRC_DIR = $(abspath $(MPICH_SRC_DIR))
+  MPI_DIR = $(abspath $(MPICH_DIR))
+  MPI_FILES = $(abspath $(MPICH_FILES))
+  MPI_INC_DIR = $(abspath $(MPICH_DIR))
+  MPI_IMPLEMENTATION := MPICH
 endif
 
-include lmr-files.mk
+ifeq ($(OPT_OUT_MPI), 0)
+  SUB_PROGRAMS += lmr-mpi-run lmrZ-mpi-run
+  DFLAGS += -I$(MPI_INC_DIR)
+else
+  MPI_FILES =
+  MPI_DIR =
+  MPI_SRC_DIR =
+  MPI_INC_DIR = 
+endif
+
+ifeq ($(WITH_CHECK_JAC), 1)
+  SUB_PROGRAMS += lmr-check-jacobian lmrZ-check-jacobian
+endif
+
+SHARE_FILES :=
+ETC_FILES := lmr.cfg
+PY_PROG_DIR := python-programs
+PY_PROGRAMS := $(LMR_BUILD_DIR)/bin/lmr-verify
+AUX_PROGRAMS := $(addprefix $(LMR_BUILD_DIR)/bin/,prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics)
+
+MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
+MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
+
+include lmr-parallel-files.mk
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -104,27 +141,28 @@ GPERF_FILES := $(GPERF_DIR)/heap_profiler.d \
 	$(GPERF_DIR)/stacktrace.d \
 	$(GPERF_DIR)/tcmalloc.d \
 
-DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR) -I$(CEQ_DIR) -I$(DYAML_DIR)/.. -I$(TINYENDIAN_DIR)
-
-INSTALL_DIR ?= $(HOME)/gdtkinst
-BUILD_DIR := $(abspath ../../build)
-OBJ_DIR := $(abspath $(BUILD_DIR)/obj)
-BUILD_DATE := $(shell date)
-REVISION_STRING := $(shell git rev-parse --short HEAD)
-FULL_REVISION_STRING := $(shell git rev-parse HEAD)
-REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
-REVISION_DATE := $(shell git log -1 --format=%cd)
-REPO_DIR := $(shell cd ../../; pwd)
-
 CEQ_DIR := ../extern/ceq/source
-CEQ_BUILD_DIR := $(abspath $(OBJ_DIR)/extern/ceq/source)
+CEQ_BUILD_DIR := $(abspath $(LMR_OBJ_DIR)/extern/ceq/source)
 LIBCEQ := $(CEQ_BUILD_DIR)/libceq.a
 include $(CEQ_DIR)/ceq_files_parallel.mk
 
 LUA_DIR := $(abspath ../../extern/lua-5.4.3/src)
-LUA_BUILD_DIR := $(abspath $(BUILD_DIR)/extern/lua)
+LUA_BUILD_DIR := $(abspath $(LMR_BUILD_DIR)/extern/lua)
 LIBLUA := $(LUA_BUILD_DIR)/liblua.a
 LIBLUAPATH := $(LUA_BUILD_DIR)
+
+DFLAGS += -I.. \
+					-I$(GAS_DIR) \
+					-I$(CEQ_SRC_DIR) \
+					-I$(GZIP_DIR) \
+					-I$(UTIL_DIR) \
+					-I$(NM_DIR) \
+					-I$(NTYPES_DIR) \
+					-I$(KINETICS_DIR) \
+					-I$(GASDYN_DIR) \
+					-I$(CEQ_DIR) \
+					-I$(DYAML_DIR)/.. \
+					-I$(TINYENDIAN_DIR)
 
 ifeq ($(DMD), ldc2)
     DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug
@@ -201,9 +239,9 @@ endif
 DFLAGS += $(DVERSION)newton_krylov
 
 SRC_DIR = $(abspath ../)
-CONFIG_BUILD_DIR = $(BUILD_DIR)/config
+LMR_CONFIG_BUILD_DIR = $(LMR_BUILD_DIR)/config
 
-LMR_SRCS = $(abspath main.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+LMR_SRCS = $(abspath $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
            $(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
            $(GEOM_FILES) $(GRID_FILES) \
            $(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -212,13 +250,15 @@ LMR_SRCS = $(abspath main.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) 
            $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
            $(DYAML_FILES) $(TINYENDIAN_FILES))
 
-LMR_OBJS = $(patsubst $(SRC_DIR)/%.d,$(OBJ_DIR)/%.o,$(LMR_SRCS))
+LMR_OBJS = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR)/%.o,$(LMR_SRCS))
 
-$(LMR_OBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
+default: $(PROGRAMS) $(SUB_PROGRAMS)
+
+$(LMR_OBJS): $(LMR_OBJ_DIR)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
 	@mkdir -p $(dir $@)
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $<
 
-$(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d: lmrconfig.d
+$(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d: lmrconfig.d
 	@mkdir -p $(dir $@)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 	    -e 's/PUT_FULL_REVISION_STRING_HERE/$(FULL_REVISION_STRING)/' \
@@ -227,57 +267,66 @@ $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d: lmrconfig.d
 	    -e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 	    $< > $@
 
-$(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.o: $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d
+$(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d: $(LMR_CMD)/runsim.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $<
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
+	    $< > $@
 
-# $(CONFIG_BUILD_DIR)/runsim_shared_run.d: $(LMR_CMD)/runsim.d $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d
-# 	@mkdir -p $(dir $@)
-# 	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
-# 	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
-# 	    $< > $@
-# 
-# $(CONFIG_BUILD_DIR)/runsim_shared_z.d: $(LMR_CMD)/runsim.d $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d
-# 	@mkdir -p $(dir $@)
-# 	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
-# 	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
-# 	    $< > $@
-# 
-# $(CONFIG_BUILD_DIR)/runsim_mpi_run.d: $(LMR_CMD)/runsim.d $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d
-# 	@mkdir -p $(dir $@)
-# 	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
-# 	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
-# 	    $< > $@
-# 
-# $(CONFIG_BUILD_DIR)/runsim_mpi_z.d: $(LMR_CMD)/runsim.d $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d
-# 	@mkdir -p $(dir $@)
-# 	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
-# 	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
-# 	    $< > $@
+$(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d: $(LMR_CMD)/runsim.d
+	@mkdir -p $(dir $@)
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
+	    $< > $@
 
+$(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d: $(LMR_CMD)/runsim.d $(MPI_FILES)
+	@mkdir -p $(dir $@)
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
+	    $< > $@
+
+$(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d: $(LMR_CMD)/runsim.d $(MPI_FILES)
+	@mkdir -p $(dir $@)
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
+	    $< > $@
 
 .PHONY: lmr
-lmr: $(BUILD_DIR)/lmr
+lmr: $(LMR_BUILD_DIR)/bin/lmr
+$(LMR_BUILD_DIR)/bin/lmr: main.d $(LMR_CMD)/runsim.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ main.d $(LMR_CMD)/runsim.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-$(BUILD_DIR)/lmr: $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.o
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(LMR_OBJS) $(CONFIG_BUILD_DIR)/lmrconfig_with_str_subst $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+.PHONY: lmr-debug
+lmr-debug: $(LMR_BUILD_DIR)/bin/lmr-debug
+$(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CMD)/runsim.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) -of=$@ main.d $(LMR_CMD)/runsim.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-lmr-debug: $(LMR_OBJS) $(LIBCEQ) $(LIBLUA)
-	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) -of=$@ $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+.PHONY: lmr-run
+lmr-run: $(LMR_BUILD_DIR)/bin/lmr-run
+$(LMR_BUILD_DIR)/bin/lmr-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)run_main $(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-LMR_RUN_SRCS = runsim_shared_run.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
-               $(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
-               $(GEOM_FILES) $(GRID_FILES) \
-               $(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-               $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-               $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-               $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-               $(DYAML_FILES) $(TINYENDIAN_FILES)
-LMR_RUN_OBJS = $(patsubst %.d,$(OBJ_DIR)/%.o,$(LMR_RUN_SRCS))
+.PHONY: lmrZ-run
+lmrZ-run: $(LMR_BUILD_DIR)/bin/lmrZ-run
+$(LMR_BUILD_DIR)/bin/lmrZ-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)run_main $(DVERSION)complex_numbers $(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-lmr-run: runsim_shared_run.d $(LMR_RUN_OBJS) $(LIBCEQ) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ -Drun_main $(LMR_RUN_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+.PHONY: lmr-mpi-run
+lmr-mpi-run: $(LMR_BUILD_DIR)/bin/lmr-mpi-run
 
+$(LMR_BUILD_DIR)/bin/lmr-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(MPI_FILES)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) $(DVERSION)run_main $(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(MPI_FILES) $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS) -L-lmpi
+
+.PHONY: lmrZ-mpi-run
+lmrZ-mpi-run: $(LMR_BUILD_DIR)/bin/lmrZ-mpi-run
+$(LMR_BUILD_DIR)/bin/lmrZ-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(MPI_FILES)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) $(DVERSION)run_main $(DVERSION)complex_numbers $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(MPI_FILES) $(LMR_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS) -I$(MPI_DIR) -L-lmpi
+
+$(MPI_FILES):
+	- rm -r $(MPI_DIR)
+	@mkdir -p $(dir $(MPI_FILES))
+	cp -r $(MPI_SRC_DIR) $(dir $(MPI_DIR))
+	$(MAKE) -C $(MPI_DIR)
 
 $(LIBLUA):
 	$(MAKE) LUA_BUILD_DIR=$(LUA_BUILD_DIR) -C $(LUA_DIR) -f parallel.make PLATFORM=$(PLATFORM)
@@ -287,28 +336,35 @@ $(LIBCEQ):
 	$(MAKE) CEA_BUILD_DIR=$(CEQ_BUILD_DIR) -C $(CEQ_DIR) -f parallel.make
 
 $(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+	cd $(GAS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) libgasf.a
 
-lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
+.PHONY: lmr-verify
+lmr-verify: $(LMR_BUILD_DIR)/bin/lmr-verify
+$(LMR_BUILD_DIR)/bin/lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
 	cp $< $@
 	chmod +x $@
 
-prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
+prep-gas: $(LMR_BUILD_DIR)/bin/prep-gas
+$(LMR_BUILD_DIR)/bin/prep-gas:
+	cd $(GAS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
 
-ugrid_partition:
-	- mkdir -p $(BUILD_DIR)/bin
-	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
-	cd $(GRID_DIR); cp ugrid_partition $(BUILD_DIR)/bin
+ugrid_partition: $(LMR_BUILD_DIR)/bin/ugrid_partition
+$(LMR_BUILD_DIR)/bin/ugrid_partition:
+	- mkdir -p $(LMR_BUILD_DIR)/bin
+	cd $(GRID_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
+	cd $(GRID_DIR); cp ugrid_partition $(LMR_BUILD_DIR)/bin
 
-prep-chem:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-chem
+prep-chem: $(LMR_BUILD_DIR)/bin/prep-chem
+$(LMR_BUILD_DIR)/bin/prep-chem:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-chem
 
-chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-chemkin2eilmer
+chemkin2eilmer: $(LMR_BUILD_DIR)/bin/chemkin2eilmer
+$(LMR_BUILD_DIR)/bin/chemkin2eilmer:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-chemkin2eilmer
 
-prep-kinetics:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-kinetics
+prep-kinetics: $(LMR_BUILD_DIR)/bin/prep-kinetics
+$(LMR_BUILD_DIR)/bin/prep-kinetics:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-kinetics
 
 gdtk-module:
 	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
@@ -318,39 +374,21 @@ gdtk-module:
 	    -e 's+PUT_BUILD_DATE_HERE+$(BUILD_DATE)+' \
 	    -e 's+PUT_REVISION_AGE_HERE+$(REVISION_AGE)+' \
 	    -e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
-	    ../eilmer/gdtk-module-template > gdtk-module
+	    ../eilmer/gdtk-module-template > $(LMR_BUILD_DIR)/gdtk-module
 
 .PHONY: default install clean prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics gdtk-module
 
-default: $(PROGRAMS) $(SUB_PROGRAMS)
-
-# TODO: FIXME
 install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	- mkdir -p $(INSTALL_DIR)/bin $(INSTALL_DIR)/lib $(INSTALL_DIR)/etc $(INSTALL_DIR)/share
-	cp $(PROGRAMS) $(INSTALL_DIR)/bin
-	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
+	cp $(addprefix $(LMR_BUILD_DIR)/bin/,$(PROGRAMS)) $(INSTALL_DIR)/bin
+	cp $(addprefix $(LMR_BUILD_DIR)/bin/,$(SUB_PROGRAMS)) $(INSTALL_DIR)/bin
 	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
 	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
 	cp lmr.cfg $(INSTALL_DIR)/etc/
-	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
-	cp -r ../lib/* $(BUILD_DIR)/lib
-	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
-	cp gdtk-module $(INSTALL_DIR)/share
-	cp share/* $(INSTALL_DIR)/share
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+	cp $(LUA_BUILD_DIR)/dgd-lua $(LUA_BUILD_DIR)/dgd-luac $(INSTALL_DIR)/bin
+	cp $(LUA_BUILD_DIR)/lpeg.so $(INSTALL_DIR)/lib
+	cp $(NML_LUA_MODULES) $(INSTALL_DIR)/lib
+	cp $(LMR_BUILD_DIR)/gdtk-module $(INSTALL_DIR)/share
 
 clean:
-	- rm -f $(OBJ_DIR)/*.o
-	- rm -rf $(BUILD_DIR)/*
-	- rm -f $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS)
-	- rm -f lmrconfig_with_str_subst.d runsim_shared_run.d runsim_shared_z.d runsim_mpi_run.d runsim_mpi_z.d
-	- cd $(OPENMPI_DIR); make clean
-	- cd $(MPICH_DIR); make clean
-	- cd $(LUA_DIR); make clean
-	- cd $(GEOM_DIR); make clean
-	- cd $(GZIP_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm -f libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(GRID_DIR); make clean
-	- cd $(CEQ_DIR); make clean
+	- rm -rf $(LMR_BUILD_DIR)
