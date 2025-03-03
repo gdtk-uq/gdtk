@@ -271,6 +271,7 @@ public:
     this(ref File fin, size_t id)
     // constructor from raw binary file content
     {
+        this.id = id;
         int[1] buf1;
         fin.rawRead(buf1);
         cell_type = to!USGCell_type(buf1[0]);
