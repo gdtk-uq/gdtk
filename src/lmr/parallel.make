@@ -341,29 +341,31 @@ $(LIBGASF):
 .PHONY: lmr-verify
 lmr-verify: $(LMR_BUILD_DIR)/bin/lmr-verify
 $(LMR_BUILD_DIR)/bin/lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
+	@mkdir -p $(LMR_BUILD_DIR)/bin
 	cp $< $@
 	chmod +x $@
 
 prep-gas: $(LMR_BUILD_DIR)/bin/prep-gas
 $(LMR_BUILD_DIR)/bin/prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
+	$(MAKE) -C $(GAS_DIR) -f parallel.make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
 
 ugrid_partition: $(LMR_BUILD_DIR)/bin/ugrid_partition
 $(LMR_BUILD_DIR)/bin/ugrid_partition:
-	- mkdir -p $(LMR_BUILD_DIR)/bin
-	cd $(GRID_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
-	cd $(GRID_DIR); cp ugrid_partition $(LMR_BUILD_DIR)/bin
+	$(MAKE) INSTALL_DIR=$(LMR_BUILD_DIR) BUILD_DIR=$(LMR_OBJ_DIR)/grid_utils -C $(GRID_DIR) -f parallel.make install $(MAKEFLAGS)
 
 prep-chem: $(LMR_BUILD_DIR)/bin/prep-chem
 $(LMR_BUILD_DIR)/bin/prep-chem:
+	@mkdir -p $(LMR_BUILD_DIR)/bin
 	cd $(KINETICS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-chem
 
 chemkin2eilmer: $(LMR_BUILD_DIR)/bin/chemkin2eilmer
 $(LMR_BUILD_DIR)/bin/chemkin2eilmer:
+	@mkdir -p $(LMR_BUILD_DIR)/bin
 	cd $(KINETICS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-chemkin2eilmer
 
 prep-kinetics: $(LMR_BUILD_DIR)/bin/prep-kinetics
 $(LMR_BUILD_DIR)/bin/prep-kinetics:
+	@mkdir -p $(LMR_BUILD_DIR)/bin
 	cd $(KINETICS_DIR); make BUILD_DIR=$(LMR_BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-kinetics
 
 gdtk-module:
@@ -375,6 +377,8 @@ gdtk-module:
 	    -e 's+PUT_REVISION_AGE_HERE+$(REVISION_AGE)+' \
 	    -e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
 	    ../eilmer/gdtk-module-template > $(LMR_BUILD_DIR)/gdtk-module
+	@mkdir -p $(LMR_BUILD_DIR)/bin
+	cp $(LMR_BUILD_DIR)/gdtk-module $(LMR_BUILD_DIR)/bin
 
 .PHONY: default install clean prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics gdtk-module
 
@@ -389,6 +393,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	cp $(LUA_BUILD_DIR)/lpeg.so $(INSTALL_DIR)/lib
 	cp $(NML_LUA_MODULES) $(INSTALL_DIR)/lib
 	cp $(LMR_BUILD_DIR)/gdtk-module $(INSTALL_DIR)/share
+	cp -r $(LMR_BUILD_DIR)/data $(INSTALL_DIR)
 
 clean:
 	- rm -rf $(LMR_BUILD_DIR)
