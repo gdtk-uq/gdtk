@@ -151,6 +151,8 @@ LUA_BUILD_DIR := $(abspath $(LMR_BUILD_DIR)/extern/lua)
 LIBLUA := $(LUA_BUILD_DIR)/liblua.a
 LIBLUAPATH := $(LUA_BUILD_DIR)
 
+DFLAGS += --allinst
+
 DFLAGS += -I.. \
 					-I$(GAS_DIR) \
 					-I$(CEQ_SRC_DIR) \
@@ -165,7 +167,7 @@ DFLAGS += -I.. \
 					-I$(TINYENDIAN_DIR)
 
 ifeq ($(DMD), ldc2)
-    DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug --allinst
+    DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug
     PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_profile
     ifeq ($(PLATFORM), macosx)
         FAST_DFLAGS := -w -g -O1 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
@@ -184,8 +186,6 @@ ifeq ($(DMD), ldc2)
     OF := -of=
     DVERSION := -d-version=
 
-    # pass LINKER_FLAGS="--linker=mold" for fast linking
-    DLINKFLAGS := $(LINKER_FLAGS)
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DLINKFLAGS := $(DLINKFLAGS) -fsanitize=thread
     endif
@@ -200,6 +200,7 @@ ifeq ($(DMD), ldc2)
 		DLINKFLAGS += -L-ld_classic
     endif
 endif
+DLINKFLAGS += $(LINKER_FLAGS)
 
 ifeq ($(FLAVOUR), debug)
     FLAVOUR_FLAGS := $(DEBUG_DFLAGS)
@@ -252,8 +253,9 @@ LMR_SRCS = $(abspath $(LMR_CORE_FILES) $(LMR_LUA_FILES) \
 
 LMR_OBJS = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR)/%.o,$(LMR_SRCS))
 
-LMR_CMD_OBJS = $(patsubst $(LMR_CMD)/%.d,$(LMR_OBJ_DIR)/%.o,$(LMR_CMD_FILES))
-LMR_CMD_OBJS_DIR = $()
+LMR_CMD_SRCS = $(abspath $(LMR_CMD_FILES))
+
+LMR_CMD_OBJS = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
 
 default: $(PROGRAMS) $(SUB_PROGRAMS)
 
@@ -261,7 +263,7 @@ $(LMR_OBJS): $(LMR_OBJ_DIR)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
 	@mkdir -p $(dir $@)
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $<
 
-$(LMR_CMD_OBJS): $(LMR_OBJ_DIR)/%.o: $(LMR_CMD)/%.d | $(LIBLUA) $(LIBCEQ)
+$(LMR_CMD_OBJS): $(LMR_OBJ_DIR)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
 	@mkdir -p $(dir $@)
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $<
 
@@ -305,7 +307,7 @@ $(LMR_BUILD_DIR)/bin/lmr: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subs
 
 .PHONY: lmr-debug
 lmr-debug: $(LMR_BUILD_DIR)/bin/lmr-debug
-$(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CMD)/runsim.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LIBCEQ) $(LIBLUA)
+$(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
 	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) -of=$@ main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 .PHONY: lmr-run
