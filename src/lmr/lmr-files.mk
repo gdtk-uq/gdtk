@@ -16,7 +16,6 @@ LMR_CORE_FILES = $(LMR)/block.d \
 	$(LMR)/fluidblockarray.d \
 	$(LMR)/fluxcalc.d \
 	$(LMR)/fluidfvcell.d \
-	$(LMR)/force_tuple_instantiation.d \
 	$(LMR)/fvcell.d \
 	$(LMR)/fvcellio.d \
 	$(LMR)/fvinterface.d \
