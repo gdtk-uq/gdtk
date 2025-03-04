@@ -237,8 +237,6 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-DFLAGS += $(DVERSION)newton_krylov
-
 SRC_DIR = $(abspath ../)
 LMR_CONFIG_BUILD_DIR = $(LMR_BUILD_DIR)/config
 
@@ -251,7 +249,11 @@ LMR_SRCS = $(abspath $(LMR_CORE_FILES) $(LMR_LUA_FILES) \
            $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
            $(DYAML_FILES) $(TINYENDIAN_FILES))
 
-LMR_OBJS = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR)/%.o,$(LMR_SRCS))
+LMR_OBJ_DIR_REAL = $(LMR_OBJ_DIR)/real
+LMR_OBJ_DIR_COMPLEX = $(LMR_OBJ_DIR)/complex
+
+LMR_OBJS_REAL = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR_REAL)/%.o,$(LMR_SRCS))
+LMR_OBJS_COMPLEX = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR_COMPLEX)/%.o,$(LMR_SRCS))
 
 LMR_CMD_SRCS = $(abspath $(LMR_CMD_FILES))
 
@@ -259,9 +261,13 @@ LMR_CMD_OBJS = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
 
 default: $(PROGRAMS) $(SUB_PROGRAMS)
 
-$(LMR_OBJS): $(LMR_OBJ_DIR)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
+$(LMR_OBJS_REAL): $(LMR_OBJ_DIR_REAL)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
 	@mkdir -p $(dir $@)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $<
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $(DVERSION)newton_krylov $<
+
+$(LMR_OBJS_COMPLEX): $(LMR_OBJ_DIR_COMPLEX)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
+	@mkdir -p $(dir $@)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $(DVERSION)newton_krylov $(DVERSION)complex_numbers $<
 
 $(LMR_CMD_OBJS): $(LMR_OBJ_DIR)/%.o: $(SRC_DIR)/%.d | $(LIBLUA) $(LIBCEQ)
 	@mkdir -p $(dir $@)
@@ -302,34 +308,52 @@ $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d: $(LMR_CMD)/runsim.d $(MPI_FILES)
 
 .PHONY: lmr
 lmr: $(LMR_BUILD_DIR)/bin/lmr
-$(LMR_BUILD_DIR)/bin/lmr: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+$(LMR_BUILD_DIR)/bin/lmr: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS_REAL) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)newton_krylov \
+		main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d\
+		$(LMR_OBJS_REAL) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 .PHONY: lmr-debug
 lmr-debug: $(LMR_BUILD_DIR)/bin/lmr-debug
-$(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
-	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) -of=$@ main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+$(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS_REAL) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) $(OF)$@ main.d \
+		$(DVERSION)newton_krylov \
+		$(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d \
+		$(LMR_OBJS_REAL) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 .PHONY: lmr-run
 lmr-run: $(LMR_BUILD_DIR)/bin/lmr-run
-$(LMR_BUILD_DIR)/bin/lmr-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)run_main $(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+$(LMR_BUILD_DIR)/bin/lmr-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS_REAL) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)run_main $(DVERSION)newton_krylov \
+		$(LMR_CONFIG_BUILD_DIR)/runsim_shared_run.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d \
+		$(LMR_OBJS_REAL) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 .PHONY: lmrZ-run
 lmrZ-run: $(LMR_BUILD_DIR)/bin/lmrZ-run
-$(LMR_BUILD_DIR)/bin/lmrZ-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)run_main $(DVERSION)complex_numbers $(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
+$(LMR_BUILD_DIR)/bin/lmrZ-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS_COMPLEX) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)run_main $(DVERSION)newton_krylov $(DVERSION)complex_numbers \
+		$(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d \
+		$(LMR_OBJS_COMPLEX) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 .PHONY: lmr-mpi-run
 lmr-mpi-run: $(LMR_BUILD_DIR)/bin/lmr-mpi-run
-
-$(LMR_BUILD_DIR)/bin/lmr-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(MPI_FILES)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) $(DVERSION)run_main $(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(MPI_FILES) $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS) -L-lmpi
+$(LMR_BUILD_DIR)/bin/lmr-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS_REAL) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(MPI_FILES)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) $(DVERSION)newton_krylov \
+		$(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d \
+		$(MPI_FILES) $(LMR_OBJS_REAL) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS) -L-lmpi
 
 .PHONY: lmrZ-mpi-run
 lmrZ-mpi-run: $(LMR_BUILD_DIR)/bin/lmrZ-mpi-run
-$(LMR_BUILD_DIR)/bin/lmrZ-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(MPI_FILES)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -of=$@ $(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) $(DVERSION)run_main $(DVERSION)complex_numbers $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(MPI_FILES) $(LMR_OBJS) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS) -I$(MPI_DIR) -L-lmpi
+$(LMR_BUILD_DIR)/bin/lmrZ-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_OBJS_COMPLEX) $(LMR_CMD_OBJS) $(LIBCEQ) $(LIBLUA) $(MPI_FILES)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) $(DVERSION)newton_krylov \
+		$(DVERSION)complex_numbers $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d \
+		$(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d \
+		$(MPI_FILES) $(LMR_OBJS_COMPLEX) $(filter %/command.o %/cmdhelper.o,$(LMR_CMD_OBJS)) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS) -I$(MPI_DIR) -L-lmpi
 
 $(MPI_FILES):
 	- rm -r $(MPI_DIR)
@@ -404,6 +428,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	cp $(NML_LUA_MODULES) $(INSTALL_DIR)/lib
 	cp $(LMR_BUILD_DIR)/gdtk-module $(INSTALL_DIR)/share
 	cp -r $(LMR_BUILD_DIR)/data $(INSTALL_DIR)
+	cp -r ../lib $(INSTALL_DIR)
 
 clean:
 	- rm -rf $(LMR_BUILD_DIR)
