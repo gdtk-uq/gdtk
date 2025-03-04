@@ -396,6 +396,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	cp $(addprefix $(LMR_BUILD_DIR)/bin/,$(PROGRAMS)) $(INSTALL_DIR)/bin
 	cp $(addprefix $(LMR_BUILD_DIR)/bin/,$(SUB_PROGRAMS)) $(INSTALL_DIR)/bin
 	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
+	cp $(AUX_PROGRAMS) $(INSTALL_DIR)/bin
 	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
 	cp lmr.cfg $(INSTALL_DIR)/etc/
 	cp $(LUA_BUILD_DIR)/dgd-lua $(LUA_BUILD_DIR)/dgd-luac $(INSTALL_DIR)/bin
