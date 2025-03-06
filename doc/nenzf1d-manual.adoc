@@ -33,7 +33,7 @@ and a collection of environment variables that need to be set.
 To install the `nenzf1d` program, move to its source directory
 and use the `make` utility.
 
-    cd dgd/src/nenzf1d
+    cd gdtk/src/nenzf1d
     make install
 
 This will also install files associated with the gas models.
@@ -202,16 +202,16 @@ it.
 
 To build the library, invoke the following commands.
 
-    cd dgd/src/nenzf1d
+    cd gdtk/src/nenzf1d
     make libnenzf1d.so
     make install
 
-This will copy the `libnenzf1d.so` file into `dgdinst/lib`. You will then need
+This will copy the `libnenzf1d.so` file into `gdtkinst/lib`. You will then need
 to add this directory to Python's path list, by adding the following lines to
 your .bashrc, if they are not there already.
 
     export PYTHONPATH=${PYTHONPATH}:${DGD}/lib
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${DGD}/lib
 
-Check out the python examples in `dgd/examples/nenzf1d/` for further
+Check out the python examples in `gdtk/examples/nenzf1d/` for further
 information on the API.
