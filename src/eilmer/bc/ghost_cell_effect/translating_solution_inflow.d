@@ -21,6 +21,7 @@ import gas;
 import bc;
 import flowsolution;
 import json_helper;
+import sfluidblock;
 
 /*
     Custom inflow boundary condition for NNG and VW's combustion work.
@@ -104,34 +105,42 @@ public:
         nfaces = getJSONint(blkjson, "nfaces", 0);
         nghost = getJSONint(blkjson, "nghost", 0);
 
+        FluidBlockLite[2] fbl;
+        fbl[0] = new FluidBlockLite(format(fileName, blk.id, 0), 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
+        fbl[1] = new FluidBlockLite(format(fileName, blk.id, 1), 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
+
         fss.length = nfaces*nghost;
 
+        SFluidBlock this_blk = cast(SFluidBlock) blk;
+        if (!this_blk) throw new Error("FlowBlock must be a structured-grid block.");
+
+        size_t nkc = this_blk.nkc;
+        size_t njc = this_blk.njc;
         size_t ighost = 0;
-        foreach (fidx; 0 .. nfaces) {
+        foreach (k; 0 .. nkc) {
+          foreach (j; 0 .. njc) {
             foreach (n; 0 .. nghost) {
-                string fname = format(fileName, blk.id, ighost);
-                FluidBlockLite fbl = new FluidBlockLite(fname, 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
-                assert (fbl.nic == nic);
-                foreach (i; 0 .. fbl.nic) {
+                assert (fbl[n].nic == nic);
+                foreach (i; 0 .. fbl[n].nic) {
                     fss[ighost] ~= FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
-                    fss[ighost][i].gas.p   = fbl["p",i,0,0];
-                    fss[ighost][i].gas.T   = fbl["T",i,0,0];
-                    fss[ighost][i].gas.rho = fbl["rho",i,0,0];
-                    fss[ighost][i].gas.a   = fbl["a",i,0,0];
-                    fss[ighost][i].gas.u   = fbl["u",i,0,0];
-                    fss[ighost][i].gas.mu  = fbl["mu",i,0,0];
-                    fss[ighost][i].gas.k   = fbl["k",i,0,0];
-                    fss[ighost][i].S       = fbl["S",i,0,0];
-                    fss[ighost][i].mu_t    = fbl["mu_t",i,0,0];
-                    fss[ighost][i].k_t     = fbl["k_t",i,0,0];
+                    fss[ighost][i].gas.p   = fbl[n]["p",i,j,k];
+                    fss[ighost][i].gas.T   = fbl[n]["T",i,j,k];
+                    fss[ighost][i].gas.rho = fbl[n]["rho",i,j,k];
+                    fss[ighost][i].gas.a   = fbl[n]["a",i,j,k];
+                    fss[ighost][i].gas.u   = fbl[n]["u",i,j,k];
+                    fss[ighost][i].gas.mu  = fbl[n]["mu",i,j,k];
+                    fss[ighost][i].gas.k   = fbl[n]["k",i,j,k];
+                    fss[ighost][i].S       = fbl[n]["S",i,j,k];
+                    fss[ighost][i].mu_t    = fbl[n]["mu_t",i,j,k];
+                    fss[ighost][i].k_t     = fbl[n]["k_t",i,j,k];
                     foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                         string sp_name = GlobalConfig.gmodel_master.species_name(sp);
-                        fss[ighost][i].gas.massf[sp] = fbl[format("massf[%d]-%s", sp, sp_name),i,0,0];
+                        fss[ighost][i].gas.massf[sp] = fbl[n][format("massf[%d]-%s", sp, sp_name),i,j,k];
                     }
                     // Change reference frame of velocity vector. Does the order of shift and rotation matter?
-                    double velx  = fbl["vel.x",i,0,0];
-                    double vely  = fbl["vel.y",i,0,0];
-                    double velz  = fbl["vel.z",i,0,0];
+                    double velx  = fbl[n]["vel.x",i,j,k];
+                    double vely  = fbl[n]["vel.y",i,j,k];
+                    double velz  = fbl[n]["vel.z",i,j,k];
                     velx += translation_velocity;
                     fss[ighost][i].vel.x = velx*cos(upstream_grid_rotation) - velz*sin(upstream_grid_rotation);
                     fss[ighost][i].vel.y = vely;
@@ -139,6 +148,7 @@ public:
                 }
                 ighost += 1;
             }
+          }
         }
     }
 
