@@ -1437,6 +1437,7 @@ function InFlowBC_ShockFitting:new(o)
    }
    o.postConvFluxAction = { ConstFlux:new{flowState=o.flowState, x0=o.x0, y0=o.y0, z0=o.z0, r=o.r} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
+   o.postDiffFluxAction = { ConstFlux:new{flowState=o.flowState, x0=o.x0, y0=o.y0, z0=o.z0, r=o.r} }
    o.is_configured = true
    return o
 end
