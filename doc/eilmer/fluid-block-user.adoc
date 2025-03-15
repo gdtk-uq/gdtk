@@ -140,7 +140,7 @@ The extra arguments are:
   _int_, default 1 +
   The number of blocks in the k-index direction.
 
-The table that is returned contains an arrays of all of the FluidBlock objects defined
+The table that is returned contains arrays of all of the FluidBlock objects defined
 over the partitioned grid:
 
 `blockArray` ::

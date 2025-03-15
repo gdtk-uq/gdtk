@@ -4,9 +4,9 @@ Grids may be built with the Eilmer built-in gridding tools or built in a 3rd-par
 This section describes the high-level functions for importing and registering grids.
 Grids need to be registered during the grid preparation stage for later use
 in defining fluid or solid blocks.
-The details of building individual grid
-objects is not covered here.
+The details of building individual Grid objects is not covered here.
 Those details can be found in xref:../geom/grid/grid-user.adoc#grid-user[Grid objects].
+
 
 == Importing grids
 
@@ -29,38 +29,132 @@ SU2 import is via the `UnstructuredGrid` object directly:
 `fmt`:: supply 'su2text' as format to import an SU2 grid
 `scale`:: value by which to scale the grid coordinates (default: 1.0)
 
-== Registering grids
 
-We call the `registerFluidGrid` function  so that we can set information about boundary conditions and the initial condition in the volume defined by the grid.
+== Registered grids
+
+We construct `RegisteredGrid` objects so that we can set information about boundary conditions
+and the initial condition in the volume defined by the grid.
+
+`RegisteredGrid:new{grid, tag, fsTag, bcTags, omegaz}`
+
+`grid`:: a `Grid` object, required. +
+  This might be created as `StructuredGrid` or `UnstructuredGrid` objects,
+  or grid objects created during an import call.
+
+`tag`:: _string_, optional +
+  A user-supplied tag that might be used to identify a grid or collection of grids
+
+`fsTag`:: _string_, required +
+  Will be used to select the initial flow condition from a dictionary when the FluidBlock is later constructucted
+
+`bcTags`:: a table of strings +
+  These tags will be used to attach boundary conditions from a dictionary when the FluidBlock is later constructed
+
+`omegaz` ::
+  _float_, default: `0.0` +
+  angular speed (in rad/s about the _z_-axis) for the rotating frame of reference. +
+  Useful for the calculation of flow in turbomachines.
+  The default value of 0.0 implies no rotating frame.
 
 
-`registerFluidGrid{grid, tag, fsTag, bcTags}`
-
-`grid`:: a `Grid` object. This might be created as `StructuredGrid` or `UnstructuredGrid` objects, or grid objects created during an import call.
-`tag`:: a user-supplied tag that might be used to identify a grid or collection of grids
-`fsTag`:: a string that will be used to select the initial flow condition from a dictionary when the FluidBlock is later constructucted
-`bcTags`:: a table of strings that will be used to attach boundary conditions from a dictionary when the FluidBlock is later constructed
-
-The `registerFluidGridArray` function can be used to carve a structured grid into subgrids.
+A `GridArray` can be constructed by carving a single structured grid into registered subgrids.
 It does not work on unstructured grids.
 
-`registerFluidGridArray{grid, tag, fsTag, bcTags, nib, njb, nkb, shock_fitting}`
+`GridArray:new{grid, tag, fsTag, bcTags, nib, njb, nkb, shock_fitting, omegaz}`
 
-`grid`:: a `Grid` object. This might be created as `StructuredGrid` or `UnstructuredGrid` objects, or grid objects created during an import call.
-`tag`:: a user-supplied tag that might be used to identify a grid or collection of grids
-`fsTag`:: a string that will be used to select the initial flow condition from a dictionary when the FluidBlock is later constructucted
-`bcTags`:: a table of strings that will be used to attach boundary conditions from a dictionary when the FluidBlock is later constructed
-`nib`:: number of blocks to use for subdivision in `i` grid direction
-`njb`:: number of blocks to use for subdivision in `j` grid direction
-`nkb`:: number of blocks to use for subdivision in `k` grid direction
-(has no meaning for 2D grids)
-`shock_fitting`:: boolean, set to `true` if using a shock-fit `WEST` boundary
+`grid`:: a `Grid` object, required +
+  This might be created as `StructuredGrid` or `UnstructuredGrid` objects,
+  or grid objects created during an import call.
+
+`tag`:: _string_, optional +
+  A user-supplied tag that might be used to identify a grid or collection of grids
+
+`fsTag`:: _string_, required +
+  Will be used to select the initial flow condition from a dictionary when the FluidBlocks are later constructucted
+
+`bcTags`:: a table of strings +
+  These tags will be used to attach boundary conditions from a dictionary when the FluidBlocks are later constructed
+
+`nib`:: _int_, default `1` +
+  Number of blocks to use for subdivision in `i` grid direction
+
+`njb`:: _int_, default `1` +
+  Number of blocks to use for subdivision in `j` grid direction
+
+`nkb`:: _int_, default `1` +
+  Number of blocks to use for subdivision in `k` grid direction
+  (has no meaning for 2D grids)
+
+`shock_fitting`:: _boolean_, default `false` +
+  Set to `true` if using a shock-fit `WEST` boundary
+
+`omegaz` ::
+  _float_, default: `0.0` +
+  angular speed (in rad/s about the _z_-axis) for the rotating frame of reference. +
+  Useful for the calculation of flow in turbomachines.
+  The default value of 0.0 implies no rotating frame.
+
+The GridArray object that is returned contains arrays of all of the structured-grid objects defined
+over the partitioned grid:
+
+`grids` ::
+  will be a multi-dimensional array of Grid objects (that are the subgrids of the original grid).
+  This array is indexed as `[ib][jb]` in 2D and `[ib][jb][kb]` in 3D,
+  with `1<=ib<=nib`, `1<=jb<=njb`, `1<=kb<=nkb`.
+
+`myGrids` ::
+  will be a multi-dimensional array of registered-grid ids.
+  This array is indexed as `[ib][jb]` in 2D and `[ib][jb][kb]` in 3D,
+  with `1<=ib<=nib`, `1<=jb<=njb`, `1<=kb<=nkb`.
+
+`gridCollection` ::
+  will be a single-dimensional array of registered-grid ids.
+  Note that the index within this array starts at 1, following the Lua convention.
 
 
+== Connecting registered grids
 
+When constructing a domain from more than one structured grid,
+you can call the function `identifyGridConnections()` to identify the cases where
+one registered grid interfaces with another and their boundaries are cleanly aligned.
+Connections can be applied manually for cases where you want one grid boundary face connected to another
+and the corresponding boundaries are not geometrically aligned.
+Non-unity transformation matrices can be provided for cases where the flow vector quantities
+need to be reoriented when they are copied from one boundary to the other.
 
+`connectGrids(idA, faceA, idB, faceB, orientation, reorient_vector_quantities, RmatrixA, RmatrixB)`
 
+`idA`:: _int_ +
+  Id of the first structured grid (grid-A).
 
+`faceA`:: _string_ +
+  Label of the boundary face on grid-A.
 
+`idB`:: _int_ +
+  Id of the second structured grid (grid-B).
+
+`faceB`:: _string_ +
+  Label of the boundary face on grid-B.
+
+`orientation`:: _int_: default: `-1` +
+  Although there is only one possible orientation for face-to-face connections in 2D,
+  there are 4 possible ways to (rotationally) orient a face-to-face connection in 3D.
+
+`reorient_vector_quantities`::
+  _boolean_, default: `false` +
+  If true, vector flow quantities are multiplied by the `Rmatrix` as they are copied from
+  the source cell into the destination ghost cell.
+
+`RmatrixA`::
+  _array of float_, default: {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} +
+  This is a 3-by-3 matrix written in row-major format.
+  It is applied, in the usual matrix-vector multiply manner, to vector flow quantities
+  such as velocity and magnetic field as they are copied into the block associated with the grid-A.
+  The user is responsible for computing appropriate coefficients.
+
+`RmatrixB`::
+  _array of float_, default: {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} +
+  As for RmatrixA, but for vector flow quantities that are being copied to the block associated
+  with grid-B
 
 
