@@ -205,25 +205,44 @@ end -- end Grid:tojson()
 --
 -- needs storage: connectionList = {}
 
-local function connectGrids(idA, faceA, idB, faceB, orientation)
+local function connectGrids(idA, faceA, idB, faceB, orientation,
+                            reorient_vector_quantities, RmatrixA, RmatrixB)
    -- in 2D, there is only one orientation for connecting a pair of faces.
    -- Since the user will probably not think of providing it, let's default to 0.
    orientation = orientation or 0
+   if reorient_vector_quantities == nil then
+      reorient_vector_quantities = false
+   end
+   RmatrixA = RmatrixA or {1.0, 0.0, 0.0,  0.0, 1.0, 0.0,  0.0, 0.0, 1.0}
+   RmatrixB = RmatrixB or {1.0, 0.0, 0.0,  0.0, 1.0, 0.0,  0.0, 0.0, 1.0}
    if false then -- debug
-      print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
-                          idA, faceA, idB, faceB, orientation))
+      local msg = string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d,',
+                                idA, faceA, idB, faceB, orientation)
+      msg = msg .. string.format(' reorient_vector_quantities=%s, RmatrixA=%s, RmatrixB=%s)',
+                                 reorient_vector_quantities, RmatrixA, RmatrixB)
+      print(msg)
    end
    local gridA = gridsList[idA+1] -- Note that the id values start at zero.
    local gridB = gridsList[idB+1]
    if gridA.grid:get_type() ~= "structured_grid" or gridB.grid:get_type() ~= "structured_grid" then
       error("connectGrids() Works only for structured grids.", 2)
    end
-   connectionList[#connectionList+1] = {idA=idA, faceA=faceA, idB=idB, faceB=faceB, orientation=orientation}
+   connectionList[#connectionList+1] = {
+      idA=idA, faceA=faceA, idB=idB, faceB=faceB, orientation=orientation,
+      reorient_vector_quantities=reorient_vector_quantities, RmatrixA=RmatrixA, RmatrixB=RmatrixB
+   }
 end
 
+local json = require 'json'
+
 local function connectionAsJSON(c)
-   str = string.format('{"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d}',
-                       c.idA, c.faceA, c.idB, c.faceB, c.orientation)
+   str = '{'
+   str = str .. string.format('"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d,',
+                              c.idA, c.faceA, c.idB, c.faceB, c.orientation)
+   str = str .. string.format(' "reorient_vector_quantities": %s,', tostring(c.reorient_vector_quantities))
+   str = str .. string.format(' "RmatrixA": %s,', json.stringify(c.RmatrixA))
+   str = str .. string.format(' "RmatrixB": %s', json.stringify(c.RmatrixB))
+   str = str .. '}'
    return str
 end
 

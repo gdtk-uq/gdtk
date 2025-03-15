@@ -283,7 +283,8 @@ local function SBlock2UBlock(blk)
    fluidBlocksDict[newLabel] = nil
 end -- SBlock2UBlock()
 
-local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
+local function connectBlocks(blkA, faceA, blkB, faceB, orientation,
+                             reorient_vector_quantities, RmatrixA, RmatrixB)
    -- Make a "full-face" connection between a pair of Block objects.
    -- The connection is made by attaching boundary conditions
    -- to each block that reference the other block.
@@ -291,7 +292,9 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       -- To reduce visual clutter at prep time, don't use the following print statement.
       -- It may still be useful for debugging.
       print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA,
-            "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
+            "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation,
+            "reorient_vector_quantities=", reorient_vector_quantities,
+            "RmatrixA=", dump(RmatrixA), "RmatrixB=", dump(RmatrixB))
    end
    -- Note that, when doing staged preparation, we may not have the grid object
    -- actually present at the point of making a FluidBlock connection.
@@ -303,10 +306,14 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
           "connectBlocks requires faceA and faceB to be strings.")
    --
    if blkA.myType == "FluidBlock" and blkB.myType == "FluidBlock" then
-      blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
-						   orientation=orientation}
-      blkB.bcList[faceB] = ExchangeBC_FullFace:new{otherBlock=blkA.id, otherFace=faceA,
-						   orientation=orientation}
+      blkA.bcList[faceA] = ExchangeBC_FullFace:new{
+         otherBlock=blkB.id, otherFace=faceB, orientation=orientation,
+         reorient_vector_quantities=reorient_vector_quantities,
+         Rmatrix=RmatrixA}
+      blkB.bcList[faceB] = ExchangeBC_FullFace:new{
+         otherBlock=blkA.id, otherFace=faceA, orientation=orientation,
+         reorient_vector_quantities=reorient_vector_quantities,
+         Rmatrix=RmatrixB}
       -- [TODO] need to test for matching corner locations and consistent numbers of cells
    elseif blkA.myType == "FluidBlock" and blkB.myType == "SolidBlock" then
       -- The preprocessor will set the time-accurate fluid/solid coupling BC by default unless the user explicitly requests the alternate
