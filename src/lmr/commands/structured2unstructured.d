@@ -17,7 +17,7 @@ import std.json;
 import std.stdio : writeln, writefln, File;
 
 import geom;
-import util.json_helper : readJSONfile;
+import util.json_helper : readJSONfile, getJSONdouble;
 
 import lmr.bc;
 import lmr.commands.command;
@@ -339,6 +339,7 @@ void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgrids
         of.writeln("{");
         of.writefln("  \"tag\": \"%s\",", sgridsMetadata[ig]["tag"].str);
         of.writefln("  \"fsTag\": \"%s\",", sgridsMetadata[ig]["fsTag"].str);
+        of.writefln("  \"omegaz\": %g,", getJSONdouble(sgridsMetadata[ig], "omegaz", 0.0));
         of.writefln("  \"type\": \"unstructured_grid\",");
         of.writefln("  \"fieldType\": \"%s\",", sgridsMetadata[ig]["fieldType"].str);
         of.writefln("  \"dimensions\": %d,", ugrid.dimensions);
