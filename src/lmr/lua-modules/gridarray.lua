@@ -31,7 +31,7 @@ function GridArray:new(o)
    if not flag then
       error("GridArray constructor expected to receive a single table with named entries", 2)
    end
-   local flag = checkAllowedNames(o, {"tag", "fieldType", "active",
+   local flag = checkAllowedNames(o, {"tag", "fieldType", "active", "omegaz",
                                       "fsTag", "bcTags", "shock_fitting",
                                       "ssTag", "solidBCTags", "solidModelTag",
                                       "grid", "gridArray", "nib", "njb", "nkb"})
@@ -74,6 +74,9 @@ function GridArray:new(o)
       o.solidBCTags[face] = o.solidBCTags[face] or o.grid:get_tag(face)
    end
    o.solidModelTag = o.solidModelTag or ""
+   --
+   -- Default non-rotating frame
+   o.omegaz = o.omegaz or 0.0
    --
    if o.grid then
       -- We will take a single grid and divide it into an array of subgrids.
@@ -393,8 +396,10 @@ function GridArray:new(o)
             if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
             if jb == 1 then bcTags['south'] = o.bcTags['south'] end
             if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
-            local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, active=o.active, fsTag=o.fsTag, bcTags=bcTags,
-                                         ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag,  gridArrayId=o.id}
+            local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, active=o.active,
+                                         omegaz=o.omegaz, fsTag=o.fsTag, bcTags=bcTags,
+                                         ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag,
+                                         gridArrayId=o.id}
             gridCollection[#gridCollection+1] = g
             o.myGrids[ib][jb] = g
          else
@@ -409,8 +414,10 @@ function GridArray:new(o)
                if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
                if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
                if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
-               local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, active=o.active, fsTag=o.fsTag, bcTags=bcTags,
-                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag, gridArrayId=o.id}
+               local g = RegisteredGrid:new{grid=subgrid, fieldType=o.fieldType, active=o.active,
+                                            omegaz=o.omegaz, fsTag=o.fsTag, bcTags=bcTags,
+                                            ssTag=o.ssTag, solidBCTags=o.solidBCTags, solidModelTag=o.solidModelTag,
+                                            gridArrayId=o.id}
                gridCollection[#gridCollection+1] = g
                o.myGrids[ib][jb][kb] = g
             end -- kb loop
@@ -436,6 +443,7 @@ function GridArray:tojson()
    str = str .. string.format('  "fieldType": "%s",\n', self.fieldType)
    str = str .. string.format('  "active": %s,\n', tostring(self.active))
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
+   str = str .. string.format('  "omegaz": %g,', self.omegaz)
    str = str .. string.format('  "type": "%s",\n', self.myType)
    str = str .. string.format('  "shock_fitting": %s,\n', tostring(self.shock_fitting))
    str = str .. string.format('  "ssTag": "%s",\n', self.ssTag)

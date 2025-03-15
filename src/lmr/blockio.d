@@ -217,8 +217,19 @@ extern(C) int luafn_writeFluidMetadata(lua_State *L)
  */
 extern(C) int luafn_writeInitialFluidFile(lua_State *L)
 {
+    // Expected stack items:
+    //   1. a block id
+    //   2. a grid (structured or unstructured)
+    //   3. a flowstate (could be a Lua fuction)
+    //   4. a value for omegaz
+    // Note that these are passed through to the FluidBlock constructors.
     auto blkId = to!int(luaL_checkinteger(L, 1));
     auto fname = fluidFilename(lmrCfg.initialFieldDir, blkId);
+    // 2025-03-15 (PJ) the following assignment of a grid object seems to be
+    // an expensive way to simply determine what type of block we want to
+    // construct.  The specific block constructor with then go and assign
+    // it own copy of the grid anyway.
+    // [TODO] We should use the grid metadata to make this decision.
     auto grid = checkStructuredGrid(L, 2);
     FluidBlock blk;
     if (grid) { // We do have a structured grid

@@ -21,5 +21,5 @@ module lmr.fvcell;
 interface FVCell {
     // there's nothing to see here.
     // Really, there is nothing here.
-    // Polymorphism... are we having fun yet?   
+    // Polymorphism... are we having fun yet?   NO! (PJ 2025-03-15)
 }

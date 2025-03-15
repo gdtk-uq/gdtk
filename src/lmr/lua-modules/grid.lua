@@ -20,6 +20,8 @@ function RegisteredGrid:new(o)
    -- tag: a string to identify the grid later in the user's script
    -- fieldType: a string labelling the intended domain as 'fluid' or 'solid'
    -- active: a boolean to indicate if the domain on the grid is active (default: true)
+   -- omegaz: value of the angular velocity about the z-axis for a rotating frame
+   --    Will be 0.0 for a non-rotating-frame.
    -- fsTag: a string that will be used to select the initial flow condition from
    --    a dictionary when the FluidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
@@ -39,7 +41,8 @@ function RegisteredGrid:new(o)
    if not flag then
       error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
-   flag = checkAllowedNames(o, {"grid", "tag", "fieldType", "active", "fsTag", "bcTags", "gridArrayId",
+   flag = checkAllowedNames(o, {"grid", "tag", "fieldType", "active", "omegaz",
+                                "fsTag", "bcTags", "gridArrayId",
                                 "ssTag", "solidModelTag", "solidBCTags"})
    if not flag then
       error("Invalid name for item supplied to Grid constructor.", 2)
@@ -71,6 +74,8 @@ function RegisteredGrid:new(o)
    o.ssTag = o.ssTag or ""
    -- Solid properties tag
    o.solidModelTag = o.solidModelTag or ""
+   -- Default non-rotating frame
+   o.omegaz = o.omegaz or 0.0
    -- Must have a grid.
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
@@ -140,6 +145,7 @@ function RegisteredGrid:tojson()
    str = str .. string.format('  "type": "%s",\n', self.type)
    str = str .. string.format('  "fieldType": "%s",\n', self.fieldType)
    str = str .. string.format('  "active": %s,\n', self.active)
+   str = str .. string.format('  "omegaz": %g,\n', self.omegaz)
    if self.type == "structured_grid" then
       str = str .. string.format('  "dimensions": %d,\n', self.grid:get_dimensions())
       str = str .. string.format('  "niv": %d,\n', self.grid:get_niv())

@@ -123,10 +123,18 @@ public:
 
     this(lua_State* L)
     // Generate a new block and fill it with information from a Lua interpreter state.
+    // Expected stack items:
+    //   1. a block id
+    //   2. a grid (structured or unstructured)
+    //   3. a flowstate (could be a Lua fuction)
+    //   4. a value for omegaz
     // This particular constructor is only used in the prep stage.
+    // Note that we assume the FlowState fs to be in a nonrotating frame.
+    // Note also that if we get the flowstate from a user-defined Lua function,
+    // we expect that any needed transformation into the rotated frame is already done.
     {
         auto grid = checkStructuredGrid(L, 2);
-        double omegaz = luaL_checknumber(L, 5);
+        double omegaz = luaL_checknumber(L, 4);
         nic = grid.niv - 1;
         njc = grid.njv - 1;
         nkc = grid.nkv - 1;

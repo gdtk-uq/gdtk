@@ -429,8 +429,8 @@ function buildGridAndFieldFiles()
       end
       -- Ready to use initialState in the Dlang function.
       local grid = fluidBlocks[idx].grid
-      local omegaz = fluidBlocks[idx].omegaz
-      writeInitialFluidFile(id, grid, ifs, nil, omegaz)
+      local omegaz = gridMetadata.omegaz
+      writeInitialFluidFile(id, grid, ifs, omegaz)
    end
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
@@ -458,7 +458,7 @@ function buildGridAndFieldFiles()
 end
 
 if false then -- debug
-   print("Done loading prep-flow.lua")
+   print("Done loading prepsim.lua")
 end
 
 

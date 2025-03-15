@@ -71,11 +71,18 @@ public:
 
     this(lua_State* L)
     // Construct from a Lua interpreter state.
+    // Expected stack items:
+    //   1. a block id
+    //   2. a grid (structured or unstructured)
+    //   3. a flowstate (could be a Lua function)
+    //   4. a value for omegaz
     // This particular constructor is only used in the prep stage.
     // Note that we assume the FlowState fs to be in a nonrotating frame.
+    // Note also that if we get the flowstate from a user-defined Lua function,
+    // we expect that any needed transformation into the rotated frame is already done.
     {
         auto grid = checkUnstructuredGrid(L, 2);
-        double omegaz = luaL_checknumber(L, 5);
+        double omegaz = luaL_checknumber(L, 4);
         ncells = grid.ncells;
         super(-1, "nil");
         grid_type = Grid_t.structured_grid;
@@ -149,9 +156,7 @@ public:
                     throw new FlowSolverException(msg);
                 }
             }
-            if (omegaz != 0.0) {
-                throw new Error("Oops, we have not yet implemented rotating-frame code here.");
-            }
+            if (omegaz != 0.0) { into_rotating_frame(myfs.vel, pos, omegaz); }
             if (lua_fs) {
                 // Now grab flow state via Lua function call.
                 // If the block is in a rotating frame with omegaz != 0.0,
