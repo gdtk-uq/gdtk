@@ -35,7 +35,7 @@ SU2 import is via the `UnstructuredGrid` object directly:
 We construct `RegisteredGrid` objects so that we can set information about boundary conditions
 and the initial condition in the volume defined by the grid.
 
-`RegisteredGrid:new{grid, tag, fsTag, bcTags, omegaz}`
+`registerFluidGrid{grid, tag, fsTag, bcTags, omegaz}`
 
 `grid`:: a `Grid` object, required. +
   This might be created as `StructuredGrid` or `UnstructuredGrid` objects,
@@ -56,11 +56,13 @@ and the initial condition in the volume defined by the grid.
   Useful for the calculation of flow in turbomachines.
   The default value of 0.0 implies no rotating frame.
 
+The integer id of the RegisteredGrid object in the gridsList is returned.
 
-A `GridArray` can be constructed by carving a single structured grid into registered subgrids.
-It does not work on unstructured grids.
 
-`GridArray:new{grid, tag, fsTag, bcTags, nib, njb, nkb, shock_fitting, omegaz}`
+A registered `GridArray` can be constructed by carving a single structured grid into registered subgrids.
+This does not work on unstructured grids.
+
+`registerFluidGridArray{grid, tag, fsTag, bcTags, nib, njb, nkb, shock_fitting, omegaz}`
 
 `grid`:: a `Grid` object, required +
   This might be created as `StructuredGrid` or `UnstructuredGrid` objects,
@@ -94,7 +96,8 @@ It does not work on unstructured grids.
   Useful for the calculation of flow in turbomachines.
   The default value of 0.0 implies no rotating frame.
 
-The GridArray object that is returned contains arrays of all of the structured-grid objects defined
+The integer id of the GridArray object within the gridArrayList is returned.
+The GridArray object contains arrays of all of the structured-grid objects defined
 over the partitioned grid:
 
 `grids` ::
