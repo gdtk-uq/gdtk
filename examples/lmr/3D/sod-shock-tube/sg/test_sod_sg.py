@@ -11,6 +11,8 @@ import re
 import os
 import yaml
 
+pytestmark = pytest.mark.short
+
 # This is used to change to local directory so that subprocess runs nicely.
 @pytest.fixture(autouse=True)
 def change_test_dir(request, monkeypatch):
