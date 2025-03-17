@@ -156,7 +156,7 @@ public:
                     throw new FlowSolverException(msg);
                 }
             }
-            if (omegaz != 0.0) { into_rotating_frame(myfs.vel, pos, omegaz); }
+            if (myfs && omegaz != 0.0) { into_rotating_frame(myfs.vel, pos, omegaz); }
             if (lua_fs) {
                 // Now grab flow state via Lua function call.
                 // If the block is in a rotating frame with omegaz != 0.0,
