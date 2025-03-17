@@ -45,7 +45,6 @@ function FluidBlock:new(o)
    if o.active == nil then
       o.active = true
    end
-   o.omegaz = o.omegaz or 0.0
    if o.may_be_turbulent == nil then
       o.may_be_turbulent = true
    end
@@ -99,6 +98,9 @@ function FluidBlock:new(o)
          for _,face in ipairs(faceList(config.dimensions)) do
             o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
          end
+         print("WARNING: constructing a FluidBlock from a raw grid rather then gridMetadata.")
+         print("  This is not the code path that PJ expected,")
+         print("  so values like omegaz will not be carried through.")
       end
       if o.grid:get_type() == "unstructured_grid" then
          -- Extract some information from the UnstructuredGrid
@@ -174,7 +176,13 @@ function FluidBlock:new(o)
             o.bcList[i] = mybc
          end
       end
+      -- For grids prepared by the local software, the omegaz value is already set
+      -- and we can find it in the gridMetadata.
+      o.omegaz = o.gridMetadata.omegaz
    end
+   -- If this FluidBlock is being constructed without accedd to the gridMetadata,
+   -- we will not yet have a value for omegaz.
+   o.omegaz = o.omegaz or 0.0
    return o
 end -- FluidBlock:new(o)
 
