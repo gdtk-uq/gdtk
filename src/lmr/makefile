@@ -569,6 +569,6 @@ lmr-complete:
 	echo '#/usr/bin/env bash\n' \
 		'_lmr_completions()\n'\
 		'{\n'\
-		'COMPREPLY=($$(compgen -W "compute-norms prep-gas slice-flow prep-grids prep-mapped-cells probe-flow prep-reactions limiter2vtk snapshot2vtk prep-sim residual2vtk plot-diagnostics list-species slice-solid custom-script prep-energy-exchange gradient2vtk run revision-id structured2unstructured extract-line lmrZ-check-jacobian lmr-check-jacobian" "$${COMP_WORDS[1]}"))\n'\
+		'COMPREPLY=($$(if [ "$$COMP_CWORD" -eq 1 ]; then\n compgen -W "compute-norms prep-gas slice-flow prep-grids prep-mapped-cells probe-flow prep-reactions limiter2vtk snapshot2vtk prep-sim residual2vtk plot-diagnostics list-species slice-solid custom-script prep-energy-exchange gradient2vtk run revision-id structured2unstructured extract-line lmrZ-check-jacobian lmr-check-jacobian" "$${COMP_WORDS[1]}"\n fi))\n'\
 		'}\n'\
 		'complete -F _lmr_completions lmr\n' > lmr-complete.sh
