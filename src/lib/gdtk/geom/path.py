@@ -11,6 +11,7 @@ FnPath by PJ, 2022-11-14
 import numpy as np
 from abc import ABC, abstractmethod
 from gdtk.geom.vector3 import Vector3, cross
+from copy import deepcopy
 
 
 class Path(ABC):
@@ -40,6 +41,9 @@ class Path(ABC):
             p0 = p1
         return L
 
+    def clone(self):
+        return deepcopy(self)
+
 
 class Line(Path):
     """
@@ -60,6 +64,29 @@ class Line(Path):
 
     def length(self):
         return abs(self.p1 - self.p0)
+
+    def rotate_about_zaxis(self, dtheta):
+        self.p0.rotate_about_zaxis(dtheta)
+        self.p1.rotate_about_zaxis(dtheta)
+        return self
+
+    def eval(self, t):
+        return self.__call__(t)
+
+    def translate(self, x, y=None, z=None):
+        if isinstance(x, Vector3):
+            self.p0 += x
+            self.p1 += x
+        else:
+            self.p0.x += x; self.p1.x += x;
+            if y is not None:
+                self.p0.y += y; self.p1.y += y;
+            if z is not None:
+                self.p0.z += z; self.p1.z += z;
+        return self
+
+    def reverse(self):
+        return Line(self.p1, self.p0)
 
     # end class Line
 
@@ -118,17 +145,23 @@ class Arc(Path):
         p, L = self.evaluate_position_and_length(1.0)
         return L
 
+    def translate(self, displacement):
+        self.a += displacement
+        self.b += displacement
+        self.c += displacement
+        return self
+
     def evaluate_position_and_length(self, t):
         L = 0.0;
         ca = self.a - self.c; ca_mag = abs(ca)
         cb = self.b - self.c; cb_mag = abs(cb)
-        if abs(ca_mag - cb_mag) > 1.0e-5:
+        if np.any(abs(ca_mag - cb_mag) > 1.0e-5):
             raise Exception("Arc: radii do not match ca=%s cb=%s" % (ca, cb))
         # First vector in plane.
         tangent1 = Vector3(ca); tangent1.normalize()
         # Compute unit normal to plane of all three points.
         n = cross(ca, cb)
-        if abs(n) > 0.0:
+        if np.all(abs(n)) > 0.0:
             n.normalize()
         else:
             raise Exception("Arc: cannot find plane of three points.")
@@ -152,6 +185,12 @@ class Arc(Path):
         # and remember to add the centre coordinates.
         loc.transform_to_global_frame(tangent1, tangent2, n, self.c);
         return loc, L
+
+    def reverse(self):
+        return Arc(self.b, self.a, self.c)
+
+    def eval(self, t):
+        return self.__call__(t)
 
     # end class Arc
 

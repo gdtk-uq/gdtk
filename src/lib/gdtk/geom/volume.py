@@ -35,8 +35,11 @@ class ParametricVolume(ABC):
         pass
 
     @abstractmethod
-    def __call__(self, r, s):
+    def __call__(self, r, s, t):
         pass
+
+    def eval(self, r, s, t):
+        return self.__call__(r,s,t)
 
 
 class TFIVolume(ParametricVolume):
@@ -162,6 +165,67 @@ class TFIVolume(ParametricVolume):
         return p_rst
 
 
+class WireFrameVolume(TFIVolume):
+    def __init__(self, c01, c12, c32, c03,
+                       c45, c56, c76, c47,
+                       c04, c15, c26, c37):
+
+        # The old eilmer3 source code has a weird order for its CoonsPatch arguments,
+        # being S N W E. This code was originally copy-pasted from there, but we use
+        # keyword arguments to make eilmer4's python CoonsPatch have the right order.
+        south  = CoonsPatch(south=c01, north=c45, west=c04, east=c15)
+        bottom = CoonsPatch(south=c01, north=c32, west=c03, east=c12)
+        west   = CoonsPatch(south=c03, north=c47, west=c04, east=c37)
+        east   = CoonsPatch(south=c12, north=c56, west=c15, east=c26)
+        north  = CoonsPatch(south=c32, north=c76, west=c37, east=c26)
+        top    = CoonsPatch(south=c45, north=c76, west=c47, east=c56)
+
+        super().__init__(iminus=west, iplus=east, jminus=south, jplus=north,
+                         kminus=bottom, kplus=top)
+    @classmethod
+    def from_extrusion(cls, base_surf, extrude_path):
+        """
+        Make the boundary surfaces with the supplied base surface and
+        an extrusion Path.
+        """
+
+        original_p0 = base_surf.eval(0.0, 0.0);
+        new_p0 = extrude_path.eval(0.0);
+        delta = new_p0 - original_p0;
+
+        # The base surface becomes the BOTTOM surface and the
+        # rest of the block is extruded in the positive-k direction.
+        c01 = base_surf.south.clone(); c01.translate(delta);
+        c32 = base_surf.north.clone(); c32.translate(delta);
+        c03 = base_surf.west.clone();  c03.translate(delta);
+        c12 = base_surf.east.clone();  c12.translate(delta);
+
+        new_p4 = extrude_path.eval(1.0);
+        delta = new_p4 - new_p0;
+        c45 = c01.clone(); c45.translate(delta);
+        c76 = c32.clone(); c76.translate(delta);
+        c47 = c03.clone(); c47.translate(delta);
+        c56 = c12.clone(); c56.translate(delta);
+        # connecting lines
+        new_p1 = c01.eval(1.0);
+        new_p2 = c32.eval(1.0);
+        new_p3 = c32.eval(0.0);
+        c04 = extrude_path.clone();
+        c15 = extrude_path.clone(); c15.translate(new_p1 - new_p0);
+        c26 = extrude_path.clone(); c26.translate(new_p2 - new_p0);
+        c37 = extrude_path.clone(); c37.translate(new_p3 - new_p0);
+        return WireFrameVolume(c01, c12, c32, c03,
+                               c45, c56, c76, c47,
+                               c04, c15, c26, c37)
+
+    def __repr__(self):
+        str = "WireFrameVolume(\n"
+        str += f"iminus={self.iminus},\niplus={self.iplus},\n"
+        str += f"jminus={self.jminus},\njplus={self.jplus},\n"
+        str += f"kminus={self.kminus},\nkplus={self.kplus},\n"
+        str += ")"
+        return str
+
 class SweptSurfaceVolume(ParametricVolume):
     """
     Volume constructed from a kminus face and an edge from p0 (p000) to p4 (p001).
@@ -186,6 +250,20 @@ class SweptSurfaceVolume(ParametricVolume):
         Evaluate point(s) in the volume.
         """
         return self.edge04(t) + self.face0123(r, s) - self.face0123(0.0, 0.0)
+
+class PyFunctionVolume(ParametricVolume):
+    """
+    Volume constructed using a user defined function.
+    """
+    def __init__(self, func):
+        self.func = func
+
+    def __repr__(self):
+        return f"PyFunctionVolume(func={self.func}"
+
+    def __call__(self, r,s,t):
+        x,y,z = self.func(r,s,t)
+        return Vector3(x,y,z)
 
 
 if __name__=='__main__':

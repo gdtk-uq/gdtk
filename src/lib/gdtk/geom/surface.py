@@ -25,6 +25,9 @@ class ParametricSurface(ABC):
     def __call__(self, r, s):
         pass
 
+    def eval(self, r, s):
+        return self.__call__(r,s)
+
 
 class CoonsPatch(ParametricSurface):
     """
@@ -53,13 +56,29 @@ class CoonsPatch(ParametricSurface):
             p01_alt = self.west(1.0)
             p11_alt = self.east(1.0)
             if not approxEqualVectors(self.p00, p00_alt):
-                raise Exception("CoonsPatch open corner p00={self.p00}, {p00_alt}")
+                print("p00: south {}  west {}".format( self.p00, p00_alt))
+                print("p10: south {}  east {}".format( self.p10, p10_alt))
+                print("p01: north {}  west {}".format( self.p01, p01_alt))
+                print("p11: north {}  east {}".format( self.p11, p11_alt))
+                raise Exception(f"CoonsPatch open corner p00={self.p00}, {p00_alt}")
             if not approxEqualVectors(self.p10, p10_alt):
-                raise Exception("CoonsPatch open corner p10={self.p10}, {p10_alt}")
+                print("p00: south {}  west {}".format( self.p00, p00_alt))
+                print("p10: south {}  east {}".format( self.p10, p10_alt))
+                print("p01: north {}  west {}".format( self.p01, p01_alt))
+                print("p11: north {}  east {}".format( self.p11, p11_alt))
+                raise Exception(f"CoonsPatch open corner p10={self.p10}, {p10_alt}")
             if not approxEqualVectors(self.p01, p01_alt):
-                raise Exception("CoonsPatch open corner p01={self.p01}, {p01_alt}")
+                print("p00: south {}  west {}".format( self.p00, p00_alt))
+                print("p10: south {}  east {}".format( self.p10, p10_alt))
+                print("p01: north {}  west {}".format( self.p01, p01_alt))
+                print("p11: north {}  east {}".format( self.p11, p11_alt))
+                raise Exception(f"CoonsPatch open corner p01={self.p01}, {p01_alt}")
             if not approxEqualVectors(self.p11, p11_alt):
-                raise Exception("CoonsPatch open corner p11={self.p11}, {p11_alt}")
+                print("p00: south {}  west {}".format( self.p00, p00_alt))
+                print("p10: south {}  east {}".format( self.p10, p10_alt))
+                print("p01: north {}  west {}".format( self.p01, p01_alt))
+                print("p11: north {}  east {}".format( self.p11, p11_alt))
+                raise Exception(f"CoonsPatch open corner p11={self.p11}, {p11_alt}")
             self.defined_by_corners = False
         elif all([p00, p10, p11, p01]):
             self.north = Line(p01, p11)
@@ -81,8 +100,9 @@ class CoonsPatch(ParametricSurface):
         if self.defined_by_corners:
             str += f"p00={self.p00}, p10={self.p10}, p11={self.p10}, p01={self.p10}"
         else:
-            str += f"north={self.north}, east={self.east}, south={self.south}, west={self.west}"
-        str += f", offset={self.offset})"
+            str += f"    north={self.north},\n    east={self.east},\n"
+            str += f"    south={self.south},\n    west={self.west},\n"
+        str += f"    offset={self.offset})"
         return str
 
     def __call__(self, r, s):
@@ -117,6 +137,24 @@ class CoonsPatch(ParametricSurface):
         new_patch = deepcopy(self)
         new_patch.offset -= offset
         return new_patch
+
+class PyFunctionSurface(ParametricSurface):
+    """
+    Volume constructed using a user defined function.
+    """
+    def __init__(self, func, label):
+        self.func = func
+        self.label = label
+
+    def __repr__(self):
+        str = "PyFunctionSurface("
+        str += str(self.func)
+        str += ")"
+        return str
+
+    def __call__(self, r,s):
+        x,y,z = self.func(r,s)
+        return Vector3(x,y,z)
 
 
 if __name__=='__main__':

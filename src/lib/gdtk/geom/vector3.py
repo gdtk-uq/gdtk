@@ -50,6 +50,16 @@ class Vector3(object):
             self.x = x.x
             self.y = x.y
             self.z = x.z
+        elif isinstance(x, np.ndarray):
+            self.x = x
+            if isinstance(y, numbers.Real):
+                self.y = x*0.0 + y
+            else:
+                self.y = y
+            if isinstance(z, numbers.Real):
+                self.z = x*0.0 + z
+            else:
+                self.z = z
         else:
             # Presume that we have been given at least 2 numbers.
             self.x = x
@@ -182,6 +192,17 @@ class Vector3(object):
             newX += c.x; newY += c.y; newZ += c.z
         self.x = newX; self.y = newY; self.z = newZ
         return self
+
+    def rotate_about_zaxis(self, dtheta):
+        """
+        Rebuild of a method in the d-side geometry library.
+        """
+        theta = np.arctan2(self.y, self.x) + dtheta;
+        r = np.sqrt(self.x*self.x + self.y*self.y);
+        self.x = r * np.cos(theta);
+        self.y = r * np.sin(theta);
+        return self;
+
 
     # ------- end class Vector3 ---------
 
