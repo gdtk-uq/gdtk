@@ -438,7 +438,9 @@ public:
     @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_FlowStateCopyFromHistory.apply_for_interface_unstructured_grid() not yet implemented");
+        auto gmodel = blk.myConfig.gmodel;
+        fhistory.set_flowstate(fstate, t, gmodel);
+        f.fs.copy_values_from(fstate);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -452,7 +454,9 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_FlowStateCopyFromHistory.apply_for_interface_structured_grid() not yet implemented");
+        auto gmodel = blk.myConfig.gmodel;
+        fhistory.set_flowstate(fstate, t, gmodel);
+        f.fs.copy_values_from(fstate);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
