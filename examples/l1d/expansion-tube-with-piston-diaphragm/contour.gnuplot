@@ -7,7 +7,7 @@
 #
 set terminal pdfcairo
 set output "contour.pdf"
-set title "x,t-diagram of log10(p) in expansion tube with ideal diaphragm"
+set title "x,t-diagram of log10(p) in expansion tube with piston diaphragm"
 set xlabel "x, m"
 set ylabel "t, ms"
 set view map
