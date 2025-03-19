@@ -1,6 +1,7 @@
 // piston.d for the Lagrangian 1D Gas Dynamics, also known as L1d4.
 // PA Jacobs
 // 2020-04-08
+// 2025-03-19 : allow variable piston mass.
 //
 module piston;
 
@@ -19,6 +20,7 @@ import gas;
 import gasdyn.gasflow;
 import config;
 import endcondition;
+import lcell;
 import misc;
 
 
@@ -32,6 +34,9 @@ public:
     double L;     // length, m
     double x;     // position, m
     double vel;   // velocity, m/s
+    double massf; // current fraction of original mass that remains
+    double dmassfdt; // rate of change of mass fraction (negative for mass decay)
+    double massfmin; // minimum mass fraction, below which interaction assumes zero mass
     double front_seal_f; // friction factor
     double front_seal_area; // area over which pressure acts
     double back_seal_f;
@@ -54,6 +59,7 @@ public:
     bool on_buffer0;
     double x0;
     double vel0;
+    double massf0;
     double[2] dxdt;
     double[2] dvdt;
 
@@ -68,6 +74,8 @@ public:
         diam = getJSONdouble(jsonData, "diameter", 0.0);
         area = 0.25*PI*diam*diam;
         L = getJSONdouble(jsonData, "length", 0.0);
+        dmassfdt = getJSONdouble(jsonData, "dmassfdt", 0.0);
+        massfmin = getJSONdouble(jsonData, "massfmin", 1.0e-3);
         front_seal_f = getJSONdouble(jsonData, "front_seal_f", 0.0);
         front_seal_area = getJSONdouble(jsonData, "front_seal_area", 0.0);
         back_seal_f = getJSONdouble(jsonData, "back_seal_f", 0.0);
@@ -84,6 +92,8 @@ public:
             writeln("  diam= ", diam);
             writeln("  area= ", area);
             writeln("  L= ", L);
+            writeln("  dmassfdt= ", dmassfdt);
+            writeln("  massfmin= ", massfmin);
             writeln("  front_seal_f= ", front_seal_f);
             writeln("  front_seal_area= ", front_seal_area);
             writeln("  back_seal_f= ", back_seal_f);
@@ -114,22 +124,25 @@ public:
         is_restrain = (to!int(items[3]) == 1);
         brakes_on = (to!int(items[4]) == 1);
         on_buffer = (to!int(items[5]) == 1);
+        // We introduce the current mass fraction variable 2025-03-19
+        // so it may not be always available in older simulation files.
+        if (items.length > 6) massf = to!double(items[6]);
     } // end read_data()
 
     void write_data(File fp, int tindx, bool write_header)
     {
         if (write_header) {
-            fp.writeln("# tindx  x  vel  is_restrain  brakes_on  on_buffer");
+            fp.writeln("# tindx  x  vel  is_restrain  brakes_on  on_buffer  massf");
         }
-        fp.writeln(format("%d %e %e %d %d %d", tindx, x, vel,
+        fp.writeln(format("%d %e %e %d %d %d %e", tindx, x, vel,
                           ((is_restrain)?1:0), ((brakes_on)?1:0),
-                          ((on_buffer)?1:0)));
+                          ((on_buffer)?1:0), massf));
     } // end write_data()
 
     @nogc @property
     double energy()
     {
-        return mass*0.5*vel*vel;
+        return mass*massf*0.5*vel*vel;
     }
 
     @nogc
@@ -140,6 +153,7 @@ public:
         on_buffer0 = on_buffer;
         x0 = x;
         vel0 = vel;
+        massf0 = massf;
         return;
     }
 
@@ -151,6 +165,7 @@ public:
         on_buffer = on_buffer0;
         x = x0;
         vel = vel0;
+        massf = massf0;
         return;
     }
 
@@ -178,6 +193,10 @@ public:
     @nogc
     void time_derivatives(int level)
     {
+        // Computation of the time derivatives for the normal piston dynamics.
+        // We compute the rate of change for velocity and position of the piston
+        // assuming that the usual surface forces are at play.
+        //
         // Pressure on each piston face.
         double pL = 0.0;
         if (ecL && ecL.slugL) {
@@ -209,34 +228,54 @@ public:
         } else {
             brakes_on = false;
         }
-        //
-        // Rate of change of velocity is acceleration.
-	// Normally, we would use these derivative values in the
-	// predictor and corrector updates.
-	// If the brakes have stopped the piston, we have an unusual update
-	// and don't want to use those derivatives.
-	full_stop = false;
-        immutable vel_tol = 1.0e-6;
-        if (vel > vel_tol) {
-            // Moving forward, apply full friction in reverse.
-            dvdt[level] = (pressure_force-friction_force)/mass;
-        } else if (vel < -vel_tol) {
-            // Moving backward, apply full friction forward.
-            dvdt[level] = (pressure_force+friction_force)/mass;
-        } else {
-            // We are effectively stationary.
-            if (fabs(pressure_force) > friction_force) {
-                // Pressure force overcomes friction.
-                dvdt[level] = (pressure_force > 0.0) ?
-                    (pressure_force-friction_force)/mass :
-                    (pressure_force+friction_force)/mass;
+        full_stop = false;
+        if (massf > massfmin) {
+            // We have the usual dynamic processes with a non-zero mass piston.
+            // Rate of change of velocity is acceleration.
+            // Normally, we would use these derivative values in the
+            // predictor and corrector updates.
+            double effectivemass = mass * massf;
+            // If the brakes have stopped the piston, we have an unusual update
+            // and don't want to use those derivatives.
+            immutable vel_tol = 1.0e-6;
+            if (vel > vel_tol) {
+                // Moving forward, apply full friction in reverse.
+                dvdt[level] = (pressure_force-friction_force)/effectivemass;
+            } else if (vel < -vel_tol) {
+                // Moving backward, apply full friction forward.
+                dvdt[level] = (pressure_force+friction_force)/effectivemass;
             } else {
-                // Friction force dominates; let's remain stationary for now.
-                vel = 0.0;
+                // We are effectively stationary.
+                if (fabs(pressure_force) > friction_force) {
+                    // Pressure force overcomes friction.
+                    dvdt[level] = (pressure_force > 0.0) ?
+                        (pressure_force-friction_force)/effectivemass :
+                        (pressure_force+friction_force)/effectivemass;
+                } else {
+                    // Friction force dominates; let's remain stationary for now.
+                    vel = 0.0;
+                    dvdt[level] = 0.0;
+                    full_stop = true;
+                } // end if sufficient pressure to accelerate
+            } // end if vel...
+        } else {
+            // We pretend that the piston has zero mass
+            // and allow the two gas slugs to push directly
+            // against each other, with the pressure and velocity
+            // determined via a solution of the Riemann problem.
+            // We can only do this if we actually have both slugs of gas.
+            if (ecL && ecL.slugL && ecR && ecR.slugR) {
+                auto slugL = ecL.slugL;
+                LCell cL = (ecL.slugL_end == End.L) ? slugL.cells[0] : slugL.cells[$-1];
+                auto slugR = ecR.slugR;
+                LCell cR = (ecR.slugR_end == End.L) ? slugR.cells[0] : slugR.cells[$-1];
+                double p;
+                lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, slugR.gmodel, vel, p);
                 dvdt[level] = 0.0;
-		full_stop = true;
-            } // end if sufficient pressure to accelerate
-        } // end if vel...
+            } else {
+                assert(0, "FATAL: Piston has effectively zero mass and we do NOT have both slugs!");
+            }
+        }
         //
         // Rate of change of position is velocity.
         dxdt[level] = vel;
@@ -269,4 +308,18 @@ public:
         return;
     }
 
+    @nogc
+    void change_mass(double dt)
+    {
+        // For modelling the secondary diaphragms in an expansion tube,
+        // where we assume that the diaphram is initially punched out
+        // of its restraint and temporarily acts as a piston.
+        if (!is_restrain) {
+            massf += dmassfdt * dt;
+            massf = fmax(massf, 0.0);
+        } else {
+            // Do nothing while the piston is still restrained.
+        }
+        return;
+    }
 } // end class Piston

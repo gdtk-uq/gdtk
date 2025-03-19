@@ -33,6 +33,9 @@ Versions:
   2020-Apr-04  L1d4 flavour started
   2021-Apr-16  Matt McGilvray's heat-transfer coefficient factor.
   2021-Apr-23  Improve piston+buffer interaction.
+  2025-Mar-19  Allow variable piston mass to model the secondary diaphragm
+               in an expansion tube, where the diaphragm is initially punched
+               out of its restraint and temporarily acts as a piston.
 """
 
 # ----------------------------------------------------------------------
@@ -803,6 +806,7 @@ class Piston():
 
     __slots__ = 'indx', 'label', \
                 'mass', 'diam', 'L', 'xL0', 'xR0', 'x0', 'vel0', \
+                'massf', 'dmassfdt', 'massfmin', \
                 'front_seal_f', 'front_seal_area', \
                 'back_seal_f', 'back_seal_area', \
                 'p_restrain', 'is_restrain', \
@@ -810,6 +814,7 @@ class Piston():
                 'x_buffer', 'on_buffer', 'ecL', 'ecR'
 
     def __init__(self, mass, diam, xL0, xR0, vel0,
+                 massf=1.0, dmassfdt=0.0, massfmin=1.0e-3,
                  front_seal_f=0.0, front_seal_area=0.0,
                  back_seal_f=0.0, back_seal_area=0.0,
                  p_restrain=0.0, is_restrain=0,
@@ -830,6 +835,9 @@ class Piston():
         self.L = xR0 - xL0
         self.x0 = 0.5*(xL0 + xR0)
         self.vel0 = vel0
+        self.massf = massf
+        self.dmassfdt = dmassfdt
+        self.massfmin = massfmin
         self.front_seal_f = front_seal_f
         self.front_seal_area = front_seal_area
         self.back_seal_f = back_seal_f
@@ -868,6 +876,8 @@ class Piston():
         fp.write('  "mass": %e,\n' % self.mass)
         fp.write('  "diameter": %e,\n' % self.diam)
         fp.write('  "length": %e,\n' % self.L)
+        fp.write('  "dmassfdt": %e,\n' % self.dmassfdt)
+        fp.write('  "massfmin": %e,\n' % self.massfmin)
         fp.write('  "front_seal_f": %e,\n' % self.front_seal_f)
         fp.write('  "front_seal_area": %e,\n' % self.front_seal_area)
         fp.write('  "back_seal_f": %e,\n' % self.back_seal_f)
@@ -892,10 +902,11 @@ class Piston():
         Write state data.
         """
         if write_header:
-            fp.write("# tindx  x  vel  is_restrain  brakes_on  on_buffer\n")
-        fp.write("%d %e %e %d %d %d\n" %
+            fp.write("# tindx  x  vel  is_restrain  brakes_on  on_buffer  massf\n")
+        fp.write("%d %e %e %d %d %d %e\n" %
                  (tindx, self.x0, self.vel0,
-                  self.is_restrain, self.brakes_on, self.on_buffer))
+                  self.is_restrain, self.brakes_on, self.on_buffer,
+                  self.massf))
         return
 
     @property
@@ -903,7 +914,7 @@ class Piston():
         """
         Returns kinetic energy.
         """
-        return 0.5*self.mass*self.vel0*self.vel0
+        return 0.5*self.mass*self.massf*self.vel0*self.vel0
 
 #----------------------------------------------------------------------------
 

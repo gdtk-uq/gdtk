@@ -374,11 +374,19 @@ void assemble_piston_history(int pindx)
     while (!fp.eof()) {
         txt = fp.readln().chomp();
         if (txt.length > 0) {
-            int tindx; double x, vel; int is_restrain, brakes_on, on_buffer;
-            txt.formattedRead!"%d %e %e %d %d %d"(tindx, x, vel, is_restrain,
-                                                  brakes_on, on_buffer);
-            fph.writefln("%d %e %e %e %d %d %d", tindx, times[tindx], x, vel,
-                         is_restrain, brakes_on, on_buffer);
+            auto items = txt.split();
+            int tindx = to!int(items[0]);
+            double x = to!double(items[1]);
+            double vel = to!double(items[2]);
+            int is_restrain = to!int(items[3]);
+            int brakes_on = to!int(items[4]);
+            int on_buffer = to!int(items[5]);
+            // We introduce the current mass fraction variable 2025-03-19
+            // so it may not be always available in older simulation files.
+            double massf = 1.0;
+            if (items.length > 6) massf = to!double(items[6]);
+            fph.writefln("%d %e %e %e %d %d %d %e", tindx, times[tindx], x, vel,
+                         is_restrain, brakes_on, on_buffer, massf);
         }
     }
     fp.close();

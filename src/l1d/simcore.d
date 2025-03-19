@@ -399,7 +399,10 @@ void integrate_in_time()
         if (step_failed) {
             throw new Exception("Step failed after 3 attempts.");
         }
-        // 6. Occasional console output.
+        // 6. For variable-mass piston modelling.
+        foreach (p; pistons) { p.change_mass(sim_data.dt_global); }
+        //
+        // 7. Occasional console output.
         if (L1dConfig.verbosity_level >= 1 &&
             ((sim_data.step % L1dConfig.print_count) == 0)) {
             // For reporting wall-clock time, convert with precision of milliseconds.
@@ -414,7 +417,7 @@ void integrate_in_time()
                      sim_data.cfl, elapsed_s, WCtFT, WCtMS);
             stdout.flush();
         }
-        // 7. Update time and (maybe) write solution.
+        // 8. Update time and (maybe) write solution.
         sim_data.step += 1;
         sim_data.sim_time += sim_data.dt_global;
         if (sim_data.sim_time >= sim_data.t_plot) {
