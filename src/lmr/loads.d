@@ -181,18 +181,26 @@ int count_written_loads()
 {
     int nPrevLoadsWritten;
     string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ "-metadata";
-    if (exists(fname)) {
-        auto lines = readText(fname).splitLines();
-        if (lines.length == 1) {
-            // looks like we found a single line.
-            nPrevLoadsWritten = 0;
+
+    if (GlobalConfig.is_master_task) {
+        if (exists(fname)) {
+            auto lines = readText(fname).splitLines();
+            if (lines.length == 0) {
+                throw new Error(format("Failed to read loads file %s", fname));
+            } else if (lines.length == 1) {
+                nPrevLoadsWritten = 0;
+            } else {
+                // assume we have a valid line to work with
+                auto finalLine = lines[$-1];
+                nPrevLoadsWritten = to!int(finalLine.split[0]) + 1;
+            }
         } else {
-            // assume we have a valid line to work with
-            auto finalLine = lines[$-1];
-            nPrevLoadsWritten = to!int(finalLine.split[0]) + 1;
+            nPrevLoadsWritten = 0;
         }
-    } else {
-        nPrevLoadsWritten = 0;
+    }
+
+    version(mpi_parallel){
+        MPI_Bcast(&nPrevLoadsWritten, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     return nPrevLoadsWritten;
