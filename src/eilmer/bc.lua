@@ -235,6 +235,29 @@ function MappedCellCopy:tojson()
    return str
 end
 
+PorousWallGhostCellEffect = GhostCellEffect:new{injectant_massf={},
+                                               kF=nil, kD=nil, Twall=nil,
+                                               plenum_pressure=nil,
+                                               porous_plate_thickness=nil}
+PorousWallGhostCellEffect.type = "porous_wall_ghost_cell_effect"
+function PorousWallGhostCellEffect:tojson()
+   local gm = getGasModel()
+   local nsp = gm:nSpecies()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "injectant_massf": [')
+   for isp=0,nsp-2 do
+      str = str .. string.format("%.18e, ", self.injectant_massf[isp])
+   end
+   str = str .. string.format("%.18e ],", self.injectant_massf[nsp-1])
+   str = str .. string.format(' "kF": %.18e,', self.kF)
+   str = str .. string.format(' "kD": %.18e,', self.kD)
+   str = str .. string.format(' "Twall": %.18e,', self.Twall)
+   str = str .. string.format(' "plenum_pressure": %.18e,', self.plenum_pressure)
+   str = str .. string.format(' "porous_plate_thickness": %.18e,', self.porous_plate_thickness)
+   str = str .. '}'
+   return str
+end
+
 UserDefinedGhostCell = GhostCellEffect:new{fileName='user-defined-bc.lua'}
 UserDefinedGhostCell.type = "user_defined"
 function UserDefinedGhostCell:tojson()
@@ -450,6 +473,29 @@ EquilibriumComposition = BoundaryInterfaceEffect:new{}
 EquilibriumComposition.type = "equilibrium_composition"
 function EquilibriumComposition:tojson()
    local str = string.format('          {"type": "%s"}', self.type)
+   return str
+end
+
+PorousWallInterfaceEffect = BoundaryInterfaceEffect:new{injectant_massf={},
+                                               kF=nil, kD=nil, Twall=nil,
+                                               plenum_pressure=nil,
+                                               porous_plate_thickness=nil}
+PorousWallInterfaceEffect.type = "porous_wall_interface_effect"
+function PorousWallInterfaceEffect:tojson()
+   local gm = getGasModel()
+   local nsp = gm:nSpecies()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "injectant_massf": [')
+   for isp=0,nsp-2 do
+      str = str .. string.format("%.18e, ", self.injectant_massf[isp])
+   end
+   str = str .. string.format("%.18e ],", self.injectant_massf[nsp-1])
+   str = str .. string.format(' "kF": %.18e,', self.kF)
+   str = str .. string.format(' "kD": %.18e,', self.kD)
+   str = str .. string.format(' "Twall": %.18e,', self.Twall)
+   str = str .. string.format(' "plenum_pressure": %.18e,', self.plenum_pressure)
+   str = str .. string.format(' "porous_plate_thickness": %.18e,', self.porous_plate_thickness)
+   str = str .. '}'
    return str
 end
 
@@ -937,6 +983,51 @@ function WallBC_NoSlip_UserDefinedT:new(o)
    return o
 end
 
+WallBC_Porous_FixedT = BoundaryCondition:new()
+WallBC_Porous_FixedT.type = "wall_porous_fixed_t"
+function WallBC_Porous_FixedT:new(o)
+   local flag = type(self)=='table' and self.type=='wall_porous_fixed_t'
+   if not flag then
+      error("Make sure that you are using WallBC_Porous_FixedT:new{}"..
+               " and not WallBC_Porous_FixedT.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"injectant_massf", "kF", "kD", "Twall",
+                                "plenum_pressure", "porous_plate_thickness",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_Porous_FixedT constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = true
+   o.is_wall_with_viscous_effects = true
+   o.preReconAction = {
+      PorousWallGhostCellEffect:new{
+         injectant_massf=convertSpeciesTableToArray(o.injectant_massf),
+         kF=o.kF, kD=o.kD, Twall=o.Twall,
+         plenum_pressure=o.plenum_pressure,
+         porous_plate_thickness=o.porous_plate_thickness
+      }
+   }
+   o.preSpatialDerivActionAtBndryFaces = {
+      PorousWallInterfaceEffect:new{
+         injectant_massf=convertSpeciesTableToArray(o.injectant_massf),
+         kF=o.kF, kD=o.kD, Twall=o.Twall,
+         plenum_pressure=o.plenum_pressure,
+         porous_plate_thickness=o.porous_plate_thickness
+      }
+   }
+
+   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+      UpdateThermoTransCoeffs:new()
+
+   if config.turbulence_model ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
+   end
+
+   o.is_configured = true
+   return o
+end
 
 WallBC_ThermionicEmission = BoundaryCondition:new()
 WallBC_ThermionicEmission.type = "wall_thermionic_emission"

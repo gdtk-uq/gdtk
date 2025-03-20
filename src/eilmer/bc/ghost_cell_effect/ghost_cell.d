@@ -183,6 +183,15 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         newGCE = new GhostCellGasSolidFullFaceCopy(blk_id, boundary,
                                                    otherBlock, face_index(otherFaceName),neighbourOrientation);
         break;
+    case "porous_wall_ghost_cell_effect":
+        double[] injectant_massf = getJSONdoublearray(jsonData, "injectant_massf", []);
+        double kF = getJSONdouble(jsonData, "kF", 0.0);
+        double kD = getJSONdouble(jsonData, "kD", 0.0);
+        double wall_temperature = getJSONdouble(jsonData, "Twall", 0.0);
+        double plenum_pressure = getJSONdouble(jsonData, "plenum_pressure", 0.0);
+        double porous_plate_thickness = getJSONdouble(jsonData, "porous_plate_thickness", 0.0);
+        newGCE = new PorousWallGhostCellEffect(blk_id, boundary, injectant_massf, kF, kD, wall_temperature, plenum_pressure, porous_plate_thickness);
+        break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");
         newGCE = new UserDefinedGhostCell(blk_id, boundary, fname);
