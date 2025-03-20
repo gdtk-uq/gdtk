@@ -242,6 +242,7 @@ public:
     */
         auto gmodel = myConfig.gmodel;
         size_t nturb = myConfig.turb_model.nturb;
+        size_t ngtl = myConfig.n_grid_time_levels;
 
         celldata.all_cell_idxs.length = ncells;
         celldata.halo_cell_ids.length = (ncells + nghost);
@@ -250,13 +251,15 @@ public:
 
         celldata.nfaces.length = ncells;
         celldata.dt_local.length = ncells;
-        celldata.areas.length = ncells + nghost;
         celldata.wall_distances.length = ncells;
         celldata.data_is_bad.length = ncells;
         celldata.in_turbulent_zone.length = ncells;
-        celldata.volumes.length = ncells + nghost;
         celldata.lengths.length = ncells + nghost;
-        celldata.positions.length = ncells + nghost;
+
+        celldata.areas.length     = ngtl*(ncells + nghost);
+        celldata.volumes.length   = ngtl*(ncells + nghost);
+        celldata.positions.length = ngtl*(ncells + nghost);
+
         celldata.U0.length = (ncells + nghost)*neq*nftl;
         if (nftl>1) celldata.U1.length = (ncells + nghost)*neq*nftl;
         if (nftl>2) celldata.U2.length = (ncells + nghost)*neq*nftl;

@@ -1624,10 +1624,6 @@ public:
                 ghost_cells[i].pos[0].apply_matrix_transform(Rmatrix);
             }
         }
-        // NNG Temporary fix for the double up of cell geometry data caused by densification refactor
-        foreach (i; 0 .. ghost_cells.length) {
-            ghost_cells[i].update_celldata_geometry();
-        }
     } // end exchange_geometry_phase2()
 
     @nogc

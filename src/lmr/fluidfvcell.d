@@ -85,7 +85,7 @@ public:
     number base_qdot; // base-level of heat addition to cell, W/m**3
     // Geometry
     Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
-    number[3] lengths; // length in i,j,k index direction
+    number[] lengths; // length in i,j,k index direction
     number L_min;   // minimum length scale for cell
     number L_max;   // maximum length scale for cell
     // Connections
@@ -181,9 +181,13 @@ public:
         id = id_init;
         contains_flow_data = false; // initial presumption to be adjusted later
         is_interior_to_domain = false;
-        pos.length = myConfig.n_grid_time_levels;
-        volume.length = myConfig.n_grid_time_levels;
-        areaxy.length = myConfig.n_grid_time_levels;
+
+        size_t ngtl = myConfig.n_grid_time_levels;
+
+        pos    = fvcd.positions[id*ngtl .. (id+1)*ngtl];
+        volume = fvcd.volumes[id*ngtl .. (id+1)*ngtl];
+        areaxy = fvcd.areas[id*ngtl .. (id+1)*ngtl];
+        lengths= fvcd.lengths[id][0 .. 3];
 
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
@@ -428,7 +432,6 @@ public:
         fvcd.lengths[id][0] = iL;
         fvcd.lengths[id][1] = jL;
         fvcd.lengths[id][2] = 0.0;
-        fvcd.positions[id] = pos[gtl];
 
         // Cell Volume.
         if (axisymmetric) {
@@ -448,8 +451,6 @@ public:
             }
             throw new FlowSolverException(msg);
         }
-        fvcd.volumes[id] = vol;
-        fvcd.areas[id] = xyplane_area;
         volume[gtl] = vol;
         areaxy[gtl] = xyplane_area;
         kLength = to!number(0.0);
@@ -490,8 +491,6 @@ public:
             debug { msg ~= format("Unhandled number of vertices: %d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
-        fvcd.volumes[id] = volume[gtl];
-        fvcd.positions[id] = pos[gtl];
         fvcd.lengths[id][0] = iL;
         fvcd.lengths[id][1] = jL;
         fvcd.lengths[id][2] = kL;
@@ -1654,14 +1653,4 @@ public:
 
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
-    @nogc
-    void update_celldata_geometry(size_t gtl=0){
-        // TODO: Temporary scaffolding for NNG's refactor. This should be removed soon.
-        fvcd.areas[id]     = areaxy[gtl];
-        fvcd.volumes[id]   = volume[gtl];
-        fvcd.positions[id] = pos[gtl];
-        fvcd.lengths[id][0] = lengths[0];
-        fvcd.lengths[id][1] = lengths[1];
-        fvcd.lengths[id][2] = lengths[2];
-    }
 } // end class FluidFVCell

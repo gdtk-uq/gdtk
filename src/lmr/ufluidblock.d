@@ -688,7 +688,6 @@ public:
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                     ghost0.L_max = inside0.L_max;
-                    ghost0.update_celldata_geometry();
                 } else {
                     auto inside0 = my_face.right_cell;
                     Vector3 delta; delta = my_face.pos; delta -= inside0.pos[gtl];
@@ -699,7 +698,6 @@ public:
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                     ghost0.L_max = inside0.L_max;
-                    ghost0.update_celldata_geometry();
                 } // end if my_outsign
 
             } // end foreach j

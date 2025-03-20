@@ -1252,7 +1252,6 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
-                    foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1283,7 +1282,6 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
-                    foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1314,7 +1312,6 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
-                    foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1345,7 +1342,6 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
-                    foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1377,7 +1373,6 @@ public:
                             extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                             ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                         }
-                        foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                     }
                 }
             }
@@ -1408,7 +1403,6 @@ public:
                             extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                             ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                         }
-                        foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                     }
                 }
             }
