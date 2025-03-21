@@ -50,6 +50,9 @@ public:
         foreach (i, f; bc.faces) {
             ghost0 = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
             ghost0.fs.copy_values_from(my_fs);
+            if (blk.omegaz != 0.0) {
+                into_rotating_frame(ghost0.fs.vel, ghost0.pos[gtl], blk.omegaz);
+            }
         }
     } // end apply_unstructured_grid()
 
@@ -67,6 +70,9 @@ public:
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
                 auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
                 ghost.fs.copy_values_from(my_fs);
+                if (blk.omegaz != 0.0) {
+                    into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
+                }
             }
         }
     } // end apply_structured_grid()

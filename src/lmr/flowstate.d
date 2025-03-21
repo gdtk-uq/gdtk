@@ -659,11 +659,11 @@ public:
             fs.vel.x = cyl_vel_x;
             fs.vel.y = cyl_vel_y;
             fs.vel.z = cyl_vel_z;
-            if (omegaz != 0.0) { into_rotating_frame(fs.vel, my_pos, omegaz); }
             break;
         default:
             throw new FlowSolverException("Invalid match option.");
         }
+        if (omegaz != 0.0) { into_rotating_frame(fs.vel, my_pos, omegaz); }
     }
 
     @nogc
@@ -967,11 +967,11 @@ public:
             fs.vel.x = cyl_vel_x;
             fs.vel.y = cyl_vel_y;
             fs.vel.z = cyl_vel_z;
-            if (omegaz != 0.0) { into_rotating_frame(fs.vel, my_pos, omegaz); }
             break;
         default:
             throw new FlowSolverException("Invalid match option.");
         }
+        if (omegaz != 0.0) { into_rotating_frame(fs.vel, my_pos, omegaz); }
     }
 
     @nogc
