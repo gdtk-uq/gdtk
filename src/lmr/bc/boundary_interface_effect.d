@@ -98,6 +98,9 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         double[] massfAtWall = getJSONdoublearray(jsonData, "wall_massf_composition", [1.0,]);
         newBIE = new BIE_FixedComposition(blk_id, boundary, massfAtWall);
         break;
+    case "zero_charged_species":
+        newBIE = new BIE_ZeroChargedSpecies(blk_id, boundary);
+        break;
     case "update_thermo_trans_coeffs":
         string thermoUpdate = getJSONstring(jsonData, "thermoUpdate", "pT");
         InterpolateOption thermoInterpOpt;
@@ -905,6 +908,93 @@ public:
     } // end apply_structured_grid()
 } // end class BIE_FixedComposition
 
+
+class BIE_ZeroChargedSpecies : BoundaryInterfaceEffect {
+public:
+    double[] massfAtWall;
+
+    this(int id, int boundary)
+    {
+        super(id, boundary, "ZeroChargedSpecies");
+    }
+
+    override string toString() const
+    {
+        return "BIE_ZeroChargedSpecies()";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        uint nsp = blk.myConfig.n_species;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        version(multi_species_gas) {
+            auto gmodel = blk.myConfig.gmodel;
+            if (gmodel.is_plasma) {
+                foreach (isp; 0 .. nsp) {
+                    if (gmodel.charge[isp] != 0) {
+                        f.fs.gas.massf[isp] = to!number(0.0);
+                    }
+                }
+            }
+        }
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        uint nsp = blk.myConfig.n_species;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            version(multi_species_gas) {
+                auto gmodel = blk.myConfig.gmodel;
+                if (gmodel.is_plasma) {
+                    foreach (isp; 0 .. nsp) {
+                        if (gmodel.charge[isp] != 0) {
+                            f.fs.gas.massf[isp] = to!number(0.0);
+                        }
+                    }
+                }
+            }
+        }
+    } // end apply_unstructured_grid()
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        uint nsp = blk.myConfig.n_species;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        version(multi_species_gas) {
+            auto gmodel = blk.myConfig.gmodel;
+            if (gmodel.is_plasma) {
+                foreach (isp; 0 .. nsp) {
+                    if (gmodel.charge[isp] != 0) {
+                        f.fs.gas.massf[isp] = to!number(0.0);
+                    }
+                }
+            }
+        }
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        uint nsp = blk.myConfig.n_species;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            version(multi_species_gas) {
+                auto gmodel = blk.myConfig.gmodel;
+                if (gmodel.is_plasma) {
+                    foreach (isp; 0 .. nsp) {
+                        if (gmodel.charge[isp] != 0) {
+                            f.fs.gas.massf[isp] = to!number(0.0);
+                        }
+                    }
+                }
+            }
+        }
+    } // end apply_structured_grid()
+} // end class BIE_FixedComposition
 
 class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     this(int id, int boundary, InterpolateOption thermoInterpOpt)
