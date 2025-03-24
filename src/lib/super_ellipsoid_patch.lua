@@ -39,17 +39,6 @@ function super_ellipsoid_patch:eval(r,s)
     face = self.face
     a    = self.a
     e    = self.e
-    q0   = self.q0
-    q1   = self.q1
-    q2   = self.q2
-    q3   = self.q3
-
-    -- The above makes the assumption of quaternions relative to RHR coord system 
-    -- Modelling and Simulation of Aerospace Vehicles (Zipfel 2007).
-
-    if (q0 == nil or q1 == nil or q2 == nil or q3 == nil) then
-        q0 = 1 ; q1 = 0.0 ; q2 = 0.0 ; q3 = 0.0 -- (enforce no rotation)
-    end 
 
     -- First, define our unit cube patch of side length 2a.
 
@@ -83,17 +72,11 @@ function super_ellipsoid_patch:eval(r,s)
     y_c = f * y_c
     z_c = f * z_c
    
-    -- Apply the rotation.
-    
-    x_cdash = (x_c * (q0*q0 + q1*q1 - q2*q2 - q3*q3) + y_c * (2*(q1*q2 - q0*q3)) + z_c * (2*(q1*q3 + q0*q2)))
-    y_cdash = (x_c * (2*(q1*q2 + q0*q3)) + y_c * (q0*q0 - q1*q1 + q2*q2 - q3*q3) + z_c * (2*(q2*q3 - q0*q1)))
-    z_cdash = (x_c * (2*(q1*q3 - q0*q2)) + y_c * (2*(q2*q3 + q0*q1)) + z_c * (q0*q0 - q1*q1 - q2*q2 + q3*q3))   
-
     -- Scale (in future, we could translate each point after scaling).
 
-    x_cdash = x_cdash * a
-    y_cdash = y_cdash * a
-    z_cdash = z_cdash * a
+    x_cdash = x_c * a
+    y_cdash = y_c * a
+    z_cdash = z_c * a
 
     return {x = x_cdash, y = y_cdash, z = z_cdash}
 

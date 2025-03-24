@@ -23,34 +23,13 @@
 
 -- Shape side length 2a
 
-a_c = 0.0127 -- m
+a_c = 1.0 -- m
 e_shape1 = 0.1
 e_shape2 = 1.0
 e_shape3 = 2.0
 
 niv = 51
 njv = 51
-
--- Euler angles (relative to CFD axes) 
--- Same convention as Modelling and Simulation of Aerospace Vehicle Dynamics, 2007.
-
-theta = math.rad(15.0) -- rotations chosen at random
-phi   = math.rad(0.0)
-psi   = math.rad(30.0)
-
--- Quaternion representation
-
-q0_patch = (math.cos(psi / 2) * math.cos(theta / 2) * math.cos(phi / 2)
-         + math.sin(psi / 2) * math.sin(theta / 2) * math.sin(phi / 2))
-
-q1_patch = (math.cos(psi / 2) * math.cos(theta / 2) * math.sin(phi / 2)
-         - math.sin(psi / 2) * math.sin(theta / 2) * math.cos(phi / 2))
-
-q2_patch = (math.cos(psi / 2) * math.sin(theta / 2) * math.cos(phi / 2)
-         + math.sin(psi / 2) * math.cos(theta / 2) * math.sin(phi / 2))
-
-q3_patch = (math.sin(psi / 2) * math.cos(theta / 2) * math.cos(phi / 2)
-         - math.cos(psi / 2) * math.sin(theta / 2) * math.sin(phi / 2))
 
 require "super_ellipsoid_patch"
 
@@ -60,7 +39,7 @@ faces = {"east", "west", "north", "south", "top", "bottom"}
 
 for _,f in ipairs(faces) do
     
-    super_ellipsoid = super_ellipsoid_patch:new{face = f, a = a_c, e = e_shape1, q0 = q0_patch, q1 = q1_patch, q2 = q2_patch, q3 = q3_patch}
+    super_ellipsoid = super_ellipsoid_patch:new{face = f, a = a_c, e = e_shape1}
    
     patch = super_ellipsoid:create()
 
@@ -72,7 +51,7 @@ end
 
 for _,f in ipairs(faces) do
     
-    super_ellipsoid = super_ellipsoid_patch:new{face = f, a = a_c, e = e_shape2, q0 = q0_patch, q1 = q1_patch, q2 = q2_patch, q3 = q3_patch}
+    super_ellipsoid = super_ellipsoid_patch:new{face = f, a = a_c, e = e_shape2}
    
     patch = super_ellipsoid:create()
 
@@ -84,7 +63,7 @@ end
 
 for _,f in ipairs(faces) do
     
-    super_ellipsoid = super_ellipsoid_patch:new{face = f, a = a_c, e = e_shape3, q0 = q0_patch, q1 = q1_patch, q2 = q2_patch, q3 = q3_patch}
+    super_ellipsoid = super_ellipsoid_patch:new{face = f, a = a_c, e = e_shape3}
    
     patch = super_ellipsoid:create()
 
