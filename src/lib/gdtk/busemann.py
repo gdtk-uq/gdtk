@@ -69,10 +69,18 @@ class BusemannDiffuser():
         return BDProperties(self._M1, self._M2, self._M3, self._Pi)
          
     
-    def _xy_from_rtheta(self, r, theta):
+    def xy_from_rtheta(self, r, theta):
         return r*np.cos(theta), r*np.sin(theta)
 
-    def generate_contour(self, r2=1.0, max_dtheta=0.01/pi):
+    def dydx(self, theta, u, v):
+        numer = (u/v)*np.sin(theta) + np.cos(theta)
+        denom = (u/v)*np.cos(theta) - np.sin(theta)
+        return numer/denom
+
+    def ode_soln(self, theta):
+        return self._ode_soln.sol(theta)
+
+    def generate_contour(self, r2=1.0, max_dtheta=0.01/pi, rtol=1.0e-3, atol=1.0e-6):
         """Generate the Busemann diffuser contour by integration."""
 
         def fODE(theta, Y):
@@ -89,34 +97,18 @@ class BusemannDiffuser():
             return u*sin(theta) + v*cos(theta)
         event.terminal = True
 
-        def dydx(theta, u, v):
-            numer = (u/v)*np.sin(theta) + np.cos(theta)
-            denom = (u/v)*np.cos(theta) - np.sin(theta)
-            return numer/denom
-
-        # Initialise storage for the integration values and derived values
-        self._us = [self._u2]
-        self._vs = [self._v2]
-        self._Ms = [self._M2]
-        self._rs = [r2]
-        self._thetas = [self._theta2]
-        x, y = self._xy_from_rtheta(r2, self._theta2)
-        self._xs = [x]
-        self._ys = [y]
-        self._dydxs = [dydx(self._theta2, self._u2, self._v2)]
-
         # Set initial conditions
         theta = self._theta2
         Y = np.array([self._u2, self._v2, r2])
-        self._ode_soln = solve_ivp(fODE, (theta, pi), Y, method='DOP853', dense_output=True, events=event, max_step=max_dtheta)
+        self._ode_soln = solve_ivp(fODE, (theta, pi), Y, method='DOP853', dense_output=True, events=event, max_step=max_dtheta, rtol=rtol, atol=atol)
 
         self._thetas = self._ode_soln.t.copy()
         self._us = self._ode_soln.y[0,:].copy()
         self._vs = self._ode_soln.y[1,:].copy()
         self._rs = self._ode_soln.y[2,:].copy()
         self._Ms = np.sqrt(self._us**2 + self._vs**2)
-        self._xs, self._ys = self._xy_from_rtheta(self._rs, self._thetas)
-        self._dydxs = dydx(self._thetas, self._us, self._vs)
+        self._xs, self._ys = self.xy_from_rtheta(self._rs, self._thetas)
+        self._dydxs = self.dydx(self._thetas, self._us, self._vs)
 
         # Set M1 now that we've completed integration
         self._M1 = self._Ms[-1]
