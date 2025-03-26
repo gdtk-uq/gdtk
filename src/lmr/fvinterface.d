@@ -836,3 +836,194 @@ public:
     } // end viscous_flux_calc()
 
 } // end of class FV_Interface
+
+@nogc
+void navier_stokes_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalConfig myConfig, size_t n_modes, size_t nturb,
+                                  bool isTurbulent, bool axisymmetric, bool is3d, Vector3 n, double Ybar,
+                                  ConservedQuantities F)
+// Unified 2D and 3D viscous-flux calculation.
+// Note that the gradient values need to be in place before calling this procedure.
+// Note, also, that the viscous fluxes are added to the flux-vector components.
+{
+    number k_eff = fs.gas.k + fs.k_t ;
+    number mu_eff = fs.gas.mu + fs.mu_t;
+    number lmbda;
+    lmbda = -2.0/3.0 * mu_eff;
+
+    number tau_xx = 0.0;
+    number tau_yy = 0.0;
+    number tau_zz = 0.0;
+    number tau_xy = 0.0;
+    number tau_xz = 0.0;
+    number tau_yz = 0.0;
+    if (is3d) {
+        number dudx = grad.vel[0][0];
+        number dudy = grad.vel[0][1];
+        number dudz = grad.vel[0][2];
+        number dvdx = grad.vel[1][0];
+        number dvdy = grad.vel[1][1];
+        number dvdz = grad.vel[1][2];
+        number dwdx = grad.vel[2][0];
+        number dwdy = grad.vel[2][1];
+        number dwdz = grad.vel[2][2];
+        // 3-dimensional planar stresses.
+        tau_xx = 2.0*mu_eff*dudx + lmbda*(dudx + dvdy + dwdz);
+        tau_yy = 2.0*mu_eff*dvdy + lmbda*(dudx + dvdy + dwdz);
+        tau_zz = 2.0*mu_eff*dwdz + lmbda*(dudx + dvdy + dwdz);
+        tau_xy = mu_eff * (dudy + dvdx);
+        tau_xz = mu_eff * (dudz + dwdx);
+        tau_yz = mu_eff * (dvdz + dwdy);
+    } else {
+        // 2D
+        number dudx = grad.vel[0][0];
+        number dudy = grad.vel[0][1];
+        number dvdx = grad.vel[1][0];
+        number dvdy = grad.vel[1][1];
+        if (axisymmetric) {
+            // Viscous stresses at the mid-point of the interface.
+            // Axisymmetric terms no longer include the radial multiplier
+            // as that has been absorbed into the interface area calculation.
+            number ybar = Ybar;
+            if (ybar > 1.0e-10) { // something very small for a cell height
+                tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy + fs.vel.y / ybar);
+                tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy + fs.vel.y / ybar);
+            } else {
+                tau_xx = 0.0;
+                tau_yy = 0.0;
+            }
+            tau_xy = mu_eff * (dudy + dvdx);
+        } else {
+            // 2-dimensional-planar stresses.
+            tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy);
+            tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy);
+            tau_xy = mu_eff * (dudy + dvdx);
+        }
+    }
+    // Thermal conductivity (NOTE: q is total energy flux)
+    number qx = k_eff * grad.T[0];
+    number qy = k_eff * grad.T[1];
+    number qz = k_eff * grad.T[2];
+    version(multi_T_gas) {
+        foreach (imode; 0 .. n_modes) {
+            qx += fs.gas.k_modes[imode] * grad.T_modes[imode][0];
+            qy += fs.gas.k_modes[imode] * grad.T_modes[imode][1];
+            qz += fs.gas.k_modes[imode] * grad.T_modes[imode][2];
+        }
+    }
+    version(turbulence) {
+        if ( isTurbulent ) {
+            // Turbulence contribution to the shear stresses.
+            number tke = myConfig.turb_model.turbulent_kinetic_energy(fs);
+            tau_xx -= 2.0/3.0 * fs.gas.rho * tke;
+            tau_yy -= 2.0/3.0 * fs.gas.rho * tke;
+            if (is3d) { tau_zz -= 2.0/3.0 * fs.gas.rho * tke; }
+
+            // Turbulent transport of turbulent kinetic energy
+            number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, grad);
+            qx += qtke[0];
+            qy += qtke[1];
+            if (is3d) { qz += qtke[2]; }
+        }
+    }
+    //
+    // Combine into fluxes: store as the dot product (F.n).
+    auto cqi = myConfig.cqi;
+    number nx = n.x;
+    number ny = n.y;
+    number nz = n.z;
+    F[cqi.xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
+    F[cqi.yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+    if (cqi.threeD) { F[cqi.zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz; }
+    F[cqi.totEnergy] -=
+        (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
+        (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
+        (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
+
+    version(multi_T_gas) {
+        foreach (imode; 0 .. n_modes) {
+            F[cqi.modes+imode] -= fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
+            F[cqi.modes+imode] -= fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
+            F[cqi.modes+imode] -= fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
+        }
+    }
+    version(turbulence) {
+        if ( isTurbulent ) {
+            // Turbulence transport of the turbulence properties themselves.
+            foreach(i; 0 .. nturb){
+                number tau_tx = 0.0;
+                number tau_ty = 0.0;
+                number tau_tz = 0.0;
+                //
+                number mu_effective = myConfig.turb_model.viscous_transport_coeff(fs, i);
+                tau_tx = mu_effective * grad.turb[i][0];
+                tau_ty = mu_effective * grad.turb[i][1];
+                if (is3d) { tau_tz = mu_effective * grad.turb[i][2]; }
+                //
+                F[cqi.rhoturb+i] -= tau_tx * nx + tau_ty * ny + tau_tz * nz;
+            }
+        }
+    }
+} // end viscous_flux_calc()
+
+@nogc
+void diffusion_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalConfig myConfig, size_t n_species, size_t n_modes,
+                              double Sc_t, bool laminarDiffusion, bool isTurbulent, Vector3 n, number[] jx, number[] jy, number[] jz, number[] hs,
+                              ConservedQuantities F) {
+version(multi_species_gas) {
+    auto gmodel = myConfig.gmodel;
+
+    // Species diffusion: Changed by NNG on 22/01/18.
+    // We now apply both laminar and turbulent diffusion additively, to prevent artificially low
+    // diffusion in areas with a small turbulent viscosity.
+    if (laminarDiffusion) {
+        myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+    } else if (isTurbulent) { // Turbulent but no mass diffusion model
+        foreach (isp; 0 .. n_species) {
+            jx[isp] = 0.0;
+            jy[isp] = 0.0;
+            jz[isp] = 0.0;
+        }
+    }
+
+    version(turbulence) {
+        if (isTurbulent) {
+            number D_t = fs.mu_t / (fs.gas.rho * Sc_t);
+            foreach (isp; 0 .. n_species) {
+                jx[isp] -= fs.gas.rho * D_t * grad.massf[isp][0];
+                jy[isp] -= fs.gas.rho * D_t * grad.massf[isp][1];
+                jz[isp] -= fs.gas.rho * D_t * grad.massf[isp][2];
+            }
+        }
+    }
+    number qx = 0.0;
+    number qy = 0.0;
+    number qz = 0.0;
+    gmodel.enthalpies(fs.gas, hs);
+    for(int isp=0; isp<n_species; isp++) {
+        qx -= jx[isp] * hs[isp];
+        qy -= jy[isp] * hs[isp];
+        qz -= jz[isp] * hs[isp];
+    }
+
+    // Combine into fluxes: store as the dot product (F.n).
+    number nx = n.x;
+    number ny = n.y;
+    number nz = n.z;
+    auto cqi = myConfig.cqi;
+    F[cqi.totEnergy] -= qx*nx + qy*ny + qz*nz;
+
+    version(multi_T_gas) {
+        for (int imode=0; imode<n_modes; imode++) {
+            // Species diffusion contribution to the energy modes (added by NNG, 2022/01/26)
+            for (int isp=0; isp<n_species; isp++) {
+                number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, isp, imode);
+                // The sign here needs to be opposite to the thermal conduction, hence +=
+                F[cqi.modes+imode] += hMode*(jx[isp]*n.x + jy[isp]*n.y + jz[isp]*n.z);
+            }
+        }
+    }
+    foreach (isp; 0 .. cqi.n_species) {
+        F[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+    }
+} // end version(multi_species_gas)
+} // end viscous_flux_calc()

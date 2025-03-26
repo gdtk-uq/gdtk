@@ -49,7 +49,7 @@ MassDiffusionModel massDiffusionModelFromName(string name)
 
 interface MassDiffusion {
     @nogc
-    void update_mass_fluxes(ref FlowState fs, ref const(FlowGradients) grad,
+    void update_mass_fluxes(in FlowState fs, ref const(FlowGradients) grad,
                             number[] jx, number[] jy, number[] jz);
 }
 
@@ -82,7 +82,7 @@ class FicksFirstLaw : MassDiffusion {
     }
 
     @nogc
-    void update_mass_fluxes(ref FlowState fs, ref const(FlowGradients) grad,
+    void update_mass_fluxes(in FlowState fs, ref const(FlowGradients) grad,
                             number[] jx, number[] jy, number[] jz)
     {
         version(multi_species_gas) {
@@ -121,7 +121,7 @@ private:
 
 interface DiffusionCoefficient {
     @nogc
-    void computeAvgDiffCoeffs(ref GasState Q, GasModel gm, ref number[] D_avg);
+    void computeAvgDiffCoeffs(in GasState Q, GasModel gm, ref number[] D_avg);
 }
 
 class ConstantLewisNumber : DiffusionCoefficient {
@@ -130,7 +130,7 @@ class ConstantLewisNumber : DiffusionCoefficient {
         this.nsp = nsp;
     }
     @nogc
-    void computeAvgDiffCoeffs(ref const(GasState) Q, GasModel gmodel, ref number[] D_avg) {
+    void computeAvgDiffCoeffs(in GasState Q, GasModel gmodel, ref number[] D_avg) {
         number Cp = gmodel.Cp(Q);
         number alpha = Q.k/(Q.rho*Cp);
         foreach (isp; 0 .. nsp) D_avg[isp] = alpha/Le;
@@ -147,7 +147,7 @@ class SpeciesSpecificLewisNumbers : DiffusionCoefficient {
         this.nsp = nsp;
     }
     @nogc
-    void computeAvgDiffCoeffs(ref const(GasState) Q, GasModel gmodel, ref number[] D_avg) {
+    void computeAvgDiffCoeffs(in GasState Q, GasModel gmodel, ref number[] D_avg) {
         // [FIX-ME] gmodel.update_trans_coeffs(Q); // This feels bad. Shouldn't this be set already???
         number Prandtl = gmodel.Prandtl(Q);
         foreach (isp; 0 .. gmodel.n_species) {
@@ -175,7 +175,7 @@ class BinaryDiffusion : DiffusionCoefficient {
         }
     }
     @nogc
-    void computeAvgDiffCoeffs(ref const(GasState) Q, GasModel gmodel, ref number[] D_avg) {
+    void computeAvgDiffCoeffs(in GasState Q, GasModel gmodel, ref number[] D_avg) {
         gmodel.massf2molef(Q, molef);
         gmodel.binary_diffusion_coefficients(Q, D);
         foreach (isp; 0 .. nsp) {

@@ -78,6 +78,7 @@ public:
     number c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
     number[] initial_T_value; // for monitor cells to check against
+    number[] jx,jy,jz,hs;          // temporary storage for computing diffusion fluxes
     //
     // Collections of cells, vertices and faces are held as arrays of references.
     // These allow us to conveniently work through the items via foreach statements.
@@ -179,6 +180,14 @@ public:
         version(multi_species_gas) {
             if (myConfig.reacting) {
                 thermochem_source.length = cqi.n_species;
+            }
+            // Workspace for viscous diffusion
+            if (dedicatedConfig[id].turb_model.isTurbulent ||
+               (dedicatedConfig[id].mass_diffusion_model != MassDiffusionModel.none)) {
+                jx.length = cqi.n_species;
+                jy.length = cqi.n_species;
+                jz.length = cqi.n_species;
+                hs.length = cqi.n_species;
             }
         }
         version(multi_T_gas) {
@@ -891,11 +900,43 @@ public:
     }
 
     @nogc
-    void viscous_flux(FVInterface[] face_list = [])
+    void viscous_flux(FVInterface[] face_list)
     {
-        if (face_list.length == 0) { face_list = faces; }
         foreach (iface; face_list) { iface.viscous_flux_calc(); }
     }
+
+   @nogc
+   void viscous_flux(size_t[] face_idxs=[])
+   {
+       immutable size_t n_species      = myConfig.n_species;
+       immutable size_t n_modes        = myConfig.n_modes;
+       immutable size_t nturb          = myConfig.turb_model.nturb;
+       immutable bool is3d             = myConfig.dimensions == 3;
+       immutable bool isTurbulent      = myConfig.turb_model.isTurbulent;
+       immutable bool axisymmetric     = myConfig.axisymmetric;
+       immutable double viscous_factor = myConfig.viscous_factor;
+       immutable size_t neq            = myConfig.cqi.n;
+       immutable bool laminarDiffusion = myConfig.mass_diffusion_model != MassDiffusionModel.none;
+       immutable double Sc_t = myConfig.turbulence_schmidt_number;
+
+       if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+       foreach(fid; face_idxs){
+           navier_stokes_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
+                             myConfig, n_modes, nturb,
+                             isTurbulent, axisymmetric, is3d,
+                             facedata.normals[fid], facedata.positions[fid].y.re,
+                             facedata.fluxes[fid*neq .. (fid+1)*neq]);
+       }
+       if ((isTurbulent || laminarDiffusion)&&(n_species>1)) {
+           foreach(fid; face_idxs){
+               diffusion_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
+                                 myConfig, n_species, n_modes,
+                                 Sc_t, laminarDiffusion, isTurbulent,
+                                 facedata.normals[fid], jx, jy, jz, hs,
+                                 facedata.fluxes[fid*neq .. (fid+1)*neq]);
+           }
+       }
+   }
 
     @nogc
     void init_residuals()
