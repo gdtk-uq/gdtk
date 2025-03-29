@@ -3,9 +3,21 @@
 # For example:
 # make install
 #
+# We need some trickery in make to get a newline into a string. We define it as a variable.
+define nl
+
+
+endef
+
+DMD_ALLOWED_OPTS := dmd ldc2
 # We can specify the DMD64 compiler as DMD=dmd on the command-line
 # when invoking this makefile.
 DMD ?= ldc2
+ifeq ($(filter $(DMD), $(DMD_ALLOWED_OPTS)),)
+    $(warning DMD=$(DMD) is not available as an option for setting the D compiler.)
+    $(warning Available options are:${nl}    $(DMD_ALLOWED_OPTS))
+    $(error Exiting unsuccessfully.${nl}Please fix DMD selection on command line or as environment variable setting.)
+endif
 NVCC ?= nvcc
 GPP ?= g++
 # default is NOT to opt out of MPI build
@@ -19,7 +31,13 @@ WITH_MPICH ?= 0
 # As default, we compile with the 'debug' option which produces a code
 # that will have better checks and more detailed error messages.
 # The 'fast' option requests production mode and to include optimisations.
+FLAVOUR_ALLOWED_OPTS := debug fast profile
 FLAVOUR ?= debug
+ifeq ($(filter $(FLAVOUR), $(FLAVOUR_ALLOWED_OPTS)),)
+    $(warning FLAVOUR=$(FLAVOUR) is not available as an option for building.)
+    $(warning Available options are: ${nl}    $(FLAVOUR_ALLOWED_OPTS))
+    $(error Exiting unsuccessfully.${nl}Please fix FLAVOUR selection.)
+endif
 WITH_FPE ?= 1
 
 # PLATFORM options are linux, macosx
