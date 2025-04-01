@@ -127,7 +127,8 @@ class Flame(object):
     @property
     def Z(self):
         Z = zeros(self.N)
-        code = self.lib.get_Z(Z)
+        Zp = ffi.cast("double *", ffi.from_buffer(Z))
+        code = self.lib.get_Z(Zp)
         if code!=0: raise Exception("Failed to get array Z from slf")
         return Z
 
