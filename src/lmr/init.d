@@ -13,7 +13,7 @@ module lmr.init;
 
 import std.algorithm : min, sort, find;
 import std.conv : to;
-import std.file : rename, readText, dirEntries, SpanMode;
+import std.file : rename, readText, dirEntries, SpanMode, write;
 import std.format : format, formattedWrite;
 import std.json;
 import std.math: pow;
@@ -39,6 +39,7 @@ import lmr.globalconfig;
 import lmr.globaldata;
 import lmr.lmrconfig;
 import lmr.lmrexceptions : LmrException;
+import lmr.lmrerrors;
 import lmr.loads : init_loads_metadata_file, initRunTimeLoads;
 import lmr.lua_helper;
 import lmr.sfluidblock : SFluidBlock;
@@ -140,6 +141,25 @@ void readControl()
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
         localConfig.update_control_parameters();
+    }
+}
+
+/**
+ * Write 0th entry into progress file for time-marching simulations
+ *
+ * Creating the 0th entry *is* the initialisation.
+ *
+ * Authors: RJG and PJ
+ * Date: 2025-04-02
+ */
+void initTimeMarchingProgressFile() {
+    if (GlobalConfig.is_master_task) {
+        try {
+            write(lmrCfg.progFile, format("%d\n", SimState.step));
+        }
+        catch (Exception e) {
+            lmrErrorExit(LmrError.inputOutput, "Couldn't write to file: " ~ lmrCfg.progFile);
+        }
     }
 }
 

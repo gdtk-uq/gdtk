@@ -39,6 +39,7 @@ import lmr.history : initHistoryCells, writeHistoryCellsToFiles;
 import lmr.init;
 import lmr.lmrconfig;
 import lmr.lmrexceptions;
+import lmr.lmrerrors;
 import lmr.simcore_solid_step : determine_solid_time_step_size, solid_step;
 import lmr.loads : 
     computeRunTimeLoads,
@@ -110,8 +111,8 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     }
     // and read the control because it sets up part of initial configuration
     readControl();
-    // [TODO] RJG, 2024-02-07
-    // Implement opening of progress file.
+    // Create progress file and add 0th step entry.
+    initTimeMarchingProgressFile();
 
     if (GlobalConfig.writeTransientResiduals && GlobalConfig.is_master_task && (snapshotStart == 0)) {
         std.file.write(lmrCfg.transResidFile, "# step time wall-clock mass x-mom y-mom z-mom energy L2 mass-balance\n");
@@ -494,7 +495,7 @@ int integrateInTime(double targetTimeAsRequested)
                 try {
                     std.file.write(lmrCfg.progFile, format("%d\n", SimState.step));
                 } catch (Exception e) {
-                    // do nothing
+                    lmrErrorExit(LmrError.inputOutput, "Couldn't write to file: " ~ lmrCfg.progFile);
                 }
             }
             //
