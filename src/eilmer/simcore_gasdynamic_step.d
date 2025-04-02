@@ -239,11 +239,29 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     } else {
         if (GlobalConfig.fixed_time_step) {
 
-            // if we have a fixed time step then we won't have calculated either a hyperbolic or parabolic dt
-            // we need to specify the number of super-steps in this case
-            S = 7;
-            dt_global = GlobalConfig.dt_init;
+            // New fixed_time_step behaviour by NNG, Apr 2025.
+            double dt_inner = fmin(SimState.dt_global, SimState.dt_global_parab);
+            double dt_outer = fmax(GlobalConfig.dt_init, dt_inner);
+            dt_global = dt_outer;
+            alpha = (dt_outer)/(dt_inner);
 
+            if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
+            } else {
+                s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+            }
+
+            // it is recommended to round S down to the nearest odd integer for stability
+            S = to!int(floor(s_RKL));
+            if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S - 1; }
+
+            // When dt_parab is approxmately equal to or greater than dt_hyper (i.e. S <= 1), then we will just do a simple Euler step
+            if (S <= 1) {
+                S = 1;
+                euler_step = true;
+            }
+            SimState.dt_global = dt_outer;
+            SimState.dt_global_parab = dt_inner;
         } else {
 
             // otherwise we will calculate the suitable number of super-steps as per:
