@@ -1031,7 +1031,7 @@ int integrate_in_time(double target_time_as_requested)
             // The user may also have some start-of-time-step maintenance to do
             // via their Lua script file.  Let them have first go.
             if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_timestep_start(); }
-            if (!GlobalConfig.fixed_time_step) { determine_time_step_size(); }
+            determine_time_step_size();
             if (GlobalConfig.divergence_cleaning) { update_ch_for_divergence_cleaning(); }
             // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
             // because the convective update is where the interface values of mu_t and k_t are set.
