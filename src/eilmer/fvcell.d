@@ -1021,17 +1021,10 @@ public:
     } // end thermochemical_increment()
 
     @nogc
-    double signal_frequency()
-    // Remember to use stringent_cfl=true for unstructured-grid.
+    number convective_signal_frequency()
     {
         number signal = 0; // Signal speed is something like a frequency, with units 1/s.
-        //
-        // Check the convective/wave-driven time step limit first,
-        // then add a component to ensure viscous stability.
-        //
-        // Look at gas-dynamic signal speeds along each face.
-        // This works for gas-dynamics only (not MHD), on a structured grid.
-        //
+
         // Get the local normal velocities by rotating the local frame of reference.
         // Also, compute the velocity magnitude and recall the minimum length.
         number un_N = fabs(fs.vel.dot(iface[Face.north].n));
@@ -1059,43 +1052,81 @@ public:
                 signal = fmax(signal, signalT);
             }
         }
-        this.signal_hyp = signal; // store hyperbolic signal for STS
+        return signal;
+    }
+
+    @nogc
+    number viscous_signal_frequency()
+    {
         // Factor for the viscous time limit.
         // See Swanson, Turkel and White (1991)
         // This factor is not included if viscosity is zero.
+
+        auto gmodel = myConfig.gmodel;
+        number gam_eff = gmodel.gamma(fs.gas);
+        // Need to sum conductivities for thermal nonequilibrium.
+        number k_total = fs.gas.k;
+        version(multi_T_gas) {
+            foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
+        }
+        number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
+        number signal = 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
+            * gam_eff / (Prandtl * fs.gas.rho)
+            * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
+        return signal;
+    }
+
+    @nogc
+    number turbulent_signal_frequency()
+    {
+        number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(*fs);
+        turbulent_signal *= myConfig.turbulent_signal_factor;
+        return turbulent_signal;
+    }
+
+    @nogc
+    number MHD_signal_frequency()
+    {
+        // Gas dynamics speed
+        // Ignoring flow and index directions, make the worst case assumptions.
+        number u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
+        if (myConfig.dimensions == 3) { u_mag_sq += (fs.vel.z)^^2; }
+        number u_mag = sqrt(u_mag_sq);
+        // MHD signal speed
+        number B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
+        number ca2 = B_mag_sq / fs.gas.rho;
+        number cfast = sqrt(ca2 + (fs.gas.a)^^2);
+        number signal = (u_mag+cfast)/L_min;
+        return signal;
+    }
+
+    @nogc
+    double signal_frequency()
+    // Remember to use stringent_cfl=true for unstructured-grid.
+    {
+        number signal = 0; // Signal speed is something like a frequency, with units 1/s.
+
+        // Check the convective/wave-driven time step limit first,
+        // then add a component to ensure viscous stability.
+        signal_hyp = convective_signal_frequency();
+        signal = signal_hyp;
+
         if (myConfig.viscous && (fs.gas.mu > 10.0e-23)) {
-            auto gmodel = myConfig.gmodel;
-            number gam_eff = gmodel.gamma(fs.gas);
-            // Need to sum conductivities for thermal nonequilibrium.
-            number k_total = fs.gas.k;
-            version(multi_T_gas) {
-                foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
-            }
-            number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
-            signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
-                * gam_eff / (Prandtl * fs.gas.rho)
-                * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
+            signal_parab = viscous_signal_frequency();
+            signal += signal_parab;
         }
-        this.signal_parab = signal - this.signal_hyp; // store parabolic signal for STS
-        version(turbulence) {
-            number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(*fs);
-            turbulent_signal *= myConfig.turbulent_signal_factor;
+
+        version(turbulence){
+            number turbulent_signal = turbulent_signal_frequency();
             signal = fmax(signal, turbulent_signal);
-            this.signal_parab = fmax(signal_parab, turbulent_signal);
+            signal_parab = fmax(signal_parab, turbulent_signal);
         }
-        version(MHD) {
+
+        version(MHD){
             if (myConfig.MHD) {
-                assert(myConfig.stringent_cfl, "MHD seems to only works if stringent_cfl is used.");
-                // Gas dynamics speed
-                // Ignoring flow and index directions, make the worst case assumptions.
-                number u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
-                if (myConfig.dimensions == 3) { u_mag_sq += (fs.vel.z)^^2; }
-                number u_mag = sqrt(u_mag_sq);
-                // MHD signal speed
-                number B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
-                number ca2 = B_mag_sq / fs.gas.rho;
-                number cfast = sqrt(ca2 + (fs.gas.a)^^2);
-                signal = fmax(signal, (u_mag+cfast)/L_min);
+                if (!myConfig.stringent_cfl) throw new Error("MHD seems to only works if stringent_cfl is used.");
+                number MHD_signal = MHD_signal_frequency();
+                signal = fmax(signal, MHD_signal);
             }
         }
         return signal.re;
