@@ -135,8 +135,8 @@ public:
     }
     this(const RobertsFunction other)
     {
-        this.end0 = end0;
-        this.end1 = end1;
+        end0 = other.end0;
+        end1 = other.end1;
         beta = other.beta;
         alpha = other.alpha;
         reverse = other.reverse;
