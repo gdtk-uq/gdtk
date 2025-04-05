@@ -74,6 +74,9 @@ NewtonKrylovGlobalConfigHidden = {
    write_gradient_values = false,
    write_loads = false,
 
+   -- Commands at run-time to solver
+   steps_between_commands_update = 10,
+
    __index = function (t, k)
       return NewtonKrylovGlobalConfigHidden[k]
    end,
@@ -166,6 +169,8 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"write_residual_values": %s,\n', tostring(nkConfig.write_residual_values)))
    f:write(string.format('"write_gradient_values": %s,\n', tostring(nkConfig.write_gradient_values)))
    f:write(string.format('"write_loads": %s,\n', tostring(nkConfig.write_loads)))
+   -- commands update
+   f:write(string.format('"steps_between_commands_update": %d,\n', nkConfig.steps_between_commands_update))
    -- write out phases
    for i=1,#nkPhases do
       f:write(nkPhases[i]:tojson() .. ",\n")
@@ -296,7 +301,6 @@ return {
    NewtonKrylovPhase = NewtonKrylovPhase,
    writeNKConfigToFile = writeNKConfigToFile,
    setIgnoreFlagInPhases = setIgnoreFlagInPhases
-
 }
 
 

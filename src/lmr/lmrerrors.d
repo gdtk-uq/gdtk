@@ -13,7 +13,10 @@ import std.stdio : writeln, writefln;
 enum LmrError {
     initialisation = 1,
     inputOutput = 2,
-    preprocessing = 3
+    preprocessing = 3,
+    unrecoverableUpdate = 4,
+    hitNumericalRailGuard = 5,
+    commandLineError = 6,
 }
 
 void lmrErrorExit(LmrError err, string msg)

@@ -24,6 +24,7 @@ struct LmrCfg {
     shared immutable string ctrlFile;
     shared immutable string progFile;
     shared immutable string nkCfgFile;
+    shared immutable string nkCmdsFile;
     shared immutable string blkIdxFmt;
     shared immutable string cellIdxFmt;
     shared immutable string snapshotDir;
@@ -80,6 +81,7 @@ static this()
     lmrCfg.ctrlFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["control-filename"].str;
     lmrCfg.progFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["progress-filename"].str;
     lmrCfg.nkCfgFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["newton-krylov-config-filename"].str;
+    lmrCfg.nkCmdsFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["newton-krylov-commands-filename"].str;
     lmrCfg.blkIdxFmt = lmrJSONCfg["block-index-format"].str;
     lmrCfg.cellIdxFmt = lmrJSONCfg["cell-index-format"].str;
     lmrCfg.snapshotDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["snapshot-directory"].str;

@@ -1,0 +1,43 @@
+# Run-time commands for Eilmer steady-state solver (solver_mode = "steady")
+#
+# This is a default file. The examples below are chosen to DO NOTHING to
+# alter the run-time behaviour as requested during initial configuration.
+#
+# You will need to make explicit edits and save the file to activate
+# your desired commands.
+#
+# Commands are executed in an order of priority. That order is:
+#    1. Commands related to writing actions
+#    2. Commands related to stopping the simulation
+#    3. Commands related to modifying the Newton-Krylov stepping
+#
+# Note 1. If you want to write a snapshot and exit, then set the appropriate
+#         write command (since it will be executed first) and the appropriate
+#         stop command.
+#
+# Note 2. This file may not be read on every step. There is a configuration setting
+#         to control how often the file is read. Actions only occur on the step when
+#         the file is re-read. That configuration setting is part of the Newton-Krylov
+#         settings and is called "steps_between_commands_update".
+#
+# Note 3. The run-time will never alter this file. So try to avoid the mistake of
+#         attempting to restart a simulation with the setting:
+#
+#           stop:
+#             at-next-check: yes
+#
+#         If you have used such a setting, you will need to reset it yourself
+#         on a restart. This applies to all settings in this file. You will need
+#         to choose what is appropriate for a restart.
+#
+#         To help with restarts, we provide a command the user can call:
+#         > lmr restore-default-run-time-commands
+#
+
+write-snapshot:
+  at-next-check: no
+  at-check-after-step: -1
+
+stop:
+  at-next-check: no
+  at-check-after-step: -1

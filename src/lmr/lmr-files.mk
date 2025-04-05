@@ -104,22 +104,23 @@ LMR_CMD_FILES = $(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/command.d \
 	$(LMR_CMD)/computenorms.d \
 	$(LMR_CMD)/customscript.d \
-	$(LMR_CMD)/probeflow.d \
-	$(LMR_CMD)/sliceflow.d \
-	$(LMR_CMD)/slicesolid.d \
 	$(LMR_CMD)/extractline.d \
-	$(LMR_CMD)/listspecies.d \
-	$(LMR_CMD)/limiter2vtk.d \
-	$(LMR_CMD)/residual2vtk.d \
 	$(LMR_CMD)/gradient2vtk.d \
+	$(LMR_CMD)/limiter2vtk.d \
+	$(LMR_CMD)/listspecies.d \
 	$(LMR_CMD)/plotdiagnostics.d \
 	$(LMR_CMD)/prepenergyexchange.d \
 	$(LMR_CMD)/prepgas.d \
-	$(LMR_CMD)/prepsim.d \
 	$(LMR_CMD)/prepgrids.d \
 	$(LMR_CMD)/prepmappedcells.d \
 	$(LMR_CMD)/prepreactions.d \
+	$(LMR_CMD)/prepsim.d \
+	$(LMR_CMD)/probeflow.d \
+	$(LMR_CMD)/residual2vtk.d \
+	$(LMR_CMD)/restore_default_run_time_commands.d \
 	$(LMR_CMD)/revisionid.d \
 	$(LMR_CMD)/runsim.d \
+	$(LMR_CMD)/sliceflow.d \
+	$(LMR_CMD)/slicesolid.d \
 	$(LMR_CMD)/snapshot2vtk.d \
 	$(LMR_CMD)/structured2unstructured.d

@@ -369,6 +369,10 @@ function buildRuntimeConfigFiles()
    write_config_file(lmrconfig.simulationConfigFilename())
    if (config.solver_mode ~= "steady") then
       write_control_file(cfgDir .. "/" .. lmrCfg["control-filename"])
+   else
+      cp_cmd = string.format("cp %s/share/default-commands-to-steady-mode %s/%s",
+         os.getenv("DGD"), cfgDir, lmrCfg["newton-krylov-commands-filename"])
+      os.execute(cp_cmd)
    end
    write_block_list_file(lmrconfig.blockListFilename())
    write_mpimap_file(lmrconfig.mpimapFilename())
