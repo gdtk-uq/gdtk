@@ -132,7 +132,7 @@ In terms of *when*, there are two options:
    _int_, `step number` +
    perform the action at the _next_ check when current step exceeds step number, but don't repeat action until `step number` is changed +
    if set to -1, this is disabled. +
-   Example: `steps_between_command_updates` is set to 10 and `at-check-after-step` is set to 15. +
+   Example: `steps_between_command_updates` is set to 10 and `at-next-check-after-step` is set to 15. +
    For these settings, the action is performed at step 20.
    The checks occur at steps: 10, 20, 30, ...
    When check occurs at step 20, then `current step > step number` -> `20 > 15`.
