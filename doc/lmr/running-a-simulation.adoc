@@ -72,6 +72,86 @@ We recommend using `lmr-mpi-run` for most transient simulations and `lmrZ-mpi-ru
 include::commands/run.txt[]
 ----
 
+== Command and control during run-time
+
+There could be several reasons one might like to interrupt the normal flow of a simulation to request an action.
+Some examples are: adjust a CFL value; request a current snapshot of the simulation evolution; or stop a simulation early.
+The facility to interrupt and act during a simulation is provided by user-edited files.
+We have two separate files for `steady` mode and `transient` mode because the kinds of actions available differ
+(and due to historical reasons).
+In general, these files are re-read at specific step intervals.
+If an action is detected at one of the checking intervals, it is executed.
+
+When issuing run-time command and control decisions, there is a trade-off between reproducibility and "getting things done".
+In terms of reproducibility, you weaken the record of your simulation settings if you adjust values on-the-fly.
+You can mitigate this by keeping good notes in your workbook, and we try to record the actions executed at run-time to STDOUT.
+That being said, you might be interested in a one-time simulation and it's handy to be able to adjust how the simulation
+proceeds without stopping and restarting.
+This can be particularly handy if you have a long-run job (eg. 6--12 hours) on a cluster computer and don't want to re-queue.
+
+=== Issuing run-time commands to steady-state solver (`config.solver_mode = "steady"`)
+
+Users can issue run-time commands to the solver in `steady` mode by editing the file:
+
+`lmrsim/commands-to-steady-mode`
+
+Here is an example file. This particular example does nothing to alter
+the run-time behaviour of the simulation since the actions are disabled.
+[source,yaml]
+----
+include::examples/commands-file[]
+----
+
+The configuration controlling how often the commands file is read is
+part of the Newton-Krylov settings. It is: `steps_between_command_updates`.
+The default is 10 steps.
+There is a performance cost to the simulation to read and execute commands,
+so make an appropriate selection.
+If you have a large simulation running on a cluster computer and the cost
+per iteration is on the order of minutes, then `steps_between_command_updates = 1` might be useful to you.
+That cost of reading the file is small compared to the step update.
+On the other hand, for a simulation that runs in seconds and you want to do many as part of a parameter sweep, you might find you do not want the cost of reading the commands file.
+In that case, set the `steps_between_command_updates` to a value larger than your maximum steps.
+
+Commands are in the form of *what* and *when*.
+There are currently two *what* commands: `write-snapshot` and `stop`.
+
+`write-snapshot` ::
+   writes a snapshot in next slot in the snapshot sequence
+
+`stop` ::
+   stops the simulation cleanly (but does not necessarily write-on-exit; use in conjuction with `write-snapshot` to achieve a write-on-exit)
+
+In terms of *when*, there are two options:
+
+`at-next-check` ::
+    _boolean_, yes|no +
+   perform the action next time the commands file is read
+
+`at-next-check-after-step` ::
+   _int_, `step number` +
+   perform the action at the _next_ check when current step exceeds step number, but don't repeat action until `step number` is changed +
+   if set to -1, this is disabled. +
+   Example: `steps_between_command_updates` is set to 10 and `at-check-after-step` is set to 15. +
+   For these settings, the action is performed at step 20.
+   The checks occur at steps: 10, 20, 30, ...
+   When check occurs at step 20, then `current step > step number` -> `20 > 15`.
+   This is the _next_ check that occurred that satisfied the condition, so the action is performed.
+
+There is a priority order given to the commands. That order is:
+
+1. Writing commands
+2. Stop commands
+
+So if you want to write and exit, you can set `at-next-check` to `yes` for
+both the write and stop commands.
+
+
+
+=== Controlling the time-marching mode at run-time (`config.solver_mode = "transient"`)
+
+See `lmrsim/control` file.
+
 == Post-processing
 The Eilmer flow field data is a native format.
 We will typically need to process it in some way to make is usable for analysis or visualisation.

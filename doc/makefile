@@ -86,7 +86,9 @@ geometry-reference-manual.html: geometry-reference-manual.adoc $(GEOM_DOC_FILES)
 nm-reference-manual.html: nm-reference-manual.adoc
 	asciidoctor nm-reference-manual.adoc
 
-lmr-reference-manual.html : lmr-reference-manual.adoc
+LMR_FILES := $(wildcard lmr/*.adoc)
+
+lmr-reference-manual.html : lmr-reference-manual.adoc $(LMR_FILES)
 	cd lmr/commands; make
 	asciidoctor lmr-reference-manual.adoc
 

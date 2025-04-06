@@ -836,6 +836,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     int stepsIntoCurrentPhase = 0;
     bool updatePreconditionerThisStep = false;
     CFLSelector cflSelector;
+    bool enableWriteSnapshotAfterCheck = true;
+    int savedSnapshotAfterCheckStep = -1;
 
     /*----------------------------------------------
      * Initialisation
@@ -1390,13 +1392,20 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                           writeln("*** COMMAND-ACTION: write-snapshot/at-next-check activated.");
                     }
                 }
-                if ("at-check-after-step" in runTimeCmds["write-snapshot"] && !writeNow) {
-                    auto stepMinForWriting = runTimeCmds["write-snapshot"]["at-check-after-step"].as!int;
-                    if (stepMinForWriting >= step && stepMinForWriting > 0) {
+                if ("at-next-check-after-step" in runTimeCmds["write-snapshot"] && !writeNow) {
+                    auto stepMinForWriting = runTimeCmds["write-snapshot"]["at-next-check-after-step"].as!int;
+                    if (savedSnapshotAfterCheckStep != stepMinForWriting) {
+                        enableWriteSnapshotAfterCheck = true;
+                        savedSnapshotAfterCheckStep = stepMinForWriting;
+                    }
+                    
+                    if (stepMinForWriting <= step && stepMinForWriting > 0 && enableWriteSnapshotAfterCheck) {
                         writeNow = true;
                         if (cfg.is_master_task) {
-                            writefln("*** COMMAND-ACTION: write-snapshot/at-check-after-step activated -- step-trigger= %d, current-step= %d", stepMinForWriting, step);
+                            writefln("*** COMMAND-ACTION: write-snapshot/at-next-check-after-step activated -- step-trigger= %d, current-step= %d", stepMinForWriting, step);
                         }
+                        // We turn off writing snapshots until we find a change in stepMinForWriting
+                        enableWriteSnapshotAfterCheck = false;
                     }
                 }
                 // For the present, we will just a write a snapshot into the
@@ -1415,12 +1424,12 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                         writeln("*** COMMAND-ACTION: stop/at-next-check activated.");
                     }
                 }
-                if ("at-check-after-step" in runTimeCmds["stop"] && !stopNow) {
-                    auto stepMinForStopping = runTimeCmds["stop"]["at-check-after-step"].as!int;
-                    if (stepMinForStopping >= step && stepMinForStopping > 0) {
+                if ("at-next-check-after-step" in runTimeCmds["stop"] && !stopNow) {
+                    auto stepMinForStopping = runTimeCmds["stop"]["at-next-check-after-step"].as!int;
+                    if (stepMinForStopping <= step && stepMinForStopping > 0) {
                         stopNow = true;
                         if (cfg.is_master_task) {
-                            writefln("*** COMMAND-ACTION: stop/at-check-after-step activated -- step-trigger= %d, current-step= %d", stepMinForStopping, step);
+                            writefln("*** COMMAND-ACTION: stop/at-next-check-after-step activated -- step-trigger= %d, current-step= %d", stepMinForStopping, step);
                         }
                     }
                 }

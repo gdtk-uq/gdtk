@@ -1,0 +1,7 @@
+write-snapshot:
+  at-next-check: no
+  at-next-check-after-step: -1
+
+stop:
+  at-next-check: no
+  at-next-check-after-step: -1
