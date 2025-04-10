@@ -9,6 +9,7 @@ import lmr.commands.extractline;
 import lmr.commands.gradient2vtk;
 import lmr.commands.limiter2vtk;
 import lmr.commands.listspecies;
+import lmr.commands.loads2vtk;
 import lmr.commands.plotdiagnostics;
 import lmr.commands.prepenergyexchange;
 import lmr.commands.prepgas;
@@ -61,6 +62,7 @@ Show help for a given Eilmer command or topic.
     commands["extract-line"] = extractLineCmd;
     commands["gradient2vtk"] = gradient2vtkCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
+    commands["loads2vtk"] = loads2vtkCmd;
     commands["list-species"] = listSpeciesCmd;
     // alias for list-species, provided for consistency with prep-gas tool
     commands["list-available-species"] = commands["list-species"];
