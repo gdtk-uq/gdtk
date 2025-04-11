@@ -172,7 +172,6 @@ int main_(string[] args)
                 string errMsg = format("Block %d has a structured grid type.\n", blkId);
                 errMsg ~= "Currently, the loads2vtk command only supports unstructured grids.";
                 throw new Error(errMsg);
-                break;
             case Grid_t.unstructured_grid:
                 grid = new UnstructuredGrid(gName, fileFmt, true);
                 break;
