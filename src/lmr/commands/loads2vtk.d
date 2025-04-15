@@ -141,7 +141,7 @@ int main_(string[] args)
             string msg = format("Reading %s file ib=%d ib_chk=%d", blkListFile, ib, ib_chk);
             throw new FlowSolverException(msg);
         }
-        gridTypes[blkId] = gridTypeFromName(gridTypeName);
+        gridTypes[ib] = gridTypeFromName(gridTypeName);
     }
 
     // write VTK files
