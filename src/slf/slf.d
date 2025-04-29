@@ -112,12 +112,12 @@ class Flame {
     int run(){
         int exitFlag = 0;
         immutable int maxiters = 8000;
-        immutable double targetGRR = 1e-10;
-        double dt = 5e-7;
+        double dt = 1e-6;
         bool verbose = false;
         double GRRold = 1.0;
         double GRold = 1e99;
-        double tau = 1e-1;
+        double tau = 1e-2;
+        immutable double targetGRR = config.targetGRR;
 
         log.length = 0;
         StopWatch sw;

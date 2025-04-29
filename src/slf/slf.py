@@ -28,9 +28,11 @@ header = """
     double get_dZ();
     double get_T0();
     double get_T1();
+    double get_targetGRR();
 
     void set_D(double D);
     void set_p(double p);
+    void set_targetGRR(double targetGRR);
 
     int get_chi(double*);
     int get_Z(double*);
@@ -141,6 +143,14 @@ class Flame(object):
     @property
     def T1(self):
         return self.lib.get_T1()
+
+    @property
+    def targetGRR(self):
+        return self.lib.get_targetGRR()
+
+    @targetGRR.setter
+    def targetGRR(self, value):
+        self.lib.set_targetGRR(value)
 
     @property
     def Z(self):

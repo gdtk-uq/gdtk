@@ -24,6 +24,7 @@ struct Config {
     double T1;
     double[string] Y0;
     double[string] Y1;
+    double targetGRR = 1e-10;
 }
 
 struct Parameters {
@@ -195,6 +196,9 @@ Config read_config_from_file(string filename){
         double Ys= to!double(data["Y1"][s].as!string);
         cfg.Y1[s] = Ys;
     }
+
+    // Optional parameters
+    if ("targetGRR" in data) cfg.targetGRR = to!double(data["targetGRR"].as!string);
 
     return cfg;
 }
