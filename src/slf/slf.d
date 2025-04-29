@@ -302,28 +302,19 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
     size_t N = pm.N;
     size_t neq = pm.neq;
     size_t nsp = pm.nsp;
-    immutable double Lewis_number=0.75;
+    immutable double lewis_number=pm.lewis_number;
 
     foreach(i; 0 .. N){
-        //double arg = erfc_inv(2.0*pm.Z[i]);
-        //number chi = pm.D*exp(-2.0*arg*arg);
         number chi = pm.chi[i];
         size_t idx = i*neq;
         bool verbose = v &&(i==15);
 
-        //gs.T = pm.T0;
-        //gs.p = pm.p;
-        //foreach(j; 0 .. nsp) gs.massf[j] = pm.Y0[j];
-        //gm.update_thermo_from_pT(gs);
-        //double rho_ox = gs.rho.re;
 
         gs.T = U[idx+nsp];
         gs.p = pm.p;
         foreach(j, Yj; U[idx .. idx+nsp]) gs.massf[j] = Yj;
         gm.update_thermo_from_pT(gs);
 
-        //number chi = evaluate_scalar_dissipation_2(gs.rho, rho_ox, pm.D, pm.Z[i]);
-        //number chi = evaluate_scalar_dissipation(pm.D, pm.Z[i]);
         //debug{
         //if (isNaN(gs.rho) || (gs.rho <= 0.0)) {
         //    throw new Exception(format("Invalid density. Gasstate is %s,%s,%s", gs.T,gs.p,gs.rho));
@@ -332,7 +323,7 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
         reactor.eval_source_terms(gm, gs, omegaMi);
         number cp = gm.Cp(gs);
 
-        R[idx+nsp] = Lewis_number*chi/2.0*U2nd[idx+nsp];
+        R[idx+nsp] = lewis_number*chi/2.0*U2nd[idx+nsp];
         for(int isp=0; isp<nsp; isp++){
             double Mi = gm.mol_masses[isp];
             number hi = gm.enthalpy(gs, isp);
@@ -357,7 +348,7 @@ void reverse_scalar_dissipation(GasModel gm, ThermochemicalReactor reactor, GasS
     size_t N = pm.N;
     size_t neq = pm.neq;
     size_t nsp = pm.nsp;
-    immutable double Lewis_number=0.75;
+    immutable double lewis_number=pm.lewis_number;
     second_derivs_from_cent_diffs(pm, U, U2nd);
 
     foreach(i; 0 .. N){
@@ -377,7 +368,7 @@ void reverse_scalar_dissipation(GasModel gm, ThermochemicalReactor reactor, GasS
             number hi = gm.enthalpy(gs, isp);
             hsOmegasMs += hi*omegaMi[isp];
         }
-        pm.chi[i] = hsOmegasMs/gs.rho/cp * 2.0/Lewis_number/d2TdZ2;
+        pm.chi[i] = hsOmegasMs/gs.rho/cp * 2.0/lewis_number/d2TdZ2;
     }
 }
 

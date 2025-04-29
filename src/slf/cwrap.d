@@ -144,10 +144,12 @@ extern (C) double get_dZ()   { return to!double(flame.pm.dZ.re); }
 extern (C) double get_T0()   { return to!double(flame.pm.T0.re); }
 extern (C) double get_T1()   { return to!double(flame.pm.T1.re); }
 extern (C) double get_targetGRR()   { return to!double(flame.config.targetGRR); }
+extern (C) double get_lewis_number()   { return to!double(flame.pm.lewis_number); }
 
 extern (C) void set_D(double D) { flame.pm.D.re = D; }
 extern (C) void set_p(double p) { flame.pm.p.re = p; }
 extern (C) void set_targetGRR(double targetGRR) { flame.config.targetGRR = targetGRR; }
+extern (C) void set_lewis_number(double lewis_number) { flame.pm.lewis_number = lewis_number; }
 
 immutable string get_array_function_def = "
 extern (C) int get_%s(double* %s) {

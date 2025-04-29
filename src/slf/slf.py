@@ -29,10 +29,12 @@ header = """
     double get_T0();
     double get_T1();
     double get_targetGRR();
+    double get_lewis_number();
 
     void set_D(double D);
     void set_p(double p);
     void set_targetGRR(double targetGRR);
+    void set_lewis_number(double lewis_number);
 
     int get_chi(double*);
     int get_Z(double*);
@@ -151,6 +153,14 @@ class Flame(object):
     @targetGRR.setter
     def targetGRR(self, value):
         self.lib.set_targetGRR(value)
+
+    @property
+    def lewis_number(self):
+        return self.lib.get_lewis_number()
+
+    @lewis_number.setter
+    def lewis_number(self, value):
+        self.lib.set_lewis_number(value)
 
     @property
     def Z(self):

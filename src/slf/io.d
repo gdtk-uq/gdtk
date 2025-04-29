@@ -25,6 +25,7 @@ struct Config {
     double[string] Y0;
     double[string] Y1;
     double targetGRR = 1e-10;
+    double lewis_number = 0.75;
 }
 
 struct Parameters {
@@ -59,6 +60,8 @@ struct Parameters {
 
         U0.length = neq; foreach(isp; 0 .. nsp) U0[isp] = Y0[isp]; U0[nsp] = T0;
         U1.length = neq; foreach(isp; 0 .. nsp) U1[isp] = Y1[isp]; U1[nsp] = T1;
+
+        lewis_number = config.lewis_number;
     }
 
     size_t nsp;
@@ -78,6 +81,8 @@ struct Parameters {
     double[] Y1;
     double[] U0;
     double[] U1;
+
+    double lewis_number;
 }
 
 void write_solution_to_file(ref const Parameters pm, number[] U, string filename){
@@ -199,6 +204,7 @@ Config read_config_from_file(string filename){
 
     // Optional parameters
     if ("targetGRR" in data) cfg.targetGRR = to!double(data["targetGRR"].as!string);
+    if ("lewis_number" in data) cfg.lewis_number = to!double(data["lewis_number"].as!string);
 
     return cfg;
 }
