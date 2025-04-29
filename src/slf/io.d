@@ -12,6 +12,7 @@ import dyaml;
 import gas;
 import nm.complex;
 import nm.number;
+import misc;
 
 struct Config {
     string gas_file_name;
@@ -37,6 +38,11 @@ struct Parameters {
         Z.length = N;
         foreach(i; 1 .. N+1) Z[i-1] = i/(N+1.0);
         dZ = 1.0/(N+1.0);
+
+        chi.length = N;
+        foreach(i; 0 .. N) {
+            chi[i] = evaluate_scalar_dissipation(D, Z[i]);
+        }
 
         // Boundary Conditions
         T0 = config.T0; T1 = config.T1;
@@ -65,6 +71,7 @@ struct Parameters {
     double T0;
     double T1;
 
+    number[] chi;
     double[] Z;
     double[] Y0;
     double[] Y1;

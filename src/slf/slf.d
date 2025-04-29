@@ -1,4 +1,16 @@
-// main.d: a steady laminar flamelet calculator by NNG.
+/*
+    slf.d: a steady laminar flamelet calculator by NNG.
+
+    References:
+      "A Consistent Flamelet Formulation for Non-Premixed Combustion Considering
+       Differential Diffusion Effects"
+       H. Pitch and N. Peters
+       Combustion and Flame, 114:26-40, 1998
+
+       "A computationally-efficient method for steady-state flamelet calculations"
+       S. Lapointe, Y. Xuan, R. A. Whitesides, M. J. McNenly
+       LLNL-JRNL-807545, March 23, 2020
+*/
 
 module slf;
 
@@ -100,7 +112,7 @@ class Flame {
     int run(){
         int exitFlag = 0;
         immutable int maxiters = 8000;
-        immutable double targetGRR = 4e-12;
+        immutable double targetGRR = 1e-10;
         double dt = 5e-7;
         bool verbose = false;
         double GRRold = 1.0;
@@ -221,6 +233,11 @@ class Flame {
         write_log_to_file(log, format("%s.log", filename));
     }
 
+    void back_out_scalar_dissipation(){
+        reverse_scalar_dissipation(gm, reactor, gs, omegaMi, pm, U, U2nd);
+    }
+
+
 public:
     string name;
     Config config;
@@ -274,33 +291,48 @@ void second_derivs_from_cent_diffs(ref const Parameters pm, number[] U, number[]
     return;
 }
 
+
 @nogc
 void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, number[] omegaMi, ref const Parameters pm, number[] U, number[] U2nd, number[] R, bool v=false){
 /*
     The residual or right hand side is the time derivatives of the equations.
     See Lapointe et al. equations (1) and (2)
+
 */
     size_t N = pm.N;
     size_t neq = pm.neq;
     size_t nsp = pm.nsp;
+    immutable double Lewis_number=0.75;
 
     foreach(i; 0 .. N){
-        double arg = erfc_inv(2.0*pm.Z[i]);
-        number chi = pm.D*exp(-2.0*arg*arg);
+        //double arg = erfc_inv(2.0*pm.Z[i]);
+        //number chi = pm.D*exp(-2.0*arg*arg);
+        number chi = pm.chi[i];
         size_t idx = i*neq;
         bool verbose = v &&(i==15);
+
+        //gs.T = pm.T0;
+        //gs.p = pm.p;
+        //foreach(j; 0 .. nsp) gs.massf[j] = pm.Y0[j];
+        //gm.update_thermo_from_pT(gs);
+        //double rho_ox = gs.rho.re;
 
         gs.T = U[idx+nsp];
         gs.p = pm.p;
         foreach(j, Yj; U[idx .. idx+nsp]) gs.massf[j] = Yj;
         gm.update_thermo_from_pT(gs);
+
+        //number chi = evaluate_scalar_dissipation_2(gs.rho, rho_ox, pm.D, pm.Z[i]);
+        //number chi = evaluate_scalar_dissipation(pm.D, pm.Z[i]);
+        //debug{
         //if (isNaN(gs.rho) || (gs.rho <= 0.0)) {
-        //    throw new Exception(format("Invalid density. Gasstate is %s", gs));
+        //    throw new Exception(format("Invalid density. Gasstate is %s,%s,%s", gs.T,gs.p,gs.rho));
+        //}
         //}
         reactor.eval_source_terms(gm, gs, omegaMi);
         number cp = gm.Cp(gs);
 
-        R[idx+nsp] = chi/2.0*U2nd[idx+nsp];
+        R[idx+nsp] = Lewis_number*chi/2.0*U2nd[idx+nsp];
         for(int isp=0; isp<nsp; isp++){
             double Mi = gm.mol_masses[isp];
             number hi = gm.enthalpy(gs, isp);
@@ -314,6 +346,38 @@ void compute_residual(GasModel gm, ThermochemicalReactor reactor, GasState gs, n
             if (verbose) writefln("Computing residual for cell %d Z %e T %e", i, pm.Z[i], gs.T);
             if (verbose) writefln(" Y: %s ", gs.massf);
         }
+    }
+}
+
+void reverse_scalar_dissipation(GasModel gm, ThermochemicalReactor reactor, GasState gs, number[] omegaMi, ref Parameters pm, number[] U, number[] U2nd){
+    /*
+        Import a flame from CFD and estimate the Z required to make it.
+        Notes: This didn't really work.
+    */
+    size_t N = pm.N;
+    size_t neq = pm.neq;
+    size_t nsp = pm.nsp;
+    immutable double Lewis_number=0.75;
+    second_derivs_from_cent_diffs(pm, U, U2nd);
+
+    foreach(i; 0 .. N){
+        size_t idx = i*neq;
+
+        gs.T = U[idx+nsp];
+        gs.p = pm.p;
+        foreach(j, Yj; U[idx .. idx+nsp]) gs.massf[j] = Yj;
+        gm.update_thermo_from_pT(gs);
+
+        reactor.eval_source_terms(gm, gs, omegaMi);
+        number cp = gm.Cp(gs);
+
+        number d2TdZ2 = U2nd[idx+nsp];
+        number hsOmegasMs = 0.0;
+        for(int isp=0; isp<nsp; isp++){
+            number hi = gm.enthalpy(gs, isp);
+            hsOmegasMs += hi*omegaMi[isp];
+        }
+        pm.chi[i] = hsOmegasMs/gs.rho/cp * 2.0/Lewis_number/d2TdZ2;
     }
 }
 

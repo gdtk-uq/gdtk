@@ -56,7 +56,7 @@ extern (C) int run()
     }
     catch(Exception e) {
         writeln("Caught exception in cwrap.run, message was:");
-        writeln(e.msg);
+        writeln(e.toString());
         exitCode = 1;
     }
 
@@ -72,7 +72,7 @@ extern (C) int save_solution()
     }
     catch(Exception e) {
         writeln("Caught exception in cwrap.save_solution, message was:");
-        writeln(e.msg);
+        writeln(e.toString());
         exitCode = 1;
     }
 
@@ -96,6 +96,42 @@ extern (C) int save_log()
     return exitCode;
 }
 
+extern (C) int back_out_scalar_dissipation()
+{
+    int exitCode = 0;
+    try{
+        flame.back_out_scalar_dissipation();
+    }
+    catch(Exception e) {
+        writeln("Caught exception in cwrap.back_out_scalar_dissipation, message was:");
+        writeln(e.toString());
+        exitCode = 1;
+    }
+
+    stdout.flush();
+    return exitCode;
+}
+
+extern (C) int extract_residual(double* R)
+{
+    int exitCode = 0;
+    try{
+        second_derivs_from_cent_diffs(flame.pm, flame.U, flame.U2nd);
+        compute_residual(flame.gm, flame.reactor, flame.gs, flame.omegaMi, flame.pm,
+                         flame.U, flame.U2nd, flame.R);
+        foreach(i; 0 .. flame.n) {
+            R[i] = flame.R[i].re;
+        }
+    }
+    catch(Exception e) {
+        writeln("Caught exception in cwrap.extract_residual, message was:");
+        writeln(e.toString());
+        exitCode = 1;
+    }
+
+    stdout.flush();
+    return exitCode;
+}
 
 extern (C) int get_nsp() { return to!int(flame.nsp); }
 extern (C) int get_neq() { return to!int(flame.neq); }
@@ -117,6 +153,7 @@ extern (C) int get_%s(double* %s) {
     catch (Exception e) { stderr.writeln(\"Failed to get %s because reason: \", e.msg); return -1; }
 }";
 
+mixin(format(get_array_function_def, "chi","chi","pm.chi","chi","pm.chi","chi"));
 mixin(format(get_array_function_def, "Z", "Z",   "pm.Z",  "Z",  "pm.Z",  "Z"));
 mixin(format(get_array_function_def, "Y0", "Y0", "pm.Y0", "Y0", "pm.Y0", "Y0"));
 mixin(format(get_array_function_def, "Y1", "Y1", "pm.Y1", "Y1", "pm.Y1", "Y1"));
@@ -153,6 +190,32 @@ extern (C) int get_Y(double* Y) {
     }
     catch (Exception e) {
         stderr.writeln("Failed to get temperature because reason: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int set_U(double* U) {
+    try {
+        foreach(i; 0 .. flame.n) {
+            flame.U[i].re = U[i];
+            flame.U[i].im = 0.0;
+        }
+        return 0;
+    }
+    catch (Exception e) {
+        stderr.writeln("Failed to set conserved quantities U because reason: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int set_chi(double* chi) {
+    try {
+        foreach(i; 0 .. flame.N) flame.pm.chi[i].re = chi[i];
+        foreach(i; 0 .. flame.N) flame.pm.chi[i].im = 0.0;
+        return 0;
+    }
+    catch (Exception e) {
+        stderr.writeln("Failed to set scalar dissipation because reason: ", e.msg);
         return -1;
     }
 }

@@ -45,3 +45,25 @@ void gaussian_initial_condition(ref const Parameters pm, number[] U){
         version(complex_numbers) { U[idx+pm.nsp].im = 0.0; }
     }
 }
+
+@nogc pure
+number evaluate_scalar_dissipation(number D, double Z){
+    /*
+        Using equation (30) from Pitsch and Peters, 1998
+    */
+    double arg = erfc_inv(2.0*Z);
+    number chi = D*exp(-2.0*arg*arg);
+    return chi;
+}
+
+@nogc pure
+number evaluate_scalar_dissipation_2(number rho, double rho_ox, number D, double Z){
+    /*
+        Using equation (31) from Pitsch and Peters, 1998
+    */
+    double arg = erfc_inv(2.0*Z);
+    number chi = D*exp(-2.0*arg*arg);
+    number stau = sqrt(rho_ox/rho);
+    chi *= 3.0*(stau+1.0)*(stau+1.0)/(2.0*stau+1.0)/4.0;
+    return chi;
+}

@@ -15,6 +15,8 @@ header = """
     int run();
     int save_solution();
     int save_log();
+    int back_out_scalar_dissipation();
+    int extract_residual(double*);
 
     int get_nsp();
     int get_neq();
@@ -30,6 +32,7 @@ header = """
     void set_D(double D);
     void set_p(double p);
 
+    int get_chi(double*);
     int get_Z(double*);
     int get_Y0(double*);
     int get_Y1(double*);
@@ -39,6 +42,9 @@ header = """
     int get_R(double*);
     int get_T(double*);
     int get_Y(double*);
+
+    int set_U(double*);
+    int set_chi(double*);
 """
 
 ffi = FFI()
@@ -79,6 +85,18 @@ class Flame(object):
         result = self.lib.save_log()
         if result!=0: raise Exception("Failed to save slf log file to disk")
         return
+
+    def back_out_scalar_dissipation(self):
+        result = self.lib.back_out_scalar_dissipation() 
+        if result!=0: raise Exception("Failed to reverse engineer a scalar dissipation")
+        return
+
+    def extract_residual(self):
+        R = zeros(self.n)
+        Rp = ffi.cast("double *", ffi.from_buffer(R))
+        result = self.lib.extract_residual(Rp)
+        if result!=0: raise Exception("Failed to extract a residual vector")
+        return R.reshape((self.N, self.neq))
 
     @property
     def nsp(self):
@@ -133,6 +151,21 @@ class Flame(object):
         return Z
 
     @property
+    def chi(self):
+        chi = zeros(self.N)
+        chip = ffi.cast("double *", ffi.from_buffer(chi))
+        code = self.lib.get_chi(chip)
+        if code!=0: raise Exception("Failed to get array chi from slf")
+        return chi
+
+    @chi.setter
+    def chi(self, arr):
+        chip = ffi.cast("double *", ffi.from_buffer(arr))
+        code = self.lib.set_chi(chip)
+        if code!=0: raise Exception("Failed to set array chi from slf")
+        return
+
+    @property
     def Y0(self):
         Y0 = zeros(self.nsp)
         Y0p = ffi.cast("double *", ffi.from_buffer(Y0))
@@ -171,6 +204,13 @@ class Flame(object):
         code = self.lib.get_U(Up)
         if code!=0: raise Exception("Failed to get array U from slf")
         return U
+
+    @U.setter
+    def U(self, arr):
+        Up = ffi.cast("double *", ffi.from_buffer(arr))
+        code = self.lib.set_U(Up)
+        if code!=0: raise Exception("Failed to set array U in slf")
+        return
 
     @property
     def R(self):
