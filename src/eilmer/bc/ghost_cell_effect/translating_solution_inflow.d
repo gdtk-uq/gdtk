@@ -93,6 +93,8 @@ public:
         this.xs0  = getJSONdouble(jsondata, "xs0", -1.0);
         this.xs1  = getJSONdouble(jsondata, "xs1", -1.0);
         this.nic  = getJSONint(jsondata, "nic", 0);
+        string fbl_format = getJSONstring(jsondata, "fbl_format", "rawbinary");
+        writefln("TIFBC: fbl_format: %s", fbl_format);
 
         this.translation_velocity  = getJSONdouble(jsondata, "translation_velocity", -1.0);
         this.upstream_grid_rotation= getJSONdouble(jsondata, "upstream_grid_rotation", -1.0);
@@ -106,19 +108,21 @@ public:
         nghost = getJSONint(blkjson, "nghost", 0);
 
         FluidBlockLite[2] fbl;
-        fbl[0] = new FluidBlockLite(format(fileName, blk.id, 0), 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
-        fbl[1] = new FluidBlockLite(format(fileName, blk.id, 1), 0, fakeJsonData, Grid_t.structured_grid, "rawbinary");
+        fbl[0] = new FluidBlockLite(format(fileName, blk.id, 0), 0, fakeJsonData, Grid_t.structured_grid, fbl_format);
+        fbl[1] = new FluidBlockLite(format(fileName, blk.id, 1), 0, fakeJsonData, Grid_t.structured_grid, fbl_format);
 
         fss.length = nfaces*nghost;
+        size_t check_nfaces = get_nfaces_from_sblk();
 
-        SFluidBlock this_blk = cast(SFluidBlock) blk;
-        if (!this_blk) throw new Error("FlowBlock must be a structured-grid block.");
+        if (nfaces!= check_nfaces) {
+            throw new Error(format(
+                 "File specifies %d faces and this boundary has %d",
+                  nfaces, check_nfaces));
+        }
 
-        size_t nkc = this_blk.nkc;
-        size_t njc = this_blk.njc;
         size_t ighost = 0;
-        foreach (k; 0 .. nkc) {
-          foreach (j; 0 .. njc) {
+        size_t k = 0;
+        foreach(j; 0 .. nfaces) {
             foreach (n; 0 .. nghost) {
                 assert (fbl[n].nic == nic);
                 foreach (i; 0 .. fbl[n].nic) {
@@ -148,7 +152,6 @@ public:
                 }
                 ighost += 1;
             }
-          }
         }
     }
 
@@ -240,12 +243,40 @@ private:
     Vector3 upstream_grid_shift;
     FlowState[][] fss;
 
+    size_t get_nfaces_from_sblk(){
+        SFluidBlock this_blk = cast(SFluidBlock) blk;
+        if (!this_blk) throw new Error("FlowBlock must be a structured-grid block.");
+
+        switch (which_boundary) {
+        case Face.west:
+            return this_blk.njc*this_blk.nkc;
+        case Face.east:
+            return this_blk.njc*this_blk.nkc;
+        case Face.south:
+            return this_blk.nic*this_blk.nkc;
+        case Face.north:
+            return this_blk.nic*this_blk.nkc;
+        case Face.bottom:
+            return this_blk.nic*this_blk.njc;
+        case Face.top:
+            return this_blk.nic*this_blk.njc;
+        default:
+            throw new Error("Case failed, incorrect structured grid face");
+        }
+    }
+
     void get_interp_idxs_and_weight(double gcxp, out int l, out int u, out double w0){
     /*
         We're given a position in the x direction, and need to figure out the two
         flowstates on either side of us, as well as a weight parameter to help
         interpolate between them.
     */
+        if (nic==1) {
+            l=0;
+            u=0;
+            w0 = 1.0;
+            return;
+        }
         double float_idx = (gcxp - xs0)/(xs1-xs0)*(nic-1);
         int int_l = to!int(floor(float_idx));
         int int_u = to!int(floor(float_idx))+1;
