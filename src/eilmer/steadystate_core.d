@@ -1417,6 +1417,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     // [TODO] KD 2021-11-30 This is a temporary fix until a more formal solution has been decided upon.
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach(boundary; blk.bc) {
+            if (boundary.preSpatialDerivActionAtBndryFaces.length<1) continue;
             if (boundary.preSpatialDerivActionAtBndryFaces[0].desc == "CopyCellData") {
                 boundary.preSpatialDerivActionAtBndryFaces[0].apply(pseudoSimTime, gtl, ftl);
             }
