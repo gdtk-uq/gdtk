@@ -7,6 +7,7 @@ Python code for interfacing with slf.
 from cffi import FFI
 from numpy import array, zeros
 from os import environ, path
+from numpy.polynomial import Polynomial
 
 header = """
     int cwrap_init();
@@ -15,6 +16,7 @@ header = """
     int run();
     int save_solution();
     int save_log();
+    int load_solution();
     int back_out_scalar_dissipation();
     int extract_residual(double*);
 
@@ -69,6 +71,7 @@ class Flame(object):
         self.lib = ffi.dlopen(libpath)
         self.lib.cwrap_init()
         check = self.lib.init_slf(bytes(file, 'utf-8'))
+        if check!=0: raise Exception("Failed to initialize slf flame object")
         return
 
     def set_initial_condition(self):
@@ -90,6 +93,10 @@ class Flame(object):
         if result!=0: raise Exception("Failed to save slf log file to disk")
         return
 
+    def load_solution(self):
+        result = self.lib.load_solution()
+        if result!=0: raise Exception("Failed to load slf solution from disk")
+
     def back_out_scalar_dissipation(self):
         result = self.lib.back_out_scalar_dissipation() 
         if result!=0: raise Exception("Failed to reverse engineer a scalar dissipation")
@@ -101,6 +108,17 @@ class Flame(object):
         result = self.lib.extract_residual(Rp)
         if result!=0: raise Exception("Failed to extract a residual vector")
         return R.reshape((self.N, self.neq))
+
+    def create_polynomial_fit(self):
+        """
+        To get smooth gradients and double gradients, we need to fit some curves
+        to the flame solution.
+        """
+        U = self.U
+        self.polyfits = []
+        for i in range(self.neq):
+            self.polyfits.append(Polynomial.fit(self.Z, U[:,i], deg=4))
+        return
 
     @property
     def nsp(self):
@@ -223,7 +241,7 @@ class Flame(object):
         Up = ffi.cast("double *", ffi.from_buffer(U))
         code = self.lib.get_U(Up)
         if code!=0: raise Exception("Failed to get array U from slf")
-        return U
+        return U.reshape((self.N, self.neq))
 
     @U.setter
     def U(self, arr):

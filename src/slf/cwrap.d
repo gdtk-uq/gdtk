@@ -80,6 +80,22 @@ extern (C) int save_solution()
     return exitCode;
 }
 
+extern (C) int load_solution()
+{
+    int exitCode = 0;
+    try{
+        flame.load_solution();
+    }
+    catch(Exception e) {
+        writeln("Caught exception in cwrap.load_solution, message was:");
+        writeln(e.toString());
+        exitCode = 1;
+    }
+
+    stdout.flush();
+    return exitCode;
+}
+
 extern (C) int save_log()
 {
     int exitCode = 0;

@@ -228,6 +228,11 @@ class Flame {
         write_solution_to_file(pm, U, format("%s.sol", filename));
     }
 
+    void load_solution(string filename=""){
+        if (filename.length==0) filename = name;
+        read_solution_from_file(pm, U, format("%s.sol", filename));
+    }
+
     void save_log(string filename=""){
         if (filename.length==0) filename = name;
         write_log_to_file(log, format("%s.log", filename));
