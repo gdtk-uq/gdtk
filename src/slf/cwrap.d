@@ -149,6 +149,20 @@ extern (C) int extract_residual(double* R)
     return exitCode;
 }
 
+extern (C) int get_species_name(int isp, char* dest_name, int n)
+{
+    // The isp-th species name will be copied into char* array.
+    // It is presumed that sufficient space (n chars, including \0) was allocated previously.
+    try {
+        char* src_name = cast(char*) flame.gm.species_name(isp).toStringz;
+        strncpy(dest_name, src_name, n);
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Failed to get species name: ", e.toString());
+        return -1;
+    }
+}
+
 extern (C) int get_nsp() { return to!int(flame.nsp); }
 extern (C) int get_neq() { return to!int(flame.neq); }
 extern (C) int get_N()   { return to!int(flame.N); }

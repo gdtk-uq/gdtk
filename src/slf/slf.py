@@ -19,6 +19,7 @@ header = """
     int load_solution();
     int back_out_scalar_dissipation();
     int extract_residual(double*);
+    int get_species_name(int, char*, int);
 
     int get_nsp();
     int get_neq();
@@ -72,6 +73,12 @@ class Flame(object):
         self.lib.cwrap_init()
         check = self.lib.init_slf(bytes(file, 'utf-8'))
         if check!=0: raise Exception("Failed to initialize slf flame object")
+
+        self.species_names = []
+        buf = ffi.new("char[]", b'\000'*32)
+        for isp in range(self.nsp):
+            self.lib.get_species_name(isp, buf, 32)
+            self.species_names.append(ffi.string(buf).decode('utf-8'))
         return
 
     def set_initial_condition(self):
@@ -114,10 +121,14 @@ class Flame(object):
         To get smooth gradients and double gradients, we need to fit some curves
         to the flame solution.
         """
-        U = self.U
-        self.polyfits = []
-        for i in range(self.neq):
-            self.polyfits.append(Polynomial.fit(self.Z, U[:,i], deg=4))
+        self.polyfits = {}
+
+        Y = self.Y
+        for isp in range(self.nsp):
+            sp = self.species_names[isp]
+            self.polyfits[sp] = Polynomial.fit(self.Z, Y[:,isp], deg=4)
+
+        self.polyfits['T'] = Polynomial.fit(self.Z, self.T, deg=4)
         return
 
     @property
@@ -272,7 +283,7 @@ class Flame(object):
         Yp = ffi.cast("double *", ffi.from_buffer(Y))
         code = self.lib.get_Y(Yp)
         if code!=0: raise Exception("Failed to get array Y from slf")
-        return Y
+        return Y.reshape((self.N, self.nsp))
 
 if __name__=='__main__':
     print("Put a test here, I guess...")
