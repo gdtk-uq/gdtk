@@ -150,18 +150,10 @@ public:
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
 
-        // We don't need the full celldata for the prep stage, just the flowstates
-        celldata.flowstates.reserve(ncells);
+        celldata.positions.length = ncells;
+        celldata.volumes.length = ncells;
 
-        bool lua_fs = false;
-        FlowState* myfs;
-        // check where our flowstate is coming from
-        if ( isObjType(L, 3, "number") ) {
-            myfs = checkFlowState(L, 3);
-            lua_settop(L, 0); // clear stack
-        } else if (lua_isfunction(L, 3)) {
-            lua_fs = true;
-        }
+        // First calculate and store the cell positions and volumes.
         Vector3 pos;
         number volume, iLen, jLen, kLen;
         size_t[3] ijk;
@@ -189,16 +181,40 @@ public:
             } else {
                 throw new Exception("GlobalConfig.dimensions not 2 or 3.");
             }
-            if (myfs && omegaz != 0.0) { into_rotating_frame(myfs.vel, pos, omegaz); }
-            if (lua_fs) {
-                // Now grab flow state via Lua function call.
-                // If the block is in a rotating frame with omegaz != 0.0,
-                // we presume that the Lua function will provide the velocity
-                // components relative to the rotating frame.
+            celldata.positions[cell_idx] = pos;
+            celldata.volumes[cell_idx] = volume;
+        }
+
+        // For the prep stage, we just need the flowstates and positions and volumes
+        celldata.flowstates.reserve(ncells);
+
+        // Option 1: Initialise flowstates using a single, constant flowstate object.
+        // In a rotating frame simulation, we may have to alter this object
+        // based on position however. See Bugfix by NNG from May 2nd, 2025.
+        if ( isObjType(L, 3, "number") ) {
+            FlowState* myfs = checkFlowState(L, 3);
+            lua_settop(L, 0); // clear stack
+            Vector3 vel_save = Vector3(myfs.vel); // Keep a saved copy of the vel vector
+
+            foreach(cell_idx, ref cell; cells) {
+                if (omegaz != 0.0) {
+                    myfs.vel.set(vel_save);  // Bugfix from write_initial_sg_flow_file.d
+                    into_rotating_frame(myfs.vel, celldata.positions[cell_idx], omegaz);
+                }
+                celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
+                cell = new FluidFVCell(myConfig, celldata.positions[cell_idx], &celldata, celldata.volumes[cell_idx], to!int(cell_idx));
+            }
+        } else if (lua_isfunction(L, 3)) {
+            // Option 2: grab flow state via Lua function call.
+            // If the block is in a rotating frame with omegaz != 0.0,
+            // we presume that the Lua function will provide the velocity
+            // components relative to the rotating frame.
+            FlowState* myfs;
+            foreach(cell_idx, ref cell; cells) {
                 lua_pushvalue(L, 3);
-                lua_pushnumber(L, pos.x);
-                lua_pushnumber(L, pos.y);
-                lua_pushnumber(L, pos.z);
+                lua_pushnumber(L, celldata.positions[cell_idx].x);
+                lua_pushnumber(L, celldata.positions[cell_idx].y);
+                lua_pushnumber(L, celldata.positions[cell_idx].z);
                 if (lua_pcall(L, 3, 1, 0) != 0) {
                     string errMsg = "Error in Lua function call for setting FlowState\n";
                     errMsg ~= "as a function of position (x, y, z).\n";
@@ -215,12 +231,14 @@ public:
                     errMsg ~= "The returned object is not a proper _FlowState handle or table.";
                     luaL_error(L, errMsg.toStringz);
                 }
+                celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
+                cell = new FluidFVCell(myConfig, celldata.positions[cell_idx], &celldata, celldata.volumes[cell_idx], to!int(cell_idx));
             }
-            // make the cell
-            celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
-            cell = new FluidFVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
+            lua_settop(L, 0);
+        } else {
+            // No other valid options
+            throw new Error("Invalid initial flowstate type.");
         }
-        if (lua_fs) { lua_settop(L, 0); }
     } // end constructor from Lua state
 
     override JSONValue get_header()
