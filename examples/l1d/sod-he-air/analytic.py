@@ -10,7 +10,7 @@ print("Compute the flow conditions expected in the Sod shock tube.")
 #
 print("shock-tube fill conditions with helium driving eq-air")
 gm_he = GasModel('ideal-helium-gas-model.lua')
-gm_air = GasModel('cea-lut-air-version-test.lua')
+gm_air = GasModel('cea-lut-air.lua')
 flow_air = GasFlow(gm_air)
 flow_he = GasFlow(gm_he)
 states = []
