@@ -36,6 +36,7 @@ Versions:
   2025-Mar-19  Allow variable piston mass to model the secondary diaphragm
                in an expansion tube, where the diaphragm is initially punched
                out of its restraint and temporarily acts as a piston.
+  2025-May-10  Implement the code for writing of history cells.
 """
 
 # ----------------------------------------------------------------------
@@ -757,33 +758,53 @@ class GasSlug():
         fp.write("# end\n")
         return
 
-    def write_history_loc_data(self, fp, x, t):
+    def write_initial_flow_data_for_any_cell(self, fp, t, x):
+        """
+        Write the flow data for a history cell or a history location.
+
+        We assume that the data is constant for the whole slug.
+        """
+        L_bar = 0.0; shear_stress=0.0; heat_flux = 0.0
+        fp.write('%e %e %e %e' % (t, x, self.vel, L_bar))
+        fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
+        fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
+        massf = [0.0,]*config.overall_species_count
+        gs_massf = self.gas.massf
+        for i in range(len(gs_massf)):
+            massf[config.overall_species_index[self.gmodel_id][i]] = gs_massf[i]
+        for mf in massf: fp.write(' %e' % mf)
+        Tmodes = [0.0,]*config.overall_modes_count
+        gs_Tmodes = self.gas.T_modes
+        for i in range(len(gs_Tmodes)):
+            Tmodes[config.overall_modes_index[self.gmodel_id][i]] = gs_Tmodes[i]
+        for Tmode in Tmodes: fp.write(' %e' % Tmode)
+        fp.write('\n')
+        return
+
+    def write_history_loc_data(self, fp, t, x):
         """
         Write the initial state of the cell at the given x-location.
 
         It may be that nothing is written, if the x-location is not
         covered by a cell in the slug.
         """
-        L_bar = 0.0; shear_stress=0.0; heat_flux = 0.0
         for j in range(self.ncells):
             if (x >= self.ifxs[j]) and (x <= self.ifxs[j+1]):
-                fp.write('%e %e %e' % (t, self.vel, L_bar))
-                fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
-                fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
-                massf = [0.0,]*config.overall_species_count
-                gs_massf = self.gas.massf
-                for i in range(len(gs_massf)):
-                    massf[config.overall_species_index[self.gmodel_id][i]] = gs_massf[i]
-                for mf in massf: fp.write(' %e' % mf)
-                Tmodes = [0.0,]*config.overall_modes_count
-                gs_Tmodes = self.gas.T_modes
-                for i in range(len(gs_Tmodes)):
-                    Tmodes[config.overall_modes_index[self.gmodel_id][i]] = gs_Tmodes[i]
-                for Tmode in Tmodes: fp.write(' %e' % Tmode)
-                fp.write('\n')
+                self.write_initial_flow_data_for_any_cell(fp, t, x)
                 break;
         return
 
+    def write_history_cell_data(self, fp, t, ic):
+        """
+        Write the initial state of a particular cell.
+
+        We are actually going to assume that all cells
+        within the slug have the same data.
+        """
+        x = 0.5 * (self.ifxs[ic] + self.ifxs[ic+1])
+        self.write_initial_flow_data_for_any_cell(fp, t, x)
+        return
+        
     @property
     def energy(self):
         """
@@ -1424,22 +1445,32 @@ def write_initial_files():
     fp.write('%d %e\n' % (0, 0.0))
     fp.close()
     #
+    history_header_line = '# 1:t  2:x  3:vel  4:L_bar  5:rho  6:p  7:T  8:u  9:a  10:shear_stress  11:heat_flux'
+    column_count = 12
+    for gi in range(len(config.gmodels)):
+        species_names = config.gmodels[gi].species_names
+        for i in range(config.gmodels[gi].n_species):
+            history_header_line += ('  %d:gas-%d-massf-%s' % (column_count, gi, species_names[i]))
+            column_count += 1
+    for gi in range(len(config.gmodels)):
+        for i in range(config.gmodels[gi].n_modes):
+            history_header_line += ('  %d:gas-%d-Tmode[%d]' % (column_count, gi, i))
+            column_count += 1
+    history_header_line += '\n'
+    #
+    for slug in slugList:
+        for ic in slug.hcells:
+            fileName = config.job_name + ('/history-cell-%04d-in-slug-%04d.data' % (ic, slug.indx))
+            fp = open(fileName, 'w')
+            fp.write(history_header_line)
+            slug.write_history_cell_data(fp, 0.0, ic)
+            fp.close()
+    #
     for ih in range(len(config.hloc_list)):
         fileName = config.job_name + ('/history-loc-%04d.data' % ih)
         fp = open(fileName, 'w')
-        fp.write('# 1:t  2:vel  3:L_bar  4:rho  5:p  6:T  7:u  8:a  9:shear_stress  10:heat_flux')
-        column_count = 11
-        for gi in range(len(config.gmodels)):
-            species_names = config.gmodels[gi].species_names
-            for i in range(config.gmodels[gi].n_species):
-                fp.write('  %d:gas-%d-massf-%s' % (column_count, gi, species_names[i]))
-                column_count += 1
-        for gi in range(len(config.gmodels)):
-            for i in range(config.gmodels[gi].n_modes):
-                fp.write('  %d:gas-%d-Tmode[%d]' % (column_count, gi, i))
-                column_count += 1
-        fp.write('\n')
-        for slug in slugList: slug.write_history_loc_data(fp, config.hloc_list[ih], 0.0)
+        fp.write(history_header_line)
+        for slug in slugList: slug.write_history_loc_data(fp, 0.0, config.hloc_list[ih])
         fp.close()
     #
     fileName = config.job_name + '/energies.data'

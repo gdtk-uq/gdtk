@@ -428,7 +428,7 @@ void integrate_in_time()
             sim_data.steps_since_last_plot_write++;
         }
         if (sim_data.sim_time >= sim_data.t_hist) {
-            write_data_at_history_locations(sim_data.sim_time);
+            write_data_at_history_locations_and_cells(sim_data.sim_time);
             write_energies(sim_data.sim_time);
             sim_data.t_hist += L1dConfig.dt_hist.get_value(sim_data.sim_time);
             sim_data.steps_since_last_hist_write = 0;
@@ -443,7 +443,7 @@ void integrate_in_time()
         write_state_gasslugs_pistons_diaphragms();
     }
     if (sim_data.steps_since_last_hist_write > 0) {
-        write_data_at_history_locations(sim_data.sim_time);
+        write_data_at_history_locations_and_cells(sim_data.sim_time);
         write_energies(sim_data.sim_time);
     }
     return;
@@ -491,7 +491,7 @@ void write_state_gasslugs_pistons_diaphragms()
 } // end write_state_gasslugs_pistons_diaphragms()
 
 
-void write_data_at_history_locations(double t)
+void write_data_at_history_locations_and_cells(double t)
 {
     foreach (i; 0 .. L1dConfig.hloc_n) {
         string fileName = L1dConfig.job_name ~ format("/history-loc-%04d.data", i);
@@ -500,8 +500,16 @@ void write_data_at_history_locations(double t)
         foreach (s; gasslugs) { s.write_history_loc_data(fp, t, x); }
         fp.close();
     }
+    foreach (s; gasslugs) {
+    	foreach (j; s.hcells) {
+    		string fileName = L1dConfig.job_name ~ format("/history-cell-%04d-in-slug-%04d.data", j, s.indx);
+	    	File fp = File(fileName, "a");
+	    	s.write_history_cell_data(fp, t, j);
+	    	fp.close();
+    	}
+    }
     return;
-} // end write_data_at_history_locations()
+} // end write_data_at_history_locations_and_cells()
 
 
 void write_energies(double t)

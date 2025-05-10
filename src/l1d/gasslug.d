@@ -171,31 +171,42 @@ public:
         fp.writeln("# end");
     } // end write_cell_data()
 
-    void write_history_loc_data(File fp, double t, double x)
+    void write_history_flow_data(File fp, double t, double x, size_t j)
     {
         // Write a subset of the data that will be common to all slugs,
         // no matter what gas model is associated with this slug.
+        LCell c = cells[j];
+        fp.write(format("%e %e %e %e", t, x, c.vel, c.L_bar));
+        fp.write(format(" %e %e %e %e", c.gas.rho, c.gas.p, c.gas.T, c.gas.u));
+        fp.write(format(" %e %e %e", c.gas.a, c.shear_stress, c.heat_flux));
+        double[] massf; massf.length = overall_species_count;
+        foreach (ref mf; massf) { mf = 0.0; }
+        foreach (i, mf; c.gas.massf) { massf[overall_species_index[gmodel_id][i]] = mf; }
+        foreach (mf; massf) { fp.write(format(" %e", mf)); }
+        double[] Tmodes; Tmodes.length = overall_modes_count;
+        foreach (ref tm; Tmodes) { tm = 0.0; }
+        foreach (i, tm; c.gas.T_modes) { Tmodes[overall_modes_index[gmodel_id][i]] = tm; }
+        foreach (tm; Tmodes) { fp.write(format(" %e", tm)); }
+        fp.write("\n");
+    } // end write_history_flow_data()
+
+    void write_history_cell_data(File fp, double t, size_t j)
+    {
+        double x = 0.5 * (faces[j].x + faces[j+1].x);
+        write_history_flow_data(fp, t, x, j);
+    }
+
+    void write_history_loc_data(File fp, double t, double x)
+    {
         // It may be that nothing is written, if there is not a cell
         // that covers the x-location.
         foreach (j; 0 .. ncells) {
             if ((x >= faces[j].x) && (x <= faces[j+1].x)) {
-                LCell c = cells[j];
-                fp.write(format("%e %e %e", t, c.vel, c.L_bar));
-                fp.write(format(" %e %e %e %e", c.gas.rho, c.gas.p, c.gas.T, c.gas.u));
-                fp.write(format(" %e %e %e", c.gas.a, c.shear_stress, c.heat_flux));
-                double[] massf; massf.length = overall_species_count;
-                foreach (ref mf; massf) { mf = 0.0; }
-                foreach (i, mf; c.gas.massf) { massf[overall_species_index[gmodel_id][i]] = mf; }
-                foreach (mf; massf) { fp.write(format(" %e", mf)); }
-                double[] Tmodes; Tmodes.length = overall_modes_count;
-                foreach (ref tm; Tmodes) { tm = 0.0; }
-                foreach (i, tm; c.gas.T_modes) { Tmodes[overall_modes_index[gmodel_id][i]] = tm; }
-                foreach (tm; Tmodes) { fp.write(format(" %e", tm)); }
-                fp.write("\n");
+            	write_history_flow_data(fp, t, x, j);
                 break;
             }
         }
-    } // end write_history_loc_data()
+    }
 
     @nogc @property
     double energy()
