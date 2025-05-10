@@ -644,12 +644,17 @@ class GasSlug():
         self.viscous_effects = viscous_effects
         self.adiabatic = adiabatic
         if isinstance(hcells,int):
-            self.hcells=[hcells,]
+            hcells=[hcells,]
         elif isinstance(hcells,list):
-            self.hcells=hcells
+            pass
         else:
             print("Warning: hcells reset to empty list.")
             hcells = []
+        # Keep only unique indices
+        hcells = list(set(hcells))
+        # Keep only in-range indices.
+        hcells = [i for i in hcells if 0 <= i < self.ncells]
+        self.hcells = hcells
         #
         # Boundary object at each end of the slug will be
         # attached later when the gas-path is assembled.
