@@ -232,6 +232,19 @@ struct NKGlobalConfig {
         maxLinearSolverRestarts = getJSONint(jsonData, "max_linear_solver_restarts", maxLinearSolverRestarts);
         useScaling = getJSONbool(jsonData, "use_scaling", useScaling);
         useRealValuedFrechetDerivative = getJSONbool(jsonData, "use_real_valued_frechet_derivative", useRealValuedFrechetDerivative);
+        version(complex_numbers)
+        {
+            ; // do nothing
+            // For complex numbers, we can use either an imagimary perturbation or real
+            // so we DO NOT touch the users choice
+        }
+        else {
+            if (!useRealValuedFrechetDerivative) {
+                writefln("WARNING: use_real_valued_frechet_derivative is set to false in real-valued calculation.");
+                writefln("WARNING: this setting is being overridden; now set to true.");
+                useRealValuedFrechetDerivative = true;
+            }
+        }
         frechetDerivativePerturbation = getJSONdouble(jsonData, "frechet_derivative_perturbation", frechetDerivativePerturbation);
         usePreconditioner = getJSONbool(jsonData, "use_preconditioner", usePreconditioner);
         useFGMRES = getJSONbool(jsonData, "use_fgmres", useFGMRES);
