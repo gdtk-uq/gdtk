@@ -1,0 +1,867 @@
+-- PREP: lmr prep-reactions [options] --gasfile=co2-n2-17sp-2T-gas-model.lua --input=co2-n2-17sp-2T-reactions.inp --output=co2-n2-17sp-2T-reactions.lua 
+--
+-- Author: Sebastiaan van Oeveren
+-- Date: 2024-08-24
+--
+-- Reference:
+--   [1] Park, Howe, Jaffe, and Candler (1994)
+--   Review of Chemical-Kinetic Problems of Future NASA Missions,
+--   II: Mars Entries
+--   Journal of Thermophysics and Heat Transfer, 8(1), pp. 9--22
+--
+--   [2] Park, and Ahn (1999)
+--   Stagnation-Point Heat Transfer Rates for Pioneer-Venus Probes
+--   Journal of Thermophysics and Heat Transfer, 13(1), pp. 33--41
+--
+-- Full chemical reaction scheme for CO2-N2 gas for Venus and Mars simulations.
+-- Scheme prioritises more recent (1999) Venus rates where avaiable and Mars values otherwise.
+--
+-- Species: {'CO2', 'N2', 'N2+', 'O2', 'C2', 'CO', 'CO+', 'NO', 'NO+',  
+--		'CN', 'CN+', 'C', 'C+', 'N',  'N+',   'O',  'O+', 'e-'}
+--
+-- 
+-- Species from Park Venus model: {'CO2', 'N2', 'C2', 'CO', 'NO', 'NO+',  
+--				'CN', 'C', 'C+', 'N', 'O', 'O+', 'e-'}
+-- Species from Park Mars model: {'N2+', 'O2', 'CO+', 'CN+', 'N+'}
+--
+-- CN reactions can cause stability issues during shock startup.
+-- CN reactions may be disabled during start-up and reenabled once the shock has formed.
+----------------------------------------------------------------
+
+WITH_IONIZATION = true
+
+-- We know that some of the species in the efficiencies list do NOT
+-- apply when we don't consider ionization.  We choose to suppress
+-- those warnings.
+
+-- SUPPRESS_WARNINGS = true
+
+-- Temperature limits.
+-- These temperature limits are used to limit the evaluation of
+-- the rate coefficients. Park et al state that up to 15000K
+-- the radiation is evaluated adequately, so it may not be wise
+-- to evaluate these rate coefficients for higher temperatures. Also, the
+-- rate values do get meaningless at very low temperatures.
+-- For this reason, we suggest the limits we set here.
+-- WARNING: We have experienced a flow solver/chemistry coupling
+-- issue for strong expansions when the lower limit is set too low.
+-- 
+
+Config{
+   tempLimits = {lower=300.0, upper=15000.0},
+   --odeStep = {method='alpha-qss'}
+}
+
+-- Dissociation Reactions
+Reaction{
+    'C2 + C <=> C + C + C',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r1'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + N <=> C + C + N',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r2'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + O <=> C + C + O',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r3'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + C2 <=> C + C + C2',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r4'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + N2 <=> C + C + N2',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r5'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + O2 <=> C + C + O2',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r6'
+    -- Ref [1]
+}
+
+Reaction{
+    'C2 + CN <=> C + C + CN',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r7'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + CO <=> C + C + CO',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r8'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + NO <=> C + C + NO',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r9'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + CO2 <=> C + C + CO2',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r10'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + C+ <=> C + C + C+',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r11'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + N+ <=> C + C + N+',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r12'
+    -- Ref [1]
+}
+
+Reaction{
+    'C2 + O+ <=> C + C + O+',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r13'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + N2+ <=> C + C + N2+',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r14'
+    -- Ref [1]
+}
+
+Reaction{
+    'C2 + CO+ <=> C + C + CO+',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r15'
+    -- Ref [1]
+}
+
+Reaction{
+    'C2 + NO+ <=> C + C + NO+',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r16'
+    -- Ref [2]
+}
+
+Reaction{
+    'C2 + e- <=> C + C + e-',
+    fr={'Arrhenius', A=3.7e+14, n=0.0, C=69900},
+    label='r17'
+    -- Ref [1]
+}
+
+Reaction{
+    'N2 + C <=> N + N + C',
+    fr={'Arrhenius', A=3.0e+22, n=-1.6, C=113200},
+    label='r18'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + N <=> N + N + N',
+    fr={'Arrhenius', A=3.0e+22, n=-1.6, C=113200},
+    label='r19'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + O <=> N + N + O',
+    fr={'Arrhenius', A=3.0e+22, n=-1.6, C=113200},
+    label='r20'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + C2 <=> N + N + C2',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r21'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + N2 <=> N + N + N2',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r22'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + O2 <=> N + N + O2',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r23'
+    -- Ref [1]
+}
+
+Reaction{
+    'N2 + CN <=> N + N + CN',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r24'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + CO <=> N + N + CO',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r25'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + NO <=> N + N + NO',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r26'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + CO2 <=> N + N + CO2',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r27'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + C+ <=> N + N + C+',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r28'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + O+ <=> N + N + O+',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r29'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + NO+ <=> N + N + NO+',
+    fr={'Arrhenius', A=7.0e+21, n=-1.6, C=113200},
+    label='r30'
+    -- Ref [2]
+}
+
+Reaction{
+    'N2 + e- <=> N + N + e-',
+    fr={'Arrhenius', A=1.2e+25, n=-1.6, C=113200},
+    label='r31'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + C <=> O + O + C',
+    fr={'Arrhenius', A=1.0e+22, n=-1.5, C=59750},
+    label='r32'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + N <=> O + O + N',
+    fr={'Arrhenius', A=1.0e+22, n=-1.5, C=59750},
+    label='r33'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + O <=> O + O + O',
+    fr={'Arrhenius', A=1.0e+22, n=-1.5, C=59750},
+    label='r34'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + C2 <=> O + O + C2',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r35'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + N2 <=> O + O + N2',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r36'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + O2 <=> O + O + O2',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r37'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + CN <=> O + O + CN',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r38'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + CO <=> O + O + CO',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r39'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + NO <=> O + O + NO',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r40'
+    -- Ref [1]
+}
+
+Reaction{
+    'O2 + CO2 <=> O + O + CO2',
+    fr={'Arrhenius', A=2.0e+21, n=-1.5, C=59750},
+    label='r41'
+    -- Ref [1]
+}
+
+Reaction{
+    'CN + C <=> C + N + C',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r42'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + N <=> C + N + N',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r43'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + O <=> C + N + O',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r44'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + C2 <=> C + N + C2',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r45'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + N2 <=> C + N + N2',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r46'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + O2 <=> C + N + O2',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=71000},
+    label='r47'
+    -- Ref [1]
+}
+
+Reaction{
+    'CN + CN <=> C + N + CN',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r48'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + CO <=> C + N + CO',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r49'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + NO <=> C + N + NO',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r50'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + CO2 <=> C + N + CO2',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r51'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + C+ <=> C + N + C+',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r52'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + N+ <=> C + N + N+',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=71000},
+    label='r53'
+    -- Ref [1]
+}
+
+Reaction{
+    'CN + O+ <=> C + N + O+',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r54'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + N2+ <=> C + N + N2+',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=71000},
+    label='r55'
+    -- Ref [1]
+}
+
+Reaction{
+    'CN + CO+ <=> C + N + CO+',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=71000},
+    label='r56'
+    -- Ref [1]
+}
+
+Reaction{
+    'CN + NO+ <=> C + N + NO+',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=87740},
+    label='r57'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + e- <=> C + N + e-',
+    fr={'Arrhenius', A=2.5e+14, n=0.0, C=71000},
+    label='r58'
+    -- Ref [1]
+}
+
+Reaction{
+    'CO + C <=> C + O + C',
+    fr={'Arrhenius', A=3.4e+20, n=-1.0, C=129000},
+    label='r59'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + N <=> C + O + N',
+    fr={'Arrhenius', A=3.4e+20, n=-1.0, C=129000},
+    label='r60'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + O <=> C + O + O',
+    fr={'Arrhenius', A=3.4e+20, n=-1.0, C=129000},
+    label='r61'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + C2 <=> C + O + C2',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r62'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + N2 <=> C + O + N2',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r63'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + O2 <=> C + O + O2',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r64'
+    -- Ref [1]
+}
+
+Reaction{
+    'CO + CN <=> C + O + CN',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r65'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + CO <=> C + O + CO',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r66'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + NO <=> C + O + NO',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r67'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + CO2 <=> C + O + CO2',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r68'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + C+ <=> C + O + C+',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r69'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + O+ <=> C + O + O+',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r70'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + NO+ <=> C + O + NO+',
+    fr={'Arrhenius', A=2.3e+20, n=-1.0, C=129000},
+    label='r71'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + C <=> N + O + C',
+    fr={'Arrhenius', A=1.1e+17, n=0.0, C=75460},
+    label='r72'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + N <=> N + O + N',
+    fr={'Arrhenius', A=1.1e+17, n=0.0, C=75460},
+    label='r73'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + O <=> N + O + O',
+    fr={'Arrhenius', A=1.1e+17, n=0.0, C=75460},
+    label='r74'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + C2 <=> N + O + C2',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r75'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + N2 <=> N + O + N2',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r76'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + O2 <=> N + O + O2',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75500},
+    label='r77'
+    -- Ref [1]
+}
+
+Reaction{
+    'NO + CN <=> N + O + CN',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r78'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + CO <=> N + O + CO',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r79'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + NO <=> N + O + NO',
+    fr={'Arrhenius', A=1.1e+17, n=0.0, C=75460},
+    label='r80'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + CO2 <=> N + O + CO2',
+    fr={'Arrhenius', A=1.1e+17, n=0.0, C=75460},
+    label='r81'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + C+ <=> N + O + C+',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r82'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + O+ <=> N + O + O+',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r83'
+    -- Ref [2]
+}
+
+Reaction{
+    'NO + NO+ <=> N + O + NO+',
+    fr={'Arrhenius', A=5.0e+15, n=0.0, C=75460},
+    label='r84'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + C <=> CO + O + C',
+    fr={'Arrhenius', A=1.4e+22, n=-1.5, C=63280},
+    label='r85'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + N <=> CO + O + N',
+    fr={'Arrhenius', A=1.4e+22, n=-1.5, C=63280},
+    label='r86'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + O <=> CO + O + O',
+    fr={'Arrhenius', A=1.4e+22, n=-1.5, C=63280},
+    label='r87'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + C2 <=> CO + O + C2',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r88'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + N2 <=> CO + O + N2',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r89'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + O2 <=> CO + O + O2',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63275},
+    label='r90'
+    -- Ref [1]
+}
+
+Reaction{
+    'CO2 + CN <=> CO + O + CN',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r91'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + CO <=> CO + O + CO',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r92'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + NO <=> CO + O + NO',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r93'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + CO2 <=> CO + O + CO2',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r94'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + C+ <=> CO + O + C+',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r95'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + O+ <=> CO + O + O+',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r96'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + NO+ <=> CO + O + NO+',
+    fr={'Arrhenius', A=6.9e+21, n=-1.5, C=63280},
+    label='r97'
+    -- Ref [2]
+}
+
+-- Neutral exchange reactions
+Reaction{
+    'NO + O <=> N + O2',
+    fr={'Arrhenius', A=8.4e12, n=0.0, C=19450},
+    label='r98'
+    -- Ref [1]
+}
+
+Reaction{
+    'N2 + O <=> NO + N',
+    fr={'Arrhenius', A=6.4e17, n=-1.0, C=38370},
+    label='r99'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + O <=> C + O2',
+    fr={'Arrhenius', A=3.9e13, n=-0.18, C=69200},
+    label='r100'
+    -- Ref [1]
+}
+
+Reaction{
+    'CO + C <=> C2 + O',
+    fr={'Arrhenius', A=2.00e17, n=-1.0, C=58000},
+    label='r101'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO + N <=> CN + O',
+    fr={'Arrhenius', A=1.0e14, n=0.0, C=38600},
+    label='102'
+    -- Ref [1]
+}
+
+Reaction{
+    'N2 + C <=> CN + N',
+    fr={'Arrhenius', A=1.1e14, n=-0.11, C=23200},
+    label='r103'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + O <=> NO + C',
+    fr={'Arrhenius', A=1.6e13, n=0.1, C=14600},
+    label='r104'
+    -- Ref [2]
+}
+
+Reaction{
+    'CN + C <=> C2 + N',
+    fr={'Arrhenius', A=5.00e13, n=0.0, C=13000},
+    label='r105'
+    -- Ref [2]
+}
+
+Reaction{
+    'CO2 + O <=> O2 + CO',
+    fr={'Arrhenius', A=2.10e13, n=0.0, C=27800},
+    label='r106'
+    -- Ref [1]
+}
+
+-- Associative ionization reactions
+Reaction{
+    'N + O <=>  NO+ + e-',
+    fr={'Arrhenius', A=8.80e8, n=1.0, C=31900},
+    label='r107'
+    -- Ref [2]
+}
+
+Reaction{
+    'C + O <=> CO+ + e-',
+    fr={'Arrhenius', A=8.80e8, n=1.0, C=33100},
+    label='r108'
+    -- Ref [1]
+}
+
+-- Charge exchange reactions
+Reaction{
+    'NO+ + C <=> NO + C+',
+    fr={'Arrhenius', A=1.00e13, n=0.0, C=23200},
+    label='r109'
+    -- Ref [1]
+}
+
+Reaction{
+    'NO+ + N <=> O+ + N2',
+    fr={'Arrhenius', A=3.40e13, n=-1.08, C=12800},
+    label='r110'
+    -- Ref [1]
+}
+
+Reaction{
+    'CO + C+ <=> CO+ + C',
+    fr={'Arrhenius', A=1.00e13, n=0.0, C=31400},
+    label='r111'
+    -- Ref [1]
+}
+
+
+-- Electron-impact ionization reactions
+Reaction{
+    'C + e- <=> C+ + e- + e-',
+    fr={'Arrhenius', A=3.90e13, n=-3.78, C=130700},
+    label='r112'
+    -- Ref [2]
+}
+
+Reaction{
+    'O + e- <=> O+ + e- + e-',
+    fr={'Arrhenius', A=3.90e13, n=-3.78, C=158500},
+    label='r113'
+    -- Ref [2]
+}
+
+--Radiative recombination reactions
+--commented for the moment because there is no way to treat the hv yet
+--
+--Reaction{
+--    'O+ + e- <=> O + hv',
+--    fr={'Arrhenius', A=1.07e+11, n=-0.52, C=0},
+--    label='r114'
+--}
+--
+--Reaction{
+--    'C+ + e- <=> C + hv',
+--    fr={'Arrhenius', A=2.02e+11, n=-0.46, C=0},
+--    label='r115'
+--}
+
+

@@ -1,0 +1,16 @@
+-- PREP: lmr prep-gas --input=co2-n2-17sp-2T-gas-model.inp --output=co2-n2-17sp-2T-gas-model.lua
+-- 
+-- Note: Sebastiaan van Oeveren (2025-04-23)
+-- 17 species CO2:N2 2T gas file. 
+-- Venus modelling may also consider: C3 [Park (1999)]
+-- Mars modelling may also consider: NCO, C2+, O2+, CN+, Ar, Ar+, [Park (1994)]
+-- These are currently excluded from this 2T model due to limited data.
+-- Fortunuately, these are typically trace species that so far haven't had a notable impact on tests.
+-- I recommend using CEA to estimate mass fractions and help confirm relevant species before simulating.
+
+
+model = "TwoTemperatureGas"
+species = {'CO2', 'N2', 'N2+', 'O2', 'C2', 'CO', 'CO+', 'NO', 'NO+', 'CN', 'C', 'C+', 'N',  'N+', 'O',  'O+', 'e-'}
+options= {database='prefer-grimech', ci_database = "wright"}
+
+

@@ -1,0 +1,107 @@
+-- PREP: lmr prep-energy-exchange [options] --gasfile=co2-n2-17sp-2T-gas-model.lua --input=co2-n2-mixture-energy-exchange.inp --output=co2-n2-mixture-energy-exchange.lua [--reacfile=co2-n2-17sp-2T-reactions.lua]
+--
+-- Author: Rowan Gollan 
+-- Date: 2021-06-12
+-- Updated: Sebastiaan van Oeveren (2024-08-24) expanded original CO2 energy-exchange file to include Nitrogen species. 
+--
+-- Includes all vibrational relaxation data provided by Park (1994).
+-- Note: Park (1994) considers a Martian entry at <9km/s and accordingly provides vibration relaxation data
+-- for CO2, CO, N2, C, O and N. May need further validation or data to account for more extreme conditions. 
+--
+-- Reference:
+--   Park, Howe, Jaffe, and Candler (1994)
+--   Review of Chemical-Kinetic Problems of Future NASA Missions,
+--   II: Mars Entries
+--   Journal of Thermophysics and Heat Transfer, 8(1), pp. 9--22
+--   Table 1
+
+Mechanism{
+   'N2 ~~ (N)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=180, b=0.0262}
+}
+
+Mechanism{
+   'N2 ~~ (O, C)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=72.4, b=0.0150}
+}
+
+Mechanism{
+   'N2 ~~ (N2, CO)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=221, b=0.0290}
+}
+
+Mechanism{
+   'N2 ~~ (CO2)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=245, b=0.0305}
+}
+
+Mechanism{
+   'CO ~~ (N, O, C)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=47.7, b=0.050}
+}
+
+Mechanism{
+   'CO ~~ (N2, CO)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=198, b=0.0290}
+}
+
+Mechanism{
+   'CO ~~ (CO2)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=218, b=0.0305}
+}
+
+Mechanism{
+   'CO2 ~~ (N)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=35.8, b=0.0271}
+}
+
+Mechanism{
+   'CO2 ~~ (O)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=37.6, b=0.0278}
+}
+
+Mechanism{
+   'CO2 ~~ (C)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=33.7, b=0.0263}
+}
+
+Mechanism{
+   'CO2 ~~ (N2, CO)',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=45.4, b=0.0305}
+}
+
+Mechanism{
+   'CO2 ~~ CO2',
+   type = 'V-T',
+   rate = 'Landau-Teller',
+   relaxation_time = {"Millikan-White", a=36.5, b=-0.0193}
+}
+
+-- Need to review impartial dissociations
+--ChemistryCouplingMechanism{
+  --  reaction_labels = {'r1','r3','r4','r5','r6','r7'},
+  --  rate = "Marrone-Treanor",
+  --  coupling_model = {model="ImpartialDissociation"}
+--}
