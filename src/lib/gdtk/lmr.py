@@ -6,6 +6,7 @@
 
 import os
 import json
+import yaml
 from typing import NamedTuple
 import re
 
@@ -44,7 +45,8 @@ class SimInfo:
     """
     A place to store the information about an lmr simulation.
     """
-    __slots__ = ['lmr_cfg', 'sim_cfg', 'blocks', 'times', 'snapshots', 'fluid_variables']
+    __slots__ = ['lmr_cfg', 'sim_cfg', 'blocks', 'grids',
+                 'times', 'snapshots', 'fluid_variables']
 
     def __init__(self, lmr_cfg):
         """
@@ -83,8 +85,8 @@ class SimInfo:
                     content = fp.readlines()
                     # [TODO] Extract the data and put it into times_list.
         self.snapshots = []
-        dirname = os.path.join(sim_dir, self.lmr_cfg["snapshot-directory"])
-        names = os.listdir(dirname)
+        snaps_dirname = os.path.join(sim_dir, self.lmr_cfg["snapshot-directory"])
+        names = os.listdir(snaps_dirname)
         names = [n for n in names if re.match('\d\d\d\d', n)]
         names.sort()
         names_in_order = [i == int(names[i]) for i in range(len(names))]
@@ -95,5 +97,24 @@ class SimInfo:
         # List of names of the fluid variables.
         #
         self.fluid_variables = []
+        fname = os.path.join(snaps_dirname, "fluid"+self.lmr_cfg["metadata-extension"])
+        with open(fname, 'r') as fp:
+            fluid_metadata = yaml.safe_load(fp)
+            self.fluid_variables = fluid_metadata["variables"]
+        #
+        # Grid metadata
+        #
+        self.grids = []
+        grid_dir = os.path.join(os.path.join(sim_dir, self.lmr_cfg["grid-directory"]))
+        fname = os.path.join(os.path.join(grid_dir, "grid"+self.lmr_cfg["metadata-extension"]))
+        with open(fname, 'r') as fp:
+            grid_metadata = json.load(fp)
+        print("grid_metadata=", grid_metadata)
+        ngrids = grid_metadata['ngrids']
+        for i in range(ngrids):
+            fname = ("grid-%04d" % i)+self.lmr_cfg["metadata-extension"]
+            fname = os.path.join(os.path.join(grid_dir, fname))
+            with open(fname, 'r') as fp:
+                self.grids.append(json.load(fp))
         #
         return
