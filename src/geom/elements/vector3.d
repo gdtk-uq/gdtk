@@ -82,6 +82,13 @@ struct Vector3 {
         return this;
     }
 
+    @nogc ref Vector3 set(const Vector3* other) return
+    // Convenience function for setting the components of an existing object.
+    {
+        x = other.x; y = other.y; z = other.z;
+        return this;
+    }
+
     @nogc ref Vector3 set(number x, number y, number z=to!number(0.0)) return
     // Convenience function for setting the components of an existing object.
     // Note that we may supply just the x,y coordinates.
@@ -150,6 +157,13 @@ struct Vector3 {
         x += other.x; y += other.y; z += other.z;
         return this;
     }
+    @nogc ref Vector3 add(const Vector3* other) return
+    // Convenience function for adding the components of an existing object.
+    // This avoids the temporary associated with += (below)
+    {
+        x += other.x; y += other.y; z += other.z;
+        return this;
+    }
 
     @nogc ref Vector3 add(ref const(Vector3) other, number factor) return
     // Convenience function for adding the components of an existing object, scaled.
@@ -160,6 +174,14 @@ struct Vector3 {
     }
 
     @nogc ref Vector3 add(Vector3* other, number factor) return
+    // Convenience function for adding the components of an existing object, scaled.
+    // This avoids the temporary associated with += (below)
+    {
+        x += other.x*factor; y += other.y*factor; z += other.z*factor;
+        return this;
+    }
+
+    @nogc ref Vector3 add(const Vector3* other, number factor) return
     // Convenience function for adding the components of an existing object, scaled.
     // This avoids the temporary associated with += (below)
     {
@@ -364,6 +386,11 @@ struct Vector3 {
         return x*other.x + y*other.y + z*other.z;
     }
 
+    @nogc number dot(const Vector3* other) const
+    {
+        return x*other.x + y*other.y + z*other.z;
+    }
+
     // Transform functions used to reorient vector values in the CFD codes.
 
     /**
@@ -529,6 +556,33 @@ double distance_between(ref const(Vector3) v1, ref const(Vector3) v2)
  */
 @nogc
 number dot(ref const(Vector3) v1, ref const(Vector3) v2)
+{
+    number result = 0.0;
+    // Maybe we should be careful with underflow and overflow...
+    result = v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+    return result;
+}
+
+@nogc
+number dot(const Vector3* v1, ref const(Vector3) v2)
+{
+    number result = 0.0;
+    // Maybe we should be careful with underflow and overflow...
+    result = v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+    return result;
+}
+
+@nogc
+number dot(ref const(Vector3) v1, const Vector3* v2)
+{
+    number result = 0.0;
+    // Maybe we should be careful with underflow and overflow...
+    result = v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+    return result;
+}
+
+@nogc
+number dot(const Vector3* v1, const Vector3* v2)
 {
     number result = 0.0;
     // Maybe we should be careful with underflow and overflow...

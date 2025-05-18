@@ -576,7 +576,7 @@ private:
         // Flux equations use the local flow state information.
         // For a moving grid we need vel relative to the interface.
         auto cqi = blk.myConfig.cqi;
-        Vector3 v_rel; v_rel.set(fs.vel); v_rel -= face.gvel;
+        Vector3 v_rel; v_rel.set(fs.vel); v_rel -= *(face.gvel);
         number mass_flux = fs.gas.rho * dot(v_rel, face.n);
         if ((outsign*mass_flux) > 0.0) {
             // We have a true outflow flux.

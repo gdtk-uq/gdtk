@@ -66,6 +66,7 @@ struct FVInterfaceData{
     Vector3[] tangents1;
     Vector3[] tangents2;
     Vector3[] positions;
+    Vector3[] grid_velocities;
     FlowState[] flowstates;
     LLLRRR[] stencil_idxs;
     L2R2InterpData[] l2r2_interp_data;

@@ -201,7 +201,7 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
                                      ref LocalConfig myConfig, double omegaz=0.0)
 {
     compute_interface_flux_interior(Lft, Rght, *(IFace.fs),
-                                     myConfig, IFace.gvel, IFace.pos, IFace.n, IFace.t1, IFace.t2,
+                                     myConfig, *(IFace.gvel), IFace.pos, IFace.n, IFace.t1, IFace.t2,
                                      IFace.F, omegaz);
     return;
 } // end compute_interface_flux_interior()

@@ -2354,7 +2354,11 @@ void set_config_for_core(JSONValue jsonData)
     sdluo.usePreconditioner = getJSONbool(sdluOptions, "use_preconditioner",  sdluo.usePreconditioner);
     */
     // Parameters controlling size of storage arrays - we set this here since we key it off some of the other config parameters
-    cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+    if (cfg.solverMode == SolverMode.steady) {
+        cfg.n_flow_time_levels = 2;
+    } else {
+        cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+    }
     // [TODO] RJG, 2024-02-11
     //        Do we need this with the lmr5 I/O arrangement? Perhaps not. BlockIO should know what to do.
     /*

@@ -308,12 +308,14 @@ public:
     */
         auto gmodel = myConfig.gmodel;
         size_t nturb = myConfig.turb_model.nturb;
+        size_t ngtl = myConfig.n_grid_time_levels;
 
         facedata.all_face_idxs.length = nfaces;
         foreach(i; 0 .. nfaces) facedata.all_face_idxs[i] = i;
 
         facedata.positions.length = nfaces;
-        facedata.areas.length = nfaces;
+        facedata.areas.length = nfaces*ngtl;
+        facedata.grid_velocities.length = nfaces*ngtl;
         facedata.normals.length = nfaces;
         facedata.tangents1.length = nfaces;
         facedata.tangents2.length = nfaces;

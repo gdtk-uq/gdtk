@@ -48,7 +48,7 @@ public:
     // Geometry
     IndexDirection idir;   // For StructuredGrid: in which index-direction is face pointing?
     Vector3 pos;           // position of the (approx) midpoint
-    Vector3 gvel;          // grid velocity at interface, m/s
+    Vector3* gvel;         // grid velocity at interface, m/s
     number Ybar;           // Y-coordinate of the mid-point
     number length;         // Interface length in the x,y-plane
     number[] area;         // Area m**2 for each grid-time-level.
@@ -119,17 +119,18 @@ public:
         this.idir = idir;
         id = id_init;
         logical_dir = dir;
-        area.length = myConfig.n_grid_time_levels;
-        gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
         auto gmodel = myConfig.gmodel;
         uint n_species = myConfig.n_species;
         size_t neq = myConfig.cqi.n;
+        size_t ngtl = myConfig.n_grid_time_levels;
 
         this.fvid = fvid;
         this.fs = &(fvid.flowstates[id]);
         this.grad = &(fvid.gradients[id]);
         this.ws_grad = &(fvid.workspaces[id]);
         this.F = fvid.fluxes[id*neq .. (id+1)*neq];
+        this.area = fvid.areas[id*ngtl .. (id+1)*ngtl];
+        this.gvel = &(fvid.grid_velocities[id]);
         F.clear();
 
         version(multi_species_gas) {
@@ -331,7 +332,6 @@ public:
             area[gtl] = length; // Assume unit depth in the Z-direction.
         }
         pos.set(Xbar, Ybar, to!number(0.0));
-        fvid.areas[id] = area[gtl];
         fvid.normals[id] = n;
         fvid.tangents1[id] = t1;
         fvid.tangents2[id] = t2;
@@ -359,7 +359,6 @@ public:
             debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
-        fvid.areas[id] = area[gtl];
         fvid.normals[id] = n;
         fvid.tangents1[id] = t1;
         fvid.tangents2[id] = t2;
