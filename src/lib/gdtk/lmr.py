@@ -9,6 +9,12 @@ import json
 import yaml
 from typing import NamedTuple
 import re
+from enum import Enum
+import pyvista as pv
+
+class DomainType(Enum):
+    FLUID = 'fluid'
+    SOLID = 'solid'
 
 class LmrConfig:
     """
@@ -45,7 +51,7 @@ class SimInfo:
     """
     A place to store the information about an lmr simulation.
     """
-    __slots__ = ['lmr_cfg', 'sim_cfg', 'blocks', 'grids',
+    __slots__ = ['lmr_cfg', 'sim_cfg', 'blocks', 'grids', 'grid_metadata',
                  'times', 'snapshots', 'fluid_variables']
 
     def __init__(self, lmr_cfg):
@@ -87,7 +93,7 @@ class SimInfo:
         self.snapshots = []
         snaps_dirname = os.path.join(sim_dir, self.lmr_cfg["snapshot-directory"])
         names = os.listdir(snaps_dirname)
-        names = [n for n in names if re.match('\d\d\d\d', n)]
+        names = [n for n in names if re.match(r'\d\d\d\d', n)]
         names.sort()
         names_in_order = [i == int(names[i]) for i in range(len(names))]
         if not all(names_in_order):
@@ -108,9 +114,8 @@ class SimInfo:
         grid_dir = os.path.join(os.path.join(sim_dir, self.lmr_cfg["grid-directory"]))
         fname = os.path.join(os.path.join(grid_dir, "grid"+self.lmr_cfg["metadata-extension"]))
         with open(fname, 'r') as fp:
-            grid_metadata = json.load(fp)
-        print("grid_metadata=", grid_metadata)
-        ngrids = grid_metadata['ngrids']
+            self.grid_metadata = json.load(fp)
+        ngrids = self.grid_metadata['ngrids']
         for i in range(ngrids):
             fname = ("grid-%04d" % i)+self.lmr_cfg["metadata-extension"]
             fname = os.path.join(os.path.join(grid_dir, fname))
@@ -118,3 +123,32 @@ class SimInfo:
                 self.grids.append(json.load(fp))
         #
         return
+
+# Service functions for picking up data from an Eilmer simulation
+
+def load_pvd_into_pyvista(lmr_cfg, sim_info, domain_type=DomainType.FLUID, merged=False, as_point_data=False):
+    """This loads the top-level PVD file for VTK output from Eilmer.
+
+    The VTK output is ordinarily produced as the result of running 'snapshot2vtk'.
+
+    Args:
+        lmr_cfg (LmrConfig)      : config object for Eilmer program itself
+        sim_info (SimInfo)       : information for specific simulation (in current working directory)
+        domain_type (DomainType) : indicates if domain contains fluid or solid data
+        merged (bool)            : set to True to combine blocks; default is to leave partitioned
+        as_point_data (bool)     : set to True to convert to point data; default is to leave as cell data
+
+    Returns:
+        A pyvista.DataSet object.
+    """
+    # locate the PVD file
+    vtk_dir = os.path.join(lmr_cfg['simulation-directory'], lmr_cfg['vtk-output-directory'])
+    fname = os.path.join(vtk_dir, domain_type.value+".pvd")
+    # now read
+    reader = pv.get_reader(fname)
+    pv_data = reader.read()
+    if merged:
+        pv_data = pv_data.combine()
+    if as_point_data:
+        pv_data = pv_data.cell_data_to_point_data()
+    return pv_data
