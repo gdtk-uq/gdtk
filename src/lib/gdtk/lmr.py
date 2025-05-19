@@ -127,6 +127,33 @@ class SimInfo:
         #
         return
 
+    def read_grids(self):
+        """
+        Return a list containing all of the grids associated the simulation.
+        """
+        grids = []
+        sim_dir = self.lmr_cfg["simulation-directory"]
+        grid_dir = os.path.join(os.path.join(sim_dir, self.lmr_cfg["grid-directory"]))
+        ngrids = self.grid_metadata['ngrids']
+        grid_format = self.sim_cfg["grid_format"]
+        for i in range(ngrids):
+            grid_type = self.grids[i]["type"]
+            if grid_type == "structured_grid":
+                if grid_format == "gziptext":
+                    fname = ("grid-%04d.gz" % i)
+                    fname = os.path.join(os.path.join(grid_dir, fname))
+                    grids.append(StructuredGrid(gzfile=fname))
+                elif grid_format == "rawbinary":
+                    fname = "grid-%04d.bin" % (i)
+                    fname = os.path.join(os.path.join(grid_dir, fname))
+                    grids.append(StructuredGrid(binaryfile=fname))
+                else:
+                    raise "Unknown format for grid[%d] %s" % (i, grid_format)
+            elif grid_type == "unstructured_grid":
+                raise "unstructured_grid reading not implemtented"
+        return grids
+
+
 # Service functions for picking up data from an Eilmer simulation
 
 def load_pvd_into_pyvista(lmr_cfg, sim_info, domain_type=DomainType.FLUID, merged=False, as_point_data=False):
@@ -155,30 +182,3 @@ def load_pvd_into_pyvista(lmr_cfg, sim_info, domain_type=DomainType.FLUID, merge
     if as_point_data:
         pv_data = pv_data.cell_data_to_point_data()
     return pv_data
-
-
-def read_grids(sim_info):
-    """
-    Load the grid data into memory.
-    """
-    grids = []
-    sim_dir = sim_info.lmr_cfg["simulation-directory"]
-    grid_dir = os.path.join(os.path.join(sim_dir, sim_info.lmr_cfg["grid-directory"]))
-    ngrids = sim_info.grid_metadata['ngrids']
-    grid_format = sim_info.sim_cfg["grid_format"]
-    for i in range(ngrids):
-        grid_type = sim_info.grids[i]["type"]
-        if grid_type == "structured_grid":
-            if grid_format == "gziptext":
-                fname = ("grid-%04d.gz" % i)
-                fname = os.path.join(os.path.join(grid_dir, fname))
-                grids.append(StructuredGrid(gzfile=fname))
-            elif grid_format == "rawbinary":
-                fname = "grid-%04d.bin" % (i)
-                fname = os.path.join(os.path.join(grid_dir, fname))
-                grids.append(StructuredGrid(binaryfile=fname))
-            else:
-                raise "Unknown format for grid[%d] %s" % (i, grid_format)
-        elif grid_type == "unstructured_grid":
-            raise "unstructured_grid reading not implemtented"
-    return grids
