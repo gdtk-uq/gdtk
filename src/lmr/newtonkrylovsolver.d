@@ -3323,8 +3323,8 @@ void evalResidual(int ftl)
                 getUDFSourceTermsForCell(blk.myL, cell, 0, dummySimTime, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
                 cell.add_udf_source_vector();
             }
-            cell.time_derivatives(gtl, ftl);
         }
+        blk.time_derivatives(gtl, ftl);
     }
 }
 

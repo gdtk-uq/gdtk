@@ -2044,4 +2044,131 @@ public:
         c.time_derivatives(gtl, ftl);
     } // end evalRU()
 
+    @nogc
+    void time_derivatives(int gtl, int ftl, size_t[] cell_idxs=[])
+    // These are the spatial (RHS) terms in the semi-discrete governing equations.
+    // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
+    // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
+    //       0: Start of stage-1 update.
+    //       1: End of stage-1.
+    //       2: End of stage-2.
+    {
+
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t ngtl = myConfig.n_grid_time_levels;
+        if (cell_idxs.length == 0) cell_idxs = celldata.all_cell_idxs;
+
+        //number[] U; number[] dUdt;
+        //if (ftl==0) { dUdt = celldata.dUdt0; U = celldata.U0; }
+        //if (ftl==1) { dUdt = celldata.dUdt1; U = celldata.U1; }
+        //if (ftl==2) { dUdt = celldata.dUdt2; U = celldata.U2; }
+        //if (ftl==3) { dUdt = celldata.dUdt3; U = celldata.U3; }
+        //if (ftl==4) { dUdt = celldata.dUdt4; U = celldata.U4; }
+
+        foreach(cidx; cell_idxs){
+            // Note this is the number of faces that the cell cidx has, not the total number
+            size_t nfaces = celldata.nfaces[cidx];
+            number vol_inv = 1.0 / celldata.volumes[cidx*ngtl + gtl]; // Cell volume (inverted).
+
+            foreach(j; 0 .. neq){
+                number surface_integral = to!number(0.0);
+                size_t idx = cidx*neq + j;
+
+                foreach(i; 0 .. nfaces){
+                    size_t fidx = celldata.c2f[cidx][i];
+                    number area = celldata.outsigns[cidx][i]*facedata.areas[fidx*ngtl + gtl];
+                    surface_integral -= facedata.fluxes[fidx*neq + j] * area;
+                }
+
+                if (ftl==0) celldata.dUdt0[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==1) celldata.dUdt1[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==2) celldata.dUdt2[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==3) celldata.dUdt3[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==4) celldata.dUdt4[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+            }
+        }
+        // GCL for steady-state
+        if ((myConfig.solverMode == SolverMode.steady) && (myConfig.grid_motion != GridMotion.none)) {
+            moving_grid_correction(gtl, ftl, cell_idxs);
+        }
+
+        if (myConfig.cqi.MHD && myConfig.MHD_static_field) {
+            zero_magnetic_field_derivatives(gtl, ftl, cell_idxs);
+        }
+    } // end time_derivatives()
+
+    @nogc
+    void moving_grid_correction(int gtl, int ftl, size_t[] cell_idxs)
+    /*
+        For steady-state moving grid calculations, we need to correct the
+        residual for the change in conserved quantities due to grid movement.
+        This correction isn't needed for the transient moving grid sims, which
+        handle this in a different, and probably better, way.
+
+        @author: Nick Gibbons and Rob Watt (May 2025)
+    */
+    {
+
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t ngtl = myConfig.n_grid_time_levels;
+
+        number[] U; number[] dUdt;
+        if (ftl==0) { dUdt = celldata.dUdt0; U = celldata.U0; }
+        if (ftl==1) { dUdt = celldata.dUdt1; U = celldata.U1; }
+        if (ftl==2) { dUdt = celldata.dUdt2; U = celldata.U2; }
+        if (ftl==3) { dUdt = celldata.dUdt3; U = celldata.U3; }
+        if (ftl==4) { dUdt = celldata.dUdt4; U = celldata.U4; }
+
+
+        foreach(cidx; cell_idxs){
+            // Note this is the number of faces that the cell cidx has, not the total number
+            size_t nfaces = celldata.nfaces[cidx];
+            number vol_inv = 1.0 / celldata.volumes[cidx*ngtl + gtl]; // Cell volume (inverted).
+
+            foreach(j; 0 .. neq){
+                number surface_integral = to!number(0.0);
+                size_t idx = cidx*neq + j;
+                foreach(i; 0 .. nfaces){
+                    size_t fidx = celldata.c2f[cidx][i];
+                    number area = celldata.outsigns[cidx][i]*facedata.areas[fidx*ngtl + gtl];
+                    number vn = dot(facedata.normals[fidx], facedata.grid_velocities[fidx]);
+                    surface_integral -= U[idx] * vn * area;
+                }
+                dUdt[idx] += vol_inv*surface_integral;
+            }
+        }
+    }
+
+    @nogc
+    void zero_magnetic_field_derivatives(int gtl, int ftl, size_t[] cell_idxs)
+    /*
+        Implement MHD_static_field by zeroing the bits of the conservation
+        equations that are involved in MHD>
+
+        @author: Nick Gibbons and Peter Jacobs (May 2025)
+    */
+    {
+
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t ngtl = myConfig.n_grid_time_levels;
+        auto cqi = myConfig.cqi;
+
+        number[] dUdt;
+        if (ftl==0) { dUdt = celldata.dUdt0; }
+        if (ftl==1) { dUdt = celldata.dUdt1; }
+        if (ftl==2) { dUdt = celldata.dUdt2; }
+        if (ftl==3) { dUdt = celldata.dUdt3; }
+        if (ftl==4) { dUdt = celldata.dUdt4; }
+
+
+        foreach(cidx; cell_idxs){
+            size_t idx = cidx*neq;
+            dUdt[idx + cqi.xB] = 0.0;
+            dUdt[idx + cqi.yB] = 0.0;
+            dUdt[idx + cqi.zB] = 0.0;
+            dUdt[idx + cqi.psi] = 0.0;
+            dUdt[idx + cqi.divB] = 0.0;
+        }
+    }
+
 } // end class FluidBlock
