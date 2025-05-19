@@ -6,7 +6,7 @@
 # Peter J. 2025-05-14
 
 import os
-from gdtk.lmr import LmrConfig, SimInfo
+from gdtk.lmr import LmrConfig, SimInfo, read_grids
 
 lmrcfg = LmrConfig()
 # print("content=", lmr.data)
@@ -19,3 +19,7 @@ print("times=", sim.times)
 print("snapshots=", sim.snapshots)
 print("variables=", sim.fluid_variables)
 print("grid tags=", [sim.grids[i]['tag'] for i in range(len(sim.grids))])
+
+grids = read_grids(sim)
+for i in range(len(grids)):
+    grids[i].write_to_vtk_file("grid-%d.vtk" % (i))
