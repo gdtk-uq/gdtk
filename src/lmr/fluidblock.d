@@ -2058,12 +2058,13 @@ public:
         immutable size_t ngtl = myConfig.n_grid_time_levels;
         if (cell_idxs.length == 0) cell_idxs = celldata.all_cell_idxs;
 
-        //number[] U; number[] dUdt;
-        //if (ftl==0) { dUdt = celldata.dUdt0; U = celldata.U0; }
-        //if (ftl==1) { dUdt = celldata.dUdt1; U = celldata.U1; }
-        //if (ftl==2) { dUdt = celldata.dUdt2; U = celldata.U2; }
-        //if (ftl==3) { dUdt = celldata.dUdt3; U = celldata.U3; }
-        //if (ftl==4) { dUdt = celldata.dUdt4; U = celldata.U4; }
+        // Doesn't allocate new memory and seems to be very fast (NNG)
+        number[] dUdt;
+        if (ftl==0) { dUdt = celldata.dUdt0; }
+        if (ftl==1) { dUdt = celldata.dUdt1; }
+        if (ftl==2) { dUdt = celldata.dUdt2; }
+        if (ftl==3) { dUdt = celldata.dUdt3; }
+        if (ftl==4) { dUdt = celldata.dUdt4; }
 
         foreach(cidx; cell_idxs){
             // Note this is the number of faces that the cell cidx has, not the total number
@@ -2079,12 +2080,7 @@ public:
                     number area = celldata.outsigns[cidx][i]*facedata.areas[fidx*ngtl + gtl];
                     surface_integral -= facedata.fluxes[fidx*neq + j] * area;
                 }
-
-                if (ftl==0) celldata.dUdt0[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
-                if (ftl==1) celldata.dUdt1[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
-                if (ftl==2) celldata.dUdt2[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
-                if (ftl==3) celldata.dUdt3[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
-                if (ftl==4) celldata.dUdt4[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                dUdt[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
             }
         }
         // GCL for steady-state
