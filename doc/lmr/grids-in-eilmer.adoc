@@ -139,9 +139,15 @@ need to be reoriented when they are copied from one boundary to the other.
 `faceB`:: _string_ +
   Label of the boundary face on grid-B.
 
-`orientation`:: _int_: default: `-1` +
-  Although there is only one possible orientation for face-to-face connections in 2D,
-  there are 4 possible ways to (rotationally) orient a face-to-face connection in 3D.
+`orientation`:: _int_: default: `0` +
+  For 2D simulations, there is only one possible orientation for each face-to-face connection,
+  so you don't need to specify the value of the orientation.
+  For 3D simulations, the default value of `0` is for a face-to-face connection
+  where the corresponding index directions for each grid's face are aligned.
+  There are 4 possible orientations (`0` thru `3`) for the connection between the faces of 3D grids
+  and the `tabulatedData` starting from line 111 in the source file `blk_conn.lua` documents
+  the full set of possibilities.
+  The user is responsible for selecting the correct value.
 
 `reorient_vector_quantities`::
   _boolean_, default: `false` +
