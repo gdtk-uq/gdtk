@@ -6,7 +6,7 @@ help:
 	@echo "   run"
 	@echo "   post"
 
-prep: gas grid init-steady
+prep: gas grid init-transient
 
 gas: ideal-air.lua
 	lmr prep-gas -i ideal-air.lua -o ideal-air.gas
