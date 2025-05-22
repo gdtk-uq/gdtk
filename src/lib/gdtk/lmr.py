@@ -10,7 +10,11 @@ import yaml
 from typing import NamedTuple
 import re
 from enum import Enum
-import pyvista as pv
+try:
+    import pyvista as pv
+    HAVE_PYVISTA = True
+except ModuleNotFoundError:
+    HAVE_PYVISTA = False
 
 from gdtk.geom.sgrid import StructuredGrid
 
@@ -171,6 +175,8 @@ def load_pvd_into_pyvista(lmr_cfg, sim_info, domain_type=DomainType.FLUID, merge
     Returns:
         A pyvista.DataSet object.
     """
+    if not HAVE_PYVISTA:
+        raise "pyvista module is not loaded"
     # locate the PVD file
     vtk_dir = os.path.join(lmr_cfg['simulation-directory'], lmr_cfg['vtk-output-directory'])
     fname = os.path.join(vtk_dir, domain_type.value+".pvd")
