@@ -59,7 +59,7 @@ class SimInfo:
     A place to store the information about an lmr simulation.
     """
     __slots__ = ['lmr_cfg', 'sim_cfg', 'blocks', 'grids', 'grid_metadata',
-                 'times', 'snapshots', 'fluid_variables']
+                 'snapshots_metadata', 'snapshots', 'times', 'fluid_variables']
 
     def __init__(self, lmr_cfg):
         """
@@ -88,17 +88,10 @@ class SimInfo:
         if not all(ids_in_order):
             print("Warning: not all block ids are in order.")
         #
-        # Read the metadata for the time snapshots.
+        # Read the metadata for the snapshots.
         #
-        self.times = []
-        if self.sim_cfg['solver_mode'] == 'transient':
-            fname = os.path.join(sim_dir, self.lmr_cfg["times-filename"])
-            if os.path.exists(fname):
-                with open(fname, 'r') as fp:
-                    content = fp.readlines()
-                    # [TODO] Extract the data and put it into times_list.
-        self.snapshots = []
         snaps_dirname = os.path.join(sim_dir, self.lmr_cfg["snapshot-directory"])
+        self.snapshots = []
         names = os.listdir(snaps_dirname)
         names = [n for n in names if re.match(r'\d\d\d\d', n)]
         names.sort()
@@ -106,6 +99,17 @@ class SimInfo:
         if not all(names_in_order):
             print("Warning: not all snapshots in order.")
         self.snapshots = names
+        self.times = []
+        if self.sim_cfg['solver_mode'] == 'transient':
+            fname = os.path.join(snaps_dirname, "snapshot-times-metadata")
+            with open(fname, 'r') as fp:
+                snapshots_metadata = yaml.safe_load(fp)
+            snaps = list(snapshots_metadata.keys())
+            snaps.sort()
+            self.times = [float(snapshots_metadata[snap]['time']) for snap in snaps]
+            found_snaps = [name in self.snapshots for name in snaps]
+            if not all(found_snaps):
+                print("Warning: not all snapshots listed in metadata are found.")
         #
         # List of names of the fluid variables.
         #

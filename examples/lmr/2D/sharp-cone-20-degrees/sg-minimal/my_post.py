@@ -14,6 +14,7 @@ print("sim_dir=", lmrcfg["simulation-directory"],
       "vtk_dir=", lmrcfg["vtk-output-directory"])
 
 sim = SimInfo(lmrcfg)
+# print("sim.sim_cfg=", sim.sim_cfg)
 print("blks=", sim.blocks)
 print("times=", sim.times)
 print("snapshots=", sim.snapshots)
