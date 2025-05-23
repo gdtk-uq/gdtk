@@ -216,7 +216,8 @@ class SimInfo:
         if not HAVE_PYVISTA:
             raise "pyvista module is not loaded"
         # locate the PVD file
-        fname = os.path.join(self.vtk_dir, domain_type.value+".pvd")
+        name = "fluid" if domain_type == DomainType.FLUID else "solid"
+        fname = os.path.join(self.vtk_dir, name+".pvd")
         if not os.path.exists(fname):
             raise "Cannot find .pvd file: %s" % (fname,)
         reader = pv.get_reader(fname)

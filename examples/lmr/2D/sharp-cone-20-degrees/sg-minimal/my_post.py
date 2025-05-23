@@ -15,12 +15,15 @@ print("sim_dir=", lmrcfg["simulation-directory"],
 
 sim = SimInfo(lmrcfg)
 # print("sim.sim_cfg=", sim.sim_cfg)
-print("blks=", sim.blocks)
+print("blocks_info=", sim.blocks)
 print("times=", sim.times)
 print("snapshots=", sim.snapshots)
 print("variables=", sim.fluid_variables)
-print("grid tags=", [sim.grids[i]['tag'] for i in range(len(sim.grids))])
+print("grid tags=", [sim.grids[i].tag for i in range(len(sim.grids))])
 
 grids = sim.read_grids()
 for i in range(len(grids)):
     grids[i].write_to_vtk_file("grid-%d.vtk" % (i))
+
+pvdata = sim.load_pvd_into_pyvista()
+print("pvdata=", pvdata)
