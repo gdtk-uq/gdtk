@@ -20,6 +20,7 @@ print("times=", sim.times)
 print("snapshots=", sim.snapshots)
 print("variables=", sim.fluid_variables)
 print("grid tags=", [sim.grids[i].tag for i in range(len(sim.grids))])
+print("gas_model=", sim.gas_model)
 
 grids = sim.read_grids()
 for i in range(len(grids)):

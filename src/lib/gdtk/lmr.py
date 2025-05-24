@@ -5,6 +5,7 @@
 #
 
 import os
+import subprocess
 import json
 import yaml
 from typing import NamedTuple
@@ -17,6 +18,7 @@ except ModuleNotFoundError:
     HAVE_PYVISTA = False
 
 from gdtk.geom.sgrid import StructuredGrid
+from gdtk.gas import GasModel
 
 
 class LmrConfig:
@@ -75,7 +77,7 @@ class SimInfo:
     __slots__ = ['lmr_cfg', 'sim_cfg',
                  'sim_dir', 'grid_dir', 'snaps_dir', 'vtk_dir',
                  'blocks', 'grids', 'snapshots', 'times',
-                 'fluid_variables']
+                 'fluid_variables', 'gas_model']
 
     def __init__(self, lmr_cfg):
         """
@@ -164,10 +166,18 @@ class SimInfo:
                               json=mdata)
                 self.grids.append(gi)
         #
+        # Finally, set up a GasModel object that may be handy.
+        #
+        self.gas_model = GasModel(self.sim_cfg['gas_model_file'])
         return
 
     def grid_metadata_as_dict(self):
-        """Return the grid metadata a dict"""
+        """
+        Return the grid metadata a dict
+
+        for use when the metadata writen by lmr is known to have the needed information
+        but this module does not already provide it in a convenient form.
+        """
         fname = os.path.join(os.path.join(self.grid_dir, "grid"+self.lmr_cfg["metadata-extension"]))
         with open(fname, 'r') as fp:
             grid_metadata = json.load(fp)
@@ -191,11 +201,11 @@ class SimInfo:
                     fname = os.path.join(os.path.join(self.grid_dir, fname))
                     grids.append(StructuredGrid(binaryfile=fname))
                 else:
-                    raise "Unknown format for grid[%d] %s" % (i, grid_format)
+                    raise RuntimeError(f"Unknown format for grid[{i}] {grid_format}")
             elif grid_type == GridType.UNSTRUCTURED:
-                raise "unstructured_grid reading not implemtented"
+                raise RuntimeError("unstructured_grid reading not implemtented")
             else:
-                raise "unknown grid type"
+                raise RuntimeError("unknown grid type")
         return grids
 
     def read_snapshot(self, snap_name):
@@ -208,28 +218,33 @@ class SimInfo:
         return fields, grids
 
     def load_pvd_into_pyvista(self, domain_type=DomainType.FLUID, snapshot=-1,
-                              merged=False, as_point_data=False):
+                              merged=False, as_point_data=False, make_vtk_files=True):
         """
-        This loads the top-level PVD file for VTK output from Eilmer.
+        Returns a pyvista.DataSet object containing the simulated flowfield.
 
-        The VTK output is ordinarily produced as the result of running 'snapshot2vtk'.
+        This is done by loading the top-level PVD file for VTK output from Eilmer
+        which is ordinarily produced as the result of running 'snapshot2vtk'.
 
         Args:
-            domain_type (DomainType) : indicates if domain contains fluid or solid data
-            snapshot (int)           : select snapshot, default is last snapshot (-1 index into list)
-            merged (bool)            : set to True to combine blocks; default is to leave partitioned
-            as_point_data (bool)     : set to True to convert to point data; default is to leave as cell data
-
-        Returns:
-            A pyvista.DataSet object.
+        domain_type (DomainType) : indicates if domain contains fluid or solid data
+        snapshot (int)           : select snapshot, default is last snapshot (-1 index into list)
+        merged (bool)            : set to True to combine blocks; default is to leave partitioned
+        as_point_data (bool)     : set to True to convert to point data; default is to leave as cell data
+        make_vtk_files (bool)    : make the VTK files if they are not already present
         """
         if not HAVE_PYVISTA:
-            raise "pyvista module is not loaded"
+            raise RuntimeError("pyvista module is not loaded")
         # locate the PVD file
         name = "fluid" if domain_type == DomainType.FLUID else "solid"
         fname = os.path.join(self.vtk_dir, name+".pvd")
         if not os.path.exists(fname):
-            raise "Cannot find .pvd file: %s" % (fname,)
+            if make_vtk_files:
+                proc = subprocess.run(['lmr', 'snapshot2vtk', '--all'], capture_output=True)
+                if not proc.returncode == 0:
+                    raise RuntimeError(f"Error when running lmr snapshot2vtk: {proc.stdout}, {proc.stderr}")
+            else:
+                raise RuntimeError(f"Cannot find .pvd file: {fname}")
+        #
         reader = pv.get_reader(fname)
         reader.set_active_time_point(snapshot)
         pv_data = reader.read()
