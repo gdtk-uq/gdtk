@@ -61,6 +61,7 @@ GridInfo = NamedTuple(
                  ('nic', int), ('njc', int), ('nkc', int),
                  ('json', dict)])
 
+
 BlockInfo = NamedTuple(
     'BlockInfo', [('id', int),
                   ('grid_type', GridType),
@@ -165,6 +166,13 @@ class SimInfo:
         #
         return
 
+    def grid_metadata_as_dict(self):
+        """Return the grid metadata a dict"""
+        fname = os.path.join(os.path.join(self.grid_dir, "grid"+self.lmr_cfg["metadata-extension"]))
+        with open(fname, 'r') as fp:
+            grid_metadata = json.load(fp)
+        return grid_metadata
+
     def read_grids(self):
         """
         Return a list containing all of the grids associated the simulation.
@@ -199,7 +207,8 @@ class SimInfo:
         grids = []
         return fields, grids
 
-    def load_pvd_into_pyvista(self, domain_type=DomainType.FLUID, merged=False, as_point_data=False):
+    def load_pvd_into_pyvista(self, domain_type=DomainType.FLUID, snapshot=-1,
+                              merged=False, as_point_data=False):
         """
         This loads the top-level PVD file for VTK output from Eilmer.
 
@@ -207,6 +216,7 @@ class SimInfo:
 
         Args:
             domain_type (DomainType) : indicates if domain contains fluid or solid data
+            snapshot (int)           : select snapshot, default is last snapshot (-1 index into list)
             merged (bool)            : set to True to combine blocks; default is to leave partitioned
             as_point_data (bool)     : set to True to convert to point data; default is to leave as cell data
 
@@ -221,6 +231,7 @@ class SimInfo:
         if not os.path.exists(fname):
             raise "Cannot find .pvd file: %s" % (fname,)
         reader = pv.get_reader(fname)
+        reader.set_active_time_point(snapshot)
         pv_data = reader.read()
         if merged:
             pv_data = pv_data.combine()
