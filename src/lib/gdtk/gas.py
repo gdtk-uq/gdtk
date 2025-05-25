@@ -9,6 +9,7 @@
 PC_P_atm = 101.325e3
 
 from cffi import FFI
+from dataclasses import dataclass
 import math
 
 ffi = FFI()
@@ -125,6 +126,27 @@ ffi.cdef("""
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
+
+# --------------------------------------------------------------------------
+# Pack physical constants into a dataclass
+# from calling module, should be accessible as:
+#    gas.PC.Avogadro_number
+#
+# NOTE: Keep this consistent with src/gas/physical_constants.d
+
+@dataclass(frozen=True)
+class PhysicalConstants():
+    R_universal: float = 8.31451
+    R_universal_cal: float = 1.987
+    P_atm: float = 101.325e3
+    Avogadro_number: float = 6.02214e23
+    electron_volt_energy: float = 1.60219e-19
+    elementary_charge: float = 1.602176634e-19
+    vacuum_permittivity: float = 8.8541878128e-12
+    Plancks_constant: float = 6.62607015e-34
+    speed_of_light: float = 299792458.0
+
+PC = PhysicalConstants()
 
 # -----------------------------------------------------------------------------------
 # Service classes that wrap the C-API in a nice Pythonic API...
