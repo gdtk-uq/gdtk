@@ -76,7 +76,7 @@ public:
             htcf = htcfs[$-1];
         } else {
             double dx = xs[1] - xs[0];
-            int i = cast(int)floor((x - xs[0])/dx);
+            int i = min(n, cast(int)floor((x - xs[0])/dx)); // Don't fall off the end of xs[].
             double frac = (x - xs[i])/dx;
             i = max(0, min(i, ds.length-2)); // deal with potential round-off error
             d = (1.0-frac)*ds[i] + frac*ds[i+1];
