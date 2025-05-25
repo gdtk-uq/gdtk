@@ -121,7 +121,17 @@ module Gas
                                  int state_c_id, int gm_id, double dtheta, double* results)'
   extern 'int gasflow_beta_cone(int state1_id, double v1, double theta,
                                 int gm_id, double dtheta, double* results)'
+
+  # Keep the following constants consistent with src/gas/physical_constants.d
+  PC_R_universal = 8.31451
+  PC_R_universal_cal = 1.987
   PC_P_atm = 101.325e3
+  PC_Avogadro_number = 6.02214e23
+  PC_electron_volt_energy = 1.60219e-19
+  PC_elementary_charge = 1.602176634e-19
+  PC_vacuum_permittivity = 8.8541878128e-12
+  PC_Plancks_constant = 6.62607015e-34
+  PC_speed_of_light = 299792458.0
 end
 
 Gas.cwrap_gas_init()
