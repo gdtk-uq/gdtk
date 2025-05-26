@@ -248,9 +248,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 
             // New fixed_time_step behaviour by NNG, Apr 2025.
             double dt_inner = fmin(SimState.dt_global, SimState.dt_global_parab);
-            double dt_outer = fmax(GlobalConfig.dt_init, dt_inner);
+            double dt_outer = GlobalConfig.dt_init;
             dt_global = dt_outer;
-            alpha = (dt_outer)/(dt_inner);
+            alpha = fmax((dt_outer)/(dt_inner), 1.0);
 
             if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
                 s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
@@ -259,8 +259,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             }
 
             // it is recommended to round S down to the nearest odd integer for stability
+            // NNG: I think we want to round up instead for safety.
             S = to!int(floor(s_RKL));
-            if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S - 1; }
+            if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S + 1; }
 
             // When dt_parab is approxmately equal to or greater than dt_hyper (i.e. S <= 1), then we will just do a simple Euler step
             if (S <= 1) {
