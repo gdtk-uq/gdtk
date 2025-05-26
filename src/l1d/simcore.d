@@ -346,7 +346,7 @@ void integrate_in_time()
         }
         // 3. Record current state of dynamic components.
         foreach (p; pistons) { p.record_state(); }
-        foreach (s; gasslugs) {
+        foreach (s; parallel(gasslugs, 1)) {
             s.compute_areas_and_volumes();
             s.encode_conserved();
             s.record_state();
@@ -364,9 +364,11 @@ void integrate_in_time()
                     if (dia) { dia.update_state(sim_data.sim_time); }
                 }
                 // 4.2 Update dynamic elements.
-                foreach (s; gasslugs) {
+                foreach (s; parallel(gasslugs, 1)) {
                     s.time_derivatives(0, sim_data.sim_time);
                     s.predictor_step(sim_data.dt_global);
+                }
+                foreach (s; gasslugs) {
                     if (s.bad_cells() > 0) { throw new Exception("Bad cells"); }
                 }
                 foreach (p; pistons) {
@@ -377,7 +379,7 @@ void integrate_in_time()
                 writefln("Predictor step failed e.msg=%s", e.msg);
                 step_failed = true;
                 foreach (p; pistons) { p.restore_state(); }
-                foreach (s; gasslugs) { s.restore_state(); }
+                foreach (s; parallel(gasslugs, 1)) { s.restore_state(); }
                 sim_data.dt_global = 0.2 * sim_data.dt_global;
             }
             if (L1dConfig.t_order == 2 && !step_failed) {
@@ -388,9 +390,11 @@ void integrate_in_time()
                         // [TODO] Diaphragms
                     }
                     // 5.2 Update dynamic elements.
-                    foreach (s; gasslugs) {
+                    foreach (s; parallel(gasslugs, 1)) {
                         s.time_derivatives(1, sim_data.sim_time+sim_data.dt_global);
                         s.corrector_step(sim_data.dt_global);
+                    }
+                    foreach (s; gasslugs) {
                         if (s.bad_cells() > 0) { throw new Exception("Bad cells"); }
                     }
                     foreach (p; pistons) {
@@ -401,13 +405,13 @@ void integrate_in_time()
                     writefln("Corrector step failed e.msg=%s", e.msg);
                     step_failed = true;
                     foreach (p; pistons) { p.restore_state(); }
-                    foreach (s; gasslugs) { s.restore_state(); }
+                    foreach (s; parallel(gasslugs, 1)) { s.restore_state(); }
                     sim_data.dt_global = 0.2 * sim_data.dt_global;
                     continue;
                 }
             }
             if (L1dConfig.reacting && !step_failed) {
-                foreach (s; gasslugs) { s.chemical_increment(sim_data.dt_global); }
+                foreach (s; parallel(gasslugs, 1)) { s.chemical_increment(sim_data.dt_global); }
             }
         } while (step_failed && (attempt_number <= 3));
         if (step_failed) {
