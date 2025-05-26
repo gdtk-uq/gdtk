@@ -25,8 +25,12 @@ int main(string[] args)
         FloatingPointControl fpctrl;
         // Enable hardware exceptions for division by zero, overflow to infinity,
         // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+        // See https://dlang.org/phobos/std_math_hardware.html#.FloatingPointControl
+        // fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+        // More fine-grained control, as explored in Eilmer.
+        // fpctrl.enableExceptions(FloatingPointControl.invalidException);
+        fpctrl.enableExceptions(FloatingPointControl.divByZeroException);
+        fpctrl.enableExceptions(FloatingPointControl.overflowException);
     }
 
     // We assemble the usage messages as multi-line strings.

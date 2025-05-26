@@ -71,7 +71,7 @@ endif
 
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
+        DFLAGS := -w -g -debug -version=flavour_debug -version=enable_fp_exceptions
     endif
     ifeq ($(FLAVOUR), profile)
         DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
@@ -88,7 +88,7 @@ ifeq ($(DMD), dmd)
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
+        DFLAGS := -w -g -debug -version=flavour_debug -version=enable_fp_exceptions
     endif
     ifeq ($(FLAVOUR), profile)
         DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
@@ -105,7 +105,7 @@ ifeq ($(DMD), ldmd2)
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug
+        DFLAGS := -w -g -d-debug -d-version=flavour_debug -d-version=enable_fp_exceptions
     endif
     ifeq ($(FLAVOUR), profile)
         # -fprofile-generate will result in profraw files being written
