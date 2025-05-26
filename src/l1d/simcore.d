@@ -42,16 +42,16 @@ __gshared static EndCondition[] ecs;
 __gshared static Diaphragm[] diaphragms;
 
 struct SimulationData {
-    int step = 0;
-    int halt_now = 0;
-    double sim_time = 0.0;
-    double dt_global;
-    double cfl;
-    double t_plot;
-    double t_hist;
-    int tindx;
-    int steps_since_last_plot_write;
-    int steps_since_last_hist_write;
+    shared int step = 0;
+    shared int halt_now = 0;
+    shared double sim_time = 0.0;
+    shared double dt_global;
+    shared double cfl;
+    shared double t_plot;
+    shared double t_hist;
+    shared int tindx;
+    shared int steps_since_last_plot_write;
+    shared int steps_since_last_hist_write;
     SysTime wall_clock_start;
 }
 
@@ -319,7 +319,7 @@ void integrate_in_time()
             } else {
                 // Cautious increase, only if we have taken some steps.
                 if (sim_data.step > 0) {
-                    sim_data.dt_global += 0.5*(dt_allowed - sim_data.dt_global);
+                    sim_data.dt_global = 0.5*(dt_allowed + sim_data.dt_global);
                 }
             }
         }
@@ -364,7 +364,7 @@ void integrate_in_time()
                 step_failed = true;
                 foreach (p; pistons) { p.restore_state(); }
                 foreach (s; gasslugs) { s.restore_state(); }
-                sim_data.dt_global *= 0.2;
+                sim_data.dt_global = 0.2 * sim_data.dt_global;
             }
             if (L1dConfig.t_order == 2 && !step_failed) {
                 try {
@@ -388,7 +388,7 @@ void integrate_in_time()
                     step_failed = true;
                     foreach (p; pistons) { p.restore_state(); }
                     foreach (s; gasslugs) { s.restore_state(); }
-                    sim_data.dt_global *= 0.2;
+                    sim_data.dt_global = 0.2 * sim_data.dt_global;
                     continue;
                 }
             }
@@ -418,22 +418,22 @@ void integrate_in_time()
             stdout.flush();
         }
         // 8. Update time and (maybe) write solution.
-        sim_data.step += 1;
-        sim_data.sim_time += sim_data.dt_global;
+        sim_data.step = sim_data.step + 1;
+        sim_data.sim_time = sim_data.sim_time + sim_data.dt_global;
         if (sim_data.sim_time >= sim_data.t_plot) {
             write_state_gasslugs_pistons_diaphragms();
-            sim_data.t_plot += L1dConfig.dt_plot.get_value(sim_data.sim_time);
+            sim_data.t_plot = sim_data.t_plot + L1dConfig.dt_plot.get_value(sim_data.sim_time);
             sim_data.steps_since_last_plot_write = 0;
         } else {
-            sim_data.steps_since_last_plot_write++;
+            sim_data.steps_since_last_plot_write = sim_data.steps_since_last_plot_write + 1;
         }
         if (sim_data.sim_time >= sim_data.t_hist) {
             write_data_at_history_locations_and_cells(sim_data.sim_time);
             write_energies(sim_data.sim_time);
-            sim_data.t_hist += L1dConfig.dt_hist.get_value(sim_data.sim_time);
+            sim_data.t_hist = sim_data.t_hist + L1dConfig.dt_hist.get_value(sim_data.sim_time);
             sim_data.steps_since_last_hist_write = 0;
         } else {
-            sim_data.steps_since_last_hist_write++;
+            sim_data.steps_since_last_hist_write = sim_data.steps_since_last_hist_write + 1;
         }
     } // End main time loop.
     //
@@ -452,7 +452,7 @@ void integrate_in_time()
 
 void write_state_gasslugs_pistons_diaphragms()
 {
-    sim_data.tindx += 1;
+    sim_data.tindx = sim_data.tindx + 1;
     if (L1dConfig.verbosity_level >= 1) {
         writeln("Write state data at tindx=", sim_data.tindx);
     }
