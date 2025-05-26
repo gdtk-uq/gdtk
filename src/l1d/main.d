@@ -4,6 +4,7 @@
 // 2020-04-05 Minimal code.
 // The intention today is that we build just enough to run
 // the Sod shock tube and David Gildfind's expanding test gas.
+// 2025-05-26 introduce parallelism
 //
 
 import std.stdio;
@@ -13,6 +14,7 @@ import std.path;
 import std.getopt;
 import std.conv;
 import std.math;
+import std.parallelism: totalCPUs;
 
 import config;
 import simcore;
@@ -68,6 +70,9 @@ Parameters:
                                        0=very little written to console
                                        1=major steps commentary (default)
                                        2=minor steps commentary
+
+  --max-cpus=<int>                   limit the number of CPUs for parallel calculation
+                                       Default is to make use of all available.
 --------------------------------------------------------------------------------
 ";
     //
@@ -97,6 +102,7 @@ Parameters:
     bool milliSec = false;
     int verbosityLevel = 1; // default to commenting on major steps
     bool helpWanted = false;
+    int maxCPUs = totalCPUs;
     try {
         getopt(args,
                "job", &jobName,
@@ -116,7 +122,8 @@ Parameters:
                "log10", &takeLog,
                "millisec", &milliSec,
                "verbosity", &verbosityLevel,
-               "help", &helpWanted
+               "help", &helpWanted,
+               "max-cpus", &maxCPUs
                );
     } catch (Exception e) {
         writeln("Problem parsing command-line options.");
@@ -174,11 +181,13 @@ Parameters:
     }
     L1dConfig.job_name = jobName;
     L1dConfig.verbosity_level = verbosityLevel;
-
-    // Get to work to do one task...
+    //
+    // Get to work, to do one task...
+    //
     if (runSimulation) {
+        writeln("maxCPUs: ", maxCPUs);
         writeln("Run a simulation.");
-        init_simulation(tindx);
+        init_simulation(tindx, maxCPUs);
         integrate_in_time();
     } else if (timeSlice) {
         extract_time_slice(tindx);

@@ -12,6 +12,7 @@ import std.file;
 import std.datetime;
 import std.algorithm;
 import std.range;
+import std.parallelism : parallel, defaultPoolThreads;
 
 import nm.schedule;
 import util.json_helper;
@@ -58,7 +59,7 @@ struct SimulationData {
 __gshared static SimulationData sim_data;
 
 
-void init_simulation(int tindx_start)
+void init_simulation(int tindx_start, int maxCPUs)
 {
     sim_data.tindx = tindx_start;
     sim_data.wall_clock_start = Clock.currTime();
@@ -273,6 +274,15 @@ void init_simulation(int tindx_start)
             writeln(format("  state=%s", dia.state));
         }
     }
+    //
+    // We are going to allow calculation over the gasslugs to be run in parallel.
+    // There is no point in running more threads than the maximum for the processor
+    // and there are occasions that we wish to limit the number of threads.
+    int extraThreadsInPool = min(maxCPUs-1, max(gasslugs.length-1, 0));
+    // total number of threads = main thread + extra-threads-in-Pool
+    defaultPoolThreads(extraThreadsInPool);
+    writefln("Number of threads requested: %d", extraThreadsInPool+1);
+    //
     // Note that, for a restart, sim_time will generally be nonzero
     sim_data.dt_global = L1dConfig.dt_init;
     sim_data.sim_time = get_time_from_times_file(tindx_start);
@@ -299,6 +309,10 @@ void integrate_in_time()
     sim_data.step = 0;
     append(L1dConfig.job_name~"/events.txt", format("t=%e Begin stepping\n", sim_data.sim_time));
     //
+    // To allow parallelism across gasslugs, we need some storage for intermediate data.
+    shared static double[] local_dt_allow;
+    local_dt_allow.length = gasslugs.length;
+    //
     // Main time loop.
     while (sim_data.sim_time <= L1dConfig.max_time &&
            sim_data.step <= L1dConfig.max_step &&
@@ -309,10 +323,10 @@ void integrate_in_time()
         // 1. Set the size of the time step.
         if ((sim_data.step % L1dConfig.cfl_count) == 0) {
             sim_data.cfl = L1dConfig.cfl_schedule.get_value(sim_data.sim_time);
-            double dt_allowed = gasslugs[0].suggested_time_step(sim_data.cfl);
-            foreach (i; 1 .. gasslugs.length) {
-                dt_allowed = min(dt_allowed, gasslugs[i].suggested_time_step(sim_data.cfl));
+            foreach (i, gs; parallel(gasslugs, 1)) {
+                local_dt_allow[i] = gs.suggested_time_step(sim_data.cfl);
             }
+            double dt_allowed = minElement(local_dt_allow);
             if (dt_allowed < sim_data.dt_global) {
                 // Reduce immediately.
                 sim_data.dt_global = dt_allowed;
