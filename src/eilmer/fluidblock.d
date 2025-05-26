@@ -1254,13 +1254,13 @@ public:
         // for STS (hyp = hyperbolic/convective, parab = parabolic/viscous)
         double signal_hyp;
         double signal_parab;
-	double dt_allow_hyp;
-	double dt_allow_parab;
+        double dt_allow_hyp;
+        double dt_allow_parab;
         //
         double dt_local;
         double cfl_local;
         double signal;
-       	//
+           //
         double cfl_allow; // allowable CFL number, t_order dependent
         double dt_allow;
         double cfl_min, cfl_max;
@@ -1293,41 +1293,41 @@ public:
         bool first = true;
         foreach(i, cell; cells) {
             signal = cell.signal_frequency();
-	    if (myConfig.with_super_time_stepping) {
-                signal_hyp = cell.signal_hyp.re;
-                signal_parab = cell.signal_parab.re;
-                if (first) {
-                    dt_allow_hyp = cfl_value / signal_hyp;
-                    dt_allow_parab = cfl_value / signal_parab;
-                    first = false;
+            if (myConfig.with_super_time_stepping) {
+                    signal_hyp = cell.signal_hyp.re;
+                    signal_parab = cell.signal_parab.re;
+                    if (first) {
+                        dt_allow_hyp = cfl_value / signal_hyp;
+                        dt_allow_parab = cfl_value / signal_parab;
+                        first = false;
+                    } else {
+                        dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);
+                        dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
+                    }
+                    // Set the allowable time-step based on hyperbolic time-step.
+                    dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max);
                 } else {
-                    dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);
-                    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
+                    // no STS
+                    dt_allow_hyp = 0;
+                    dt_allow_parab = 0;
+                    // Compute current (Local) CFL number and recommend a time step.
+                    cfl_local = dt_current * signal;
+                    dt_local = cfl_value / signal;
+                    // Set local time-step in cell.
+                    cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor);
+                    // Limit the largest local time-step to a set input value.
+                    cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max);
+                    if (first) {
+                        cfl_min = cfl_local;
+                        cfl_max = cfl_local;
+                        dt_allow = dt_local;
+                        first = false;
+                    } else {
+                        cfl_min = fmin(cfl_min, cfl_local);
+                        cfl_max = fmax(cfl_max, cfl_local);
+                        dt_allow = fmin(dt_allow, dt_local);
+                    }
                 }
-                // Set the allowable time-step based on hyperbolic time-step.
-                dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max);
-            } else {
-                // no STS
-                dt_allow_hyp = 0;
-                dt_allow_parab = 0;
-                // Compute current (Local) CFL number and recommend a time step.
-                cfl_local = dt_current * signal;
-                dt_local = cfl_value / signal;
-                // Set local time-step in cell.
-                cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor);
-                // Limit the largest local time-step to a set input value.
-                cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max);
-                if (first) {
-                    cfl_min = cfl_local;
-                    cfl_max = cfl_local;
-                    dt_allow = dt_local;
-                    first = false;
-                } else {
-                    cfl_min = fmin(cfl_min, cfl_local);
-                    cfl_max = fmax(cfl_max, cfl_local);
-                    dt_allow = fmin(dt_allow, dt_local);
-                }
-            }
             celldata.dt_local[i] = cell.dt_local;
         } // foreach cell
         if (myConfig.with_super_time_stepping == false && check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
