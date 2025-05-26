@@ -132,6 +132,13 @@ void determine_time_step_size()
         } else if (GlobalConfig.with_local_time_stepping) {
             SimState.dt_global = SimState.dt_allow;
         } else { // do some global time-stepping checks
+            if (GlobalConfig.fixed_time_step){
+                // If the user has asked for a fixed timestep, set it now. We also
+                // calculate what the equivalent CFL would be for this size step.
+                SimState.dt_global = GlobalConfig.dt_init;
+                SimState.cfl_max = SimState.dt_global/SimState.dt_allow;
+                return;
+            }
             if (SimState.step == 0) {
                 // When starting out, we may override the computed value.
                 // This might be handy for situations where the computed estimate
