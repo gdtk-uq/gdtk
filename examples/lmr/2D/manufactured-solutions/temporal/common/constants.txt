@@ -1,0 +1,9 @@
+L = 1.0
+
+Rgas = 287.0
+gamma = 1.4
+Cv = Rgas/(gamma-1)
+Cp = gamma*Cv
+Prandtl = 1.0
+mu = 10.0
+k = Cp*mu/Prandtl
