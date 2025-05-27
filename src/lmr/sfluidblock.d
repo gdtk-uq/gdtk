@@ -49,6 +49,7 @@ import lmr.grid_motion_udf;
 import lmr.lua_helper;
 import lmr.luawrap.luaflowstate;
 import lmr.onedinterp;
+import lmr.user_defined_source_terms;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
@@ -2947,6 +2948,29 @@ public:
             }
         }
         return index;
+    }
+
+    override void eval_udf_source_vectors(double simTime, size_t gtl, size_t[] cell_list=[])
+    {
+    /*
+        Evaluate the user defined source terms and store them in cell.Qudf.
+        Note that after calling this routine you must call
+        blk.add_udf_source_vectors or cell.add_udf_source_vector to actually
+        apply Qudf to the RHS.
+
+        @author: Nick Gibbons (May 2025)
+    */
+        if (myConfig.udf_source_terms) {
+            if (cell_list.length==0) cell_list = celldata.all_cell_idxs;
+            foreach (i; cell_list) {
+                auto cell = cells[i];
+                auto ijk_indices = to_ijk_indices_for_cell(cell.id);
+                size_t i_cell = ijk_indices[0];
+                size_t j_cell = ijk_indices[1];
+                size_t k_cell = ijk_indices[2];
+                getUDFSourceTermsForCell(myL, cell, gtl, simTime, myConfig, id, i_cell, j_cell, k_cell);
+            }
+        }
     }
 } // end class SFluidBlock
 

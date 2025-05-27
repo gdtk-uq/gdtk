@@ -1395,6 +1395,7 @@ public:
     Vector3 gravity;
     ConservedQuantitiesIndices* cqi;
     GasdynamicUpdate gasdynamic_update_scheme;
+    bool eval_udf_source_terms_at_each_stage;
     size_t n_flow_time_levels;
     bool residual_smoothing;
     bool with_local_time_stepping;
@@ -1579,6 +1580,7 @@ public:
         // Presumably these times, not all of the GlobalConfig is needed, so press on doing what can be done.
         if (cfg.cqi) { cqi = new ConservedQuantitiesIndices(*(cfg.cqi)); }
         gasdynamic_update_scheme = cfg.gasdynamic_update_scheme;
+        eval_udf_source_terms_at_each_stage = cfg.eval_udf_source_terms_at_each_stage;
         n_flow_time_levels = cfg.n_flow_time_levels;
         residual_smoothing = cfg.residual_smoothing;
         with_local_time_stepping = cfg.with_local_time_stepping;

@@ -44,6 +44,7 @@ import lmr.grid_motion_udf;
 import lmr.lsqinterp;
 import lmr.lua_helper;
 import lmr.luawrap.luaflowstate;
+import lmr.user_defined_source_terms;
 
 class UFluidBlock: FluidBlock {
 public:
@@ -1056,5 +1057,27 @@ public:
         size_t[] index;
         index = iota(0, ncells, myConfig.nic_write).array();
         return index;
+    }
+
+    override void eval_udf_source_vectors(double simTime, size_t gtl, size_t[] cell_idxs=[])
+    {
+    /*
+        Evaluate the user defined source terms and store them in cell.Qudf.
+        Note that after calling this routine you must call
+        blk.add_udf_source_vectors or cell.add_udf_source_vector to actually
+        apply Qudf to the RHS.
+
+        @author: Nick Gibbons (May 2025)
+    */
+        if (myConfig.udf_source_terms) {
+            if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
+            foreach (i; cell_idxs) {
+                auto cell = cells[i];
+                size_t i_cell = cell.id;
+                size_t j_cell = 0;
+                size_t k_cell = 0;
+                getUDFSourceTermsForCell(myL, cell, gtl, simTime, myConfig, id, i_cell, j_cell, k_cell);
+            }
+        }
     }
 } // end class UFluidBlock

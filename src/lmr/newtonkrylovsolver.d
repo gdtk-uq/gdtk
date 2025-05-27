@@ -3308,22 +3308,9 @@ void evalResidual(int ftl)
             if (blk.myConfig.reacting) {
                 cell.add_thermochemical_source_vector(blk.thermochem_source, limit_factor);
             }
-            if (blk.myConfig.udf_source_terms) {
-                size_t i_cell = cell.id;
-                size_t j_cell = 0;
-                size_t k_cell = 0;
-                if (blk.grid_type == Grid_t.structured_grid) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                    i_cell = ijk_indices[0];
-                    j_cell = ijk_indices[1];
-                    k_cell = ijk_indices[2];
-                }
-                getUDFSourceTermsForCell(blk.myL, cell, 0, dummySimTime, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                cell.add_udf_source_vector();
-            }
         }
+        blk.eval_udf_source_vectors(SimState.time, gtl);
+        blk.add_udf_source_vectors();
         blk.time_derivatives(gtl, ftl);
     }
 }

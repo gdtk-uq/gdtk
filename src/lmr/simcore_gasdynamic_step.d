@@ -304,25 +304,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 
     // Preparation for the inviscid gas-dynamic flow update.
     if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
-    if (GlobalConfig.udf_source_terms) {
-        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-            if (!blk.active) continue;
-            int local_ftl = ftl;
-            int local_gtl = gtl;
-            double local_sim_time = SimState.time;
-            foreach (cell; blk.cells) {
-                size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                if (blk.grid_type == Grid_t.structured_grid) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                    i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                }
-                getUDFSourceTermsForCell(blk.myL, cell, local_gtl, local_sim_time,
-                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-            }
-        }
-    }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	if (blk.active) {
 	    blk.clear_fluxes_of_conserved_quantities();
@@ -451,11 +432,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	int blklocal_ftl = ftl;
 	int blklocal_gtl = gtl;
 	double dt = dt_global;
-	double blklocal_sim_time = SimState.time;
+    double blklocal_sim_time = SimState.time;
+
+    blk.eval_udf_source_vectors(blklocal_sim_time, blklocal_gtl);
+    blk.add_udf_source_vectors();
+
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
 	    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-	    if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
 	}
     blk.time_derivatives(blklocal_gtl, blklocal_ftl);
 	if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
@@ -578,25 +562,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 
         // Preparation for the inviscid gas-dynamic flow update.
         if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
-        if (GlobalConfig.udf_source_terms && GlobalConfig.eval_udf_source_terms_at_each_stage) {
-            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-                if (!blk.active) continue;
-                int blklocal_ftl = ftl;
-                int blklocal_gtl = gtl;
-                double blklocal_sim_time = SimState.time;
-                foreach (cell; blk.cells) {
-                    size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                    if (blk.grid_type == Grid_t.structured_grid) {
-                        auto sblk = cast(SFluidBlock) blk;
-                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                        i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                    }
-                    getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
-                                             blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                }
-            }
-        }
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) {
 		blk.clear_fluxes_of_conserved_quantities();
@@ -725,10 +690,15 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    int blklocal_ftl = ftl;
 	    int blklocal_gtl = gtl;
 	    double dt = dt_global;
+
+        if (blk.myConfig.eval_udf_source_terms_at_each_stage){
+            blk.eval_udf_source_vectors(SimState.time, blklocal_gtl);
+        }
+        blk.add_udf_source_vectors();
+
 	    foreach (cell; blk.cells) {
 		cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
 		if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-		if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
 	    }
 		blk.time_derivatives(blklocal_gtl, blklocal_ftl);
 	    if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
@@ -967,26 +937,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             // Phase 01 LOCAL
             if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
-            if (GlobalConfig.udf_source_terms &&
-                ((stage == 1) || GlobalConfig.eval_udf_source_terms_at_each_stage)) {
-                foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-                    if (!blk.active) continue;
-                    int blklocal_ftl = ftl;
-                    int blklocal_gtl = gtl;
-                    double blklocal_sim_time = SimState.time;
-                    foreach (cell; blk.cells) {
-                        size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                        if (blk.grid_type == Grid_t.structured_grid) {
-                            auto sblk = cast(SFluidBlock) blk;
-                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                            auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                            i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                        }
-                        getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
-                                                 blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                    }
-                }
-            }
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.clear_fluxes_of_conserved_quantities();
@@ -1127,10 +1077,16 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     int blklocal_gtl = gtl;
                     bool blklocal_with_local_time_stepping = with_local_time_stepping;
                     double blklocal_dt_global = SimState.dt_global;
+                    double blklocal_sim_time = SimState.time;
+
+                    if (blk.myConfig.eval_udf_source_terms_at_each_stage || stage==1){
+                        blk.eval_udf_source_vectors(blklocal_sim_time, blklocal_gtl);
+                    }
+                    blk.add_udf_source_vectors();
+
                     foreach (cell; blk.cells) {
                         cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
                         if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-                        if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
                     }
                     blk.time_derivatives(blklocal_gtl, blklocal_ftl);
                     if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
@@ -1481,37 +1437,6 @@ void gasdynamic_explicit_increment_with_moving_grid()
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     // Phase 00a LOCAL
     if (GlobalConfig.conductivity_model) { evaluate_electrical_conductivity(); }
-    if (GlobalConfig.udf_source_terms) {
-        try {
-            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-                if (!blk.active) continue;
-                int blklocal_ftl = ftl;
-                int blklocal_gtl = gtl;
-                double blklocal_sim_time = SimState.time;
-                foreach (cell; blk.cells) {
-                    size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                    if (blk.grid_type == Grid_t.structured_grid) {
-                        auto sblk = cast(SFluidBlock) blk;
-                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                        i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                    }
-                    getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
-                                             blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                }
-            }
-        } catch (Exception e) {
-            debug { writefln("Exception thrown while preparing user source terms"~
-                             " for explicit update on moving grid: %s", e.msg); }
-            step_failed = 1;
-        }
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        }
-        if (step_failed) {
-            throw new FlowSolverException("User-defined-source-term failure.");
-        }
-    }
     // Phase 00b (mabe) MPI
     final switch(GlobalConfig.grid_motion) {
     case GridMotion.none:
@@ -1804,10 +1729,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 int blklocal_gtl = gtl;
                 double blklocal_dt_global = SimState.dt_global;
                 auto cqi = blk.myConfig.cqi;
+
+                blk.eval_udf_source_vectors(SimState.time, blklocal_gtl);
+                blk.add_udf_source_vectors();
+
                 foreach (cell; blk.cells) {
                     cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
                     if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-                    if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
                     cell.time_derivatives(blklocal_gtl, blklocal_ftl);
                     //
                     auto dt = blklocal_dt_global;
@@ -2156,10 +2084,14 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     int blklocal_gtl = gtl;
                     double blklocal_dt_global = SimState.dt_global;
                     auto cqi = blk.myConfig.cqi;
+                    if (blk.myConfig.eval_udf_source_terms_at_each_stage){
+                        blk.eval_udf_source_vectors(SimState.time, blklocal_gtl);
+                    }
+                    blk.add_udf_source_vectors();
+
                     foreach (cell; blk.cells) {
                         cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
                         if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-                        if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
                         cell.time_derivatives(blklocal_gtl, blklocal_ftl);
                         //
                         auto dt = blklocal_dt_global;

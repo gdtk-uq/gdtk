@@ -231,6 +231,7 @@ public:
                                                FluidFVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
+    abstract void eval_udf_source_vectors(double simTime, size_t gtl, size_t[] cell_idxs=[]);
 
     void allocate_dense_celldata(size_t ncells, size_t nghost, size_t neq, size_t nftl)
     {
@@ -2167,4 +2168,28 @@ public:
         }
     }
 
+    @nogc
+    void add_udf_source_vectors(size_t[] cell_list=[]){
+    /*
+        To save some computation, it is possible to compute the
+        user defined source terms once per timestep, store them
+        in Qudf (in the cells) and then apply them to the RHS
+        for each stage of the explicit update here.
+
+        However, for Kyle's temporal MMS and some other specific
+        applications, we need to sometimes recalculate the terms'
+        each stage. This neccessitated a separation of this
+        routine from eval_udf_source_vectors, which are defined
+        separately in sfluidblock and ufluidblock.
+
+        @author: Nick Gibbons (May 2025)
+    */
+        if (myConfig.udf_source_terms) {
+            if (cell_list.length==0) cell_list = celldata.all_cell_idxs;
+            foreach (i; cell_list) {
+                auto cell = cells[i];
+                cell.add_udf_source_vector();
+            }
+        }
+    }
 } // end class FluidBlock
