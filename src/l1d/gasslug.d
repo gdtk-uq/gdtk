@@ -287,6 +287,16 @@ public:
         // compute face motion as Riemann subproblems.
         // There will be a single pressure and a single velocity
         // as a result of solving the Riemann problem.
+        //
+        // *************** [FIX-ME] 2025-05-29 *********************
+        // In the context of a multi-threaded process,
+        // We should not be dipping into an adjacent GasSlug object
+        // and its GasModel and cell data.
+        // As done for Eilmer, we may need to introduce ghost cells
+        // that receive copies of the relevant information, but this
+        // would have to be accompanied by a copy of the associated
+        // GasModel objects, as well.
+        //
         foreach (i, f; faces) {
             // Need to consider the end conditions.
             if (i == 0) {
