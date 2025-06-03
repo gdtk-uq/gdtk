@@ -926,18 +926,18 @@ extern (C) int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double
         auto rm = reaction_mechanisms[rm_i];
         auto gm = gas_models[gm_i];
         auto gs = gas_states[gs_i];
-        
+        //
         double[] forward_tickrates, backward_tickrates, concentrations;
         forward_tickrates.length = rm.n_reactions;
         backward_tickrates.length = rm.n_reactions;
         concentrations.length = gm.n_species;
-
+        //
         rm.eval_rate_constants(gm, *gs);
         gm.massf2conc(*gs, concentrations);
         rm.eval_tickrates(concentrations, forward_tickrates, backward_tickrates);
         foreach(i; 0 .. rm.n_reactions) forwardrates[i] = forward_tickrates[i];
         foreach(i; 0 .. rm.n_reactions) backwardrates[i] = backward_tickrates[i];
-
+        //
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);

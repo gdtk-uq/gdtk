@@ -45,7 +45,7 @@ T solve(alias f, T)(T x1, T x2, double tol=1.0e-9)
     if ( f1 * f2 > 0.0 ) {
         throw new Exception("Range does not clearly bracket a root.");
     }
-    while ( abs(x2 - x1) > tol ) {
+    while ( abs(x2 - x1)/(1.0+abs(x1)+abs(x2)) > tol ) {
         x3 = 0.5*(x1+x2);
         f3 = f(x3);
         if ( f3 == 0.0 ) return x3;
