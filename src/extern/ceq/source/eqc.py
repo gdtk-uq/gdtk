@@ -1,5 +1,5 @@
 """
-Python interface for ceq chemical equilibrium calculator
+Python interface for eqc chemical equilibrium calculator
 
 References:
     "Computer Program for Calculation of Complex Equilibrium Compositions and Applications"
@@ -17,19 +17,24 @@ References:
 from string import ascii_letters
 from numpy import array, zeros, log
 from ctypes import cdll,c_double,POINTER,c_int,byref
+from platform import system
 from clib import *
 
+# Keep these files together. The code will look in the directory
+# where this file is placed for the following:
+DBPATH =     __file__.replace('eqc.py', 'thermo.inp')
+HEADERFILE = __file__.replace('eqc.py', 'eqc.h')
+if system()=='Linux':     LIBPATH = __file__.replace('eqc.py', 'libeqc.so')
+elif system()=='Windows': LIBPATH = __file__.replace('eqc.py', 'libeqc.dll')
+else: raise Exception("Failed to find a supported correct OS, should be Linux or Windows.")
 letters = set(ascii_letters)
-DBPATH='../thermo.inp'
-LIBPATH='./libceq.so'
-HEADERFILE='./ceq.h'
 
 class EqCalculator(object):
-    """ Python interface to low level ceq routines """
+    """ Python interface to low level eqc routines """
     def __init__(self, spnames):
         self.spnames = spnames
         self.nsp = len(spnames)
-        self.lib = self.load_ceq_library()
+        self.lib = self.load_eqc_library()
 
         atoms = []
         M = []
@@ -146,7 +151,7 @@ class EqCalculator(object):
 
 
     @staticmethod
-    def load_ceq_library(LIBPATH=LIBPATH):
+    def load_eqc_library(LIBPATH=LIBPATH):
         """ Load the c library and set return types """
         lib = CLib(LIBPATH,[HEADERFILE])
         return lib
@@ -258,15 +263,24 @@ class EqCalculator(object):
         if recode!=0: raise Exception("u calc failed.")
         return u
 
+    def verify_equilibrium(self, p, T, Xs0, verbose=0):
+        """ Call c library to compute lagrangian derivatives for fixed p, T """
+        if Xs0.size!=self.nsp: raise Exception('Mismatched array size {}!={}'.format(Xs0.size, self.nsp))
+        dLdn = zeros(Xs0.shape)
+
+        recode = self.lib.verify_equilibrium(p, T, Xs0, self.nsp, self.nel, self.lewis, self.M, self.a, dLdn, verbose)
+        if recode!=0: raise Exception("Equilibrium Verify Failed.")
+        return dLdn
+
     def YtoX(self, Y):
-        Mmix = 1.0/((Y/self.M).sum())
+        Mmix = 1.0/((Y/self.M).sum(axis=-1))
         X = Y*Mmix/self.M
         return X
     
     def XtoY(self, X):
-        Mmix = (X*self.M).sum()
+        Mmix = (X*self.M).sum(axis=-1)
         Y = X*self.M/Mmix
         return Y
 
 if __name__=='__main__':
-    print("Called pyeq main!")
+    print("Called eqc main!")

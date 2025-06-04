@@ -33,9 +33,9 @@ LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
-CEQ_DIR := ../extern/ceq/source
-LIBCEQ := $(CEQ_DIR)/libceq.a
-include $(CEQ_DIR)/ceq_files.mk
+EQC_DIR := ../extern/ceq/source
+LIBEQC := $(EQC_DIR)/libeqc.a
+include $(EQC_DIR)/eqc_files.mk
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
@@ -67,13 +67,13 @@ clean:
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
-	- cd $(CEQ_DIR); make clean
+	- cd $(EQC_DIR); make clean
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
-$(LIBCEQ):
-	cd $(CEQ_DIR); make
+$(LIBEQC):
+	cd $(EQC_DIR); make
 
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(NTYPES_FILES) $(LIBLUA) \
 	$(UTIL_FILES)
@@ -88,20 +88,20 @@ luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(NTYPES_FILES) $(LIBLU
 		gasflowexception.d \
 		$(NM_FILES) $(NTYPES_FILES) $(LIBLUA) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(NTYPES_FILES) $(LIBCEQ) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
+gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(NTYPES_FILES) $(LIBEQC) $(LIBLUA) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
 	ldmd2 $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)  $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)\
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(LIBEQC) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	gasflow.d idealgasflow.d \
-	$(NM_FILES) $(NTYPES_FILES) $(LIBLUA) $(LIBCEQ) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) \
+	$(NM_FILES) $(NTYPES_FILES) $(LIBLUA) $(LIBEQC) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	ldmd2 $(DFLAGS) $(OF)luagasflow_demo \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS_LUA)

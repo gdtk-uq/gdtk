@@ -41,9 +41,9 @@ include $(GEOM_DIR)/geom_files.mk
 GASDYN_DIR := ../gasdyn
 include $(GASDYN_DIR)/gasdyn_files.mk
 
-CEQ_DIR := ../extern/ceq/source
-LIBCEQ := $(CEQ_DIR)/libceq.a
-include $(CEQ_DIR)/ceq_files.mk
+EQC_DIR := ../extern/ceq/source
+LIBEQC := $(EQC_DIR)/libeqc.a
+include $(EQC_DIR)/eqc_files.mk
 
 NTYPES_DIR := ../ntypes
 NTYPES_FILES := $(NTYPES_DIR)/complex.d
@@ -161,7 +161,7 @@ clean:
 	- cd $(LUA_DIR); make clean;
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
-	- cd $(CEQ_DIR); make clean
+	- cd $(EQC_DIR); make clean
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
@@ -169,12 +169,12 @@ $(LIBLUA):
 $(LIBGASF):
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) libgasf.a
 
-$(LIBCEQ):
-	cd $(CEQ_DIR); make
+$(LIBEQC):
+	cd $(EQC_DIR); make
 
 l1d4: main.d $(L1D_FILES) \
 	$(GEOM_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
@@ -185,11 +185,11 @@ l1d4: main.d $(L1D_FILES) \
 		main_with_rev_string.d \
 		$(L1D_FILES) \
 		$(GEOM_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBCEQ) $(LIBLUA) \
+		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 l1d4-prep: l1d4-prep.py

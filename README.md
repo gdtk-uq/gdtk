@@ -54,7 +54,7 @@ The tools in the kit are:
   a program for estimating flow conditions in reflected-shock tunnels,
   when the test gas reaches temperatures high enough for chemical reactions to occur
   and when nonequilibrium chemistry effects are expected to be important.
-* ceq, a calculator of thermochemical equilibrium gas compositions.
+* [equilibrium-c](https://github.com/uqngibbo/equilibrium-c), a calculator of thermochemical equilibrium gas compositions.
 * Loadable Python libraries
 
 

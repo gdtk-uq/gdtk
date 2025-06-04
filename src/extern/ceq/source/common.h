@@ -4,6 +4,7 @@
 extern const double TRACELIMIT;
 extern const double tol;
 extern const int attempts;
+extern const double relaxation_limit;
 
 double update_limit_factor(double fac, double x, double dx);
 void handle_trace_species_locking(double* a, double n, int nsp, int nel, double* ns, double* bi0, double* dlnns, int verbose);

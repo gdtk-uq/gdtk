@@ -133,7 +133,7 @@ public:
         tpgs.massf[] = reactants_massf[];
 
         tpEqCalc.set_massf_and_T_from_rhou(tpgs);
-        tpGasEqModel.update_thermo_from_rhoT(tpgs); // Faster than calling from_rhou, and ceq set T for us
+        tpGasEqModel.update_thermo_from_rhoT(tpgs); // Faster than calling from_rhou, and eqc set T for us
 
         copy_gas_state_except_massf(tpgs, Q);
         number Mmix = gas.gas_model.mixture_molecular_mass(tpgs.massf, tpGasEqModel.mol_masses);
@@ -224,7 +224,7 @@ public:
     }
     override number entropy(in GasState Q)
     {
-        // It's important that this method return one consistent with ceq's internal thermo routines,
+        // It's important that this method return one consistent with eqc's internal thermo routines,
         // so we use those here rather than tpGasEqModel. For some reason tpGasModel has a different
         // zero point to thermo.c, with regard to entropy.
         set_tpgs_from_external_gasstate(Q);
@@ -291,7 +291,7 @@ version(equilibrium_gas_test) {
         gd.rho = 0.0139284858607; // Fixed example to use reactants = {N2=0.79, O2=0.21} in moles
         gd.u = 2122510.049202302; //
 
-        gd.T = 3352.068185; // Same guess as normal ceq
+        gd.T = 3352.068185; // Same guess as normal eqc
         gm.update_thermo_from_rhou(gd);
         // writeln("gd.p=", gd.p, " gd.T=", gd.T);
         assert(isClose(2500.0, gd.T, 1.0), failedUnitTest());

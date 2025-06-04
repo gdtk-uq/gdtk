@@ -33,4 +33,4 @@ class CLib(CDLL):
             getattr(self,function.name).argtypes = [ctypesmap[i] for i in function.argtypes]
 
 if __name__=='__main__':
-    clib = CLib('libceq.so', glob('*.h')) 
+    clib = CLib('libeqc.so', glob('*.h')) 

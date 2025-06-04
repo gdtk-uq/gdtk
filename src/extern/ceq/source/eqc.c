@@ -22,7 +22,7 @@ References:
 #include "rhou.h"
 #include "ps.h"
 #include "rhot.h"
-#include "ceq.h"
+#include "eqc.h"
 
 
 int pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1, int verbose){
@@ -298,8 +298,8 @@ int batch_pt(int N, double* p,double* T,double* X0,int nsp,int nel,double* lewis
         result = solve_pt(pi, Ti, X0i, nsp, nel, lewis, M, a, X1i, verbose);
         if (result!=0){
             printf("Error in batch_pt @ position: %d\n", i);
-            printf("pi: %f Ti: %f \n", pi, Ti);
-            for (s=0; s<nsp; s++) printf("Xs[%d]=%e\n",s,X0i[s]);
+            printf("pi= %16.16e; Ti= %16.16e \n", pi, Ti);
+            for (s=0; s<nsp; s++) printf("Xs[%d]=%16.16e\n",s,X0i[s]);
             printf("Retrying with debugging on\n");
             solve_pt(pi, Ti, X0i, nsp, nel, lewis, M, a, X1i, 2);
             return result;
@@ -374,9 +374,29 @@ int batch_u(int N, double* T, double* X, int nsp, double* lewis, double* M, doub
     return 0;
 }
 
+int verify_equilibrium(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* dLdn, int verbose){
+    /*
+    Compute the equilibrium composition X1 at a fixed temperature and pressure
+    Inputs:
+        p     : Pressure (Pa)
+        T     : Temperature (K)
+        X0    : Intial Mole fractions [nsp]
+        nsp   : number of species
+        nel   : number of elements
+        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
+        M     : Molar Mass of each species (kg/mol) [nsp]
+        a     : elemental composition array [nel,nsp]
+        verbose: print debugging information
+
+    Output:
+        dLdn : Partial derivatives of the Lagrangian [nsp]
+    */
+    return verify_equilibrium_pt(p, T, X0, nsp, nel, lewis, M, a, dLdn, verbose);
+}
+
 /*
 int main(){
-    printf("Called main in ceq.c!\n");
+    printf("Called main in eqc.c!\n");
     return 0;
 }
 */

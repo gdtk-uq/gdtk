@@ -25,7 +25,7 @@ import gas.therm_perf_gas_equil;
 import util.lua;
 import util.lua_service;
 import kinetics.thermochemical_reactor;
-import ceq;
+import eqc;
 
 final class EquilibriumUpdate : ThermochemicalReactor {
 
@@ -44,7 +44,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         int error;
 
         eqcalc.set_massf_and_T_from_rhou(Q);
-        // Note that T is already set from ceq.rhou
+        // Note that T is already set from eqc.rhou
         // This slightly messes with the u, but it isn't by much
         _gmodel.update_thermo_from_rhoT(Q);
         _gmodel.update_sound_speed(Q);
@@ -64,7 +64,7 @@ class EquilibriumCalculator {
     /*
        D version of pyeq's equilibrium calculator.
        Rather than have the code here duplicated in separate reactor and gas model
-       classes, all of the ceq machinery is encapulated in this class which can be
+       classes, all of the eqc machinery is encapulated in this class which can be
        instantiated whereever it is needed.
 
        @author: Nick Gibbons
@@ -129,39 +129,39 @@ version(complex_numbers){
     @nogc void set_massf_from_pT(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
-        int error = ceq.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
-        if (error!=0) throw new GasModelException("ceq.pt convergence failure");
+        int error = eqc.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        if (error!=0) throw new GasModelException("eqc.pt convergence failure");
         molef2massf(X1, M, Q.massf);
     }
 
     @nogc void set_massf_and_T_from_rhou(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
-        int error = ceq.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
-        if (error!=0) throw new GasModelException("ceq.rhou convergence failure");
+        int error = eqc.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        if (error!=0) throw new GasModelException("eqc.rhou convergence failure");
         molef2massf(X1, M, Q.massf);
     }
 
     @nogc void set_massf_and_T_from_ps(ref GasState Q, double s)
     {
         massf2molef(Q.massf, M, X0);
-        int error = ceq.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
-        if (error!=0) throw new GasModelException("ceq.ps convergence failure");
+        int error = eqc.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        if (error!=0) throw new GasModelException("eqc.ps convergence failure");
         molef2massf(X1, M, Q.massf);
     }
 
     @nogc void set_massf_from_rhoT(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
-        int error = ceq.rhot(Q.rho,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
-        if (error!=0) throw new GasModelException("ceq.rhot convergence failure");
+        int error = eqc.rhot(Q.rho,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        if (error!=0) throw new GasModelException("eqc.rhot convergence failure");
         molef2massf(X1, M, Q.massf);
     }
 
     @nogc double get_s(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
-        return ceq.get_s(Q.T, Q.p, X0ptr, nsp, lewisptr, Mptr);
+        return eqc.get_s(Q.T, Q.p, X0ptr, nsp, lewisptr, Mptr);
     }
 }
     @nogc int n_species() const { return nsp; }
@@ -189,7 +189,7 @@ private:
 
     void compile_lewis_array(lua_State* L, ref double[] _lewis){
         /*
-        ceq needs lewis thermo data coefficients packed into a single array
+        eqc needs lewis thermo data coefficients packed into a single array
         */
 
         _lewis.length = 0;
@@ -232,7 +232,7 @@ private:
 
     double[] fix_missing_thermo_segment(string species, double[] lewis_s, double Mi){
     /*
-        ceq's thermodynamic routines assume a fixed layout of curve-fit data with 3 sections
+        eqc's thermodynamic routines assume a fixed layout of curve-fit data with 3 sections
         for each species. Since some species in the Lewis database only have 2 segments,
         this routine can be used to make a make a fake segment that assumes constant Cp above
         6000 K.
@@ -250,9 +250,9 @@ private:
         double[1] X = [1.0];
         double[1] M = [Mi];
 
-        double cp = ceq.get_cp(T, X.ptr, nsp, lspa.ptr, M.ptr);
-        double h  = ceq.get_h(T, X.ptr, nsp, lspa.ptr, M.ptr);
-        double s0 = ceq.get_s0(T, X.ptr, nsp, lspa.ptr, M.ptr);
+        double cp = eqc.get_cp(T, X.ptr, nsp, lspa.ptr, M.ptr);
+        double h  = eqc.get_h(T, X.ptr, nsp, lspa.ptr, M.ptr);
+        double s0 = eqc.get_s0(T, X.ptr, nsp, lspa.ptr, M.ptr);
 
         double a2 = cp*Mi/Ru;
         double b1 = h*Mi/Ru - a2*T;
@@ -286,7 +286,7 @@ private:
             }
             lua_pop(L, 1); // remove atomicConstituents (lua_next removed the key when it broke loop)
 
-            // ceq deals with ionised species with a pretend Electron element named E
+            // eqc deals with ionised species with a pretend Electron element named E
             int charge = getInt(L, -1, "charge");
             if (charge!=0) species_elements["E"] = -1*charge;
 
@@ -362,7 +362,7 @@ version(equilibrium_update_test) {
         gs2.rho = rho_target;
         gs2.u = u_target;
         gs2.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
-        gs2.T = 2000.0; // ceq doesn't guess temperature anymore
+        gs2.T = 2000.0; // eqc doesn't guess temperature anymore
         double tInterval = 0.0;
         double dtSuggest = -1.0;
         double[maxParams] params;
