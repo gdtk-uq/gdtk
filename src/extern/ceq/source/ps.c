@@ -408,7 +408,7 @@ int solve_ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double
         Teq: Equilibrium Temperature 
     */
     double *A, *B, *S, *mu_RTs, *H_RTs, *S_Rs, *Cp_Rs, *ns, *lnns, *bi0, *dlnns; // Dynamic arrays
-    int neq,s,i,k,errorcode;
+    int neq,s,i,k,errorcode,solvecode;
     double n,M1,T,errorrms;
 
     errorcode=0;
@@ -434,8 +434,8 @@ int solve_ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double
     // Begin Iterations
     for (k=0; k<attempts; k++){
         Assemble_Matrices(a,bi0,pt,st,T,n,ns,lnns,nsp,nel,A,B,mu_RTs,H_RTs,Cp_Rs,S_Rs,lewis);
-        errorcode = solve_matrix(A, B, S, neq);
-        if (errorcode!=0) {
+        solvecode = solve_matrix(A, B, S, neq);
+        if (solvecode!=0) {
             handle_singularity(S,a,mu_RTs,H_RTs,pt,n,ns,nsp,nel,dlnns,verbose);
             continue;
         }

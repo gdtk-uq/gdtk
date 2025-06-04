@@ -341,7 +341,7 @@ int solve_rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,doub
         Teq: Equilibrium Temperature 
     */
     double *A, *B, *S, *G0_RTs, *U0_RTs, *Cv0_Rs, *ns, *lnns, *bi0, *dlnns; // Dynamic arrays
-    int neq,s,i,k,errorcode;
+    int neq,s,i,k,errorcode,solvecode;
     double n,M1,T,errorrms;
 
     errorcode=0;
@@ -367,8 +367,8 @@ int solve_rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,doub
     // Begin Iterations
     for (k=0; k<attempts; k++){
         Assemble_Matrices(a,bi0,rho,u,T,ns,lnns,nsp,nel,A,B,G0_RTs,U0_RTs,Cv0_Rs,lewis);
-        errorcode = solve_matrix(A, B, S, neq);
-        if (errorcode!=0) {
+        solvecode = solve_matrix(A, B, S, neq);
+        if (solvecode!=0) {
             handle_singularity(S,a,G0_RTs,U0_RTs,rho,T,ns,lnns,n,nsp,nel,dlnns,verbose);
             continue;
         }

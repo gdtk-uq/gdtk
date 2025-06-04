@@ -231,7 +231,7 @@ int solve_rhot(double rho, double T, double* X0, int nsp, int nel, double* lewis
     */
     double *A, *B, *S, *G0_RTs, *ns, *lnns, *bi0, *dlnns; // Dynamic arrays
     double *lp;
-    int neq,s,i,k,errorcode;
+    int neq,s,i,k,errorcode,solvecode;
     double n,M1,errorrms;
 
     errorcode=0;
@@ -258,8 +258,8 @@ int solve_rhot(double rho, double T, double* X0, int nsp, int nel, double* lewis
     // Begin Iterations
     for (k=0; k<attempts; k++){
         Assemble_Matrices(a,bi0,rho,T,ns,lnns,nsp,nel,A,B,G0_RTs);
-        errorcode = solve_matrix(A, B, S, neq);
-        if (errorcode!=0) {
+        solvecode = solve_matrix(A, B, S, neq);
+        if (solvecode!=0) {
             handle_singularity(S,a,G0_RTs,rho,T,ns,lnns,n,nsp,nel,dlnns,verbose);
             continue;
         }

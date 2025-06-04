@@ -344,7 +344,7 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
     */
     double *A, *B, *S, *G0_RTs, *ns, *lnns, *bi0, *dlnns; // Dynamic arrays
     double *lp;
-    int neq,s,i,k,errorcode;
+    int neq,s,i,k,errorcode,solvecode;
     double n,M1,errorrms;
 
     errorcode=0;
@@ -372,8 +372,8 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
     for (k=0; k<=attempts; k++){
         // 1: Perform an update of the equations
         Assemble_Matrices(a, bi0, G0_RTs, p, ns, lnns, n, nsp, nel, A, B);
-        errorcode = solve_matrix(A, B, S, neq);
-        if (errorcode!=0) {
+        solvecode = solve_matrix(A, B, S, neq);
+        if (solvecode!=0) {
             handle_singularity(S, a, G0_RTs, p, n, ns, lnns, nsp, nel, dlnns, verbose);
             continue;
         }
