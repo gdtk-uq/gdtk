@@ -5,6 +5,7 @@ import std.stdio;
 import lmr.commands.command;
 import lmr.commands.computenorms;
 import lmr.commands.customscript;
+import lmr.commands.deformgrid;
 import lmr.commands.extractline;
 import lmr.commands.gradient2vtk;
 import lmr.commands.limiter2vtk;
@@ -59,6 +60,7 @@ Show help for a given Eilmer command or topic.
     // 1. Add user commands
     commands["compute-norms"] = compNormsCmd;
     commands["custom-script"] = customScriptCmd;
+    commands["deform-grid"] = deformGridCmd;
     commands["extract-line"] = extractLineCmd;
     commands["gradient2vtk"] = gradient2vtkCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;

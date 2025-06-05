@@ -104,6 +104,7 @@ LMR_CMD_FILES = $(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/command.d \
 	$(LMR_CMD)/computenorms.d \
 	$(LMR_CMD)/customscript.d \
+	$(LMR_CMD)/deformgrid.d \
 	$(LMR_CMD)/extractline.d \
 	$(LMR_CMD)/gradient2vtk.d \
 	$(LMR_CMD)/limiter2vtk.d \
