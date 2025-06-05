@@ -64,7 +64,7 @@
 2D/sphere-lobb/smoke-test/lobb-test.rb
 2D/sphere-nonaka/nonaka-test.rb
 2D/nozzle-shock-tunnel-t4m4/cea/t4m4-test.rb
-2D/nozzle-shock-tunnel-t4m4/ceq/t4m4-test.rb
+2D/nozzle-shock-tunnel-t4m4/eqc/t4m4-test.rb
 2D/cylinder-axial-flow/sg/cyl50-sg-test.rb
 2D/cylinder-axial-flow/usg/cyl50-usg-test.rb
 2D/new_flow_format/flow-format-test.rb

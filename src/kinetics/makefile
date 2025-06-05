@@ -38,7 +38,7 @@ GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
 LIBGASF := $(GAS_DIR)/libgasf.a
 
-EQC_DIR := ../extern/ceq/source
+EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 include $(EQC_DIR)/eqc_files.mk
 

@@ -8,7 +8,7 @@ title: "T4 shot 12033 with Mach 4 nozzle."    # Any string will do.
 species: ['N2', 'O2', 'N', 'O', 'NO']         # List
 molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
 # Gas model and reactions files need to be consistent with the species above.
-# Gas model 1 is a ceq gas model file.
+# Gas model 1 is a eqc gas model file.
 # Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
 gas-model-1: air-5sp-eq.lua
 gas-model-2: air-5sp-1T.lua

@@ -33,7 +33,7 @@ LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
-EQC_DIR := ../extern/ceq/source
+EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 include $(EQC_DIR)/eqc_files.mk
 

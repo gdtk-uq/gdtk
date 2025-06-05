@@ -8,7 +8,7 @@ Where and when did we take snapshots:
 * OpenMPI https://github.com/DlangScience/OpenMPI 2017-06-05
 * gzip
 * opencl.d
-* ceq: https://github.com/uqngibbo/ceq (d2dc8c9: 2020-02-06)
+* equilibrium-c: https://github.com/uqngibbo/equilibrium-c (4fcbeb4: 2025-06-04)
 * D-YAML: https://github.com/dlang-community/D-YAML.git (2020-09-26)
 * tinyendian: https://github.com/dlang-community/tinyendian.git (2020-09-26)
 

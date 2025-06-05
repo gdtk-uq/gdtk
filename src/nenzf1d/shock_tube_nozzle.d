@@ -338,7 +338,7 @@ Result analyse(int verbosityLevel, Config config)
             writeln("Initializing gas state using equilibrium gas saved data");
         }
         if (verbosityLevel >= 2) {
-            writeln("Start part B state mass fractions from ceq.");
+            writeln("Start part B state mass fractions from eqc.");
             writeln("massf=", tpgs.massf);
         }
         GasState gs = GasState(gm2);

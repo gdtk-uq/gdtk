@@ -1,4 +1,4 @@
-# object and source files needed to build ceq
+# object and source files needed to build eqc
 # Note that we list just the D-language source files.
 #
 EQC_DIR ?= .

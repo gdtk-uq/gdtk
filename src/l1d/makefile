@@ -41,7 +41,7 @@ include $(GEOM_DIR)/geom_files.mk
 GASDYN_DIR := ../gasdyn
 include $(GASDYN_DIR)/gasdyn_files.mk
 
-EQC_DIR := ../extern/ceq/source
+EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 include $(EQC_DIR)/eqc_files.mk
 
