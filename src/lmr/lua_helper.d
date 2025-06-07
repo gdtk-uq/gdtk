@@ -380,6 +380,7 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
 void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FluidFVCell) cell,
                           size_t gtl, LocalConfig myConfig)
 {
+    lua_pushnumber(L, cell.id); lua_setfield(L, tblIdx, "id");
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
     lua_pushnumber(L, cell.pos[gtl].z); lua_setfield(L, tblIdx, "z");
