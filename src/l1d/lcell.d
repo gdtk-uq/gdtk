@@ -132,6 +132,20 @@ public:
         debug { gas_save = GasState(gm); }
     }
 
+    @nogc void copy_flow_state_from(LCell other_cell, GasModel other_gm)
+    // Used for filling details for the ghost cells.
+    {
+        xmid = other_cell.xmid;
+        volume = other_cell.volume;
+        vel = other_cell.vel;
+        L_bar = other_cell.L_bar;
+        gas.copy_values_from(other_cell.gas);
+        mass = other_cell.mass;
+        moment = other_cell.moment;
+        energy = other_cell.energy;
+        return;
+    }
+
     @nogc
     void encode_conserved(GasModel gm)
     {

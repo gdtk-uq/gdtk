@@ -274,6 +274,11 @@ void init_simulation(int tindx_start, int maxCPUs)
             writeln(format("  state=%s", dia.state));
         }
     }
+    // Now that all dynamic components are established,
+    // revisit the gas slugs and set up the ghost cells.
+    foreach (i, s; gasslugs) {
+        s.set_up_ghost_cells();
+    }
     //
     // We are going to allow calculation over the gasslugs to be run in parallel.
     // There is no point in running more threads than the maximum for the processor
@@ -364,6 +369,9 @@ void integrate_in_time()
                     if (dia) { dia.update_state(sim_data.sim_time); }
                 }
                 // 4.2 Update dynamic elements.
+                foreach (s; gasslugs) {
+                    s.update_ghost_cell_data();
+                }
                 foreach (s; parallel(gasslugs, 1)) {
                     s.time_derivatives(0, sim_data.sim_time);
                     s.predictor_step(sim_data.dt_global);
@@ -390,6 +398,9 @@ void integrate_in_time()
                         // [TODO] Diaphragms
                     }
                     // 5.2 Update dynamic elements.
+                    foreach (s; gasslugs) {
+                        s.update_ghost_cell_data();
+                    }
                     foreach (s; parallel(gasslugs, 1)) {
                         s.time_derivatives(1, sim_data.sim_time+sim_data.dt_global);
                         s.corrector_step(sim_data.dt_global);
