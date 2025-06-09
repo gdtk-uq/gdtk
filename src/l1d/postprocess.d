@@ -464,6 +464,32 @@ void trim_solution_files(int tindxEnd)
         }
         fp_src.close();
         fp_dest.close();
+        //
+        writeln("  Trim history cells files for slug ", i);
+        JSONValue slugData = jsonData[format("slug_%d", i)];
+        int hcell_n = getJSONint(slugData, "hncells", 0);
+        int[] hcells; foreach(j; 0 .. hcell_n) hcells ~= 0;
+        hcells = getJSONintarray(slugData, "hcells", hcells);
+        foreach (j; hcells) {
+            writeln("    Trim cell history file for cell ", j);
+            fileName = L1dConfig.job_name ~ format("/history-cell-%04d-in-slug-%04d.data", j, i);
+            backupFileName = fileName ~ ".backup";
+            std.file.rename(fileName, backupFileName);
+            fp_src = File(backupFileName, "r");
+            fp_dest = File(fileName, "w");
+            txt = fp_src.readln().chomp(); // header line
+            fp_dest.writeln(txt);
+            while (!fp_src.eof()) {
+                txt = fp_src.readln().chomp();
+                if (txt.length > 0) {
+                    double tme = to!double(txt.split()[0]);
+                    if (tme > timeEnd) { break; }
+                }
+                fp_dest.writeln(txt);
+            }
+            fp_src.close();
+            fp_dest.close();
+        }
     }
     int npistons = getJSONint(configData, "npistons", 0);
     foreach (i; 0 .. npistons) {
