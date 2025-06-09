@@ -185,17 +185,8 @@ Parameters:
     // Get to work, to do one task...
     //
     if (runSimulation) {
-        // *************** [FIX-ME] 2025-05-29 *********************
-        // In the context of a multi-threaded process,
-        // We should not be dipping into an adjacent GasSlug object
-        // and its GasModel and cell data in the time_derivatives()
-        // function over in gasslug.d.
-        // As done for Eilmer, we may need to introduce ghost cells
-        // that receive copies of the relevant information, but this
-        // would have to be accompanied by a copy of the associated
-        // GasModel objects, as well.
-        // Force single thread operation until we fix this issue.
-        maxCPUs = 1;
+        // Force single thread operation by uncommenting the following line.
+        // maxCPUs = 1;
         writeln("maxCPUs: ", maxCPUs);
         writeln("Run a simulation.");
         init_simulation(tindx, maxCPUs);
