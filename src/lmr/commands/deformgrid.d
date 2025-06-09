@@ -91,12 +91,12 @@ void inverseDistanceWeighting(FluidBlock blk, Vector3[] bndryVtxInitPos,
             foreach (i; 0 .. nBndryVtx) {
                 ds.x = bndryVtxNewPos[i].x - bndryVtxInitPos[i].x;
                 ds.y = bndryVtxNewPos[i].y - bndryVtxInitPos[i].y;
-                dx = vtx.pos[0].x - bndryVtxInitPos[i].x; 
-                dy = vtx.pos[0].y - bndryVtxInitPos[i].y; 
+                dx = vtx.pos[0].x.re - bndryVtxInitPos[i].x.re;
+                dy = vtx.pos[0].y.re - bndryVtxInitPos[i].y.re;
                 r = sqrt(dx*dx + dy*dy);
                 w = 1.0 / (r*r);
-                numerSum[0] += ds.x * w; 
-                numerSum[1] += ds.y * w;
+                numerSum[0] += ds.x.re * w;
+                numerSum[1] += ds.y.re * w;
                 denomSum += w;
             }
 
