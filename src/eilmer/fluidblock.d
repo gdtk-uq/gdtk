@@ -792,6 +792,16 @@ public:
         }
     } // end enforce_strict_shock_detector
 
+    int count_invalid_cells_safe(int gtl, int ftl)
+    {
+        try {
+            return count_invalid_cells(gtl, ftl);
+        } catch (FlowSolverException e) {
+            writefln("Adjust invalid cells failed: %s", e.msg);
+            return to!int(ncells);
+        }
+    }
+
     int count_invalid_cells(int gtl, int ftl)
     // Returns the number of cells that contain invalid data,
     // optionally patching bad cell data as it goes.
@@ -2496,6 +2506,45 @@ public:
             }
         }
         return;
+    }
+
+    @nogc void block_decode_conserved(int gtl, int ftl)
+    {
+        number[] U;
+        if (ftl==0) { U = celldata.U0; }
+        if (ftl==1) { U = celldata.U1; }
+        if (ftl==2) { U = celldata.U2; }
+        if (ftl==3) { U = celldata.U3; }
+        if (ftl==4) { U = celldata.U4; }
+
+        size_t ncq = myConfig.cqi.n;
+        foreach (icell; 0 .. ncells) {
+            size_t idx = icell*ncq;
+            decode_conserved(celldata.positions[icell], U[idx .. idx+ncq],
+                             celldata.flowstates[icell], omegaz, icell, myConfig);
+        }
+    }
+
+    @nogc void block_decode_conserved_safe(int gtl, int ftl)
+    {
+        number[] U;
+        if (ftl==0) { U = celldata.U0; }
+        if (ftl==1) { U = celldata.U1; }
+        if (ftl==2) { U = celldata.U2; }
+        if (ftl==3) { U = celldata.U3; }
+        if (ftl==4) { U = celldata.U4; }
+
+        size_t ncq = myConfig.cqi.n;
+        foreach (icell; 0 .. ncells) {
+            size_t idx = icell*ncq;
+            celldata.data_is_bad[icell] = false;
+            try {
+                decode_conserved(celldata.positions[icell], U[idx .. idx+ncq],
+                                 celldata.flowstates[icell], omegaz, icell, myConfig);
+            }  catch (FlowSolverException e) {
+                celldata.data_is_bad[icell] = true;
+            }
+        }
     }
 
 } // end class FluidBlock

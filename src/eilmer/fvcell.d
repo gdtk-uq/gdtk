@@ -1722,7 +1722,6 @@ public:
 
 } // end class FVCell
 
-// FIXME: The caller has responsibility for data_is_bad
 @nogc
 int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, double omegaz, size_t id, LocalConfig myConfig, bool allow_k_omega_update=true, double tolerance=0.0, double assert_error_tolerance=0.1)
 {
@@ -1753,21 +1752,14 @@ int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, dou
         }
     }
     if (!(rho.re > 0.0)) {
-        if (myConfig.adjust_invalid_cell_data) {
-            //data_is_bad = true;
-            // We can do nothing more with the present data but the caller may
-            // be able to replace the data with other nearby-cell data.
-            return -1;
-        } else {
-            debug {
-                writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
-                writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
-                writeln("  x= ", pos.x, " y= ", pos.y, " z= ", pos.z);
-                writeln("  gas= ", fs.gas);
-                writeln("  U[ftl]= ", myU);
-            }
-            throw new FlowSolverException("Bad cell with negative mass.");
+        debug {
+            writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
+            writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
+            writeln("  x= ", pos.x, " y= ", pos.y, " z= ", pos.z);
+            writeln("  gas= ", fs.gas);
+            writeln("  U[ftl]= ", myU);
         }
+        throw new FlowSolverException("Bad cell with negative mass.");
     } // end if mass is not positive
     fs.gas.rho = rho; // This is limited to nonnegative and finite values.
     number dinv = 1.0 / rho;
@@ -1886,20 +1878,15 @@ int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, dou
         gmodel.update_sound_speed(fs.gas);
         if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
     } catch (GasModelException err) {
-        if (myConfig.adjust_invalid_cell_data) {
-            //data_is_bad = true;
-            return -2;
-        } else {
-            string msg = "Bad cell with failed thermodynamic update.";
-            debug {
-                msg ~= format(" thermodynamic update exception with message:\n  %s", err.msg);
-                msg ~= format("The decode_conserved() failed for cell: %d\n", id);
-                msg ~= format("  This cell is located at: %s\n", pos);
-                msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
-                msg ~= format("  The gas state after the failed update is:\n   fs.gas %s", fs.gas);
-            }
-            throw new FlowSolverException(msg);
-        } // end if
+        string msg = "Bad cell with failed thermodynamic update.";
+        debug {
+            msg ~= format(" thermodynamic update exception with message:\n  %s", err.msg);
+            msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+            msg ~= format("  This cell is located at: %s\n", pos);
+            msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
+            msg ~= format("  The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+        }
+        throw new FlowSolverException(msg);
     } // end catch
     //
     return 0; // success

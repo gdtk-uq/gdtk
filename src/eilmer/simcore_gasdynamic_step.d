@@ -481,37 +481,39 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             }
         }
 
-        foreach (id; 0 .. blk.ncells) {
-            size_t idx = id*ncq;
-            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U1[idx .. idx+ncq],
-                                        blk.celldata.flowstates[id], blk.omegaz, id, blk.myConfig);
-            if (okay!=0) blk.celldata.data_is_bad[id] = true;
-        }
+        if (blk.myConfig.adjust_invalid_cell_data){
+        /*
+            IMPORTANT: adjust_invalid_cell_data has an MPI reduce coming up
+            which means that we cannot allow this decode routine to throw an
+            exception, or some process will be stuck down here and the ones
+            that fail will be upstairs in the main timestepping loop, waiting
+            forever. For this reason, when adjusting cell data we have to
+            use safe versions of these routines that catch exceptions.
 
-        try {
-            local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
-        }  catch (Exception e) {
-            debug {
-                writefln("Exception thrown in count_invalid_cells: %s", e.msg);
-                writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
-            }
-            local_invalid_cell_count[i] = to!int(blk.cells.length);
+            @author: Nick Gibbons (June 2025)
+        */
+            blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
+            local_invalid_cell_count[i] = blk.count_invalid_cells_safe(blklocal_gtl, blklocal_ftl+1);
+        } else {
+            blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
         }
     } // end foreach blk
     //
-    int flagTooManyBadCells = 0;
-    foreach (i, blk; localFluidBlocksBySize) { // serial loop
-        if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-            flagTooManyBadCells = 1;
-            writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
-                     local_invalid_cell_count[i], i);
+    if (GlobalConfig.adjust_invalid_cell_data) {
+        int flagTooManyBadCells = 0;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop
+            if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+                flagTooManyBadCells = 1;
+                writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
+                         local_invalid_cell_count[i], i);
+            }
         }
-    }
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-    }
-    if (flagTooManyBadCells > 0) {
-        throw new FlowSolverException("Too many bad cells; go home.");
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        }
+        if (flagTooManyBadCells > 0) {
+            throw new FlowSolverException("Too many bad cells; go home.");
+        }
     }
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
@@ -759,37 +761,29 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                         muj_tilde*dt*dUdt0[k] + gam_tilde*dt*dUdtO[k];
                 }
             }
-            foreach (id; 0 .. blk.ncells) {
-                size_t idx = id*ncq;
-                int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U2[idx .. idx+ncq],
-                                            blk.celldata.flowstates[id], blk.omegaz, id, blk.myConfig);
-                if (okay!=0) blk.celldata.data_is_bad[id] = true;
-            }
-
-            try {
-                local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
-            }  catch (Exception e) {
-                debug {
-                    writefln("Exception thrown in count_invalid_cells: %s", e.msg);
-                    writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
-                }
-                local_invalid_cell_count[i] = to!int(blk.cells.length);
+            if (blk.myConfig.adjust_invalid_cell_data){
+                blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
+                local_invalid_cell_count[i] = blk.count_invalid_cells_safe(blklocal_gtl, blklocal_ftl+1);
+            } else {
+                blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
             }
         } // end foreach blk
         //
-        flagTooManyBadCells = 0;
-        foreach (i, blk; localFluidBlocksBySize) { // serial loop
-            if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                flagTooManyBadCells = 1;
-                writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
-                         local_invalid_cell_count[i], i);
+        if (GlobalConfig.adjust_invalid_cell_data) {
+            int flagTooManyBadCells = 0;
+            foreach (i, blk; localFluidBlocksBySize) { // serial loop
+                if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+                    flagTooManyBadCells = 1;
+                    writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
+                             local_invalid_cell_count[i], i);
+                }
             }
-        }
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        }
-        if (flagTooManyBadCells > 0) {
-            throw new FlowSolverException("Too many bad cells; go home.");
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            }
+            if (flagTooManyBadCells > 0) {
+                throw new FlowSolverException("Too many bad cells; go home.");
+            }
         }
         //
         if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
@@ -1137,9 +1131,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U1[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U1[idx .. idx+ncq],
-                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
-                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     case 2:
@@ -1182,9 +1173,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U2[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U2[idx .. idx+ncq],
-                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
-                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     case 3:
@@ -1238,9 +1226,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U3[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U3[idx .. idx+ncq],
-                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
-                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     case 4:
@@ -1288,18 +1273,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U4[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U4[idx .. idx+ncq],
-                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
-                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     default: throw new Error("Invalid state for explicit update.");
                     } // end switch (stage)
-                    //
-                    if (blk.myConfig.adjust_invalid_cell_data) {
-                        local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    if (blk.myConfig.adjust_invalid_cell_data){
+                        blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
+                        local_invalid_cell_count[i] = blk.count_invalid_cells_safe(blklocal_gtl, blklocal_ftl+1);
                     } else {
-                        local_invalid_cell_count[i] = 0;
+                        blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
                     }
                 } // end foreach blk
             } catch (Exception e) {
