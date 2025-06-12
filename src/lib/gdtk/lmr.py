@@ -1,7 +1,7 @@
 # lmr.py
 # Tools for getting lmr configuration and simulation information.
 #
-# Peter J. 2025-05-14
+# Peter J. 2025-05-14, 2025-06-13
 #
 
 import os
@@ -49,26 +49,43 @@ class LmrConfig:
         """
         return self.data[indx]
 
+# We will use Enums and NamedTuples to label the available metadata
+# and make it conveniently findable in the Python module.
 
 DomainType = Enum('DomainType', ['FLUID', 'SOLID'])
 
 GridType = Enum('GridType', ['STRUCTURED', 'UNSTRUCTURED'])
 
 GridInfo = NamedTuple(
-    'Gridinfo', [('tag', str),
-                 ('type', GridType),
-                 ('field_type', DomainType),
-                 ('dimensions', int),
-                 ('niv', int), ('njv', int), ('nkv', int),
-                 ('nic', int), ('njc', int), ('nkc', int),
-                 ('json', dict)])
+    'GridInfo',
+    [('tag', str),
+     ('type', GridType),
+     ('field_type', DomainType),
+     ('dimensions', int),
+     ('niv', int), ('njv', int), ('nkv', int),
+     ('nic', int), ('njc', int), ('nkc', int),
+     # ('json', dict) # The entire JSON dict could be made available.
+     ])
 
+GridArrayInfo = NamedTuple(
+    'GridArrayInfo',
+    [('tag', str),
+     ('shock_fitting', bool),
+     ('idarray', list),
+     ('idflatlist', list),
+     ('nib', int), ('njb', int), ('nkb', int),
+     ('niv', int), ('njv', int), ('nkv', int),
+     ('nics', list), ('njcs', list), ('nkcs', list),
+     # ('json', dict)
+     ])
 
 BlockInfo = NamedTuple(
-    'BlockInfo', [('id', int),
-                  ('grid_type', GridType),
-                  ('label', str),
-                  ('ncells', int)])
+    'BlockInfo',
+    [('id', int),
+     ('grid_type', GridType),
+     ('label', str),
+     ('ncells', int)
+     ])
 
 class SimInfo:
     """
@@ -76,7 +93,8 @@ class SimInfo:
     """
     __slots__ = ['lmr_cfg', 'sim_cfg',
                  'sim_dir', 'grid_dir', 'snaps_dir', 'vtk_dir',
-                 'blocks', 'grids', 'snapshots', 'times',
+                 'blocks', 'grids', 'gridarrays',
+                 'snapshots', 'times',
                  'fluid_variables', 'gas_model']
 
     def __init__(self, lmr_cfg):
@@ -150,20 +168,34 @@ class SimInfo:
         # Grid metadata
         #
         self.grids = []
+        self.gridarrays = []
         fname = os.path.join(os.path.join(self.grid_dir, "grid"+self.lmr_cfg["metadata-extension"]))
         with open(fname, 'r') as fp:
             grid_metadata = json.load(fp)
+        for i in range(grid_metadata['ngridarrays']):
+            mdata = grid_metadata['gridarrays'][i]
+            gai = GridArrayInfo(
+                tag=mdata['tag'], shock_fitting=mdata['shock_fitting'],
+                idarray=mdata['idarray'], idflatlist=mdata['idflatlist'],
+                nib=mdata['nib'], njb=mdata['njb'], nkb=mdata['nkb'],
+                niv=mdata['niv'], njv=mdata['njv'], nkv=mdata['nkv'],
+                nics=mdata['nics'], njcs=mdata['njcs'], nkcs=mdata['nkcs'],
+                # json=mdata
+            )
+            self.gridarrays.append(gai)
         for i in range(grid_metadata['ngrids']):
             fname = ("grid-%04d" % i)+self.lmr_cfg["metadata-extension"]
             fname = os.path.join(os.path.join(self.grid_dir, fname))
             with open(fname, 'r') as fp:
                 mdata = json.load(fp)
                 gt = GridType.STRUCTURED if mdata['type'] == "structured_grid" else GridType.UNSTRUCTURED
-                gi = GridInfo(tag=mdata['tag'], type=gt, field_type=mdata['fieldType'],
-                              dimensions=mdata['dimensions'],
-                              niv=mdata['niv'], njv=mdata['njv'], nkv=mdata['njv'],
-                              nic=mdata['nic'], njc=mdata['njc'], nkc=mdata['nkc'],
-                              json=mdata)
+                gi = GridInfo(
+                    tag=mdata['tag'], type=gt, field_type=mdata['fieldType'],
+                    dimensions=mdata['dimensions'],
+                    niv=mdata['niv'], njv=mdata['njv'], nkv=mdata['njv'],
+                    nic=mdata['nic'], njc=mdata['njc'], nkc=mdata['nkc'],
+                    # json=mdata
+                )
                 self.grids.append(gi)
         #
         # Finally, set up a GasModel object that may be handy.

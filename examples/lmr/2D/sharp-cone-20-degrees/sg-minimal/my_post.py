@@ -15,6 +15,8 @@ print("sim_dir=", lmrcfg["simulation-directory"],
 
 sim = SimInfo(lmrcfg)
 # print("sim.sim_cfg=", sim.sim_cfg)
+print("grids_info=", sim.grids)
+print("gridarrays_info=", sim.gridarrays)
 print("blocks_info=", sim.blocks)
 print("times=", sim.times)
 print("snapshots=", sim.snapshots)
