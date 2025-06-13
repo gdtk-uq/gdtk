@@ -7,6 +7,7 @@
 
 import os
 from gdtk.lmr import LmrConfig, SimInfo
+import matplotlib.pyplot as plt
 
 lmrcfg = LmrConfig()
 # print("content=", lmr.data)
@@ -33,6 +34,17 @@ for i in range(len(grids)):
 snap_first = sim.read_snapshot('0000')
 snap_last = sim.read_snapshot(sim.snapshots[-1])
 # print("snap_last=", snap_last)
+# Sample the data along a grid-line for block 1,
+# which happens to be over the ramp.
+field_data = snap_last[0]
+xs = field_data[1]['pos.x'][:,10]
+ps = field_data[1]['p'][:,10]
+# print("x,p=", list(zip(xs,ps)))
+fig, ax = plt.subplots()
+ax.plot(xs, ps/1000)
+ax.set_xlabel('x, m')
+ax.set_ylabel('pressure, kPa')
+plt.show()
 
 # Load the PyVista data via VTK files.
 pvdata = sim.load_pvd_into_pyvista()

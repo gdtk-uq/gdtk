@@ -267,8 +267,8 @@ class SimInfo:
         field_format = self.sim_cfg["field_format"]
         binary_data = field_format == "rawbinary"
         for i in range(n):
-            fname = self.grids[i].field_type
-            fname += ("-%04d" % (i)) + (".bin" if binary_data else ".gz")
+            grid_meta = self.grids[i]
+            fname = grid_meta.field_type + ("-%04d" % (i)) + (".bin" if binary_data else ".gz")
             fname = os.path.join(os.path.join(snap_dir, fname))
             if not os.path.exists(fname):
                 raise RuntimeError(f"Could not find field file {fname}")
@@ -282,7 +282,14 @@ class SimInfo:
             combined_data = combined_data.reshape((nvars,ncells))
             field_data = {}
             for j,var in enumerate(self.fluid_variables):
-                field_data[var] = combined_data[j,:]
+                vdata = combined_data[j,:]
+                if grid_meta.type == GridType.STRUCTURED:
+                    nic = grid_meta.nic; njc = grid_meta.njc; nkc = grid_meta.nkc
+                    if grid_meta.dimensions == 2:
+                        vdata = vdata.reshape((njc,nic)).transpose()
+                    else:
+                        vdata = vdata.reshape((nkc,njc,nic)).transpose()
+                field_data[var] = vdata
             fields.append(field_data)
         return fields, grids
 
