@@ -24,9 +24,17 @@ print("variables=", sim.fluid_variables)
 print("grid tags=", [sim.grids[i].tag for i in range(len(sim.grids))])
 print("gas_model=", sim.gas_model)
 
+# Read grids from the grid-preparation stage.
 grids = sim.read_grids()
 for i in range(len(grids)):
     grids[i].write_to_vtk_file("grid-%d.vtk" % (i))
 
+# Read a couple of snapshots
+snap_first = sim.read_snapshot('0000')
+snap_last = sim.read_snapshot(sim.snapshots[-1])
+# print("snap_last=", snap_last)
+
+# Load the PyVista data via VTK files.
 pvdata = sim.load_pvd_into_pyvista()
 print("pvdata=", pvdata)
+

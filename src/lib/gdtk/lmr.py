@@ -11,6 +11,8 @@ import yaml
 from typing import NamedTuple
 import re
 from enum import Enum
+import gzip
+import numpy as np
 try:
     import pyvista as pv
     HAVE_PYVISTA = True
@@ -93,7 +95,7 @@ class SimInfo:
     """
     __slots__ = ['lmr_cfg', 'sim_cfg',
                  'sim_dir', 'grid_dir', 'snaps_dir', 'vtk_dir',
-                 'blocks', 'grids', 'gridarrays',
+                 'blocks', 'grids', 'gridarrays', 'moving_grid',
                  'snapshots', 'times',
                  'fluid_variables', 'gas_model']
 
@@ -157,6 +159,8 @@ class SimInfo:
             if not all(found_snaps):
                 print("Warning: not all snapshots listed in metadata are found.")
         #
+        self.moving_grid = self.sim_cfg['grid_motion'] != "none"
+        #
         # List of names of the fluid variables.
         #
         self.fluid_variables = []
@@ -215,10 +219,15 @@ class SimInfo:
             grid_metadata = json.load(fp)
         return grid_metadata
 
-    def read_grids(self):
+    def read_grids(self, grid_dir=None):
         """
         Return a list containing all of the grids associated the simulation.
+
+        By default, look in the grid_dir associated with the preparation of the simulation.
+        We can override this to pick the '0000' snapshot or any later snapshot
+        for a transient simulation with moving-grid.
         """
+        if not grid_dir: grid_dir = self.grid_dir
         grids = []
         grid_format = self.sim_cfg["grid_format"]
         for i in range(len(self.grids)):
@@ -226,11 +235,11 @@ class SimInfo:
             if grid_type == GridType.STRUCTURED:
                 if grid_format == "gziptext":
                     fname = ("grid-%04d.gz" % i)
-                    fname = os.path.join(os.path.join(self.grid_dir, fname))
+                    fname = os.path.join(os.path.join(grid_dir, fname))
                     grids.append(StructuredGrid(gzfile=fname))
                 elif grid_format == "rawbinary":
                     fname = "grid-%04d.bin" % (i)
-                    fname = os.path.join(os.path.join(self.grid_dir, fname))
+                    fname = os.path.join(os.path.join(grid_dir, fname))
                     grids.append(StructuredGrid(binaryfile=fname))
                 else:
                     raise RuntimeError(f"Unknown format for grid[{i}] {grid_format}")
@@ -243,10 +252,38 @@ class SimInfo:
     def read_snapshot(self, snap_name):
         """
         Read the solution data for a particular snapshot.
+
+        Returns lists of fields and grids.
         """
-        # [TODO] PJ 2025-05-23
         fields = []
         grids = []
+        snap_dir = os.path.join(self.snaps_dir, snap_name)
+        if not os.path.exists(snap_dir):
+            raise RuntimeError(f"Could not find snapshot {snap_dir}")
+        grid_dir = snap_dir if self.moving_grid else os.path.join(self.snaps_dir, self.snapshots[0])
+        grids = self.read_grids(grid_dir)
+        n = len(self.grids)
+        assert n == len(grids), f"Expected number of grids ({n}) and actually loaded grids ({len(grids)})."
+        field_format = self.sim_cfg["field_format"]
+        binary_data = field_format == "rawbinary"
+        for i in range(n):
+            fname = self.grids[i].field_type
+            fname += ("-%04d" % (i)) + (".bin" if binary_data else ".gz")
+            fname = os.path.join(os.path.join(snap_dir, fname))
+            if not os.path.exists(fname):
+                raise RuntimeError(f"Could not find field file {fname}")
+            f = open(fname, 'rb') if binary_data else gzip.open(fname, 'rt')
+            combined_data = np.frombuffer(f.read(), dtype=float) if binary_data else np.loadtxt(f)
+            f.close()
+            ntotal = combined_data.shape[0]
+            # [FIX-ME] Need to handle solid blocks appropriately
+            nvars = len(self.fluid_variables)
+            ncells = ntotal // nvars
+            combined_data = combined_data.reshape((nvars,ncells))
+            field_data = {}
+            for j,var in enumerate(self.fluid_variables):
+                field_data[var] = combined_data[j,:]
+            fields.append(field_data)
         return fields, grids
 
     def load_pvd_into_pyvista(self, domain_type=DomainType.FLUID, snapshot=-1,
