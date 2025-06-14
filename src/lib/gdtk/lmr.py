@@ -366,8 +366,8 @@ class Snapshot:
         if dims == 3: z = np.array([], dtype=float)
         values = np.array([], dtype=float)
         #
+        # Make sure that we have a list of block ids.
         typ = type(blocks)
-        print('DEBUG typ=', typ)
         if typ == type([1]):
             pass
         elif typ == type(1) or typ == type(range(1)):
@@ -377,14 +377,41 @@ class Snapshot:
         else:
             raise RuntimeError("Don't know how to handle blocks="+str(blocks))
         #
-        # [TODO] sort out the i, j, k indexing; just something arbitrary for now
-        #
-        print('DEBUG blocks=', blocks, 'i=', i, 'j=', j, 'k=', k)
+        # We select a single line of cells along one index direction,
+        # the one that is None.
         #
         for ib in blocks:
-            x = np.concat((x, self.fields[ib]['pos.x'][:,j]), axis=None)
-            y = np.concat((y, self.fields[ib]['pos.y'][:,j]), axis=None)
-            if dims == 3: z = np.concat((z, self.fields[ib]['pos.z'][:,j]), axis=None)
-            values = np.concat((values, self.fields[ib][var][:,j]), axis=None)
+            if self.sim.grids[ib].type == GridType.UNSTRUCTURED: continue
+            # The following works for a structured grid only.
+            if dims == 3:
+                if i != None and j != None:
+                    x = np.concat((x, self.fields[ib]['pos.x'][i,j,:]), axis=None)
+                    y = np.concat((y, self.fields[ib]['pos.y'][i,j,:]), axis=None)
+                    z = np.concat((z, self.fields[ib]['pos.z'][i,j,:]), axis=None)
+                    values = np.concat((values, self.fields[ib][var][i,j,:]), axis=None)
+                elif j != None and k != None:
+                    x = np.concat((x, self.fields[ib]['pos.x'][:,j,k]), axis=None)
+                    y = np.concat((y, self.fields[ib]['pos.y'][:,j,k]), axis=None)
+                    z = np.concat((z, self.fields[ib]['pos.z'][:,j,k]), axis=None)
+                    values = np.concat((values, self.fields[ib][var][:,j,k]), axis=None)
+                elif i != None and k != None:
+                    x = np.concat((x, self.fields[ib]['pos.x'][i,:,k]), axis=None)
+                    y = np.concat((y, self.fields[ib]['pos.y'][i,:,k]), axis=None)
+                    z = np.concat((z, self.fields[ib]['pos.z'][i,:,k]), axis=None)
+                    values = np.concat((values, self.fields[ib][var][i,:,k]), axis=None)
+                else:
+                    raise RuntimeError("Did not correctly select i, j or k index.")
+            else:
+                # Presumably 2D
+                if i != None:
+                    x = np.concat((x, self.fields[ib]['pos.x'][i,:]), axis=None)
+                    y = np.concat((y, self.fields[ib]['pos.y'][i,:]), axis=None)
+                    values = np.concat((values, self.fields[ib][var][i,:]), axis=None)
+                elif j != None:
+                    x = np.concat((x, self.fields[ib]['pos.x'][:,j]), axis=None)
+                    y = np.concat((y, self.fields[ib]['pos.y'][:,j]), axis=None)
+                    values = np.concat((values, self.fields[ib][var][:,j]), axis=None)
+                else:
+                    raise RuntimeError("Did not correctly select i or j index.")
         if dims == 3: return x, y, z, values
         return x, y, values

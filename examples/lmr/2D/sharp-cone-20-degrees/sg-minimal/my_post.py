@@ -33,12 +33,7 @@ for i in range(len(grids)):
 # Read a couple of snapshots
 snap_first = sim.read_snapshot('0000')
 snap_last = sim.read_snapshot(sim.snapshots[-1])
-# print("snap_last=", snap_last)
-# Sample the data along a grid-line for block 1,
-# which happens to be over the ramp.
 xs, ys, ps = snap_last.get_slice(var='p', j=10)
-# xs = snap_last.fields[1]['pos.x'][:,10]
-# ps = snap_last.fields[1]['p'][:,10]
 # print("x,p=", xs, ps)
 fig, ax = plt.subplots()
 ax.plot(xs, ps/1000)
