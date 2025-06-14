@@ -252,46 +252,8 @@ class SimInfo:
     def read_snapshot(self, snap_name):
         """
         Read the solution data for a particular snapshot.
-
-        Returns lists of fields and grids.
         """
-        fields = []
-        grids = []
-        snap_dir = os.path.join(self.snaps_dir, snap_name)
-        if not os.path.exists(snap_dir):
-            raise RuntimeError(f"Could not find snapshot {snap_dir}")
-        grid_dir = snap_dir if self.moving_grid else os.path.join(self.snaps_dir, self.snapshots[0])
-        grids = self.read_grids(grid_dir)
-        n = len(self.grids)
-        assert n == len(grids), f"Expected number of grids ({n}) and actually loaded grids ({len(grids)})."
-        field_format = self.sim_cfg["field_format"]
-        binary_data = field_format == "rawbinary"
-        for i in range(n):
-            grid_meta = self.grids[i]
-            fname = grid_meta.field_type + ("-%04d" % (i)) + (".bin" if binary_data else ".gz")
-            fname = os.path.join(os.path.join(snap_dir, fname))
-            if not os.path.exists(fname):
-                raise RuntimeError(f"Could not find field file {fname}")
-            f = open(fname, 'rb') if binary_data else gzip.open(fname, 'rt')
-            combined_data = np.frombuffer(f.read(), dtype=float) if binary_data else np.loadtxt(f)
-            f.close()
-            ntotal = combined_data.shape[0]
-            # [FIX-ME] Need to handle solid blocks appropriately
-            nvars = len(self.fluid_variables)
-            ncells = ntotal // nvars
-            combined_data = combined_data.reshape((nvars,ncells))
-            field_data = {}
-            for j,var in enumerate(self.fluid_variables):
-                vdata = combined_data[j,:]
-                if grid_meta.type == GridType.STRUCTURED:
-                    nic = grid_meta.nic; njc = grid_meta.njc; nkc = grid_meta.nkc
-                    if grid_meta.dimensions == 2:
-                        vdata = vdata.reshape((njc,nic)).transpose()
-                    else:
-                        vdata = vdata.reshape((nkc,njc,nic)).transpose()
-                field_data[var] = vdata
-            fields.append(field_data)
-        return fields, grids
+        return Snapshot(self, snap_name)
 
     def load_pvd_into_pyvista(self, domain_type=DomainType.FLUID, snapshot=-1,
                               merged=False, as_point_data=False, make_vtk_files=True):
@@ -331,3 +293,98 @@ class SimInfo:
         return pv_data
 
     # end of class SimInfo
+
+
+class Snapshot:
+    """
+    A place to store the field data and a set of grids.
+
+    And some functions to provide convenient access.
+    """
+    __slots__ = ['sim', 'fields', 'grids']
+
+    def __init__(self, sim, snap_name):
+        """
+        We pick up a specific snapshot for a simulation.
+        """
+        self.sim = sim
+        snap_dir = os.path.join(sim.snaps_dir, snap_name)
+        if not os.path.exists(snap_dir):
+            raise RuntimeError(f"Could not find snapshot {snap_dir}")
+        grid_dir = snap_dir if sim.moving_grid else os.path.join(sim.snaps_dir, sim.snapshots[0])
+        self.grids = sim.read_grids(grid_dir)
+        n = len(sim.grids)
+        assert n == len(self.grids), f"Expected number of grids ({n}) and actually loaded grids ({len(grids)})."
+        field_format = sim.sim_cfg["field_format"]
+        binary_data = field_format == "rawbinary"
+        self.fields = []
+        for i in range(n):
+            grid_meta = sim.grids[i]
+            fname = grid_meta.field_type + ("-%04d" % (i)) + (".bin" if binary_data else ".gz")
+            fname = os.path.join(os.path.join(snap_dir, fname))
+            if not os.path.exists(fname):
+                raise RuntimeError(f"Could not find field file {fname}")
+            f = open(fname, 'rb') if binary_data else gzip.open(fname, 'rt')
+            combined_data = np.frombuffer(f.read(), dtype=float) if binary_data else np.loadtxt(f)
+            f.close()
+            ntotal = combined_data.shape[0]
+            # [FIX-ME] Need to handle solid blocks appropriately
+            nvars = len(sim.fluid_variables)
+            ncells = ntotal // nvars
+            combined_data = combined_data.reshape((nvars,ncells))
+            field_data = {}
+            for j,var in enumerate(sim.fluid_variables):
+                vdata = combined_data[j,:]
+                if grid_meta.type == GridType.STRUCTURED:
+                    nic = grid_meta.nic; njc = grid_meta.njc; nkc = grid_meta.nkc
+                    if grid_meta.dimensions == 2:
+                        vdata = vdata.reshape((njc,nic)).transpose()
+                    else:
+                        vdata = vdata.reshape((nkc,njc,nic)).transpose()
+                field_data[var] = vdata
+            self.fields.append(field_data)
+        return
+
+    def get_slice(self, var, blocks=None, i=None, j=None, k=None):
+        """
+        Returns four arrays of data for x, y, z and var.
+
+        var    : str, name of particular field variable
+        blocks : int, index, or range of indices, given in a list
+        i      : int or None
+        j      : int or None
+        k      : int or None
+
+        Only one of i, j, k may be non-None.
+        Whichever that is defines the orientation of the slice.
+        """
+        # [TODO] Check for valid arguments
+        #
+        dims = self.sim.grids[0].dimensions
+        x = np.array([], dtype=float)
+        y = np.array([], dtype=float)
+        if dims == 3: z = np.array([], dtype=float)
+        values = np.array([], dtype=float)
+        #
+        typ = type(blocks)
+        print('DEBUG typ=', typ)
+        if typ == type([1]):
+            pass
+        elif typ == type(1) or typ == type(range(1)):
+            blocks = list(blocks)
+        elif typ == type(None):
+            blocks = list(range(len(self.fields)))
+        else:
+            raise RuntimeError("Don't know how to handle blocks="+str(blocks))
+        #
+        # [TODO] sort out the i, j, k indexing; just something arbitrary for now
+        #
+        print('DEBUG blocks=', blocks, 'i=', i, 'j=', j, 'k=', k)
+        #
+        for ib in blocks:
+            x = np.concat((x, self.fields[ib]['pos.x'][:,j]), axis=None)
+            y = np.concat((y, self.fields[ib]['pos.y'][:,j]), axis=None)
+            if dims == 3: z = np.concat((z, self.fields[ib]['pos.z'][:,j]), axis=None)
+            values = np.concat((values, self.fields[ib][var][:,j]), axis=None)
+        if dims == 3: return x, y, z, values
+        return x, y, values
