@@ -347,7 +347,7 @@ class Snapshot:
 
     def get_slice(self, var, blocks=None, i=None, j=None, k=None):
         """
-        Returns four arrays of data for x, y, z and var.
+        Returns four arrays of data for x, y, z and var for all cells along one index.
 
         var    : str, name of particular field variable
         blocks : int, index, or range of indices, given in a list
@@ -355,8 +355,10 @@ class Snapshot:
         j      : int or None
         k      : int or None
 
-        Only one of i, j, k may be non-None.
-        Whichever that is defines the orientation of the slice.
+        In 2D, we supply either a specific i-index or j-index and
+        select all cells along the index that is None.
+        In 3D, two of the three need to be integers and all cells
+        will be selected along the final index direction.
         """
         # [TODO] Check for valid arguments
         #
