@@ -234,7 +234,7 @@ struct NKGlobalConfig {
         useRealValuedFrechetDerivative = getJSONbool(jsonData, "use_real_valued_frechet_derivative", useRealValuedFrechetDerivative);
         version(complex_numbers)
         {
-            ; // do nothing
+            {} // do nothing
             // For complex numbers, we can use either an imagimary perturbation or real
             // so we DO NOT touch the users choice
         }
