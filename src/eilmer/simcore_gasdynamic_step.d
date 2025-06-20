@@ -168,12 +168,10 @@ void determine_time_step_size()
 
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
-    if (GlobalConfig.reacting && GlobalConfig.chemistry_update == ChemistryUpdateMode.integral) {
-        throw new Error("Not implemented: explicit gasdynamic update with integral chemistry update.");
-    }
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
+    immutable bool integral_chemistry = GlobalConfig.chemistry_update == ChemistryUpdateMode.integral;
     //
     // compute number of super steps
     bool euler_step = false;
@@ -289,7 +287,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 
             // it is recommended to round S down to the nearest odd integer for stability
             S = to!int(floor(s_RKL));
-            if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S - 1; }
+            if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S + 1; }
 
             // When dt_parab is approxmately equal to or greater than dt_hyper (i.e. S <= 1), then we will just do a simple Euler step
             if (S <= 1) {
@@ -448,6 +446,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         size_t ncq = cqi.n;
 
         blk.eval_fluid_source_vectors(blk.omegaz);
+        if (integral_chemistry) { blk.eval_thermochem_source_vector(SimState.step); }
         blk.eval_udf_source_vectors(SimState.time);
         blk.time_derivatives(blklocal_gtl, blklocal_ftl);
         if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
@@ -480,40 +479,33 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                 blk.celldata.U3[k] = U0[k];
             }
         }
-
-        if (blk.myConfig.adjust_invalid_cell_data){
-        /*
-            IMPORTANT: adjust_invalid_cell_data has an MPI reduce coming up
-            which means that we cannot allow this decode routine to throw an
-            exception, or some process will be stuck down here and the ones
-            that fail will be upstairs in the main timestepping loop, waiting
-            forever. For this reason, when adjusting cell data we have to
-            use safe versions of these routines that catch exceptions.
-
-            @author: Nick Gibbons (June 2025)
-        */
-            blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
-            local_invalid_cell_count[i] = blk.count_invalid_cells_safe(blklocal_gtl, blklocal_ftl+1);
+    }
+    int step_failed = 0;
+    try {
+        if (GlobalConfig.adjust_invalid_cell_data){
+            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                int blklocal_ftl = ftl;
+                int blklocal_gtl = gtl;
+                blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
+                local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+            }
         } else {
-            blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
-        }
-    } // end foreach blk
-    //
-    if (GlobalConfig.adjust_invalid_cell_data) {
-        int flagTooManyBadCells = 0;
-        foreach (i, blk; localFluidBlocksBySize) { // serial loop
-            if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                flagTooManyBadCells = 1;
-                writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
-                         local_invalid_cell_count[i], i);
+            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                int blklocal_ftl = ftl;
+                int blklocal_gtl = gtl;
+                blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
             }
         }
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        }
-        if (flagTooManyBadCells > 0) {
-            throw new FlowSolverException("Too many bad cells; go home.");
-        }
+    } catch (FlowSolverException e) {
+        step_failed = 1;
+        writefln("Decode conserved failed in STS stage 1: %s", e.msg);
+    }
+
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    }
+    if (step_failed > 0) {
+        throw new FlowSolverException("At least one processor has reported too many bad cells: Giving up.");
     }
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
@@ -701,6 +693,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             size_t ncq = cqi.n;
 
             blk.eval_fluid_source_vectors(blk.omegaz);
+            if (integral_chemistry) { blk.eval_thermochem_source_vector(SimState.step); }
             blk.eval_udf_source_vectors(SimState.time);
             blk.time_derivatives(blklocal_gtl, blklocal_ftl);
             if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
@@ -761,29 +754,34 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                         muj_tilde*dt*dUdt0[k] + gam_tilde*dt*dUdtO[k];
                 }
             }
-            if (blk.myConfig.adjust_invalid_cell_data){
-                blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
-                local_invalid_cell_count[i] = blk.count_invalid_cells_safe(blklocal_gtl, blklocal_ftl+1);
-            } else {
-                blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
-            }
         } // end foreach blk
         //
-        if (GlobalConfig.adjust_invalid_cell_data) {
-            int flagTooManyBadCells = 0;
-            foreach (i, blk; localFluidBlocksBySize) { // serial loop
-                if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                    flagTooManyBadCells = 1;
-                    writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
-                             local_invalid_cell_count[i], i);
+        step_failed = 0;
+        try {
+            if (GlobalConfig.adjust_invalid_cell_data){
+                foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                    int blklocal_ftl = ftl;
+                    int blklocal_gtl = gtl;
+                    blk.block_decode_conserved_safe(blklocal_gtl, blklocal_ftl+1);
+                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                }
+            } else {
+                foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                    int blklocal_ftl = ftl;
+                    int blklocal_gtl = gtl;
+                    blk.block_decode_conserved(blklocal_gtl, blklocal_ftl+1);
                 }
             }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            if (flagTooManyBadCells > 0) {
-                throw new FlowSolverException("Too many bad cells; go home.");
-            }
+        } catch (FlowSolverException e) {
+            step_failed = 1;
+            writefln("Decode conserved failed in STS stage 2: %s", e.msg);
+        }
+        //
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        }
+        if (step_failed > 0) {
+            throw new FlowSolverException("At least one processor has reported too many bad cells: Giving up.");
         }
         //
         if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
@@ -880,9 +878,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_fixed_grid()
 {
-    if (GlobalConfig.reacting && GlobalConfig.chemistry_update == ChemistryUpdateMode.integral) {
-        throw new Error("Not implemented: explicit gasdynamic update with integral chemistry update.");
-    }
+    immutable bool integral_chemistry = GlobalConfig.chemistry_update == ChemistryUpdateMode.integral;
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
@@ -1081,6 +1077,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     size_t ncq = cqi.n;
 
                     blk.eval_fluid_source_vectors(blk.omegaz);
+                    if (integral_chemistry) { blk.eval_thermochem_source_vector(SimState.step); }
                     blk.eval_udf_source_vectors(SimState.time);
                     blk.time_derivatives(blklocal_gtl, blklocal_ftl);
                     if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
