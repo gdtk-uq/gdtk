@@ -123,7 +123,7 @@ ControlPointPatch:new{north, south, east, west, control_points}
 ----
 ----
 ControlPointPatch:new{north, south, east, west,
-                      ncpi, ncpi, guide_patch}
+                      ncpi, ncpj, guide_patch}
 ----
 
 For the first constructor, the `control_points` are listed as a table of tables such
