@@ -58,6 +58,8 @@ include::2D/supersonic-duct/README.adoc[tag=description]
 
 include::2D/supersonic-ramp/README.adoc[tag=description]
 
+include::2D/internal-axisymmetric-conical-M-flow/README.adoc[tag=description]
+
 include::2D/capsule-fire-II/README.adoc[tag=description]
 
 include::2D/supersonic-aerofoil/README.adoc[tag=description]

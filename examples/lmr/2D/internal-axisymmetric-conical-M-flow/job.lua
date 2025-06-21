@@ -6,10 +6,15 @@
 -- to maintain the conicity of the shock.
 --
 -- Author: RJG
--- Date: 2025-06-15
---
+-- Date: 2025-06-15 -- initial build
+--       2025-06-21 -- change to more orthogonal domain boundaries
 
-theta_s = math.rad(140.0)
+local rad = math.rad
+local pi = math.pi
+local tan = math.tan
+local atan2 = math.atan2
+
+theta_s = rad(140.0)
 
 config.dimensions = 2
 config.axisymmetric = true
@@ -22,11 +27,27 @@ contour = Spline2:new{filename=fname}
 -- construction points
 d = contour(0.0)
 c = contour(1.0)
+dp = contour(0.001) -- perturbed slightly, to compute slope
+lip_angle = atan2(dp.y - d.y, dp.x - d.x)
+cp = contour(0.999) -- perturbed slightly
+tail_angle = atan2(c.y - cp.y, c.x - cp.x)
 Lx = (c.x - d.x)
-y_shock = Lx*math.tan(math.pi - theta_s)
-y_frac = 0.05
-a = {x=d.x, y=(1 - y_frac)*d.y}
-b = {x=c.x, y=d.y - 1.1*y_shock}
+y_lip = 0.02*Lx
+a_y = (1 - y_lip)*d.y
+dx_a = (d.y - a_y)*tan(lip_angle)
+
+alpha = (theta_s - pi)
+beta = tail_angle + pi/2
+
+x_shock = (d.x*tan(alpha) - d.y - c.x*tan(beta) + c.y)/(tan(alpha) - tan(beta))
+y_shock = tan(alpha)*(x_shock - d.x) + d.y
+dy_shock = c.y - y_shock
+b_y = c.y - 1.1*dy_shock
+b_x = ((b_y - c.y)/tan(beta)) + c.x
+
+
+a = {x=d.x+dx_a, y=a_y}
+b = {x=b_x, y=b_y}
 
 -- boundaries
 ab = Line:new{p0=a, p1=b}
@@ -34,16 +55,19 @@ ad = Line:new{p0=a, p1=d}
 bc = Line:new{p0=b, p1=c}
 
 -- patch
-quad = CoonsPatch:new{north=contour, south=ab, east=bc, west=ad}
+quad = ControlPointPatch:new{north=contour, south=ab, east=bc, west=ad,
+                             ncpi=10, ncpj=4, guide_patch="channel"}
 
 -- grid
-cf_n = RobertsFunction:new{end0=false, end1=true, beta=1.05}
-cf_t = RobertsFunction:new{end0=true, end1=false, beta=1.1}
-nx = 50
-ny = 50
-grid = registerFluidGrid{
+cf_n = GeometricFunction:new{a=0.04, r=1.1, N=20, reverse=true}
+cf_t = GeometricFunction:new{a=0.001, r=1.02, N=170}
+nx = 200
+ny = 20
+grid = registerFluidGridArray{
    grid = StructuredGrid:new{psurface=quad, niv=nx+1, njv=ny+1,
-                             cfList={west=cf_n, east=cf_n, south=cf_t, north=cf_t}},
+                             cfList={north=cf_t, south=cf_t}},
+   nib=8,
+   njb=1,
    fsTag = "inflow",
    bcTags = {west="inflow", south="inflow", east="outflow"}
 }
@@ -74,7 +98,7 @@ config.extrema_clipping = false
 
 NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 3,
-   stop_on_relative_residual = 1.0e-6,
+   stop_on_relative_residual = 1.0e-9,
    number_of_phases = 2,
    max_steps_in_initial_phases = { 50 },
    use_physicality_check = true,

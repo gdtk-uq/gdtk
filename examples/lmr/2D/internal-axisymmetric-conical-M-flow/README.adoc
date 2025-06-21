@@ -1,0 +1,27 @@
+//tag::description[]
+= M-flow: Internal, axisymmetric, conical flow
+`gdtk/examples/lmr/2D/internal-axisymmetric-conical-m-flow`
+
+Rowan J. Gollan
+2025-06-21
+
+This example is of supersonic flow in an M-flow configuration.
+M-flow is an internal, axisymmetric, conical flow.
+The wall shape supports a conical shock.
+This particular case is from the paper by Mölder (1967).
+
+image::M-flow-mach-field.png[align="center",width=60%]
+
+//end::description[]
+
+== Reference
+
+  @article{molder1967internal,
+    title={Internal, axisymmetric, conical flow.},
+    author={Mölder, Sannu},
+    journal={AIAA Journal},
+    volume={5},
+    number={7},
+    pages={1252--1255},
+    year={1967}
+  }
