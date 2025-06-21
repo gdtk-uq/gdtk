@@ -32,9 +32,9 @@ Computational Fluid Dynamics Journal, 12(2):47, pp.408--414
 """
 import numpy as np
 from scipy.integrate import solve_ivp
-from math import sin, cos, tan, pi, sqrt, asin, ceil, floor
-from gdtk.ideal_gas_flow import theta_obl, M2_obl, p02_p01_obl
-from gdtk.numeric.ode import rkf45_step
+from scipy.optimize import root_scalar
+from math import sin, cos, tan, pi, sqrt, asin, fabs, atan2, degrees
+from gdtk.ideal_gas_flow import theta_obl, M2_obl, p02_p01_obl, p2_p1_obl, T2_T1_obl, p0_p, T0_T
 from gdtk.numeric.spline import CubicSpline
 from collections import namedtuple
 
@@ -43,7 +43,10 @@ from collections import namedtuple
 #   M2 : Mach number at end of isentropic compression, BEFORE terminating shock
 #   M3 : Mach number BEHIND terminating shock, Mach number of flow entering throat
 #   Pi : total pressure recovery, ratio of pt3/pt2
-BDProperties = namedtuple('BDProperties', ['M1', 'M2', 'M3', 'Pi'])
+#   PR : pressure ratio
+#   TR : temperature ratio
+#   CR : contraction ratio
+BDProperties = namedtuple('BDProperties', ['M1', 'M2', 'M3', 'Pi', 'PR', 'TR', 'CR'])
 
 def cot(x): return 1/tan(x)
 
@@ -65,9 +68,42 @@ class BusemannDiffuser():
         self._ode_soln = None
         return
 
+    @property
+    def theta2(self):
+        return self._theta2
+
+    @property
+    def theta23(self):
+        return self._theta_23
+
+    @property
+    def M2(self):
+        return self._M2
+
+    @property
+    def start(self):
+        assert self._M1, "Busemann contour not yet computed"
+        return self._xs[-1], self._ys[-1]
+
+    @property
+    def end(self):
+        assert self._M1, "Busemann contour not yet computed"
+        return self._xs[0], self._ys[0]
+
+    @property
     def properties(self):
-        return BDProperties(self._M1, self._M2, self._M3, self._Pi)
-         
+        # compute ratios in isentopic portion
+        p2_p1 = p0_p(self._M1, self._gamma)/p0_p(self._M2, self._gamma)
+        T2_T1 = T0_T(self._M1, self._gamma)/T0_T(self._M2, self._gamma)
+        # compute ratios across terminating shock
+        p3_p2 = p2_p1_obl(self._M2, self._theta_23, self._gamma)
+        T3_T2 = T2_T1_obl(self._M2, self._theta_23, self._gamma)
+        # compute ratios from capture to throat
+        PR = p3_p2*p2_p1
+        TR = T3_T2*T2_T1
+        CR = self._ys[-1]**2/self._ys[0]**2
+        return BDProperties(self._M1, self._M2, self._M3,
+                            self._Pi, PR, TR, CR)
     
     def xy_from_rtheta(self, r, theta):
         return r*np.cos(theta), r*np.sin(theta)
@@ -79,6 +115,22 @@ class BusemannDiffuser():
 
     def ode_soln(self, theta):
         return self._ode_soln.sol(theta)
+
+    @property
+    def last_characteristic(self):
+        return float(self._ode_soln.t_events[0][0])
+
+    def theta_from_x(self, x):
+
+        def fZERO(theta):
+            u, v, r = self.ode_soln(theta)
+            x_test, y = self.xy_from_rtheta(r, theta)
+            return x - x_test
+
+        theta0 = self._thetas[-1]
+        theta1 = self._thetas[0]
+        sol = root_scalar(fZERO, bracket=[theta0, theta1], method='brentq')
+        return sol.root
 
     def generate_contour(self, r2=1.0, max_dtheta=0.01/pi, rtol=1.0e-3, atol=1.0e-6):
         """Generate the Busemann diffuser contour by integration."""
@@ -92,15 +144,25 @@ class BusemannDiffuser():
             dr_dtheta = r*u/v
             return np.array([du_dtheta, dv_dtheta, dr_dtheta])
 
-        def event(theta, Y):
+        def last_characteristic(theta, Y):
+            u, v, r = Y
+            M = sqrt(u*u + v*v)
+            mu = asin(1/M)
+            vx = u*cos(theta) - r*v*sin(theta)
+            vy = u*sin(theta) + r*v*cos(theta)
+            delta = atan2(vy, vx)
+            return theta - (pi - (fabs(mu) + fabs(delta)))
+
+        def singularity(theta, Y):
             u, v, r = Y
             return u*sin(theta) + v*cos(theta)
-        event.terminal = True
+        singularity.terminal = True
 
         # Set initial conditions
         theta = self._theta2
         Y = np.array([self._u2, self._v2, r2])
-        self._ode_soln = solve_ivp(fODE, (theta, pi), Y, method='DOP853', dense_output=True, events=event, max_step=max_dtheta, rtol=rtol, atol=atol)
+        self._ode_soln = solve_ivp(fODE, (theta, pi), Y, method='DOP853', dense_output=True,
+                                   events=[last_characteristic, singularity], max_step=max_dtheta, rtol=rtol, atol=atol)
 
         self._thetas = self._ode_soln.t.copy()
         self._us = self._ode_soln.y[0,:].copy()
@@ -157,3 +219,13 @@ class BusemannDiffuser():
         total_points = len(self._xs)
         idxs = np.round(np.linspace(0, total_points - 1, number_points)).astype(int)
         return idxs[::-1] # reversed
+
+if __name__ == '__main__':
+    M2 = 3.0
+    k = 1.4
+    theta_23 = asin(k/M2)
+    bd = BusemannDiffuser(M2, theta_23)
+    bd.generate_contour()
+
+    print(bd.properties)
+    print(f"last centred characteristic at {degrees(bd.last_characteristic)} deg")
