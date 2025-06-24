@@ -809,7 +809,7 @@ class GasSlug():
         x = 0.5 * (self.ifxs[ic] + self.ifxs[ic+1])
         self.write_initial_flow_data_for_any_cell(fp, t, x)
         return
-        
+
     @property
     def energy(self):
         """

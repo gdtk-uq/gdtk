@@ -523,10 +523,10 @@ immutable MAX_STEPS = 50;
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
 
-    number fT_tol = 1.0e-6 * T_given;
-    number fp_tol = 1.0e-6 * p_given;
-    number fp_tol_fail = 0.02 * p_given;
-    number fT_tol_fail = 0.02 * T_given;
+    number fT_tol = 1.0e-6 * (T_given + 1.0);
+    number fp_tol = 1.0e-6 * (p_given + 1.0);
+    number fp_tol_fail = 0.02 * (p_given + 1.0);
+    number fT_tol_fail = 0.02 * (T_given + 1.0);
 
     Q.rho = 1.0; // kg/m**3
     Q.u = 2.0e5; // J/kg
@@ -660,10 +660,11 @@ immutable MAX_STEPS = 50;
             msg ~= format("\n    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
             msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given);
             msg ~= "  Supplied Q:" ~ Q.toString();
+            writeln(msg);
         }
-        throw new GasModelException(msg);
+        // Maybe the result is good enough, so don't throw an exception.
+        // throw new GasModelException(msg);
     }
-
     if( (fabs(fp_old) > fp_tol_fail) || (fabs(fT_old) > fT_tol_fail) ) {
         string msg = "Iterations failed badly in update_thermo_state_pT.";
         debug {
@@ -690,8 +691,8 @@ immutable MAX_STEPS = 50;
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    number fT_tol = 1.0e-6 * T_given;
-    number fT_tol_fail = 0.02 * T_given;
+    number fT_tol = 1.0e-6 * (T_given + 1.0);
+    number fT_tol_fail = 0.02 * (T_given + 1.0);
 
     // Get an idea of the gas properties by calling the original
     // equation of state with some dummy values for density
@@ -759,7 +760,7 @@ immutable MAX_STEPS = 50;
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
     // via finite differences.
-    converged = (fabs(fT_old) < fT_tol);
+    converged = fabs(fT_old) < fT_tol;
     count = 0;
     while ( !converged && count < MAX_STEPS ) {
         de = -fT_old / dfT_de;
@@ -803,14 +804,16 @@ immutable MAX_STEPS = 50;
         throw new GasModelException(msg);
     }
 
-     if (count >= MAX_STEPS) {
+    if (count >= MAX_STEPS) {
         string msg = "Iterations did not converge in update_thermo_state_rhoT.";
         debug {
             msg ~= format("\n    fT_old = %g\n", fT_old);
             msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given);
             msg ~= "  Supplied Q:" ~ Q.toString;
+            writeln(msg);
         }
-        throw new GasModelException(msg);
+        // Maybe the result is good enough, so don't throw an exception.
+        // throw new GasModelException(msg);
     }
     if (fabs(fT_old) > fT_tol_fail) {
         string msg = "Iterations failed badly in update_thermo_state_rhoT.";
@@ -837,8 +840,8 @@ immutable MAX_STEPS = 50;
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    number fp_tol = 1.0e-6 * p_given;
-    number fp_tol_fail = 0.02 * p_given;
+    number fp_tol = 1.0e-6 * (p_given + 1.0);
+    number fp_tol_fail = 0.02 * (p_given + 1.0);
 
     // Get an idea of the gas properties by calling the original
     // equation of state with some dummy values for density
@@ -905,7 +908,7 @@ immutable MAX_STEPS = 50;
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
     // via finite differences.
-    converged = (fabs(fp_old) < fp_tol);
+    converged = fabs(fp_old) < fp_tol;
     count = 0;
     while (!converged && count < MAX_STEPS) {
         de = -fp_old / dfp_de;
@@ -951,16 +954,17 @@ immutable MAX_STEPS = 50;
         throw new GasModelException(msg);
     }
 
-      if (count >= MAX_STEPS) {
+    if (count >= MAX_STEPS) {
         string msg = "Iterations did not converge in update_thermo_state_rhop.";
         debug {
             msg ~= format("\n    fp_old = %g, e_old = %g\n", fp_old, e_old);
             msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given);
             msg ~= "  Supplied Q:" ~ Q.toString;
+            writeln(msg);
         }
-        throw new GasModelException(msg);
+        // Maybe the result is good enough, so don't throw an exception.
+        // throw new GasModelException(msg);
     }
-
     if (fabs(fp_old) > fp_tol_fail) {
         string msg = "Iterations failed badly in update_thermo_state_rhop.";
         debug {
@@ -1082,10 +1086,11 @@ immutable MAX_STEPS = 50;
             msg ~= format("\n    fs_old = %g  count=%d MAX_STEPS=%d\n", fs_old, count, MAX_STEPS);
             msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given);
             msg ~= "  Supplied Q:" ~ Q.toString;
+            writeln(msg);
         }
-        throw new GasModelException(msg);
+        // Maybe the result is good enough, so don't throw an exception.
+        // throw new GasModelException(msg);
     }
-
     if ( fabs(fs_old) > fs_tol_fail ) {
         string msg = "Iterations failed badly in update_thermo_state_ps.";
         debug {
@@ -1111,10 +1116,10 @@ immutable MAX_STEPS = 50;
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    number fh_tol = 1.0e-6 * h_given;
-    number fs_tol = 1.0e-6 * s_given;
-    number fh_tol_fail = 0.02 * h_given;
-    number fs_tol_fail = 0.02 * s_given;
+    number fh_tol = 1.0e-6 * (h_given + 1.0);
+    number fs_tol = 1.0e-6 * (s_given + 1.0);
+    number fh_tol_fail = 0.02 * (h_given + 1.0);
+    number fs_tol_fail = 0.02 * (s_given + 1.0);
 
     // Use current gas state as guess
     p_old = Q.p;
@@ -1222,10 +1227,11 @@ immutable MAX_STEPS = 50;
             msg ~= format("\n    fh_old = %g, fs_old = %g\n", fh_old, fs_old);
             msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given);
             msg ~= "  Supplied Q:" ~ Q.toString();
+            writeln(msg);
         }
-        throw new GasModelException(msg);
+        // Maybe the result is good enough, so don't throw an exception.
+        // throw new GasModelException(msg);
     }
-
     if( (fabs(fh_old) > fh_tol_fail) || (fabs(fs_old) > fs_tol_fail) ) {
         string msg = "Iterations failed badly in update_thermo_state_hs.";
         debug {
