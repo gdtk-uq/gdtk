@@ -94,7 +94,7 @@ void inverseDistanceWeighting(FluidBlock blk, Vector3[] bndryVtxInitPos,
                 dx = vtx.pos[0].x.re - bndryVtxInitPos[i].x.re;
                 dy = vtx.pos[0].y.re - bndryVtxInitPos[i].y.re;
                 r = sqrt(dx*dx + dy*dy);
-                w = 1.0 / (r*r);
+                w = 1.0 / (r^^5.0);
                 numerSum[0] += ds.x.re * w;
                 numerSum[1] += ds.y.re * w;
                 denomSum += w;
@@ -131,7 +131,11 @@ options ([+] can be repeated):
  -g, --group
      Name of boundary group assigned to deforming surface.
      default:
-       --group=wall
+       --group="wall"
+
+ -w, --write-old-boundary
+     Writes the boundary vertex positions prior to deformation.
+     Note: deformation is not performed if this flag is provided.
 
  -v, --verbose [+]
      Increase verbosity during preparation and writing of VTK files.
@@ -144,12 +148,14 @@ int main_(string[] args)
 {
     string bndryGroup = "wall";
     string newBndryFilename = "new-bndry-verts.txt";
+    bool writeOldBndry = false;
     int verbosity = 0;
     try {
         getopt(args,
                config.bundling,
                "f|filename", &newBndryFilename,
                "g|group", &bndryGroup,
+               "w|write-old-boundary", &writeOldBndry,
                "v|verbose+", &verbosity);
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
@@ -166,7 +172,6 @@ int main_(string[] args)
     loadFluidBlocks(0);
 
     // store boundary vertices and their ids
-    // TODO: consider internal boundaries - may need to handle these separately
     Vector3[] bndryVtxInitPos;
     foreach (blk; localFluidBlocks) {
         foreach (bndry; blk.bc) {
@@ -183,61 +188,76 @@ int main_(string[] args)
         }
     }
 
-    // make copy of grid vertices in gtl=1
-    size_t gtl = 1;
-    foreach (blk; localFluidBlocks) {
-        foreach(vtx; blk.vertices) {
-            vtx.pos.length = 2;
-            vtx.pos[gtl].x = vtx.pos[0].x;
-            vtx.pos[gtl].y = vtx.pos[0].y;
-            vtx.pos[gtl].z = vtx.pos[0].z;
-        }
-    }
-
-    // load updated boundary vertices into gtl=1
-    auto file = File(newBndryFilename);
-    auto range = file.byLine();
-    int blkId, vtxId;
-    double x, y, z;
-    Vector3 newPos;
-    Vector3[] bndryVtxNewPos;
-    foreach (line; range) {
-        if (!line.empty && line[0] != '#') {
-            auto vtxData = strip(line).split;
-            blkId = to!int(vtxData[0]);
-            vtxId = to!int(vtxData[1]);
-            x = to!double(vtxData[2]);
-            y = to!double(vtxData[3]);
-            z = to!double(vtxData[4]);
-
-            if (localFluidBlocks[blkId].boundaryVtxIndexList.canFind(vtxId)) {
-                newPos = Vector3(x,y,z);
-                localFluidBlocks[blkId].vertices[vtxId].pos[gtl] = newPos;
-                bndryVtxNewPos ~= newPos;
-            } else {
-                string msg = format("Vertex %d of block %d is not in boundary group %s.", vtxId, blkId, bndryGroup);
-                throw new Error(msg);
+    if (writeOldBndry) {
+        File outfile = File("old-bndry-verts.txt", "w");
+        outfile.writeln("# blk.id vtx.id pos.x pos.y pos.z");
+        size_t idx = 0;
+        Vector3 vert = Vector3(0.0, 0.0, 0.0);
+        foreach (blk; localFluidBlocks) {
+            foreach (vtxIdx; blk.boundaryVtxIndexList) {
+                vert = bndryVtxInitPos[idx];
+                outfile.writefln("%d %d %.16e %.16e %.16e", blk.id, vtxIdx, vert.x, vert.y, vert.z);
+                idx += 1;
             }
         }
-    }
-
-    // compute new internal vertices with IDW
-    foreach (blk; localFluidBlocks) {
-        inverseDistanceWeighting(blk, bndryVtxInitPos, bndryVtxNewPos, gtl);
-    }
-
-    // write deformed grid to specified output directory
-    foreach (blk; localFluidBlocks) {
-        foreach(vtx; blk.vertices) {
-            vtx.pos[0].x = vtx.pos[gtl].x;
-            vtx.pos[0].y = vtx.pos[gtl].y;
+        outfile.close();
+    } else {
+        // make copy of grid vertices in gtl=1
+        size_t gtl = 1;
+        foreach (blk; localFluidBlocks) {
+            foreach(vtx; blk.vertices) {
+                vtx.pos.length = 2;
+                vtx.pos[gtl].x = vtx.pos[0].x;
+                vtx.pos[gtl].y = vtx.pos[0].y;
+                vtx.pos[gtl].z = vtx.pos[0].z;
+            }
         }
-        
-        // write out grid
-        blk.sync_vertices_to_underlying_grid(0);
-        // ensure_directory_is_present(); // make new directory for deformed grid
-        auto filename = gridFilename(0, blk.id);
-        blk.write_underlying_grid(filename);
+
+        // load updated boundary vertices into gtl=1
+        auto file = File(newBndryFilename);
+        auto range = file.byLine();
+        int blkId, vtxId;
+        double x, y, z;
+        Vector3 newPos;
+        Vector3[] bndryVtxNewPos;
+        foreach (line; range) {
+            if (!line.empty && line[0] != '#') {
+                auto vtxData = strip(line).split;
+                blkId = to!int(vtxData[0]);
+                vtxId = to!int(vtxData[1]);
+                x = to!double(vtxData[2]);
+                y = to!double(vtxData[3]);
+                z = to!double(vtxData[4]);
+
+                if (localFluidBlocks[blkId].boundaryVtxIndexList.canFind(vtxId)) {
+                    newPos = Vector3(x,y,z);
+                    localFluidBlocks[blkId].vertices[vtxId].pos[gtl] = newPos;
+                    bndryVtxNewPos ~= newPos;
+                } else {
+                    string msg = format("Vertex %d of block %d is not in boundary group %s.", vtxId, blkId, bndryGroup);
+                    throw new Error(msg);
+                }
+            }
+        }
+
+        // compute new internal vertices with IDW
+        foreach (blk; localFluidBlocks) {
+            inverseDistanceWeighting(blk, bndryVtxInitPos, bndryVtxNewPos, gtl);
+        }
+
+        // write deformed grid to specified output directory
+        foreach (blk; localFluidBlocks) {
+            foreach(vtx; blk.vertices) {
+                vtx.pos[0].x = vtx.pos[gtl].x;
+                vtx.pos[0].y = vtx.pos[gtl].y;
+            }
+            
+            // write out grid
+            blk.sync_vertices_to_underlying_grid(0);
+            // ensure_directory_is_present(); // make new directory for deformed grid
+            auto filename = gridFilename(0, blk.id);
+            blk.write_underlying_grid(filename);
+        }
     }
     
     return 0;
