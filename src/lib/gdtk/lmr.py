@@ -422,7 +422,7 @@ class Snapshot:
         """
         Add a derived variable to the field dictionary for all blocks in the Snapshot.
 
-        names: list(str) names may contain mach, pitot, ...
+        names: list(str) names may contain mach, pitot, total_p, total_h, total_T
         """
         current_vars = list(self.fields[0].keys())
         names = [name.lower() for name in names]
@@ -438,8 +438,7 @@ class Snapshot:
                 v = np.sqrt(vx*vx + vy*vy)
             M = v/a
             g = a*a*rho/p # approximation for gamma
-            # shape = field[current_vars[0]].shape
-            # new_data = np.zeros(shape, dtype=float)
+            #
             if 'mach' in names:
                 field['mach'] = M
             if 'pitot' in names:
@@ -452,4 +451,17 @@ class Snapshot:
                 pitot_p_subsonic = p * np.pow(t1,(g/(g-1)))
                 # Select one to save.
                 field['pitot'] = np.where(M > 1, pitot_p_supersonic, pitot_p_subsonic)
+            if 'total_p' in names:
+                # Isentropic process only.
+                t1 = 1 + 0.5*(g-1)*M*M;
+                field['total_p'] = p * np.pow(t1,(g/(g-1)))
+            if 'total_h' in names:
+                emodes_names = [var for var in current_vars if var.find('e_modes') >= 0]
+                e_int = np.zeros(p.shape, dtype=float)
+                for var in emodes_names: e_int += field[var]
+                total_h = p/rho + field['e'] + 0.5*v*v
+                if 'tke' in current_vars: total_h += field['tke']
+                field['total_h'] = total_h
+            if 'total_T' in names:
+                field['total_T'] = T * (1.0 + 0.5*(g - 1.0)*M*M)
         return
