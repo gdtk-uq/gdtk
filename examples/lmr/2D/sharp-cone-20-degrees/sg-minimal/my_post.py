@@ -33,12 +33,22 @@ for i in range(len(grids)):
 # Read a couple of snapshots
 snap_first = sim.read_snapshot('0000')
 snap_last = sim.read_snapshot(sim.snapshots[-1])
+
+# Add a derived variable.
+snap_last.add_vars(["mach","pitot"])
+
 xs, ys, ps = snap_last.get_slice(var='p', j=10)
+xs, ys, Ms = snap_last.get_slice(var='mach', j=10)
+xs, ys, pitot = snap_last.get_slice(var='pitot', j=10)
 # print("x,p=", xs, ps)
-fig, ax = plt.subplots()
-ax.plot(xs, ps/1000)
-ax.set_xlabel('x, m')
-ax.set_ylabel('pressure, kPa')
+fig, ax = plt.subplots(3,1)
+ax[0].plot(xs, ps/1000)
+ax[1].plot(xs, Ms)
+ax[2].plot(xs, pitot/1000)
+ax[2].set_xlabel('x, m')
+ax[0].set_ylabel('pressure, kPa')
+ax[1].set_ylabel('Mach number')
+ax[2].set_ylabel('Pitot pressure, kPa')
 plt.show()
 
 # Load the PyVista data via VTK files.

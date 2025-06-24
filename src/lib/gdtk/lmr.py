@@ -417,3 +417,39 @@ class Snapshot:
                     raise RuntimeError("Did not correctly select i or j index.")
         if dims == 3: return x, y, z, values
         return x, y, values
+
+    def add_vars(self, names):
+        """
+        Add a derived variable to the field dictionary for all blocks in the Snapshot.
+
+        names: list(str) names may contain mach, pitot, ...
+        """
+        current_vars = list(self.fields[0].keys())
+        names = [name.lower() for name in names]
+        for field in self.fields:
+            p = field['p']
+            rho = field['rho']
+            a = field['a']
+            vx = field['vel.x']; vy = field['vel.y']
+            if 'vel.z' in current_vars:
+                vz = field['vel.z']
+                v = np.sqrt(vx*vx + vy*vy + vz*vz)
+            else:
+                v = np.sqrt(vx*vx + vy*vy)
+            M = v/a
+            g = a*a*rho/p # approximation for gamma
+            # shape = field[current_vars[0]].shape
+            # new_data = np.zeros(shape, dtype=float)
+            if 'mach' in names:
+                field['mach'] = M
+            if 'pitot' in names:
+                # Go through the shock and isentropic compression.
+                t1 = (g+1)*M*M/2;
+                t2 = (g+1)/(2*g*M*M - (g-1));
+                pitot_p_supersonic = p * np.pow(t1,(g/(g-1))) * np.pow(t2,(1/(g-1)))
+                # Isentropic compression only.
+                t1 = 1 + 0.5*(g-1)*M*M
+                pitot_p_subsonic = p * np.pow(t1,(g/(g-1)))
+                # Select one to save.
+                field['pitot'] = np.where(M > 1, pitot_p_supersonic, pitot_p_subsonic)
+        return
