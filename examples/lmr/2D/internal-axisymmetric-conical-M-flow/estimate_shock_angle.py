@@ -16,7 +16,7 @@ import scipy.stats.mstats as mstats
 import math
 
 M_inf = 5.0
-M_threshold = 0.995*M_inf
+M_threshold = 0.6*M_inf
 
 sim = SimInfo(LmrConfig())
 ff_pv = sim.load_pvd_into_pyvista(as_point_data=True, merged=True)
