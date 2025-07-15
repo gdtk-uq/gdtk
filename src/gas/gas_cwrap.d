@@ -845,6 +845,45 @@ extern (C) int thermochemical_reactor_eval_source_terms(int cr_i, int gm_i, int 
     }
 }
 
+extern (C) int thermochemical_reactor_map_source_terms(int cr_i, int gm_i, int n, double* T,
+                                      double* p, double* rho, double* massf, double* source)
+{
+    try {
+        auto reactor = thermochemical_reactors[cr_i];
+        auto gm = gas_models[gm_i];
+        GasState* gs = new GasState(gm);
+
+        int nmodes = gm.n_modes;
+        int nsp = gm.n_species;
+        int nsource = nsp + nmodes;
+        double[] sourceTerms;
+        sourceTerms.length = nsource;
+
+        int dp = max(1, n/100); 
+        double nn = to!double(n);
+        foreach (i; 0 .. n) {
+            gs.T = T[i];
+            gs.p = p[i];
+            gs.rho = rho[i];
+
+            foreach (iT; 0 .. nmodes) gs.T_modes[iT] = T[i];
+            foreach (isp; 0 .. nsp) gs.massf[isp] = massf[i*nsp + isp];
+
+            reactor.eval_source_terms(gm, *(gs), sourceTerms);
+            foreach (iv,v; sourceTerms) {
+                source[i*nsource + iv] = v;
+            }
+            if (i%dp==0) {
+                writefln("Progress: %3.0f percent", (i/nn)*100.0);
+            }
+        }
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 //---------------------------------------------------------------------------
 extern (C) int reaction_mechanism_new(int gm_i, const char* filename)
 {

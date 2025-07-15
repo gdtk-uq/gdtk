@@ -64,6 +64,7 @@ ffi.cdef("""
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                 double* dt_suggest);
     int thermochemical_reactor_eval_source_terms(int cr_i, int gm_i, int gs_i, int nsp, int nmodes, double* source);
+    int thermochemical_reactor_map_source_terms(int cr_i, int gm_i, int n, double* T, double* p, double* rho, double* massf, double* source);
 
     int reaction_mechanism_new(int gm_i, char* filename);
     int reaction_mechanism_n_reactions(int rm_i);
@@ -642,6 +643,25 @@ class ThermochemicalReactor(object):
         source = ffi.new("double[]", [0.0]*(self.gmodel.n_species + self.gmodel.n_modes))
         flag = so.thermochemical_reactor_eval_source_terms(self.id, self.gmodel.id, gstate.id,
                                                            self.gmodel.n_species, self.gmodel.n_modes, source)
+        if flag < 0: raise Exception("Could not compute source terms.")
+        return [source[i] for i in range(self.gmodel.n_species+self.gmodel.n_modes)]
+
+    def map_source_terms(self, T, p, rho, massf, source):
+        """
+        Evaluate many source terms from a collection of numpy arrays. This 
+        is a faster version of the source_terms routine above, for
+        postprocessing large grids in 3D.
+
+        @author: Nick Gibbons (June 2025)
+        """
+        T_ptr = ffi.cast("double *", ffi.from_buffer(T))
+        p_ptr = ffi.cast("double *", ffi.from_buffer(p))
+        rho_ptr = ffi.cast("double *", ffi.from_buffer(rho))
+        massf_ptr = ffi.cast("double *", ffi.from_buffer(massf))
+        source_ptr = ffi.cast("double *", ffi.from_buffer(source))
+        n = T.size
+
+        flag = so.thermochemical_reactor_map_source_terms(self.id, self.gmodel.id, n, T_ptr, p_ptr, rho_ptr, massf_ptr, source_ptr)
         if flag < 0: raise Exception("Could not compute source terms.")
         return [source[i] for i in range(self.gmodel.n_species+self.gmodel.n_modes)]
 
