@@ -34,7 +34,7 @@ import gas.physical_constants;
 import kinetics;
 import nm.bbla;
 import nm.number;
-import nm.complex;
+import ntypes.complex;
 
 bool endFlag;
 extern(C) void handler(int num) nothrow @nogc @system

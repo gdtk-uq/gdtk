@@ -10,7 +10,7 @@ import std.conv;
 
 import dyaml;
 import gas;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import misc;
 

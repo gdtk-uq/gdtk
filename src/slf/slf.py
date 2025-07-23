@@ -335,7 +335,6 @@ def read_solution_file(filename):
 
     buff = stream.read(8*4)
     nsp, neq, N, n = struct.unpack("Q"*4, buff)
-    print("nsp, neq, N, n", nsp, neq, N, n)
 
     buff = stream.read(8*5)
     D, p, dZ, T0, T1 = struct.unpack("d"*5, buff)

@@ -9,7 +9,7 @@ import std.math;
 import io;
 
 import nm.bbla;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 

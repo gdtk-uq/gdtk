@@ -11,7 +11,7 @@ import std.conv;
 import io;
 
 import nm.bbla;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 void multiply_tridigonal_block_matrix(ref const Parameters pm, Matrix!(double)[3][] LHS, Matrix!(double)[] U, Matrix!(double)[] R){

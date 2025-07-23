@@ -6,7 +6,14 @@ DMD ?= ldc2
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
 FLAVOUR ?= debug
-PLATFORM ?= linux
+WITH_FPE ?= 0
+
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 PROGRAMS := slf libslf.so
 
@@ -18,16 +25,21 @@ include $(UTIL_DIR)/util_files.mk
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
+NML_DIR := ../lib
+include $(NML_DIR)/nml_files.mk
+
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
-LIBGASF := $(GAS_DIR)/libgasf.a
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
 
-CEQ_DIR := ../extern/ceq/source
-LIBCEQ := $(CEQ_DIR)/libceq.a
-include $(CEQ_DIR)/ceq_files.mk
+EQC_DIR := ../extern/eqc/source
+LIBEQC := $(EQC_DIR)/libeqc.a
+include $(EQC_DIR)/eqc_files.mk
+
+NTYPES_DIR := ../ntypes
+NTYPES_FILES := $(NTYPES_DIR)/complex.d
 
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
@@ -71,8 +83,10 @@ ifeq ($(DMD), dmd)
     PIC := -fPIC
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS :=
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(FLAVOUR), debug)
@@ -87,8 +101,10 @@ ifeq ($(DMD), ldmd2)
     PIC := -fPIC
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS :=
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
@@ -101,16 +117,19 @@ ifeq ($(DMD), ldc2)
         DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O3 -mcpu=native -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
+        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math
+        ifeq ($(PLATFORM), linux)
+	    # Full link-time optimization does not play nicely on macOS
+	    DFLAGS += -flto=full
+        endif
     endif
     PIC := --relocation-model=pic
     OF := -of=
     DVERSION := -d-version=
-    DLINKFLAGS :=
-    #ifeq ($(FLAVOUR), profile)
-    #    DLINKFLAGS := $(DLINKFLAGS) -Wl,-fprofile-generate
-    #endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
 # This rules out the use of gdc for compiling the code.
@@ -150,7 +169,7 @@ clean:
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
-	- cd $(CEQ_DIR); make clean
+	- cd $(EQC_DIR); make clean
 	- cd $(DYAML_DIR); rm -rf *.o
 	- cd $(TINYENDIAN_DIR); rm -rf *.o
 
@@ -160,43 +179,43 @@ $(LIBLUA):
 $(LIBGASF):
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
 
-$(LIBCEQ):
-	cd $(CEQ_DIR); make
+$(LIBEQC):
+	cd $(EQC_DIR); make
 
 slf: slf.d $(SLF_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES)
+	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS) $(OF)slf \
 		$(DVERSION)complex_numbers \
 		slf.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(LIBEQC) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 libslf.so: cwrap.d slf.d $(SLF_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES)
+	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
 	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op \
 		$(DVERSION)complex_numbers \
 		slf.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+		$(LIBEQC) $(LIBGASF) $(LIBLUA)
 	$(DMD) $(OF)libslf.so cwrap.o $(PIC) $(DFLAGS) -op -shared \
 		$(DVERSION)complex_numbers \
 		slf.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(LIBEQC) $(LIBGASF) $(LIBLUA) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
