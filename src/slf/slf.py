@@ -5,9 +5,11 @@ Python code for interfacing with slf.
 """
 
 from cffi import FFI
-from numpy import array, zeros, interp
+from numpy import array, zeros, interp, frombuffer
 from os import environ, path
 from numpy.polynomial import Polynomial
+import struct
+from io import BytesIO, BufferedWriter
 
 header = """
     int cwrap_init();
@@ -300,6 +302,65 @@ class Flame(object):
         code = self.lib.get_Y(Yp)
         if code!=0: raise Exception("Failed to get array Y from slf")
         return Y.reshape((self.N, self.nsp))
+
+def number(thing):
+    try:
+        outnumber = int(thing)
+    except(ValueError):
+        try:
+            outnumber = float(thing)
+        except(ValueError):
+            outnumber = complex(thing.replace('i','j')).real
+    return outnumber
+
+def read_log_file(filename):
+    with open(filename) as fp:
+       lines = [line.strip().split() for line in fp if line.startswith('iter')]
+    
+    tokens = lines[0][::2]
+    data = {token:[] for token in tokens}
+
+    for line in lines:
+        tokens = line[::2]
+        values  = list(map(number, line[1::2]))
+        for t,d in zip(tokens, values):
+            data[t].append(d)
+    return data
+
+def read_solution_file(filename):
+    with open(filename, 'rb') as fp:
+        bytes = fp.read()
+
+    stream = BytesIO(bytes)
+
+    buff = stream.read(8*4)
+    nsp, neq, N, n = struct.unpack("Q"*4, buff)
+    print("nsp, neq, N, n", nsp, neq, N, n)
+
+    buff = stream.read(8*5)
+    D, p, dZ, T0, T1 = struct.unpack("d"*5, buff)
+
+    buff = stream.read(8*N)
+    Z = frombuffer(buff)
+
+    buff = stream.read(8*nsp)
+    Y0 = frombuffer(buff)
+
+    buff = stream.read(8*nsp)
+    Y1 = frombuffer(buff)
+
+    buff = stream.read(8*n)
+    U = frombuffer(buff)
+    U = U.reshape((N, neq))
+    Y = U[:,:-1]
+    T = U[:,-1]
+
+    data = {}
+    data['nsp'] = nsp; data['neq'] = neq; data['N'] = N; data['n'] = n
+    data['D'] = p; data['p'] = p; data['dZ'] = dZ; data['T0'] = T0; data['T1'] = T1
+    data['Z'] = Z; data['Y0'] = Y0; data['Y1'] = Y1
+    data['Y'] = Y; data['T'] = T
+    return data
 
 if __name__=='__main__':
     print("Put a test here, I guess...")

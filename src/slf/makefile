@@ -8,7 +8,7 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := slf
+PROGRAMS := slf libslf.so
 
 SLF_FILES := io.d linalg.d misc.d
 
@@ -178,7 +178,7 @@ slf: slf.d $(SLF_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-libslf: cwrap.d slf.d $(SLF_FILES) \
+libslf.so: cwrap.d slf.d $(SLF_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \

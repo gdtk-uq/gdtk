@@ -119,6 +119,7 @@ class Flame {
         double tau = 1e-2;
         immutable double targetGRR = config.targetGRR;
 
+        writefln("Called slf.run(): Target Global Relative Residual=%e", targetGRR);
         log.length = 0;
         StopWatch sw;
         sw.start();
@@ -144,7 +145,7 @@ class Flame {
             if (iter<150) GRmax = fmax(GR, GRmax);
             double GRR = GR/GRmax;
 
-            string output = format("iter %d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
+            string output = format("iter % 05d dt %e GRmax %e GR %e GRR %e", iter, dt, GRmax, GR, GRR);
             log ~= output;
             if (iter%50==0){
                 writeln(output);
@@ -531,6 +532,7 @@ int main(string[] args)
     int exitFlag = 0;
     string name = "slf";
     if (args.length>1) name = args[1];
+    name = name.chomp(".yaml");
 
     auto flame = new Flame(name);
     flame.set_initial_condition();
