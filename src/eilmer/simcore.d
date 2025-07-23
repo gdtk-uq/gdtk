@@ -777,7 +777,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
 
     if (GlobalConfig.is_master_task) {
-        writefln("JFNK memory used: %.0f MB, unused: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
+        writefln("simcore memory used: %.0f MB, unused: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
                  heapUsed, heapFree, heapUsed+heapFree, minTotal, maxTotal);
         stdout.flush();
     }
