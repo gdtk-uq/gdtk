@@ -504,6 +504,7 @@ ResidualSmoothingType residual_smoothing_type_from_name(string name)
 enum ShockDetector {
     PJ,
     NNG,
+    NNGE,
 }
 
 @nogc
@@ -512,6 +513,7 @@ string shock_detector_name(ShockDetector sd)
     final switch ( sd ) {
     case ShockDetector.PJ: return "PJ";
     case ShockDetector.NNG: return "NNG";
+    case ShockDetector.NNGE: return "NNGE";
     }
 }
 
@@ -521,6 +523,7 @@ ShockDetector shock_detector_from_name(string name)
     switch ( name ) {
     case "PJ": return ShockDetector.PJ;
     case "NNG": return ShockDetector.NNG;
+    case "NNGE": return ShockDetector.NNGE;
     default:
         throw new FlowSolverException("Invalid shock detector name: ");
     }
