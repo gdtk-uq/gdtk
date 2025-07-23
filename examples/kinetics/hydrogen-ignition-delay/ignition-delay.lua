@@ -1,6 +1,6 @@
-spFile = "Stanford-2011-gas-model.lua"
-reacFile = "Stanford-2011-reac-file.lua"
-outFile = "Stanford-ignition-delay.dat"
+spFile = "Jachimowski-1992-gas-model.lua"
+reacFile = "Jachimowski-1992-reac-file.lua"
+outFile = "J92-ignition-delay.dat"
 
 tFinal = 1500.0e-6 -- s
 pInit = P_atm

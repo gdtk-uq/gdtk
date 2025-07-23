@@ -8,4 +8,5 @@ set xrange [800:1400]
 plot 'slack-grillo-p-1atm.data' t 'Slack \& Grillo (1977) expt.' w p pt 8 ps 1.5, \
      'ES-ignition-delay.dat' u 1:($2*1.0e6) t 'Evans \& Schexnayder' w l ls 1, \
      'RS-ignition-delay.dat' u 1:($2*1.0e6) t 'Rogers \& Schexnayder' w l ls 3, \
+     'J92-ignition-delay.dat' u 1:($2*1.0e6) t 'Jachimowski (1992)' w l ls 4, \
      'Stanford-ignition-delay.dat' u 1:($2*1.0e6) t 'Stanford (2011)' w l ls 5
