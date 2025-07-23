@@ -222,7 +222,9 @@ int main(string[] args)
     }
 
     if (GlobalConfig.is_master_task) { writefln("Initialising simulation from snapshot: %d", snapshotStart); }
-    init_simulation(snapshotStart, -1, maxCPUs, threadsPerMPITask, maxWallClock);
+    int retcode = init_simulation(snapshotStart, -1, maxCPUs, threadsPerMPITask, maxWallClock);
+    if (retcode!=0) throw new Error(format("Init simulation failed with return code %d in task %d.", retcode, GlobalConfig.mpi_rank_for_local_task));
+
 
     // Additional memory allocation specific to steady-state solver
     allocate_global_fluid_workspace();
