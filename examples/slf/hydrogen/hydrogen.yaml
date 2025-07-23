@@ -1,0 +1,16 @@
+# hydrogen.yaml
+# Example config file for slf flamelet calculator
+# Nick Gibbons (2024-Sept-18)
+
+gas_file_name: "gm.lua"           # GDTk gas model file
+reaction_file_name: "rr.lua"      # GDTk reactions model file
+
+p: 49767.1                        # Constant pressure over the domain
+N: 64                             # Number of finite-difference nodes
+D: 2000.0                         # Strain rate parameter
+
+T0: 1400.0                        # Left side temperature boundary condition
+T1: 400.0                         # Right side temperature boundary condition
+
+Y0: {'N2': 0.767, 'O2': 0.233}    # Left side species boundary condition
+Y1: {'N2': 0.70, 'H2': 0.30}      # Right side species boundary condition
