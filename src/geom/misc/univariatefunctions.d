@@ -302,11 +302,23 @@ public:
         this.m = m;
         this.s = s;
         this.ratio = ratio;
-        if ((m<=0.0) || (m>=1.0)) throw new Error("Problematic parameters in GaussianFunction m= "~to!string(m));
-        if ((ratio<=0.0) || (ratio>=1.0)) throw new Error("Problematic parameters in GaussianFunction ratio= "~to!string(ratio));
+        if ((m<0.0) || (m>1.0)) throw new Error("Problematic parameters in GaussianFunction m= "~to!string(m));
+        if ((ratio<=0.0) || (ratio>1.0)) throw new Error("Problematic parameters in GaussianFunction ratio= "~to!string(ratio));
         // See derivation 20/12/11 (NNG)
-        this.a = 1.0/(1.0+sqrt(pi/2.0)*(1.0-ratio)*s*(erf((m-1.0)/sqrt(2.0)/s) - erf(m/sqrt(2.0)/s)));
-        this.c = -sqrt(pi/2.0)*a*(1-ratio)*s*erf(m/sqrt(2.0)/s);
+
+        // Iterate to ensure cluster center is at m.
+        double b = m;
+        double a,c,err;
+        foreach(n; 0 .. 100) {
+            a = 1.0/(1.0+sqrt(pi/2.0)*(1.0-ratio)*s*(erf((b-1.0)/sqrt(2.0)/s) - erf(b/sqrt(2.0)/s)));
+            c = -sqrt(pi/2.0)*a*(1-ratio)*s*erf(b/sqrt(2.0)/s);
+            err = (a*b + c) - m;  // Center of the cluster is at opCall(b) = a*b + c
+            if (fabs(err)<1e-15) break;
+            b -= err * (a*ratio); // Newton update, d/dx(opCall)(b) = a*ratio
+        }
+        this.a = a;
+        this.b = b;
+        this.c = c;
     }
 
     this(const GaussianFunction other)
@@ -325,11 +337,11 @@ public:
 
     override double opCall(double x) const
     {
-        return a*x + sqrt(pi/2.0)*a*(1.0-ratio)*s*erf((m-x)/sqrt(2.0)/s) + c;
+        return a*x + sqrt(pi/2.0)*a*(1.0-ratio)*s*erf((b-x)/sqrt(2.0)/s) + c;
     }
 
 private:
-    double m,s,ratio,a,c;
+    double m,s,ratio,a,b,c;
     immutable double pi = 3.1415926535;
     immutable double p  = 0.3275911;
     immutable double a1 = 0.254829592;
@@ -338,7 +350,7 @@ private:
     immutable double a4 =-1.453152027;
     immutable double a5 = 1.061405429;
 
-    const double erf(double x){
+    double erf(double x) const {
         /*
             Approximate the gaussian error function using curve fitted polynomial
             "Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables", NIST
