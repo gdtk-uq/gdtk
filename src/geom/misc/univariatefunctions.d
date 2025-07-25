@@ -778,6 +778,7 @@ version(univariatefunctions_test) {
         auto cf3 = new GeometricFunction(0.005, 1.1, 40, false);
         assert(isClose(cf3(0.1), 0.0225106, 1.0e-4), failedUnitTest());
         assert(isClose(cf3(0.9), 0.85256413, 1.0e-4), failedUnitTest());
+        test_gaussian_function_curvature();
         auto cf4 = new GaussianFunction(0.5, 0.1, 0.2);
         assert(isClose(cf4(0.1), 0.1250750, 1.0e-4), failedUnitTest());
         assert(isClose(cf4(0.9), 0.8749249, 1.0e-4), failedUnitTest());
@@ -785,5 +786,48 @@ version(univariatefunctions_test) {
         assert(isClose(cf5(0.1), 0.0518068, 1.0e-4), failedUnitTest());
         assert(isClose(cf5(0.9), 0.8984721, 1.0e-4), failedUnitTest());
         return 0;
+    }
+
+    double bisect_iterate(alias f)(double p0, double p1) {
+        int count = 0;
+        double f0 = f(p0);
+        double f1 = f(p1);
+        if (f0*f1 > 0.0) {
+            throw new Exception("Does not bracket an odd number of roots.");
+        }
+        double pmid = 0.5*(p0+p1);
+        double fmid = f(pmid);
+        do {
+            if (f0*fmid < 0.0) {
+                p1 = pmid; f1 = fmid;
+            } else {
+                p0 = pmid; f0 = fmid;
+            }
+            pmid = 0.5*(p0+p1);
+            fmid = f(pmid);
+            count += 1;
+        } while ((fabs(p1-p0)/pmid > 1e-6) && (fabs(fmid) > 1e-6));
+        return pmid;
+    }
+
+    void test_gaussian_function_curvature() {
+        /// Ensure the inflection point of the gaussian cluster function is at m.
+        // Solve the input (test-point) required for a value of m, and then
+        // check that curvature == 0 and slope >= 0.
+        double test_point, slope, curvature;
+        double h = 1.0e-3;  // Step in finite difference test
+        foreach (m; [0.0, 0.1, 0.5, 0.9, 1.0]) {
+            auto cf = new GaussianFunction(m, 0.1, 0.2);
+            if ((m == 0.0) || (m == 1.0)) {
+                // The cluster center must be at the edge
+                test_point = m;
+            } else {
+                test_point = bisect_iterate!((x) => cf(x) - m)(0.0, 1.0);
+            }
+            slope = (cf(test_point+h) - cf(test_point-h)) / (2*h);
+            curvature = (cf(test_point+h) - 2*cf(test_point) + cf(test_point-h)) / (h*h);
+            assert(slope >= 0.0, failedUnitTest());
+            assert(fabs(curvature) <= 1.0e-3, failedUnitTest());
+        }
     }
 } // end univariatefunctions_test
