@@ -5,7 +5,7 @@ Python code for interfacing with slf.
 """
 
 from cffi import FFI
-from numpy import array, zeros, interp, frombuffer
+from numpy import array, zeros, interp, frombuffer, array, concatenate
 from os import environ, path
 from numpy.polynomial import Polynomial
 import struct
@@ -135,16 +135,17 @@ class Flame(object):
 
     def return_linear_interps(self, Zs):
         interps = {}
-        Y = self.Y
-        Z = self.Z
         Y0 = self.Y0
         Y1 = self.Y1
+        Y = concatenate([self.Y0.reshape((1,self.nsp)), self.Y, self.Y1.reshape((1,self.nsp))])
+        Z = array([0.0] + list(self.Z) + [1.0])
+        T = array([self.T0] + list(self.T) + [self.T1])
 
         for isp in range(self.nsp):
             sp = self.species_names[isp]
             key = 'massf-{}'.format(sp)
             interps[key] = interp(Zs, Z, Y[:,isp], left=Y0[isp], right=Y1[isp])
-        interps['T'] = interp(Zs, Z, self.T, left=self.T0, right=self.T1)
+        interps['T'] = interp(Zs, Z, T, left=self.T0, right=self.T1)
 
         return interps
 
