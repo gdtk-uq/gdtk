@@ -2,20 +2,27 @@
 Header file to the cray MPICH bindings in D.
 
 Steps to generate this file:
- - Copy mpi.h into the working directory
+ - Use module show cray-mpich to find mpi.h and mpio.h and cray_version.h
+   + They should be in the include directory inside CRAY_MPICH_DIR
+ - Copy mpi.h and mpio.h and cray_version.h into the working directory
  - Run gcc to preprocess the header file:
     $ gcc -E -P mpi.h > pppmpi.h
  - Then run dstep to convert this into a d file 
     $ ./dstep pppmpi.h -o mpi.d
- - This will create some troublesome variadic functions,
+ - This will create some troublesome variadic functions with arguments like this "..."
    such as MPI_Errhandler_create. Just comment them out.
  - Now run def2d.py to extract the #define constants from mpi.h - > out.d
     $ python3 def2d.py
  - Finally, copy the lines from out.d into place in the mpi.d file.
    This can go anywhere, but somewhere near the top is good.
+ - PS: It's a good idea to copy these instructions to the top of mpi.d as well
+
+Notes:
+ - Module cray-mpich/8.1.19 and PrgEnv-gnu/8.3.2 were used, with library
+   /opt/cray/pe/mpich/8.1.19/ofi/gnu/9.1
 
 @author: (with much gnashing of teeth and funereal wailing) Nick Gibbons [20/06/24]
-  - Updated June 2024 to work with cray cray-mpich/8.1.27 and PrgEnv-gnu/8.4.0
+ - Updated August 2025 to with with cray-mpich/8.1.32 and PrgEnv-gnu/8.6.0
 */
 
 import core.stdc.config;
@@ -331,6 +338,9 @@ enum MPIX_ERR_EAGAIN = MPICH_ERR_FIRST_MPIX+4;
 enum MPIX_ERR_NOREQ = MPICH_ERR_FIRST_MPIX+5;
 enum MPICH_ERR_LAST_MPIX = MPICH_ERR_FIRST_MPIX+5;
 immutable MPI_Datarep_conversion_function * MPI_CONVERSION_FN_NULL = cast(MPI_Datarep_conversion_function *) 0;
+enum MPIX_GPU_SUPPORT_CUDA = 0;
+enum MPIX_GPU_SUPPORT_ZE = 1;
+enum MPIX_GPU_SUPPORT_HIP = 2;
 enum MPIIMPL_ADVERTISES_FEATURES = 1;
 enum MPIIMPL_HAVE_MPI_INFO = 1;
 enum MPIIMPL_HAVE_MPI_COMBINER_DARRAY = 1;
@@ -388,6 +398,7 @@ alias __id_t = uint;
 alias __time_t = c_long;
 alias __useconds_t = uint;
 alias __suseconds_t = c_long;
+alias __suseconds64_t = c_long;
 alias __daddr_t = int;
 alias __key_t = int;
 alias __clockid_t = int;
@@ -1161,6 +1172,8 @@ int MPI_Unpublish_name (const(char)* service_name, MPI_Info info, const(char)* p
 int MPI_Comm_set_info (MPI_Comm comm, MPI_Info info);
 int MPI_Comm_get_info (MPI_Comm comm, MPI_Info* info);
 int MPIX_Comm_rankpool (MPI_Comm comm, const(char)* name, int timeout);
+int MPIX_GPU_query_support (int gpu_type, int* is_supported);
+int MPIX_Query_cuda_support ();
 int MPIX_Create_queue (MPI_Comm comm, void* stream, MPIX_Queue* queue);
 int MPIX_Free_queue (MPIX_Queue queue);
 int MPIX_Enqueue_send (
@@ -2439,6 +2452,8 @@ int PMPI_Unpublish_name (const(char)* service_name, MPI_Info info, const(char)* 
 int PMPI_Comm_set_info (MPI_Comm comm, MPI_Info info);
 int PMPI_Comm_get_info (MPI_Comm comm, MPI_Info* info);
 int PMPIX_Comm_rankpool (MPI_Comm comm, const(char)* name, int timeout);
+int PMPIX_GPU_query_support (int gpu_type, int* is_supported);
+int PMPIX_Query_cuda_support ();
 int PMPIX_Create_queue (MPI_Comm comm, void* stream, MPIX_Queue* queue);
 int PMPIX_Free_queue (MPIX_Queue queue);
 int PMPIX_Enqueue_send (
