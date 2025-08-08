@@ -26,6 +26,7 @@ import lmr.commands.sliceflow;
 import lmr.commands.slicesolid;
 import lmr.commands.snapshot2vtk;
 import lmr.commands.structured2unstructured;
+import lmr.lmrbuild;
 import lmr.lmrconfig;
 public import lmr.commands.runsim;
 
@@ -262,14 +263,11 @@ void printVersion(bool shortVersion=true)
 {
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer 5.0 compressible-flow simulation code.");
-        writeln("Revision-id: ", lmrCfg.revisionId);
-        writeln("Revision-date: ", lmrCfg.revisionDate);
-        writeln("Compiler-name: ", lmrCfg.compilerName);
-        writeln("Build-date: ", lmrCfg.buildDate);
-        write("Build-flavour: ");
-        version(flavour_debug) { writeln("debug"); }
-        version(flavour_profile) { writeln("profile"); }
-        version(flavour_fast) { writeln("fast"); }
+        writeln("Revision-id: ", buildCfg.revisionId);
+        writeln("Revision-date: ", buildCfg.revisionDate);
+        writeln("Compiler-name: ", buildCfg.compilerName);
+        writeln("Build-date: ", buildCfg.buildDate);
+        writeln("Build-flavour: ", buildCfg.buildFlavour);
         write("Profiling: ");
         version(diagnostics) { writeln("included"); } else { writeln("omitted"); }
 

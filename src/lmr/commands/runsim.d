@@ -26,6 +26,7 @@ import dyaml;
 
 import util.json_helper : readJSONfile;
 
+import lmr.lmrbuild;
 import lmr.commands.command;
 import lmr.globalconfig;
 import lmr.lmrconfig;
@@ -36,7 +37,7 @@ version(mpi_parallel) {
     import mpi;
 }
 
-enum NumberType {default_type, real_values, complex_values};
+enum NumberType {default_type, real_values, complex_values}
 
 int determineNumberOfSnapshots()
 {
@@ -226,16 +227,13 @@ int main(string[] args)
 
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer simulation code.");
-        writeln("Revision-id: ", lmrCfg.revisionId);
-        writeln("Revision-date: ", lmrCfg.revisionDate);
-        writeln("Compiler-name: ", lmrCfg.compilerName);
-        writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
-        writeln("Number-type: PUT_NUMBER_TYPE_HERE");
-        write("Build-flavour: ");
-        version(flavour_debug) { writeln("debug"); }
-        version(flavour_profile) { writeln("profile"); }
-        version(flavour_fast) { writeln("fast"); }
-        writeln("Build-date: ", lmrCfg.buildDate);
+        writeln("Revision-id: ",      buildCfg.revisionId);
+        writeln("Revision-date: ",    buildCfg.revisionDate);
+        writeln("Compiler-name: ",    buildCfg.compilerName);
+        writeln("Parallel-flavour: ", buildCfg.parallelType);
+        writeln("Number-type: ",      buildCfg.numberType);
+        writeln("Build-flavour: ",    buildCfg.buildFlavour);
+        writeln("Build-date: ",       buildCfg.buildDate);
     }
 
     int verbosity = 0;
