@@ -285,6 +285,7 @@ public:
         repr ~= ", tau_wall_z=" ~ to!string(tau_wall_z);
         repr ~= ", q=" ~ to!string(q);
         repr ~= ", F=" ~ to!string(F);
+        repr ~= ", E=" ~ to!string(fs.electric_field);
         repr ~= ", grad=" ~ to!string(grad);
         repr ~= ", cloud_pos=[";
         // Because the positions are held as pointers to Vector3 objects,
@@ -570,6 +571,48 @@ public:
             }
         }
     } // end average_cell_deriv_values()
+
+    @nogc
+    void average_electric_field()
+    {
+        if (left_cell && right_cell) {
+            if (!left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
+                fs.electric_field[0] = right_cell.electric_field[0];
+                fs.electric_field[1] = right_cell.electric_field[1];
+            }
+            else if (left_cell.is_interior_to_domain && !right_cell.is_interior_to_domain) {
+                fs.electric_field[0] = left_cell.electric_field[0];
+                fs.electric_field[1] = left_cell.electric_field[1];
+            }
+            else {
+                if (isNaN(left_cell.electric_field[0])) {
+                    fs.electric_field[0] = right_cell.electric_field[0];
+                    fs.electric_field[1] = right_cell.electric_field[1];
+                }
+                else if (isNaN(right_cell.electric_field[0])) {
+                    fs.electric_field[0] = left_cell.electric_field[0];
+                    fs.electric_field[1] = left_cell.electric_field[1];
+                }
+                else {
+                    fs.electric_field[0] = 0.5 * (left_cell.electric_field[0] +
+                                               right_cell.electric_field[0]);
+                    fs.electric_field[1] = 0.5 * (left_cell.electric_field[1] +
+                                               right_cell.electric_field[1]);               
+                }
+            }
+
+        }
+        else if (left_cell && !right_cell) {
+            fs.electric_field[0] = left_cell.electric_field[0];
+            fs.electric_field[1] = left_cell.electric_field[1];
+        }
+        else if (!left_cell && right_cell) {
+            fs.electric_field[0] = right_cell.electric_field[0];
+            fs.electric_field[1] = right_cell.electric_field[1];
+        }
+        return;
+        // throw new Exception("Oops! This face does not have at least one cell attached.");
+    }
 
     @nogc
     void average_turbulent_transprops()

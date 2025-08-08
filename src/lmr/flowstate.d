@@ -60,6 +60,7 @@ public:
     version(turbulence) {
         number[2] turb; // turbulence primitives
     }
+    double[2] electric_field;
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
     number S;         // shock indicator
@@ -314,6 +315,7 @@ public:
         repr ~= ", mu_t=" ~ to!string(mu_t);
         repr ~= ", k_t=" ~ to!string(k_t);
         repr ~= ", S=" ~ to!string(S);
+        repr ~= ", E=" ~ to!string(electric_field);
         repr ~= ")";
         return to!string(repr);
     }

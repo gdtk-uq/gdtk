@@ -23,10 +23,11 @@ import util.lua;
 import lmr.flowgradients;
 import lmr.flowstate;
 import lmr.globalconfig;
+import lmr.efield.efieldconductivity;
 
 private immutable double SMALL_DIFFUSION_COEFFICIENT = 1.0e-20;
 
-enum MassDiffusionModel { none, ficks_first_law, stefan_maxwell }
+enum MassDiffusionModel { none, ficks_first_law, stefan_maxwell, drift_diffusion }
 
 @nogc
 string massDiffusionModelName(MassDiffusionModel i)
@@ -35,6 +36,7 @@ string massDiffusionModelName(MassDiffusionModel i)
     case MassDiffusionModel.none: return "none";
     case MassDiffusionModel.ficks_first_law: return "ficks_first_law";
     case MassDiffusionModel.stefan_maxwell: return "stefan_maxwell";
+    case MassDiffusionModel.drift_diffusion: return "drift_diffusion";
     }
 }
 
@@ -45,6 +47,7 @@ MassDiffusionModel massDiffusionModelFromName(string name)
     case "none": return MassDiffusionModel.none;
     case "ficks_first_law": return MassDiffusionModel.ficks_first_law;
     case "stefan_maxwell": return MassDiffusionModel.stefan_maxwell;
+    case "drift_diffusion": return MassDiffusionModel.drift_diffusion;
     default: return MassDiffusionModel.none;
     }
 }
@@ -66,6 +69,8 @@ MassDiffusion initMassDiffusion(GasModel gmodel,
                                  Lewis);
     case MassDiffusionModel.stefan_maxwell:
         return new StefanMaxwell(gmodel, diffusion_coefficient_type);
+    case MassDiffusionModel.drift_diffusion:
+        return new DriftDiffusion(gmodel, diffusion_coefficient_type);
     default:
         throw new FlowSolverException("Selected mass diffusion model is not available.");
     }
@@ -222,6 +227,176 @@ private:
     size_t[] _ion_idxs;
     size_t _electron_idx;
     bool _ambipolar_diffusion = false;
+}
+
+
+// Drift-diffusion mass diffusion model
+// Based on stefan-maxwell equations
+// Author: Robert Watt
+// Date: 30/4/2024
+class DriftDiffusion : MassDiffusion {
+    this(GasModel gmodel, string diffusion_coefficient_type){
+        if (diffusion_coefficient_type != "binary_diffusion"){
+            throw new FlowSolverException("stefan_maxwell diffusion requires binary_diffusion coefficients");
+        }
+
+        _gmodel = gmodel;
+        _nsp = gmodel.n_species;
+        _D_avg.length = _nsp;
+        _molef.length = _nsp;
+        _num_den.length = _nsp;
+        _mobility.length = _nsp;
+        _mol_masses.length = _nsp;
+        _D.length = _nsp;
+        foreach (isp; 0 .. _nsp) _D[isp].length = _nsp;
+
+        // even though the gas may be a plasma, we handle ambipolar diffusion
+        // as a constraint on the system of equations here, not by modifying 
+        // the average diffusion coefficients. So we pretend the gas is not
+        // a plasma for the purposes of computing diffusion coefficients.
+        _binary_diffusion = new BinaryDiffusion(_nsp, false, gmodel.charge);
+        _conductivity = new DiffusionConductivity(gmodel);
+
+        if (gmodel.is_plasma()){
+            _ambipolar_diffusion = true;
+            foreach (isp, charge; gmodel.charge) {
+                if (charge > 0) _ion_idxs ~= isp;
+                if (charge < 0) _electron_idx = isp;
+            }
+        }
+    }
+
+    @nogc
+    void compute_electron_mass_flux(number[] jx, number[] jy, number[] jz)
+    {
+        if (_ambipolar_diffusion) {
+            number nx = 0.0;
+            number ny = 0.0;
+            number nz = 0.0;
+            foreach (isp; _ion_idxs) {
+                nx += jx[isp] / _mol_masses[isp];
+                ny += jy[isp] / _mol_masses[isp];
+                nz += jz[isp] / _mol_masses[isp];
+            }
+            jx[_electron_idx] = nx * _mol_masses[_electron_idx];
+            jy[_electron_idx] = ny * _mol_masses[_electron_idx];
+            jz[_electron_idx] = nz * _mol_masses[_electron_idx]; 
+        }
+    }
+
+    @nogc
+    void correct_mass_fluxes(in FlowState fs, number[] jx, number[] jy, number[] jz)
+    {
+        // correct the mass fluxes so they add up to zero
+        number sum_x = 0.0;
+        number sum_y = 0.0;
+        number sum_z = 0.0;
+        foreach (isp; 0 .. _nsp) {
+            sum_x += jx[isp];
+            sum_y += jy[isp];
+            sum_z += jz[isp];
+        }
+        foreach (isp; 0 .. _nsp) {
+            jx[isp] = jx[isp] - fs.gas.massf[isp] * sum_x;
+            jy[isp] = jy[isp] - fs.gas.massf[isp] * sum_y;
+            jz[isp] = jz[isp] - fs.gas.massf[isp] * sum_z;
+        }
+    }
+
+    @nogc
+    void update_mass_fluxes(in FlowState fs, ref const(FlowGradients) grad,
+                            number[] jx, number[] jy, number[] jz)
+    {
+        version(multi_species_gas){
+            // _binary_diffusion.computeAvgDiffCoeffs(fs.gas, _gmodel, _D_avg);
+            _gmodel.massf2molef(fs.gas, _molef);
+            _gmodel.massf2numden(fs.gas, _num_den);
+            _gmodel.binary_diffusion_coefficients(fs.gas, _D);
+            _mol_masses = _gmodel.mol_masses();
+            number M = _gmodel.molecular_mass(fs.gas);
+
+            foreach (isp; _ion_idxs) {
+                foreach (jsp; _ion_idxs) {
+                    _D[isp][jsp] *= (1 + fs.gas.T_modes[$-1] / fs.gas.T);
+                    _D[jsp][isp] *= (1 + fs.gas.T_modes[$-1] / fs.gas.T);
+                }
+            }
+            foreach (isp; 0 .. _nsp) {
+                number sum = 0.0;
+                foreach (jsp; 0 .. _nsp) {
+                    if (isp == jsp) continue;
+                    // if (_D[isp][jsp] < SMALL_DIFFUSION_COEFFICIENT) continue;
+                    // if (_molef[jsp] < 0.0) continue;
+                    sum += _molef[jsp] / _D[isp][jsp];
+                }
+                if (sum <= 0.0) {
+                    _D_avg[isp] = 0.0;
+                }
+                else {
+                    _D_avg[isp] = (1.0 - _molef[isp]) / sum;
+                }
+                number T = (isp == _electron_idx) ? fs.gas.T_modes[$-1] : fs.gas.T;
+
+                // the electrical conductivity
+                number q = elementary_charge;
+                number kB = Boltzmann_constant;
+                number Z = _gmodel.charge[isp];
+                _mobility[isp] = _D_avg[isp] * Z * q / (kB * T);
+            }
+
+            // Initial guess using the average diffusion coefficient
+            foreach(isp; 0 .. _nsp){
+                jx[isp] = -fs.gas.rho * (_D_avg[isp] * grad.massf[isp][0] - fs.gas.massf[isp] * fs.electric_field[0] * _mobility[isp]);
+                jy[isp] = -fs.gas.rho * (_D_avg[isp] * grad.massf[isp][1] - fs.gas.massf[isp] * fs.electric_field[1] * _mobility[isp]);
+                jz[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][2];
+            }
+
+            correct_mass_fluxes(fs, jx, jy, jz);
+            compute_electron_mass_flux(jx, jy, jz);
+
+            // Iterate to solve the Stefan-Maxwell equations
+            foreach (n_iter; 0 .. 20){
+                foreach (isp; 0 .. _nsp){
+                    number sum_x = 0;
+                    number sum_y = 0;
+                    number sum_z = 0;
+                    foreach (jsp; 0 .. _nsp){
+                        if (isp == jsp) continue;
+                        number M_ratio = M / _mol_masses[jsp];
+                        sum_x += fs.gas.rho * M_ratio * grad.massf[jsp][0] + M_ratio * jx[jsp] / _D[isp][jsp];
+                        sum_y += fs.gas.rho * M_ratio * grad.massf[jsp][1] + M_ratio * jy[jsp] / _D[isp][jsp];
+                        sum_z += fs.gas.rho * M_ratio * grad.massf[jsp][2] + M_ratio * jz[jsp] / _D[isp][jsp];
+                    }
+                    jx[isp] = -fs.gas.rho*_D_avg[isp]*grad.massf[isp][0] 
+                        + fmax(0.0, fs.gas.massf[isp]) * fs.gas.rho * fs.electric_field[0] * _mobility[isp]
+                        + fs.gas.massf[isp] / (1 - _molef[isp]) * _D_avg[isp] * sum_x;
+                    jy[isp] = -fs.gas.rho*_D_avg[isp]*grad.massf[isp][1]
+                        + fmax(0.0, fs.gas.massf[isp]) * fs.gas.rho * fs.electric_field[1] * _mobility[isp]
+                        + fs.gas.massf[isp] / (1 - _molef[isp]) * _D_avg[isp] * sum_y;
+                    jz[isp] = -fs.gas.rho*_D_avg[isp]*grad.massf[isp][2]
+                        + fs.gas.massf[isp] / (1 - _molef[isp]) * _D_avg[isp] * sum_z;
+                }
+
+                correct_mass_fluxes(fs, jx, jy, jz);
+                compute_electron_mass_flux(jx, jy, jz);
+            }
+        }
+    }
+
+private:
+    int _nsp;
+    number[] _D_avg;
+    number[] _molef;
+    double[] _mol_masses;
+    number[] _num_den;
+    number[] _mobility;
+    number[][] _D;
+    BinaryDiffusion _binary_diffusion;
+    GasModel _gmodel;
+    size_t[] _ion_idxs;
+    size_t _electron_idx;
+    bool _ambipolar_diffusion = false;
+    DiffusionConductivity _conductivity;
 }
 
 

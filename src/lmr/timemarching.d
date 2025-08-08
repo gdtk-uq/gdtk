@@ -41,6 +41,7 @@ import lmr.lmrconfig;
 import lmr.lmrexceptions;
 import lmr.lmrerrors;
 import lmr.simcore_solid_step : determine_solid_time_step_size, solid_step;
+import lmr.efield.efield : ElectricField;
 import lmr.loads : 
     computeRunTimeLoads,
     count_written_loads,
@@ -439,6 +440,24 @@ int integrateInTime(double targetTimeAsRequested)
                 dt_chem *= GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 chemistry_step(dt_chem);
             }
+            // 2.5 Update electric field solution (if needed)
+            if (GlobalConfig.solve_electric_field && ((SimState.step+1)%GlobalConfig.electric_field_count==0)){
+                if (GlobalConfig.is_master_task) writeln("Called field.solve_efield(): ...");
+                eField.solve_efield(localFluidBlocks, GlobalConfig.is_master_task);
+                eField.compute_electric_field_vector(localFluidBlocks);
+                foreach (blk; parallel(localFluidBlocks, 1)) {
+                    foreach (face; blk.faces) {face.average_electric_field();}
+                }
+
+                // double current_in, current_out;
+                // eField.compute_boundary_current(localFluidBlocks, current_in, current_out);
+                // if (GlobalConfig.is_master_task) {
+                //     writeln("Called field.compute_boundary_current() ...");
+                //     writefln("    Current in:  %f (A/m)", current_in);
+                //     writefln("    Current out: %f (A/m)", current_out);
+                // }
+            }
+
             //
             // 2.2 Step the gasdynamic processes.
             if (SimState.step >= GlobalConfig.freeze_limiter_on_step && !(GlobalConfig.frozen_limiter)) {
@@ -734,21 +753,19 @@ int integrateInTime(double targetTimeAsRequested)
     // [TODO] RJG, 2024-02-07
     // Disabled for a little bit while we get the new time-marching code going.
     //
-    /*
     if (GlobalConfig.solve_electric_field && caughtException==false){
         if (GlobalConfig.is_master_task) writeln("Called field.solve_efield(): ...");
         eField.solve_efield(localFluidBlocks, GlobalConfig.is_master_task);
         eField.compute_electric_field_vector(localFluidBlocks);
 
-        double current_in, current_out;
-        eField.compute_boundary_current(localFluidBlocks, current_in, current_out);
-        if (GlobalConfig.is_master_task) {
-            writeln("Called field.compute_boundary_current() ...");
-            writefln("    Current in:  %f (A/m)", current_in);
-            writefln("    Current out: %f (A/m)", current_out);
-        }
+        // double current_in, current_out;
+        // eField.compute_boundary_current(localFluidBlocks, current_in, current_out);
+        // if (GlobalConfig.is_master_task) {
+        //     writeln("Called field.compute_boundary_current() ...");
+        //     writefln("    Current in:  %f (A/m)", current_in);
+        //     writefln("    Current out: %f (A/m)", current_out);
+        // }
     }
-    */
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Done integrate_in_time().");
         stdout.flush();
