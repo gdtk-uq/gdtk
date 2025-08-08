@@ -1266,7 +1266,7 @@ public:
             }
         }
 
-        if (myConfig.electric_field_work) {
+        if (myConfig.gmodel.is_plasma) {
             // Work done on electrons due to electric field induced by charge separation
             // on scales less than the Debye length
             // FIXME: Only consistent with ambipolar diffusion. Currently this is up to
@@ -1286,6 +1286,7 @@ public:
             // }
             // // [TODO] FIXME: Assuming the free electron energy is included in the last mode
             // Q.energies.back() += udivpe * myConfig.diffusion_factor;
+            Q[cqi.modes+cqi.n_modes-1] += fs.vel.x * grad.p_e[0] + fs.vel.y * grad.p_e[1] + fs.vel.z * grad.p_e[2]; 
         } // end if ( myConfig.electric_field_work )
         return;
     } // end add_viscous_source_vector()

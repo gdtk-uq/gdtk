@@ -69,6 +69,8 @@ public:
         number[3][2] turb; // turbulence primitive variables
     }
 
+    number[3] p_e; // electron pressure
+
     this(in LocalConfig myConfig)
     {
         // Note that the gradient values are initialized to zero.
@@ -81,6 +83,10 @@ public:
         foreach (i; 0 .. 3) {
             foreach (j; 0 .. 3) { vel[i][j] = to!number(0.0); }
             T[i] = to!number(0.0);
+
+            if (myConfig.gmodel.is_plasma){
+                p_e[i] = to!number(0.0);
+            }
         }
         version(multi_species_gas) {
             massf.length = myConfig.n_species;
@@ -694,6 +700,10 @@ public:
             vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0;
         }
         mixin(codeForGradients("gas.T", "T"));
+
+        if (myConfig.gmodel.is_plasma) {
+            mixin(codeForGradients("gas.p_e", "p_e"));
+        }
         version(multi_T_gas) {
             // T_modes
             size_t nmodes = cloud_fs[0].gas.T_modes.length;
