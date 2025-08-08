@@ -144,6 +144,13 @@ If you have added a new file to the code make sure to add it too, or it won't sh
     $ git commit -m "A commit message"
 
 Make sure to add a good descriptive commit message, this will help other people understand what you have done, and help you in case you have to come back to this commit and debug anything.
+It is common-place to add a prefix to your commit message describing the common directory of the changes you have made. 
+
+    $ git commit -m "lmr: A commit message"
+    $ git commit -m "examples/gas: Another message"
+
+If you want to automate suggestions for this, a `prepare-commit-msg` file has been included in this directory, which can be copied to the `.git/hooks` directory for use.
+Simply exclude the commit message from your `git commit`, and git will open your preferred editor to finish writing the prefixed commit message.
 
 At this point your repository should be in a state where it can be pushed to the master copy other people will pull down and use.
 A simple command to do this is:
@@ -181,8 +188,8 @@ Do a `make clean` before committing.
 * Other binary files such as gzipped solution files or PDF files,
 unless they are "golden solutions" that will never change.
 Binary files rapidly add bloat to the repository.
-* Backup files produced by your editor.  Use a `.hgignore` file in your
-working tree.
+* Backup files produced by your editor.  Use a `.gitignore` file in your
+working tree, or `.git/info/exclude` if you want to keep your filters local.
 
 ## Odds and ends
 
