@@ -41,6 +41,7 @@ public:
     this(lua_State *L, string[] speciesNames)
     {
         mNSpecies = to!int(speciesNames.length);
+        mElectronicMode = getInt(L, "electronic_mode");
         double[] molMasses;
         mMolMasses.length = mNSpecies;
         mParticleMass.length = mNSpecies;
@@ -225,14 +226,17 @@ public:
 
         // electronic contribution
         number k_ee = 0.0;
-        // foreach (isp; 0 .. mNSpecies) {
-        //     denom = 0.0;
-        //     foreach (jsp; 0 .. mNSpecies) {
-        //         denom += mMolef[jsp]*mDelta_11[isp][jsp];
-        //     }
-        //     number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
-        //     k_ee += fmax((Cp.re - 9.0/2.0), 0.0) * mMolef[isp]/denom;
-        // }
+        foreach (isp; 0 .. mNSpecies) {
+            // Free electrons don't contribute to the electronic thermal
+            // conduction
+            if (isp == mElectronIdx) continue;
+            denom = 0.0;
+            foreach (jsp; 0 .. mNSpecies) {
+                denom += mMolef[jsp]*mDelta_11[isp][jsp];
+            }
+            number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
+            k_ee += fmax((Cp.re - 9.0/2.0), 0.0) * mMolef[isp]/denom;
+        }
 
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
@@ -256,9 +260,9 @@ public:
             k_E *= 2.3901e-8*(15./4.)*kB_erg;
             k_E *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         }
-        gs.k_modes[$-1] = 0.0;
         gs.k_modes[0] = k_vib;
-        gs.k_modes[$-1] += k_E + k_ee;
+        gs.k_modes[1] = k_E;
+        // gs.k_modes[mElectronicMode] += k_ee;
     }
 
     @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D)
@@ -295,6 +299,7 @@ public:
 private:
     int mNSpecies;
     int mElectronIdx = -1;
+    int mElectronicMode;
     int[] mMolecularSpecies;
     double[] mMolMasses;
     double[] mParticleMass;
