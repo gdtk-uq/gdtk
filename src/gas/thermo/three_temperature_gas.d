@@ -95,7 +95,7 @@ public:
         number denom = 0.0;
         foreach (isp; 0 .. mNSpecies) {
             number T = (isp == mElectronIdx) ? gs.T_modes[FREE_ELECTRON] : gs.T;
-            denom += gs.massf[isp] * mR[isp] * T;
+            denom += fmax(0.0, gs.massf[isp]) * mR[isp] * T;
         }
         gs.rho = gs.p/denom;
 
@@ -106,7 +106,7 @@ public:
 
         // update electron pressure, if needed
         if (mElectronIdx != -1)
-            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
+            gs.p_e = gs.rho * fmax(0.0, gs.massf[mElectronIdx]) * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
     }
 
     @nogc
@@ -117,7 +117,9 @@ public:
         number Cv = trans_rot_Cv_mixture(gs);
         number formation_energy = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            formation_energy += gs.massf[isp] * (mHf[isp] - mCpTR[isp] * T_REF);
+            // free electron formation is included in the free electron translation energy
+            if (isp == mElectronIdx) continue;
+            formation_energy += fmax(0.0, gs.massf[isp]) * (mHf[isp] - mCpTR[isp] * T_REF);
         }
         gs.T = (gs.u - formation_energy) / Cv;
         gs.T_modes[VIB] = temperature_of_mode(gs, VIB);
@@ -139,22 +141,31 @@ public:
     @nogc
     override void updateFromRhoP(ref GasState gs)
     {
-        // First, calculate the temperature
+        // Assume u_modes is set correctly in addition to rho and p.
+        // Therefore, we need to update the electron temperature, and therefore
+        // the electron pressure as well.
+        // To compute the heavy particle translation
+        // temperature, we need the electron pressure, we need the electron temperature,
+        // so we'll compute the modal temperatures first.
+        gs.T_modes[VIB] = temperature_of_mode(gs, VIB);
+        gs.T_modes[FREE_ELECTRON] = temperature_of_mode(gs, FREE_ELECTRON);
+
+        // compute the electron pressure, and subtract it off from the total pressure  
         number p_heavy = gs.p;
-        if (mElectronIdx != -1)
-            p_heavy -= gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
+        if (mElectronIdx != -1){
+            gs.p_e = gs.rho * fmax(0.0, gs.massf[mElectronIdx]) * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
+            p_heavy -= gs.p_e;
+        }
+
+        // Now we can compute the heavy particle translation temperature from the
+        // pressure and density
         number denom = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            denom += gs.massf[isp] * gs.rho * mR[isp];
+            if (isp == mElectronIdx) continue;
+            denom += fmax(0.0, gs.massf[isp]) * gs.rho * mR[isp];
         }
         gs.T = p_heavy / denom;
         gs.u = trans_rot_energy_mixture(gs);
-
-        // We assume that u_modes is set correctly
-        gs.T_modes[VIB] = temperature_of_mode(gs, VIB);
-        gs.T_modes[FREE_ELECTRON] = temperature_of_mode(gs, FREE_ELECTRON);
-        if (mElectronIdx != -1)
-            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
     }
 
     @nogc override void updateFromPS(ref GasState gs, number s)
@@ -275,7 +286,7 @@ public:
         number h_e = electron_energy_species(gs.T_modes[FREE_ELECTRON], isp);
         number h_electronic = electronic_energy_species(gs.T_modes[mElectronicMode], isp);
         if (isp == mElectronIdx) {
-            h_e += (gs.T_modes[FREE_ELECTRON] - T_REF) * mR[mElectronIdx];
+            h_e += gs.T_modes[FREE_ELECTRON] * mR[mElectronIdx];
         }
         if (mElectronicMode == 0) {h_v += h_electronic;}
         else {h_e += h_electronic;}
@@ -299,7 +310,7 @@ public:
                     h_e += electronic_energy_species(gs.T_modes[FREE_ELECTRON], isp);
                 }
                 if (isp == mElectronIdx) {
-                    h_e += (gs.T_modes[FREE_ELECTRON] - T_REF) * mR[mElectronIdx] + mHf[mElectronIdx];
+                    h_e += gs.T_modes[FREE_ELECTRON] * mR[mElectronIdx];
                 }
                 return h_e;
             default:
@@ -530,7 +541,8 @@ private:
     number electron_energy_species(number Te, int isp)
     {
         if (isp == mElectronIdx) {
-            return (3.0/2.0)*(Te-T_REF)*mR[mElectronIdx] + mHf[mElectronIdx]-mR[mElectronIdx]*T_REF;
+            // return (3.0/2.0)*(Te-T_REF)*mR[mElectronIdx] + mHf[mElectronIdx]-mR[mElectronIdx]*T_REF;
+            return (5.0/2.0)*(Te-T_REF)*mR[mElectronIdx] + mHf[mElectronIdx] - mR[mElectronIdx]*Te;
         }
         return to!number(0.0);
     }
@@ -636,12 +648,12 @@ private:
     number electron_temperature(ref GasState gs)
     {
         if (gs.massf[mElectronIdx] < 1e-30) {return gs.T_modes[FREE_ELECTRON];}
-        number e_e = gs.u_modes[FREE_ELECTRON];
+        number e_e = gs.u_modes[FREE_ELECTRON] / gs.massf[mElectronIdx];
         number Re = mR[mElectronIdx];
-        number Xe = gs.massf[mElectronIdx];
         number Hf = mHf[mElectronIdx];
         // return e_e / (3.0 / 2.0 * gs.massf[mElectronIdx] * mR[mElectronIdx]) + T_REF;
-        return 2 * e_e / (3 * Re * Xe) - 2 * (Hf - Re * T_REF) / (3 * Re) + T_REF;
+        // return 2 * e_e / (3 * Re * Xe) - 2 * (Hf - Re * T_REF) / (3 * Re) + T_REF;
+        return (e_e + 5 / 2  * Re * T_REF - Hf) / (3/2 * Re);
     }
 
     @nogc
