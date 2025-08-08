@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# prepare-commit-msg hook
+# Prepopulates commit message with common directory prefix of staged files
+# Copy this file to .git/hooks/prepare-commit-msg, and ensure it's executable
+# using chmod +x prepare-commit-msg.
+
+set -e
+
+MAX_PREFIX_DEPTH=2
+COMMIT_MSG_FILE=$1
+
+# Get staged files, exit if none
+staged_files=$(git diff --cached --name-only)
+[ -z "$staged_files" ] && exit 0
+
+# Helper functions to improve array readability
+len() {
+    local -n arr=$1
+    echo ${#arr[@]}
+}
+
+indices() {
+    local -n arr=$1
+    echo ${!arr[@]}
+}
+
+# Find common prefix between two directory paths
+find_common_path_prefix() {
+    local path1="$1"
+    local path2="$2"
+    local temp_prefix=""
+    
+    IFS='/' read -ra parts1 <<< "$path1"
+    IFS='/' read -ra parts2 <<< "$path2"
+    
+    # Compare path components one by one
+    for i in $(indices parts1); do
+        if [[ $i -lt $(len parts2) && "${parts1[i]}" == "${parts2[i]}" ]]; then
+            temp_prefix="${temp_prefix:+$temp_prefix/}${parts1[i]}"
+        else
+            break
+        fi
+    done
+    
+    echo "$temp_prefix"
+}
+
+# Find common directory prefix among all staged files
+find_common_prefix() {
+    # Get unique directories from staged files
+    local directories
+    directories=$(echo "$staged_files" | while read -r file; do
+        dirname "$file"
+    done | sort -u)
+    
+    # Convert to array for easier processing
+    local dirs_array=()
+    while IFS= read -r dir; do
+        dirs_array+=("$dir")
+    done <<< "$directories"
+    
+    # Start with the first directory
+    local common_prefix="${dirs_array[0]}"
+    
+    # Compare with each remaining directory
+    for ((i=1; i<$(len dirs_array); i++)); do
+        common_prefix=$(find_common_path_prefix "$common_prefix" "${dirs_array[i]}")
+        # Early exit if no common prefix remains
+        [ -z "$common_prefix" ] && break
+    done
+    
+    echo "$common_prefix"
+}
+
+# Get common prefix and clean it up
+common_prefix=$(find_common_prefix)
+
+if [ -z "$common_prefix" ] || [ "$common_prefix" = "." ]; then
+    # No common directory, use repository name
+    if remote_url=$(git remote get-url origin 2>/dev/null); then
+        prefix=$(basename "$remote_url" .git)
+    else
+        prefix=$(basename "$(git rev-parse --show-toplevel)")
+    fi
+else
+    # Clean up the prefix
+    # These are heuristics quite specific to gdtk
+    prefix="$common_prefix"
+    
+    # Remove leading "src/" if present
+    prefix="${prefix#src/}"
+    
+    # Remove trailing "/src" or "/source" if present
+    prefix="${prefix%/src}"
+    prefix="${prefix%/source}"
+    
+    # Limit depth by taking only first MAX_PREFIX_DEPTH components
+    IFS='/' read -ra parts <<< "$prefix"
+    if [ $(len parts) -gt $MAX_PREFIX_DEPTH ]; then
+        prefix=$(IFS='/'; echo "${parts[*]:0:$MAX_PREFIX_DEPTH}")
+    fi
+fi
+
+# Handle existing commit message
+existing_msg=$(cat "$COMMIT_MSG_FILE")
+
+# Extract content after existing prefix (if any)
+if [[ "$existing_msg" =~ ^[a-zA-Z0-9_/-]+:[[:space:]]*(.*) ]]; then
+    content="${BASH_REMATCH[1]}"
+else
+    content="$existing_msg"
+fi
+
+# Write new message
+echo "${prefix}: ${content}" > "$COMMIT_MSG_FILE"
