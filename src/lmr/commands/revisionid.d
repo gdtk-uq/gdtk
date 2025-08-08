@@ -11,6 +11,7 @@ import std.getopt;
 import std.stdio;
 import std.string;
 
+import lmr.lmrbuild;
 import lmr.commands.command;
 import lmr.lmrconfig;
 
@@ -55,11 +56,11 @@ int main_(string[] args)
     }
 
     if (showFull) {
-        writeln(lmrCfg.fullRevisionId);
+        writeln(buildCfg.fullRevisionId);
         return 0;
     }
 
-    writeln(lmrCfg.revisionId);
+    writeln(buildCfg.revisionId);
     return 0;
 }
 

@@ -21,6 +21,7 @@ import geom.luawrap;
 import nm.number;
 import util.lua;
 
+import lmr.lmrbuild;
 import lmr.flowsolution : FluidBlockLite;
 import lmr.fluidblock : FluidBlock;
 import lmr.fvcell : FVCell;
@@ -52,7 +53,7 @@ public:
     	auto f = File(fname, "w");
         f.writefln("---");
         f.writefln("  version: \"%s\"", BLK_IO_VERSION);
-        f.writeln("  revision-id: ", lmrCfg.revisionId);
+        f.writeln("  revision-id: ", buildCfg.revisionId);
         f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
         f.writefln("  variables:");
         foreach (var; mCIO.variables) {
