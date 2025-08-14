@@ -263,7 +263,7 @@ endif
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
 # This rules out the use of gdc for compiling the code.
 DFLAGS += -dip1008
-DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
+DFLAGS += -I..
 
 ifeq ($(DEBUG_CHEM),1)
     DFLAGS += $(DVERSION)debug_chem
@@ -340,6 +340,11 @@ $(LIBLUA):
 $(LIBEQC):
 	cd $(EQC_DIR); make
 
+# Always make this, to ensure it's up-to-date
+.PHONY: env_config.d
+env_config.d:
+	@echo "Baking compile-time env options..."
+
 lmrconfig_with_str_subst.d: lmrconfig.d
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_FULL_REVISION_STRING_HERE/$(FULL_REVISION_STRING)/' \
@@ -376,13 +381,16 @@ LMR_LUA_DEPS := \
 	$(LMR_LUA_FILES) \
 	$(NM_LUA_FILES)
 
-lmr-debug: main.d lmrconfig_with_str_subst.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS)
-	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) $(OF)$@ \
+lmr-common: main.d env_config.d lmrconfig_with_str_subst.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$(output) \
 		$(DVERSION)newton_krylov $^ $(DLINKFLAGS)
 
-lmr: main.d lmrconfig_with_str_subst.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
-		$(DVERSION)newton_krylov $^ $(DLINKFLAGS)
+lmr: output = lmr
+lmr: lmr-common
+
+lmr-debug: output = lmr-debug
+lmr-debug: FLAVOUR_FLAGS = $(DEBUG_DFLAGS)
+lmr-debug: lmr-common
 
 lmr-run: lmrconfig_with_str_subst.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS)
 	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
@@ -395,7 +403,7 @@ lmr-run: lmrconfig_with_str_subst.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS)
 		$(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
-		-i=$(GAS_PACKAGE) -I=$(GAS_DIR) $(EQC_SRC_FILES) $(GZIP_FILES) \
+		-i=$(GAS_PACKAGE) $(EQC_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
@@ -576,3 +584,5 @@ lmr-complete:
 		'COMPREPLY=($$(if [ "$$COMP_CWORD" -eq 1 ]; then\n compgen -W "compute-norms prep-gas slice-flow prep-grids prep-mapped-cells probe-flow prep-reactions limiter2vtk snapshot2vtk prep-sim residual2vtk plot-diagnostics list-species slice-solid custom-script prep-energy-exchange gradient2vtk run revision-id structured2unstructured extract-line lmrZ-check-jacobian lmr-check-jacobian" "$${COMP_WORDS[1]}"\n fi))\n'\
 		'}\n'\
 		'complete -F _lmr_completions lmr\n' > lmr-complete.sh
+
+.PHONY: install clean gdtk-module lmr-common

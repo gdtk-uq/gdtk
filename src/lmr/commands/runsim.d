@@ -26,6 +26,7 @@ import dyaml;
 
 import util.json_helper : readJSONfile;
 
+import lmr.lmrbuild;
 import lmr.commands.command;
 import lmr.globalconfig;
 import lmr.lmrconfig;
@@ -36,7 +37,7 @@ version(mpi_parallel) {
     import mpi;
 }
 
-enum NumberType {default_type, real_values, complex_values};
+enum NumberType {default_type, real_values, complex_values}
 
 int determineNumberOfSnapshots()
 {
@@ -226,16 +227,18 @@ int main(string[] args)
 
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer simulation code.");
-        writeln("Revision-id: ", lmrCfg.revisionId);
-        writeln("Revision-date: ", lmrCfg.revisionDate);
-        writeln("Compiler-name: ", lmrCfg.compilerName);
-        writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
-        writeln("Number-type: PUT_NUMBER_TYPE_HERE");
+        writeln("Revision-id: ", BuildCfg.revisionId);
+        writeln("Revision-date: ", BuildCfg.revisionDate);
+        writeln("Compiler-name: ", BuildCfg.compilerName);
+        write("Parallel-flavour: ");
+        version(mpi_parallel) { writeln("parallel"); } else { writeln("shared"); }
+        write("Number-type: ", BuildCfg.numberType);
+        version(complex_numbers) { writeln("complex"); } else { writeln("real"); }
         write("Build-flavour: ");
         version(flavour_debug) { writeln("debug"); }
         version(flavour_profile) { writeln("profile"); }
         version(flavour_fast) { writeln("fast"); }
-        writeln("Build-date: ", lmrCfg.buildDate);
+        writeln("Build-date: ", __TIMESTAMP__);
     }
 
     int verbosity = 0;
