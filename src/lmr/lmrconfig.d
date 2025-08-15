@@ -59,11 +59,6 @@ struct LmrCfg {
     immutable string mappedCellsFile;
     immutable string transResidFile;
     immutable string dblVarFmt;
-    immutable string revisionId = "PUT_REVISION_STRING_HERE";
-    immutable string fullRevisionId = "PUT_FULL_REVISION_STRING_HERE";
-    immutable string revisionDate = "PUT_REVISION_DATE_HERE";
-    immutable string compilerName = "PUT_COMPILER_NAME_HERE";
-    immutable string buildDate = "PUT_BUILD_DATE_HERE";
 }
 
 LmrCfg lmrCfg;

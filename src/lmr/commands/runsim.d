@@ -227,18 +227,13 @@ int main(string[] args)
 
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer simulation code.");
-        writeln("Revision-id: ", BuildCfg.revisionId);
-        writeln("Revision-date: ", BuildCfg.revisionDate);
-        writeln("Compiler-name: ", BuildCfg.compilerName);
-        write("Parallel-flavour: ");
-        version(mpi_parallel) { writeln("parallel"); } else { writeln("shared"); }
-        write("Number-type: ", BuildCfg.numberType);
-        version(complex_numbers) { writeln("complex"); } else { writeln("real"); }
-        write("Build-flavour: ");
-        version(flavour_debug) { writeln("debug"); }
-        version(flavour_profile) { writeln("profile"); }
-        version(flavour_fast) { writeln("fast"); }
-        writeln("Build-date: ", __TIMESTAMP__);
+        writeln("Revision-id: ",      BuildCfg.revisionId);
+        writeln("Revision-date: ",    BuildCfg.revisionDate);
+        writeln("Compiler-name: ",    BuildCfg.compilerName);
+        writeln("Parallel-flavour: ", BuildCfg.parallelType);
+        writeln("Number-type: ",      BuildCfg.numberType);
+        writeln("Build-flavour: ",    BuildCfg.buildFlavour);
+        writeln("Build-date: ",       BuildCfg.buildDate);
     }
 
     int verbosity = 0;
