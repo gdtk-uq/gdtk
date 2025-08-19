@@ -550,7 +550,15 @@ void ausmdv(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQ
     number alphaL = 2.0 * pLrL / (pLrL + pRrR);
     number alphaR = 2.0 * pRrR / (pLrL + pRrR);
     // Common sound speed (eqn 33) and Mach numbers.
-    number am = fmax(aL, aR);
+    // Note that we have replaced the common sound speed am = max(aL, aR) with the smooth maximum (eqn 3)
+    // from Biswas et al., SMU: Smooth activation function for deep networks using smoothing maximum
+    // technique, CVPR 2021. The smooth max approaches max(aL, aR) when they differ significantly
+    // and ~0.5*(aL + aR) when they are close, ensuring differentiability.
+    // KAD 2025-08-18
+    number da = aL - aR;
+    number scale = 0.5*(aL + aR);
+    number eps = 1e-6 * scale + 1e-12; // smoothness parameter (tunable)
+    number am = 0.5*(aL + aR) + 0.5*sqrt(da*da + eps*eps);
     number ML = uL / am;
     number MR = uR / am;
     // Left state:
