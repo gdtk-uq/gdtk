@@ -84,7 +84,7 @@ config.mass_diffusion_model       = "ficks_first_law"
 config.diffusion_coefficient_type = "binary_diffusion"
 
 -- invsicid flux settings
-config.flux_calculator             = "adaptive_ldfss0_ldfss2"
+config.flux_calculator             = "adaptive_hanel_ausmdv"
 config.shock_detector              = "KAD"
 config.compression_tolerance       = -1.0
 config.interpolation_order         = 2
