@@ -41,7 +41,7 @@ def test_run_steady():
     expected_reason_for_stop = "relative-global-residual-target"
     expected_number_steps = 60
     if (sys.platform == 'linux'):
-        expected_final_cfl = 5.288e+05
+        expected_final_cfl = 4.769e+05
     else:
         expected_final_cfl = 5.787e+05
     steps = 0

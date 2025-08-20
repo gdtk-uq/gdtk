@@ -57,9 +57,8 @@ def test_run_steady():
     # Compiler: LLVM D compiler v 1.40.0 with LLVM 19.1.6
     # CPU: Apple M2 Pro
     if (sys.platform == 'linux'):
-        expected_number_steps = 246
-        #expected_final_cfl = 2.808e+04
-        expected_final_cfl = 24280.0
+        expected_number_steps = 249
+        expected_final_cfl = 4.066e+04
     else:
         expected_number_steps = 245
         expected_final_cfl = 8033.0

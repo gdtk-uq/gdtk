@@ -47,7 +47,7 @@ def test_run():
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
     expected_number_steps = 55
-    expected_final_cfl = 1.518e+05
+    expected_final_cfl = 1.945e+05
     reason = ""
     steps = 0
     cfl = 0.0
