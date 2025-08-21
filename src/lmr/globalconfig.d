@@ -1200,7 +1200,8 @@ final class GlobalConfig {
     // Set to true to halt simulation when any monitor point sees a large flow change.
     shared static double tolerance_in_T;   // Temperature change for the flow change.
     //
-    shared static bool electric_field_work;
+    shared static bool electric_field_work = false;
+    shared static bool electron_pressure_convection_term = false;
     //
     // For Daryl Bond and Vince Wheatley's Single-fluid MHD additions.
     //
@@ -1506,6 +1507,7 @@ public:
     //
     bool radiation;
     bool electric_field_work;
+    bool electron_pressure_convection_term;
     bool MHD;
     bool MHD_static_field;
     bool MHD_resistive;
@@ -1696,6 +1698,7 @@ public:
         //
         radiation = cfg.radiation;
         electric_field_work = cfg.electric_field_work;
+        electron_pressure_convection_term = cfg.electron_pressure_convection_term;
         MHD = cfg.MHD;
         MHD_static_field = cfg.MHD_static_field;
         MHD_resistive = cfg.MHD_resistive;
@@ -2066,6 +2069,9 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
     mixin(update_string("conductivity_model_name", "conductivity_model_name"));
 
+    mixin(update_bool("electric_field_work", "electric_field_work"));
+    mixin(update_bool("electron_pressure_convection_term", "electron_pressure_convection_term"));
+
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
     // have been set.  This is the first such check.  For details, see the function below.
@@ -2155,6 +2161,8 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  electric_field_count: ", cfg.electric_field_count);
         writeln("  solve_electric_field: ", cfg.solve_electric_field);
         writeln("  conductivity_model_name: ", cfg.conductivity_model_name);
+        writeln("  electric_field_work: ", cfg.electric_field_work);
+        writeln("  electron_pressure_convection_term: ", cfg.electron_pressure_convection_term);
     }
     configCheckPoint2();
     //

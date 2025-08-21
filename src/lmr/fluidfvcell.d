@@ -1266,7 +1266,7 @@ public:
             }
         }
 
-        if (myConfig.gmodel.is_plasma) {
+        if (myConfig.gmodel.is_plasma && myConfig.gmodel.n_modes > 0 && myConfig.electric_field_work) {
             // Work done on electrons due to electric field induced by charge separation
             // on scales less than the Debye length
             // FIXME: Only consistent with ambipolar diffusion. Currently this is up to
