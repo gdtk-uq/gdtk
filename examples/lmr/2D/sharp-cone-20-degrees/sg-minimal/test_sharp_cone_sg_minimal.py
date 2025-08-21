@@ -39,11 +39,16 @@ def test_run_steady():
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 60
+    # KAD, 2025-08-20
+    # Values for macos updated.
+    # Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
+    # CPU: Apple M1 Pro
     if (sys.platform == 'linux'):
+        expected_number_steps = 60
         expected_final_cfl = 4.769e+05
     else:
-        expected_final_cfl = 5.787e+05
+        expected_number_steps = 72
+        expected_final_cfl = 6.382e+05
     steps = 0
     cfl = 0.0
     lines = proc.stdout.split("\n")

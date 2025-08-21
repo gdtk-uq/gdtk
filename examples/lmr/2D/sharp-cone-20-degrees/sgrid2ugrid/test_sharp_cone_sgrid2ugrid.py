@@ -52,12 +52,16 @@ def test_run_steady():
     # that extra step makes quite a difference in expected CFL.
     #
     # So we specialise the expected values based on OS
+    # KAD, 2025-08-20
+    # Values for macos updated.
+    # Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
+    # CPU: Apple M1 Pro
     if (sys.platform == 'linux'):
         expected_number_steps = 58
         expected_final_cfl = 1.640e+04
     else:
         expected_number_steps = 54
-        expected_final_cfl = 7.946e+03
+        expected_final_cfl = 2.181e+04
     reason = ""
     steps = 0
     cfl = 0.0

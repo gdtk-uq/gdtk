@@ -12,14 +12,24 @@ sys.path.append(__file__.replace('test_aerofoil.py', '.')) # So that we can impo
 from loads import *
 
 # Solution generated on 21st of August 2024
-REF_LOADS={"Alpha":  3.0,
-"Inviscid x-Force": 15.479138121629932,
-"Inviscid y-Force": 262.59714106272236,
-"Viscous x-Force": 30.459896093918754,
-"Viscous y-Force": 0.2528720799466463,
-"Pitching Moment": -4.584229142740343,
-}
-
+# KAD, 2025-08-21
+# Values for macos added.
+# Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
+# CPU: Apple M1 Pro
+if (sys.platform == 'linux'):
+    REF_LOADS={"Alpha":  3.0,
+               "Inviscid x-Force": 15.479138121629932,
+               "Inviscid y-Force": 262.59714106272236,
+               "Viscous x-Force": 30.459896093918754,
+               "Viscous y-Force": 0.2528720799466463,
+               "Pitching Moment": -4.584229142740343,}
+else:
+    REF_LOADS={"Alpha":  3.0,
+               "Inviscid x-Force": 15.479127952676537,
+               "Inviscid y-Force": 262.5972502859998,
+               "Viscous x-Force": 30.45982960589959,
+               "Viscous y-Force": 0.2528709172772733,
+               "Pitching Moment": -4.584223054459798,}
     
 # This is used to change to local directory so that subprocess runs nicely.
 @pytest.fixture(autouse=True)

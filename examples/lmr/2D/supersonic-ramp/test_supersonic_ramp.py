@@ -88,8 +88,16 @@ def test_limiter():
 def test_solution():
 
     # file names
-    ref_solution_file = "reference_solution.dat" # generated on 2024-08-21 using commit a97145f696a7f10db47a0ff3cc2d508f16fec7e7
-    solution_file     = "solution_over_line.dat"
+    # KAD, 2025-08-21
+    # Values for macos added.
+    # Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
+    # CPU: Apple M1 Pro
+    if (sys.platform == 'linux'):
+        ref_solution_file = "reference_solution_linux.dat"
+        solution_file     = "solution_over_line.dat"
+    else:
+        ref_solution_file = "reference_solution_macos.dat"
+        solution_file     = "solution_over_line.dat"
 
     # call post process from plot_over_line.py
     plot_over_line.post_process(solution_file)
