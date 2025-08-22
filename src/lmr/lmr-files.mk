@@ -28,6 +28,8 @@ LMR_CORE_FILES = $(LMR)/block.d \
 	$(LMR)/history.d \
 	$(LMR)/init.d \
 	$(LMR)/jacobian.d \
+	$(LMR)/lmrbuild.d \
+	$(LMR)/lmrconfig.d \
 	$(LMR)/lmrerrors.d \
 	$(LMR)/lmrexceptions.d \
 	$(LMR)/lmrwarnings.d \
