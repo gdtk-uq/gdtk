@@ -36,6 +36,8 @@ configOptionsHidden = { -- hidden from user
    electric_field_count = 1000000000,
    solve_electric_field = false,
    conductivity_model_name="none",
+   electric_field_work = false,
+   electron_pressure_convection_term = false,
    --
    strang_splitting = "full_T_full_R",
    gasdynamic_update_scheme = "predictor_corrector",
