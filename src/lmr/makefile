@@ -296,6 +296,14 @@ endif
 
 default: $(PROGRAMS) $(SUB_PROGRAMS)
 
+# The pipe symbol (|) separates normal prerequisites from order-only ones.
+# Order-only prerequisites being updated do *not* cause the target to
+# become out of date. This prevents unneccesary rebuilds of targets when
+# only the build-time changes in `buildinfo.json`.
+#
+# Including `buildinfo.json` as a order-only prerequisite here ensures that
+# all programs have the same build information (i.e. build-time) when
+# calling `make install`.
 install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.json
 	- mkdir -p $(INSTALL_DIR)/bin
 	- mkdir -p $(INSTALL_DIR)/lib
@@ -360,9 +368,9 @@ define buildinfo
 }
 endef
 
-# Always make this, to ensure it's up-to-date
 buildinfo.json:
 	@echo "Creating 'buildinfo.json'..."
+	# Ensure the define becomes a proper multi-line string.
 	@echo '$(subst $(nl),\n,${buildinfo})' > $@
 
 LMR_SRC_DEPS := \
@@ -383,16 +391,20 @@ LMR_SRC_DEPS := \
 	$(NM_FILES) \
 	$(NTYPES_FILES) \
 	$(TINYENDIAN_FILES) \
-	$(UTIL_FILES) \
+	$(UTIL_FILES)
 	
 LMR_LUA_DEPS := \
-		$(GASDYN_LUA_FILES) \
-		$(GAS_LUA_FILES) \
-		$(KINETICS_LUA_FILES) \
-		$(LIBLUA) \
-		$(LMR_LUA_FILES) \
-		$(NM_LUA_FILES)
+	$(GASDYN_LUA_FILES) \
+	$(GAS_LUA_FILES) \
+	$(KINETICS_LUA_FILES) \
+	$(LIBLUA) \
+	$(LMR_LUA_FILES) \
+	$(NM_LUA_FILES)
 
+# A user-defined-function to reduce the duplication of the d-lang compiler
+# recipe. The output will be the caller recipe name and source files will
+# be all dependencies of the caller recipe.
+# All variables are inherited from the caller recipe.
 define build_lmr_entry
 $(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $^ $(DLINKFLAGS) -J=.
 endef
@@ -400,6 +412,9 @@ endef
 lmr: main.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json 
 	$(call build_lmr_entry)
 
+# The pattern of `target ...: variable-assignment` is termed
+# "target specific variable assignment". These variable assignments are
+# local to the context of the invoked target recipe.
 lmr-debug: FLAVOUR_FLAGS = $(DEBUG_DFLAGS)
 lmr-debug: main.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 	$(call build_lmr_entry)
@@ -412,6 +427,8 @@ lmrZ-run: DFLAGS += $(DVERSION)run_main $(DVERSION)complex_numbers
 lmrZ-run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 	$(call build_lmr_entry)
 
+# Multiple target speific variable assignments can be done across
+# separate rows, and are composed together.
 lmr-mpi-run: DFLAGS += $(DVERSION)run_main $(DVERSION)mpi_parallel
 lmr-mpi-run: DLINKFLAGS += -L-lmpi $(MPI_LIB_DIRS_SEARCH)
 lmr-mpi-run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) $(MPI_FILES) | buildinfo.json
@@ -470,5 +487,11 @@ lmr-complete:
 		'}\n'\
 		'complete -F _lmr_completions lmr\n' > lmr-complete.sh
 
+# Special Targets
+# ===============
+# The .INTERMEDIATE target will ensure that generated files are removed after
+# a successful recipe *if* the files did not exist prior to calling the recipe.
 .INTERMEDIATE: buildinfo.json
+# The .PHONY target will ensure that recipes are *always* run, regardless of
+# if their dependencies (if any) are out of date.
 .PHONY: install clean
