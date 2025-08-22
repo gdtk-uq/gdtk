@@ -409,41 +409,28 @@ define build_lmr_entry
 $(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $^ $(DLINKFLAGS) -J=.
 endef
 
-lmr: main.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json 
-	$(call build_lmr_entry)
-
 # The pattern of `target ...: variable-assignment` is termed
 # "target specific variable assignment". These variable assignments are
 # local to the context of the invoked target recipe.
 lmr-debug: FLAVOUR_FLAGS = $(DEBUG_DFLAGS)
-lmr-debug: main.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
+lmr-debug lmr: main.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json 
 	$(call build_lmr_entry)
 
-lmr-run: DFLAGS += $(DVERSION)run_main
-lmr-run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
+# Use the pattern rule % to match *all* lmrZ[...] targets.
+# Add complex specialisations to all complex versions of programs
+lmrZ%: DFLAGS += $(DVERSION)complex_numbers
+
+# Add MPI specialisations
+lmr-mpi-run lmrZ-mpi-run: DFLAGS += $(DVERSION)mpi_parallel
+lmr-mpi-run lmrZ-mpi-run: DLINKFLAGS += -L-lmpi $(MPI_LIB_DIRS_SEARCH)
+lmr-mpi-run lmrZ-mpi-run: $(MPI_FILES)
+
+# Enable runsim main() function for lmr-runners
+lmr%run: DFLAGS += $(DVERSION)run_main
+lmr%run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 	$(call build_lmr_entry)
 
-lmrZ-run: DFLAGS += $(DVERSION)run_main $(DVERSION)complex_numbers
-lmrZ-run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
-	$(call build_lmr_entry)
-
-# Multiple target speific variable assignments can be done across
-# separate rows, and are composed together.
-lmr-mpi-run: DFLAGS += $(DVERSION)run_main $(DVERSION)mpi_parallel
-lmr-mpi-run: DLINKFLAGS += -L-lmpi $(MPI_LIB_DIRS_SEARCH)
-lmr-mpi-run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) $(MPI_FILES) | buildinfo.json
-	$(call build_lmr_entry)
-
-lmrZ-mpi-run: DFLAGS += $(DVERSION)run_main $(DVERSION)complex_numbers $(DVERSION)mpi_parallel
-lmrZ-mpi-run: DLINKFLAGS += -L-lmpi $(MPI_LIB_DIRS_SEARCH)
-lmrZ-mpi-run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) $(MPI_FILES) | buildinfo.json
-	$(call build_lmr_entry)
-
-lmr-check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
-	$(call build_lmr_entry)
-
-lmrZ-check-jacobian: DFLAGS += $(DVERSION)complex_numbers
-lmrZ-check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
+lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 	$(call build_lmr_entry)
 
 #### Python programs
@@ -460,14 +447,8 @@ ugrid_partition:
 	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
 	cd $(GRID_DIR); cp ugrid_partition $(BUILD_DIR)/bin
 
-prep-chem:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-chem
-
-chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-chemkin2eilmer
-
-prep-kinetics:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-kinetics
+prep-chem chemkin2eilmer prep-kinetics:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-$@
 
 gdtk-module:
 	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
