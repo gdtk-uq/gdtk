@@ -1,238 +1,247 @@
 # this file gets included by makefile
 
-# TODO: S. Imran 26-Aug-2025: simplify this stuff, there are many more variables
-# than actually needed
+MAKEDEPS :=
+ifeq ($(DMD),ldc2)
+	MAKEDEPS := "--makedeps="
+else ifeq ($(DMD),dmd)
+	MAKEDEPS := "-makedeps="
+endif
 
-LMR_BUILD_DIR = $(abspath $(BUILD_DIR))
-LMR_OBJ_DIR := $(abspath $(LMR_BUILD_DIR)/src)
-LMR_CONFIG_BUILD_DIR = $(LMR_BUILD_DIR)/config
-SRC_DIR = $(abspath ../)
 
-# CORE SOURCE FILES (everything except commands)
-_LMR_CORE_SRCS_RAW = $(LMR_CORE_FILES) $(LMR_LUA_FILES) \
+SRC_DIR = ../
+BIN_DIR := $(BUILD_DIR)/bin
+LIB_DIR := $(BUILD_DIR)/lib
+SHARE_DIR := $(BUILD_DIR)/share
+DATA_DIR := $(BUILD_DIR)/data
+ETC_DIR := $(BUILD_DIR)/etc
+
+
+OBJ_DIR := $(BUILD_DIR)/src
+REAL_OBJ_DIR := $(OBJ_DIR)/real
+COMPLEX_OBJ_DIR := $(OBJ_DIR)/complex
+MPI_OBJ_DIR := $(OBJ_DIR)/mpi
+COMPLEX_MPI_OBJ_DIR := $(OBJ_DIR)/complex_mpi
+
+LMR_SRCS = $(abspath $(LMR_CORE_FILES) $(LMR_LUA_FILES) \
            $(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
            $(GEOM_FILES) $(GRID_FILES) \
            $(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
            $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
            $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
            $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-           $(DYAML_FILES) $(TINYENDIAN_FILES)
-_LMR_CORE_SRCS_ABS := $(abspath $(_LMR_CORE_SRCS_RAW))
-LMR_CORE_SRCS := $(patsubst $(SRC_DIR)/%,%,$(_LMR_CORE_SRCS_ABS))
+           $(DYAML_FILES) $(TINYENDIAN_FILES))
 
-_LMR_CMD_SRCS_RAW = $(LMR_CMD_FILES)
-_LMR_CMD_SRCS_ABS := $(abspath $(_LMR_CMD_SRCS_RAW))
-LMR_CMD_SRCS := $(patsubst $(SRC_DIR)/%,%,$(_LMR_CMD_SRCS_ABS))
+ABS_SRC = $(abspath $(SRC_DIR))
+LMR_CMD_SRCS = $(abspath $(LMR_CMD_FILES))
 
-_ALL_SRCS_ABS := $(_LMR_CORE_SRCS_ABS) $(_LMR_CMD_SRCS_ABS)
-CONTAINS_COMPLEX := $(shell grep -l "version(complex_numbers)" $(_ALL_SRCS_ABS))
-CONTAINS_MPI := $(shell grep -l "version(mpi_parallel)" $(_ALL_SRCS_ABS))
+REAL_OBJS := $(patsubst $(ABS_SRC)/%.d,$(REAL_OBJ_DIR)/%.o,$(LMR_SRCS))
+COMPLEX_OBJS := $(patsubst $(ABS_SRC)/%.d,$(COMPLEX_OBJ_DIR)/%.o,$(LMR_SRCS))
+MPI_OBJS := $(patsubst $(ABS_SRC)/%.d,$(MPI_OBJ_DIR)/%.o,$(LMR_SRCS))
+COMPLEX_MPI_OBJS := $(patsubst $(ABS_SRC)/%.d,$(COMPLEX_MPI_OBJ_DIR)/%.o,$(LMR_SRCS))
 
-LMR_BIN_DIR := $(LMR_BUILD_DIR)/bin
-
-LMR_REAL_OBJ_DIR := $(LMR_OBJ_DIR)/real
-LMR_COMPLEX_OBJ_DIR := $(LMR_OBJ_DIR)/complex
-LMR_MPI_OBJ_DIR := $(LMR_OBJ_DIR)/mpi
-LMR_COMPLEX_MPI_OBJ_DIR := $(LMR_OBJ_DIR)/complex_mpi
-
-LMR_CORE_REAL_OBJS := $(patsubst %.d,$(LMR_REAL_OBJ_DIR)/%.o,$(LMR_CORE_SRCS))
-LMR_CORE_COMPLEX_OBJS := $(patsubst %.d,$(LMR_COMPLEX_OBJ_DIR)/%.o,$(LMR_CORE_SRCS))
-LMR_CORE_MPI_OBJS := $(patsubst %.d,$(LMR_MPI_OBJ_DIR)/%.o,$(LMR_CORE_SRCS))
-LMR_CORE_COMPLEX_MPI_OBJS := $(patsubst %.d,$(LMR_COMPLEX_MPI_OBJ_DIR)/%.o,$(LMR_CORE_SRCS))
-
-LMR_CMD_REAL_OBJS := $(patsubst %.d,$(LMR_REAL_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
-LMR_CMD_COMPLEX_OBJS := $(patsubst %.d,$(LMR_COMPLEX_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
-LMR_CMD_MPI_OBJS := $(patsubst %.d,$(LMR_MPI_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
-LMR_CMD_COMPLEX_MPI_OBJS := $(patsubst %.d,$(LMR_COMPLEX_MPI_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
-
-LMR_REAL_OBJS := $(LMR_CORE_REAL_OBJS) $(LMR_CMD_REAL_OBJS)
-LMR_COMPLEX_OBJS := $(LMR_CORE_COMPLEX_OBJS) $(LMR_CMD_COMPLEX_OBJS)
-LMR_MPI_OBJS := $(LMR_CORE_MPI_OBJS) $(LMR_CMD_MPI_OBJS)
-LMR_COMPLEX_MPI_OBJS := $(LMR_CORE_COMPLEX_MPI_OBJS) $(LMR_CMD_COMPLEX_MPI_OBJS)
-
-LUA_DIR := $(abspath ../../extern/lua-5.4.3)
-LUA_BUILD_ROOT = ${BUILD_DIR}/extern/lua-5.4.3
-LUA_SRC_DIR = $(LUA_DIR)/src
-LPEG_SRC_DIR = $(LUA_DIR)/lpeg-1.0.2
-LUA_BUILD_DIR = $(LUA_BUILD_ROOT)/src
-LPEG_BUILD_DIR = $(LUA_BUILD_ROOT)/lpeg-1.0.2
-
-LIBLUA = $(LUA_BUILD_DIR)/liblua.a
-LIBLPEG = $(LPEG_BUILD_DIR)/lpeg.so
-
-EQC_BUILD_DIR = $(LMR_OBJ_DIR)/extern/eqc
-LIBEQC := $(EQC_BUILD_DIR)/libeqc.a
-
-PY_PROGRAMS_BIN := $(foreach prog,$(PY_PROGRAMS),$(LMR_BUILD_DIR)/bin/$(prog))
-LMR_PROGRAMS_BIN := $(foreach prog,$(PROGRAMS) $(SUB_PROGRAMS) $(AUX_PROGRAMS),$(LMR_BUILD_DIR)/bin/$(prog))
-LMR_PROGRAMS_BIN += $(PY_PROGRAMS_BIN)
-LMR_PROGRAMS_SHARE := $(foreach prog,$(AUX_PROGRAMS_SHARE),$(LMR_BUILD_DIR)/share/$(prog))
+REAL_CMD_OBJS := $(patsubst $(ABS_SRC)/%.d,$(REAL_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
+COMPLEX_CMD_OBJS := $(patsubst $(ABS_SRC)/%.d,$(COMPLEX_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
+MPI_CMD_OBJS := $(patsubst $(ABS_SRC)/%.d,$(MPI_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
+COMPLEX_MPI_CMD_OBJS := $(patsubst $(ABS_SRC)/%.d,$(COMPLEX_MPI_OBJ_DIR)/%.o,$(LMR_CMD_SRCS))
 
 ifeq ($(MPI_IMPLEMENTATION),OpenMPI)
-	MPI_FILES_BUILD = $(patsubst $(SRC_DIR)/%.d,$(LMR_OBJ_DIR)/%.d,$(abspath $(MPI_FILES)))
+	MPI_FILES_BUILD = $(patsubst ../%,$(OBJ_DIR)/%,$(MPI_FILES))
+	MPI_BUILD_DIR = $(patsubst ../%,$(OBJ_DIR)/%,$(MPI_DIR))
 endif
 
+COMPLEX_VERSION_FLAGS := $(DVERSION)complex_numbers
+MPI_VERSION_FLAGS := $(DVERSION)mpi_parallel -I$(MPI_BUILD_DIR)/source
+COMPLEX_MPI_VERSION_FLAGS := $(DVERSION)complex_numbers $(DVERSION)mpi_parallel -I$(MPI_BUILD_DIR)/source
+
+MPI_EXTRA_DEPS := $(MPI_FILES_BUILD)
+COMPLEX_MPI_EXTRA_DEPS := $(MPI_FILES_BUILD)
+
+REAL_NUMBER_TYPE := real
+COMPLEX_NUMBER_TYPE := complex
+MPI_NUMBER_TYPE := real
+COMPLEX_MPI_NUMBER_TYPE := complex
+
+REAL_PARALLEL_FLAVOUR := shared
+COMPLEX_PARALLEL_FLAVOUR := shared
+MPI_PARALLEL_FLAVOUR := $(MPI_IMPLEMENTATION)
+COMPLEX_MPI_PARALLEL_FLAVOUR := $(MPI_IMPLEMENTATION)
+
+LUA_DIR := ../../extern/lua-5.4.3
+LUA_SRC_DIR = $(LUA_DIR)/src
+LUA_BUILD_DIR = $(patsubst ../../%,$(BUILD_DIR)/%,$(LUA_SRC_DIR))
+LUA_TARGET = $(PLATFORM)
+LIBLUA = $(LUA_BUILD_DIR)/liblua.a
+
+LPEG_SRC_DIR = $(LUA_DIR)/lpeg-1.0.2
+LPEG_BUILD_DIR = $(patsubst ../../%,$(BUILD_DIR)/%,$(LPEG_SRC_DIR))
+LPEG_TARGET = $(PLATFORM)
+LIBLPEG = $(LPEG_BUILD_DIR)/lpeg.so
+
+EQC_SRC_DIR := $(EQC_DIR)
+EQC_BUILD_DIR = $(patsubst ../%,$(OBJ_DIR)/%,$(EQC_SRC_DIR))
+LIBEQC := $(EQC_BUILD_DIR)/libeqc.a
+
+PY_PROGRAMS_BIN := $(foreach prog,$(PY_PROGRAMS),$(BIN_DIR)/$(prog))
+PROGRAMS_BIN := $(foreach prog,$(PROGRAMS) $(SUB_PROGRAMS) $(AUX_PROGRAMS),$(BIN_DIR)/$(prog))
+PROGRAMS_SHARE := $(foreach prog,$(AUX_PROGRAMS_SHARE),$(SHARE_DIR)/$(prog))
+
 CIF_DIR := $(GAS_DIR)/species-database/collision-integrals
-COLLISION_INTEGRAL_FILES := $(CIF_DIR)/gupta_etal_1990_CI_data.lua \
-	$(CIF_DIR)/wright_etal_CI_data.lua \
-	$(CIF_DIR)/palmer_etal_CI_data.lua
+COLLISION_INTEGRAL_FILES := $(wildcard $(CIF_DIR)/*.lua)
 
-BUILD_DIRS := $(LMR_BIN_DIR) $(LMR_REAL_OBJ_DIR) $(LMR_COMPLEX_OBJ_DIR) $(LMR_MPI_OBJ_DIR) $(LMR_COMPLEX_MPI_OBJ_DIR)
+BUILD_DIRS := $(BIN_DIR) $(OBJ_DIR) $(LIB_DIR) $(REAL_OBJ_DIR) $(COMPLEX_OBJ_DIR) $(MPI_OBJ_DIR) $(COMPLEX_MPI_OBJ_DIR) $(LUA_BUILD_DIR) $(LPEG_BUILD_DIR) $(EQC_BUILD_DIR) $(DATA_DIR) $(ETC_DIR) $(SHARE_DIR) $(LMR_CONFIG_BUILD_DIR)
 
-VPATH = $(SRC_DIR)
+VERSIONS = REAL MPI COMPLEX COMPLEX_MPI
 
 default: $(PROGRAMS) $(SUB_PROGRAMS)
 
 $(BUILD_DIRS):
 	@mkdir -p $@
 
-$(LMR_REAL_OBJS): $(LMR_REAL_OBJ_DIR)/%.o: %.d | $(LMR_REAL_OBJ_DIR)
-	@echo "Compiling real: $< -> $@"
-	@mkdir -p $(dir $@)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $(DVERSION)newton_krylov $<
+define GEN_COMPILE_RULE_TEMPLATE
+$(1)_DEPS := $$(patsubst %.o,%.dep,$$($(1)_OBJS) \
+	$$($(1)_OBJ_DIR)/lmr/main.o \
+	$$($(1)_OBJ_DIR)/lmr/commands/runsim_gen.o \
+	$$($(1)_OBJ_DIR)/lmr/commands/checkjacobian.o \
+	$$($(1)_OBJ_DIR)/lmr/lmrconfig.o)
 
-$(LMR_COMPLEX_OBJS): $(LMR_COMPLEX_OBJ_DIR)/%.o: %.d | $(LMR_COMPLEX_OBJ_DIR)
-	@echo "Compiling complex: $< -> $@"
-	@mkdir -p $(dir $@)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $(DVERSION)newton_krylov $(DVERSION)complex_numbers $<
+$$($(1)_OBJS) $$($(1)_CMD_OBJS) $$($(1)_OBJ_DIR)/lmr/main.o $$($(1)_OBJ_DIR)/lmr/commands/checkjacobian.o: $$($(1)_OBJ_DIR)/%.o: $(ABS_SRC)/%.d $$($(1)_EXTRA_DEPS) | $$($(1)_OBJ_DIR)
+	@echo
+	@echo "Compiling $(1): $$< -> $$@"
+	@mkdir -p $$(dir $$@)
+	$$(DMD) $$(FLAVOUR_FLAGS) $$(DFLAGS) -c $$(OF)$$@ \
+		$$(MAKEDEPS)$$(patsubst %.o,%.dep,$$@) \
+		$$(DVERSION)newton_krylov $$($(1)_VERSION_FLAGS) $$<
 
-$(LMR_MPI_OBJS): $(LMR_MPI_OBJ_DIR)/%.o: %.d $(MPI_FILES_BUILD) | $(LMR_MPI_OBJ_DIR)
-	@echo "Compiling mpi: $< -> $@"
-	@mkdir -p $(dir $@)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $(DVERSION)newton_krylov $(DVERSION)mpi_parallel -I$(LMR_BUILD_DIR)/src/extern/OpenMPI/source $<
+$$($(1)_OBJ_DIR)/lmr/commands/runsim_gen.o: $(SRC_DIR)/lmr/commands/runsim.d | $$($(1)_OBJ_DIR)
+	@echo
+	@echo "Generating $$(dir $$@)/runsim_gen.d"
+	@mkdir -p $$(dir $$@)
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$$($(1)_PARALLEL_FLAVOUR)/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/$$($(1)_NUMBER_TYPE)/' \
+	    $$< > $$(dir $$@)runsim_gen.d
+	@echo
+	@echo "Compiling runsim_gen.d: $$(dir $$@)runsim_gen.d -> $$@"
+	$$(DMD) $$(FLAVOUR_FLAGS) $$(DFLAGS) -c $$(OF)$$@ \
+		$$(MAKEDEPS)$$(patsubst %.o,%.dep,$$@) \
+		$(DVERSION)newton_krylov $(DVERSION)run_main $$($(1)_VERSION_FLAGS) $$(dir $$@)runsim_gen.d
 
-$(LMR_COMPLEX_MPI_OBJS): $(LMR_COMPLEX_MPI_OBJ_DIR)/%.o: %.d $(MPI_FILES_BUILD) | $(LMR_COMPLEX_MPI_OBJ_DIR)
-	@echo "Compiling complex+mpi: $< -> $@"
-	@mkdir -p $(dir $@)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -c -of=$@ $(DVERSION)newton_krylov $(DVERSION)complex_numbers $(DVERSION)mpi_parallel -I$(LMR_BUILD_DIR)/src/extern/OpenMPI/source $<
+$$($(1)_OBJ_DIR)/lmr/lmrconfig.o: $(SRC_DIR)/lmr/lmrconfig.d | $$($(1)_OBJ_DIR)
+	@mkdir -p $$(dir $$@)
+	@echo
+	@echo "Generating $$(dir $$@)/lmrconfig.d"
+	sed -e 's/PUT_REVISION_STRING_HERE/$$(REVISION_STRING)/' \
+	    -e 's/PUT_FULL_REVISION_STRING_HERE/$$(FULL_REVISION_STRING)/' \
+	    -e 's/PUT_REVISION_DATE_HERE/$$(REVISION_DATE)/' \
+	    -e 's/PUT_COMPILER_NAME_HERE/$$(DMD)/' \
+	    -e 's/PUT_BUILD_DATE_HERE/$$(BUILD_DATE)/' \
+	    $$< > $$(dir $$@)lmrconfig.d
+	@echo
+	@echo "Compiling lmrconfig.d: $$(dir $$@)lmrconfig.d -> $$@"
+	$$(DMD) $$(FLAVOUR_FLAGS) $$(DFLAGS) -c $$(OF)$$@ \
+		$$(MAKEDEPS)$$(patsubst %.o,%.dep,$$@) \
+		$(DVERSION)newton_krylov $$($(1)_VERSION_FLAGS) $$(dir $$@)lmrconfig.d
 
-$(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d: lmrconfig.d
-	@mkdir -p $(dir $@)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-	    -e 's/PUT_FULL_REVISION_STRING_HERE/$(FULL_REVISION_STRING)/' \
-	    -e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
-	    -e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-	    -e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
-	    $< > $@
+-include $$($(1)_DEPS)
+endef
 
-$(LMR_CONFIG_BUILD_DIR)/runsim_shared.d: $(LMR_CMD)/runsim.d
-	@mkdir -p $(dir $@)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
-	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
-	    $< > $@
+$(foreach ver,$(VERSIONS),$(eval $(call GEN_COMPILE_RULE_TEMPLATE,$(ver))))
 
-$(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d: $(LMR_CMD)/runsim.d
-	@mkdir -p $(dir $@)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
-	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
-	    $< > $@
+define GEN_LIBRARY_RULE_TEMPLATE
+$$(LIB$(1)): | $$($(1)_BUILD_DIR)
+	ln -sf $$(abspath $$($(1)_SRC_DIR))/* $$($(1)_BUILD_DIR)/
+	$$(MAKE) -C $$($(1)_BUILD_DIR) $$($(1)_TARGET)
+endef
 
-$(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d: $(LMR_CMD)/runsim.d $(MPI_FILES_BUILD)
-	@mkdir -p $(dir $@)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
-	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
-	    $< > $@
+$(foreach ver,LUA LPEG EQC,$(eval $(call GEN_LIBRARY_RULE_TEMPLATE,$(ver))))
 
-$(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d: $(LMR_CMD)/runsim.d $(MPI_FILES_BUILD)
-	@mkdir -p $(dir $@)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
-	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
-	    $< > $@
-
-$(LUA_BUILD_DIR) $(LPEG_BUILD_DIR) $(EQC_BUILD_DIR):
-	mkdir -p $@
-
-$(LIBLPEG): | $(LPEG_BUILD_DIR)
-	ln -sf $(LPEG_SRC_DIR)/*.c $(LPEG_BUILD_DIR)
-	ln -sf $(LPEG_SRC_DIR)/*.h $(LPEG_BUILD_DIR)
-	ln -sf $(LPEG_SRC_DIR)/makefile $(LPEG_BUILD_DIR)
-	$(MAKE) -C $(LPEG_BUILD_DIR) $(PLATFORM)
-
-$(LIBLUA): | $(LUA_BUILD_DIR)
-	ln -sf $(LUA_SRC_DIR)/*.c $(LUA_BUILD_DIR)
-	ln -sf $(LUA_SRC_DIR)/*.h $(LUA_BUILD_DIR)
-	ln -sf $(LUA_SRC_DIR)/Makefile $(LUA_BUILD_DIR)
-	$(MAKE) -C $(LUA_BUILD_DIR) $(PLATFORM)
-
-$(LIBEQC): | $(EQC_BUILD_DIR)
-	ln -sf $(abspath $(EQC_DIR)/*.c) $(EQC_BUILD_DIR)
-	ln -sf $(abspath $(EQC_DIR)/*.h) $(EQC_BUILD_DIR)
-	ln -sf $(abspath $(EQC_DIR)/makefile) $(EQC_BUILD_DIR)
-	$(MAKE) -C $(EQC_BUILD_DIR)
-
+ifeq ($(MPI_IMPLEMENTATION),OpenMPI)
 $(MPI_FILES_BUILD):
-	cp -r $(MPI_DIR) $(LMR_BUILD_DIR)/src/extern
-	$(MAKE) -C $(LMR_BUILD_DIR)/src/extern/OpenMPI
+	cp -r $(MPI_DIR) $(MPI_BUILD_DIR)
+	$(MAKE) -C $(MPI_BUILD_DIR)
+endif
 
+.PHONY: lib
+lib: $(LIB_DIR)/lua_helper.lua
+$(LIB_DIR)/lua_helper.lua:
+	@cp -r ../lib $(BUILD_DIR)
+
+.PHONY: share
+share: $(SHARE_DIR)/diagnostics-term.gplot
+$(SHARE_DIR)/diagnostics-term.gplot:
+	@cp -r ./share $(BUILD_DIR)
 
 .PHONY: lua
-lua: $(LIBLUA) $(LIBLPEG)
-	-mkdir -p $(LMR_BUILD_DIR)/bin
-	-mkdir -p $(LMR_BUILD_DIR)/lib
-	@cp $(LUA_BUILD_DIR)/dgd-lua  $(LMR_BUILD_DIR)/bin
-	@cp $(LUA_BUILD_DIR)/dgd-luac  $(LMR_BUILD_DIR)/bin
-	@cp $(LPEG_BUILD_DIR)/lpeg.so  $(LMR_BUILD_DIR)/lib
-	cp lua-modules/*.lua $(LMR_BUILD_DIR)/lib/
-	cp $(NML_LUA_MODULES) $(LMR_BUILD_DIR)/lib/
-	cp $(KINETICS_DIR)/mechanism.lua $(KINETICS_DIR)/lex_elems.lua $(KINETICS_DIR)/reaction.lua $(LMR_BUILD_DIR)/lib/
+lua: $(LIBLUA) $(LIBLPEG) lib share | $(BIN_DIR) $(LIB_DIR)
+	@cp $(LUA_BUILD_DIR)/dgd-lua $(LUA_BUILD_DIR)/dgd-luac $(BIN_DIR)/
+	@cp $(LPEG_BUILD_DIR)/lpeg.so lua-modules/*.lua $(NML_LUA_MODULES) $(LIB_DIR)/
+	@cp $(KINETICS_DIR)/mechanism.lua $(KINETICS_DIR)/lex_elems.lua $(KINETICS_DIR)/reaction.lua $(LIB_DIR)/
 
 .PHONY: eqc
 eqc: $(LIBEQC)
 
-.PHONY: lmr
-lmr: $(LMR_BUILD_DIR)/bin/lmr
-$(LMR_BUILD_DIR)/bin/lmr: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_REAL_OBJS) $(LMR_CMD_REAL_OBJS) $(LIBEQC) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ \
-		$(DVERSION)newton_krylov $^ $(DLINKFLAGS)
+define DVERS
+$(foreach _dv,$(strip $1),$(DVERSION)$(_dv))
+endef
 
-.PHONY: lmr-run
-lmr-run: $(LMR_BUILD_DIR)/bin/lmr-run
-$(LMR_BUILD_DIR)/bin/lmr-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_REAL_OBJS) $(filter-out %/runsim.o,$(LMR_CMD_REAL_OBJS)) $(LIBLUA) $(LIBEQC)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ \
-		$(DVERSION)run_main $(DVERSION)newton_krylov \
-		$^ $(DLINKFLAGS)
+define BINARY_TEMPLATE
+.PHONY: $(1)
+$(1): $(BIN_DIR)/$(1)
 
-.PHONY: lmrZ-run
-lmrZ-run: $(LMR_BUILD_DIR)/bin/lmrZ-run
-$(LMR_BUILD_DIR)/bin/lmrZ-run: $(LMR_CONFIG_BUILD_DIR)/runsim_shared_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_COMPLEX_OBJS) $(filter-out %/runsim.o,$(LMR_CMD_COMPLEX_OBJS)) $(LIBEQC) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ \
-		$(DVERSION)run_main $(DVERSION)newton_krylov $(DVERSION)complex_numbers \
-		$^ $(DLINKFLAGS)
+$(BIN_DIR)/$(1): $$(strip $$($(1)_OBJS)) $$(strip $$($(1)_EXTRA_PREREQS))
+	@echo
+	@echo "Linking $(1): $$@"
+	$$(DMD) $$(FLAVOUR_FLAGS) $$(DFLAGS) $$(OF)$$@ \
+		$$(call DVERS,$$($(1)_DVERS)) $$(DVERSION)newton_krylov $$(strip $$($(1)_PRELINK)) $$^ $$(strip $$($(1)_POSTLINK)) $$(DLINKFLAGS)
+endef
 
-.PHONY: lmr-mpi-run
-lmr-mpi-run: $(LMR_BUILD_DIR)/bin/lmr-mpi-run
-$(LMR_BUILD_DIR)/bin/lmr-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_MPI_OBJS) $(filter-out %/runsim.o,$(LMR_CMD_MPI_OBJS)) $(LIBEQC) $(LIBLUA) $(MPI_FILES_BUILD)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ $(DVERSION)run_main \
-		$(DVERSION)newton_krylov $(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
-		-I$(LMR_BUILD_DIR)/src/extern/OpenMPI/source $^ -L-lmpi $(DLINKFLAGS) 
+TARGETS := \
+	lmr \
+	lmr-run \
+	lmrZ-run \
+	lmr-mpi-run \
+	lmrZ-mpi-run \
+	lmr-check-jacobian \
+	lmrZ-check-jacobian
 
-.PHONY: lmrZ-mpi-run
-lmrZ-mpi-run: $(LMR_BUILD_DIR)/bin/lmrZ-mpi-run
-$(LMR_BUILD_DIR)/bin/lmrZ-mpi-run: $(LMR_CONFIG_BUILD_DIR)/runsim_mpi_Z.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_COMPLEX_MPI_OBJS) $(filter-out %/runsim.o,$(LMR_CMD_COMPLEX_MPI_OBJS)) $(LIBEQC) $(LIBLUA) $(MPI_FILES_BUILD)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ $(DVERSION)run_main \
-		$(DVERSION)newton_krylov $(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
-		$(DVERSION)complex_numbers \
-		-I$(LMR_BUILD_DIR)/src/extern/OpenMPI/source $^ -L-lmpi $(DLINKFLAGS)
+lmr_OBJS := $(REAL_OBJ_DIR)/lmr/main.o $(REAL_CMD_OBJS) $(REAL_OBJS) $(REAL_OBJ_DIR)/lmr/lmrconfig.o
+lmr_EXTRA_PREREQS := $(LIBEQC) $(LIBLUA)
 
-.PHONY: lmr-check-jacobian
-lmr-check-jacobian: $(LMR_BUILD_DIR)/bin/lmr-check-jacobian
-$(LMR_BUILD_DIR)/bin/lmr-check-jacobian: $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_REAL_OBJS) $(filter-out %/checkjacobian.o,$(LMR_CMD_REAL_OBJS)) $(LMR_CMD)/checkjacobian.d $(LIBEQC) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_REAL_OBJ_DIR) $(OF)$@ \
-		$(DVERSION)newton_krylov $^ $(DLINKFLAGS)
+lmr-run_OBJS := $(REAL_OBJ_DIR)/lmr/commands/runsim_gen.o $(REAL_OBJ_DIR)/lmr/commands/command.o $(REAL_OBJ_DIR)/lmr/commands/cmdhelper.o $(REAL_OBJS) $(REAL_OBJ_DIR)/lmr/lmrconfig.o
+lmr-run_EXTRA_PREREQS := $(LIBLUA) $(LIBEQC)
+lmr-run_DVERS := run_main
 
-.PHONY: lmrZ-check-jacobian
-lmrZ-check-jacobian: $(LMR_BUILD_DIR)/bin/lmrZ-check-jacobian
-$(LMR_BUILD_DIR)/bin/lmrZ-check-jacobian: $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_COMPLEX_OBJS) $(filter-out %/checkjacobian.o,$(LMR_CMD_COMPLEX_OBJS)) $(LMR_CMD)/checkjacobian.d $(LIBEQC) $(LIBLUA)
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_COMPLEX_OBJ_DIR) $(OF)$@ \
-		$(DVERSION)newton_krylov $(DVERSION)complex_numbers $^ $(DLINKFLAGS)
+lmrZ-run_OBJS := $(COMPLEX_OBJ_DIR)/lmr/commands/runsim_gen.o $(COMPLEX_OBJS) $(COMPLEX_OBJ_DIR)/lmr/commands/command.o $(COMPLEX_OBJ_DIR)/lmr/commands/cmdhelper.o $(COMPLEX_OBJ_DIR)/lmr/lmrconfig.o
+lmrZ-run_EXTRA_PREREQS := $(LIBEQC) $(LIBLUA)
+lmrZ-run_DVERS := run_main complex_numbers
+
+lmr-mpi-run_OBJS := $(MPI_OBJ_DIR)/lmr/commands/runsim_gen.o $(MPI_OBJS) $(MPI_OBJ_DIR)/lmr/commands/command.o $(MPI_OBJ_DIR)/lmr/commands/cmdhelper.o $(MPI_OBJ_DIR)/lmr/lmrconfig.o
+lmr-mpi-run_EXTRA_PREREQS := $(LIBEQC) $(LIBLUA) $(MPI_FILES_BUILD)
+lmr-mpi-run_DVERS := run_main mpi_parallel
+lmr-mpi-run_PRELINK := -I$(BUILD_DIR)/src/extern/OpenMPI/source
+lmr-mpi-run_POSTLINK := -L-lmpi
+
+lmrZ-mpi-run_OBJS := $(COMPLEX_MPI_OBJ_DIR)/lmr/commands/runsim_gen.o $(COMPLEX_MPI_OBJS) $(COMPLEX_MPI_OBJ_DIR)/lmr/commands/command.o $(COMPLEX_MPI_OBJ_DIR)/lmr/commands/cmdhelper.o $(COMPLEX_MPI_OBJ_DIR)/lmr/lmrconfig.o
+lmrZ-mpi-run_EXTRA_PREREQS := $(LIBEQC) $(LIBLUA) $(MPI_FILES_BUILD)
+lmrZ-mpi-run_DVERS := run_main mpi_parallel complex_numbers
+lmrZ-mpi-run_PRELINK := -I$(BUILD_DIR)/src/extern/OpenMPI/source
+lmrZ-mpi-run_POSTLINK := -L-lmpi
+
+lmr-check-jacobian_OBJS := $(REAL_OBJS) $(REAL_OBJ_DIR)/lmr/commands/checkjacobian.o $(REAL_CMD_OBJS) $(REAL_OBJ_DIR)/lmr/lmrconfig.o
+lmr-check-jacobian_EXTRA_PREREQS := $(LMR_CMD)/checkjacobian.d $(LIBEQC) $(LIBLUA)
+
+lmrZ-check-jacobian_OBJS := $(COMPLEX_OBJS) $(COMPLEX_OBJ_DIR)/lmr/commands/checkjacobian.o $(COMPLEX_CMD_OBJS) $(COMPLEX_OBJ_DIR)/lmr/lmrconfig.o
+lmrZ-check-jacobian_EXTRA_PREREQS := $(LIBEQC) $(LIBLUA)
+lmrZ-check-jacobian_DVERS := complex_numbers
+
+$(foreach t,$(TARGETS),$(eval $(call BINARY_TEMPLATE,$(t))))
 
 # if FLAVOUR=fast, then all of the build .o files will use that.
 # this means that if the flavour is not debug, then the best way to additionally build lmr-debug
 # is from scratch, giving it all relevant source files
 .PHONY: lmr-debug
-lmr-debug: $(LMR_BUILD_DIR)/bin/lmr-debug
+lmr-debug: $(BIN_DIR)/lmr-debug
 ifneq ($(FLAVOUR), debug)
-$(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+$(BIN_DIR)/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
@@ -240,7 +249,7 @@ $(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_st
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ \
+	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) -od=$(OBJ_DIR)/lmr $(OF)$@ \
 		$(DVERSION)newton_krylov \
 		main.d \
 		$(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_str_subst.d \
@@ -255,23 +264,23 @@ $(LMR_BUILD_DIR)/bin/lmr-debug: main.d $(LMR_CONFIG_BUILD_DIR)/lmrconfig_with_st
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
 else
-$(LMR_BUILD_DIR)/bin/lmr-debug: $(LMR_BUILD_DIR)/bin/lmr
+$(BIN_DIR)/lmr-debug: $(BIN_DIR)/lmr
 	@mkdir -p $(dir $@)
 	cp $< $@
 endif
 	
-$(PY_PROGRAMS_BIN): $(LMR_BUILD_DIR)/bin/lmr-%: python-programs/lmr_%.py
-	@mkdir -p $(LMR_BUILD_DIR)/bin
+$(PY_PROGRAMS_BIN): $(BIN_DIR)/lmr-%: python-programs/lmr_%.py
+	@mkdir -p $(BIN_DIR)
 	cp $< $@
 	chmod +x $@
 
-$(addprefix $(LMR_BUILD_DIR)/etc/,$(ETC_FILES)): $(ETC_FILES)
-	@mkdir -p $(LMR_BUILD_DIR)/etc
+$(addprefix $(ETC_DIR)/,$(ETC_FILES)): $(ETC_FILES)
+	@mkdir -p $(ETC_DIR)
 	cp $< $@
 
 .PHONY: lmr-complete
-lmr-complete: $(LMR_BUILD_DIR)/share/lmr-complete.sh
-$(LMR_BUILD_DIR)/share/lmr-complete.sh:
+lmr-complete: $(SHARE_DIR)/lmr-complete.sh
+$(SHARE_DIR)/lmr-complete.sh:
 	echo '#/usr/bin/env bash\n' \
 		'_lmr_completions()\n'\
 		'{\n'\
@@ -280,49 +289,50 @@ $(LMR_BUILD_DIR)/share/lmr-complete.sh:
 		'complete -F _lmr_completions lmr\n' > $@
 
 .PHONY: prep-gas
-prep-gas: $(LMR_BUILD_DIR)/bin/prep-gas
-$(LMR_BUILD_DIR)/bin/prep-gas: $(GAS_DIR)/prep_gas.lua $(LMR_BUILD_DIR)/data/species-database.lua \
-		$(GAS_DIR)/species-database/species-list.txt $(GAS_DIR)/species_data_converter.lua $(COLLISION_INTEGRAL_FILES)
-	@mkdir -p $(LMR_BUILD_DIR)/bin
-	cp $(GAS_DIR)/prep_gas.lua $(LMR_BUILD_DIR)/bin/prep-gas; chmod +x $(LMR_BUILD_DIR)/bin/prep-gas
-	cp $(GAS_DIR)/species_data_converter.lua $(LMR_BUILD_DIR)/bin/species-data-converter; \
-		chmod +x $(LMR_BUILD_DIR)/bin/species-data-converter
-	@mkdir -p $(LMR_BUILD_DIR)/data
-	cp $(GAS_DIR)/species-database/species-list.txt $(LMR_BUILD_DIR)/data/
-	cp $(COLLISION_INTEGRAL_FILES) $(LMR_BUILD_DIR)/data/
+prep-gas: $(BIN_DIR)/prep-gas
+$(BIN_DIR)/prep-gas: $(DATA_DIR)/species-database.lua $(abspath $(GAS_DIR)/species_data_converter.lua $(COLLISION_INTEGRAL_FILES) $(GAS_DIR)/prep_gas.lua)
+	@mkdir -p $(BIN_DIR)
+	cp $(GAS_DIR)/prep_gas.lua $(BIN_DIR)/prep-gas; chmod +x $(BIN_DIR)/prep-gas
+	cp $(GAS_DIR)/species_data_converter.lua $(BIN_DIR)/species-data-converter; \
+		chmod +x $(BIN_DIR)/species-data-converter
+	@mkdir -p $(DATA_DIR)
+	cp $(COLLISION_INTEGRAL_FILES) $(DATA_DIR)/
 
-$(LMR_BUILD_DIR)/data/species-database.lua:
-	@mkdir $(LMR_BUILD_DIR)/data
-	$(MAKE) SPECIES_DATABASE_DIR=$(LMR_BUILD_DIR)/data -C $(GAS_DIR)/species-database
+.PHONY: species-database
+species-database: $(DATA_DIR)/species-database.lua
+$(DATA_DIR)/species-database.lua:
+	@mkdir -p $(BUILD_DIR)/src/gas/species-database
+	@ln -sf $(abspath $(abspath $(GAS_DIR)/species-database)/*) $(BUILD_DIR)/src/gas/species-database/
+	$(MAKE) -C $(BUILD_DIR)/src/gas/species-database species-database.lua
+	@mkdir -p $(DATA_DIR)
+	@cp $(BUILD_DIR)/src/gas/species-database/species-list.txt $(DATA_DIR)/
+	@cp $(BUILD_DIR)/src/gas/species-database/species-database.lua $(DATA_DIR)/
 
 .PHONY: ugrid_partition
-ugrid_partition: $(LMR_BUILD_DIR)/bin/ugrid_partition
-$(LMR_BUILD_DIR)/bin/ugrid_partition: $(GRID_DIR)/ugrid_partition.d
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(LMR_OBJ_DIR)/lmr $(OF)$@ $< $(DLINKFLAGS)
-	
+ugrid_partition: $(BIN_DIR)/ugrid_partition
+$(BIN_DIR)/ugrid_partition: $(GRID_DIR)/ugrid_partition.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -od=$(OBJ_DIR)/lmr $(OF)$@ $< $(DLINKFLAGS)
 
-.PHONY: prep-chem
-prep-chem: $(LMR_BUILD_DIR)/bin/prep-chem
-$(LMR_BUILD_DIR)/bin/prep-chem: $(KINETICS_DIR)/prep_chem.lua lua
-	- mkdir -p $(LMR_BUILD_DIR)/bin
-	cp $< $@; chmod +x $@
+KIN_PROGS = prep-chem chemkin2eilmer prep-kinetics
+prep-chem_lua = $(KINETICS_DIR)/prep_chem.lua
+chemkin2eilmer_lua = $(KINETICS_DIR)/chemkin2eilmer.lua
+prep-kinetics_lua = $(KINETICS_DIR)/prep_kinetics.lua
 
-.PHONY: chemkin2eilmer
-chemkin2eilmer: $(LMR_BUILD_DIR)/bin/chemkin2eilmer
-$(LMR_BUILD_DIR)/bin/chemkin2eilmer: $(KINETICS_DIR)/chemkin2eilmer.lua lua
-	- mkdir -p $(LMR_BUILD_DIR)/bin
-	cp $< $@; chmod +x $@
+define GEN_KINETICS_PROGRAM_RULE_TEMPLATE
+.PHONY: $(1)
+$(1): $$(BIN_DIR)/$(1)
+$$(BIN_DIR)/$(1): $$($(1)_lua)
+	@echo "Installing kinetics program: $$< -> $$@"
+	@mkdir -p $$(BIN_DIR)
+	cp $$< $$@; chmod +x $$@
+endef
 
-.PHONY: prep-kinetics
-prep-kinetics: $(LMR_BUILD_DIR)/bin/prep-kinetics 
-$(LMR_BUILD_DIR)/bin/prep-kinetics: $(KINETICS_DIR)/prep_kinetics.lua lua
-	- mkdir -p $(LMR_BUILD_DIR)/bin
-	cp $< $@; chmod +x $@
+$(foreach prog,$(KIN_PROGS),$(eval $(call GEN_KINETICS_PROGRAM_RULE_TEMPLATE,$(prog))))
 
 .PHONY: gdtk-module
-gdtk-module: $(LMR_BUILD_DIR)/share/gdtk-module
-$(LMR_BUILD_DIR)/share/gdtk-module:
-	@mkdir -p $(LMR_BUILD_DIR)/share
+gdtk-module: $(SHARE_DIR)/gdtk-module
+$(SHARE_DIR)/gdtk-module:
+	@mkdir -p $(SHARE_DIR)
 	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
 	    -e 's+PUT_COMPILER_NAME_HERE+$(DMD)+' \
 	    -e 's+PUT_INSTALL_DIR_HERE+$(INSTALL_DIR)+' \
@@ -332,21 +342,13 @@ $(LMR_BUILD_DIR)/share/gdtk-module:
 	    -e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
 	    ../eilmer/gdtk-module-template > $@
 
-.PHONY: lib
-lib:
-	@cp -r ../lib $(LMR_BUILD_DIR)
-
-.PHONY: share
-share:
-	@cp -r ./share $(LMR_BUILD_DIR)
-
-install: $(LMR_PROGRAMS_BIN) $(LMR_PROGRAMS_SHARE) $(addprefix $(LMR_BUILD_DIR)/etc/,$(ETC_FILES)) lib share
-	-mkdir $(INSTALL_DIR)
-	cp -r $(LMR_BUILD_DIR)/bin $(INSTALL_DIR)
-	cp -r $(LMR_BUILD_DIR)/lib $(INSTALL_DIR)
-	cp -r $(LMR_BUILD_DIR)/etc $(INSTALL_DIR)
-	cp -r $(LMR_BUILD_DIR)/data $(INSTALL_DIR)
-	cp -r $(LMR_BUILD_DIR)/share $(INSTALL_DIR)
+install: $(PROGRAMS_BIN) $(PY_PROGRAMS_BIN) $(PROGRAMS_SHARE) $(addprefix $(ETC_DIR)/,$(ETC_FILES)) lib share lua | $(BIN_DIR) $(LIB_DIR) $(ETC_DIR) $(DATA_DIR) $(SHARE_DIR)
+	@mkdir -p $(INSTALL_DIR)
+	@cp -r $(BIN_DIR) $(INSTALL_DIR)
+	@cp -r $(LIB_DIR) $(INSTALL_DIR)
+	@cp -r $(ETC_DIR) $(INSTALL_DIR)
+	@cp -r $(DATA_DIR) $(INSTALL_DIR)
+	@cp -r $(SHARE_DIR) $(INSTALL_DIR)
 
 clean:
-	- rm -rf $(LMR_BUILD_DIR)
+	- rm -rf $(BUILD_DIR)

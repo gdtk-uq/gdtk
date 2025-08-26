@@ -299,4 +299,4 @@ endif
 
 DLINKFLAGS += $(LINKER_FLAGS)
 
-include lmr-rules.mk
+include $(LMR_DIR)lmr-rules.mk
