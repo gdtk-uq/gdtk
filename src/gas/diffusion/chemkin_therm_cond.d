@@ -173,3 +173,27 @@ version(chemkin_therm_cond_test) {
         return 0;
     }
 }
+
+unittest {
+    import util.msg_service;
+
+    /// First, let's test the ChemkinThermCondCurve on its own.
+    double[string] params = ["T_lower":200.0, "T_upper":3500.0,
+                             "A":-2.119099884033e+01, "B":5.186927559697e+00,
+                             "C":-4.741229077145e-01, "D":1.610702319175e-02];
+    auto chemkinCurve = ChemkinThermCondCurve(params);
+    assert(isClose(10.124382229603, chemkinCurve.eval(2000.0), 1.0e-6), "Uh-oh");
+
+    /*
+    /// Next, let's test the creation and functionality
+    /// of a ChemkinThermalConductivity object.
+    auto L = init_lua_State();
+    doLuaFile(L, "sample-data/CO2-therm-cond.lua");
+    lua_getglobal(L, "chemkin");
+    auto co2Chemkin = createChemkinThermalConductivity(L);
+    lua_close(L);
+    auto Q = GasState(1, 1);
+    // Q.T = 3500.0;
+    assert(isClose(0.185719655303, co2Chemkin.eval(Q, 3500.0), 1.0e-6), failedUnitTest());
+    */
+}

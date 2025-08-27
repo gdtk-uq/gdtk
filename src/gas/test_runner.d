@@ -1,12 +1,16 @@
 // test_runner.d
-import core.runtime;
 import core.exception;
-import std.stdio;
-import std.string;
+import core.runtime;
+
 import std.algorithm;
-import std.range;
 import std.conv;
 import std.format;
+import std.getopt;
+import std.range;
+import std.stdio;
+import std.string;
+
+import gas;
 
 // Helper functions for adaptive padding
 string centerPadded(string text, char padChar, int totalWidth = 79) {
@@ -50,7 +54,16 @@ UnitTestResult customUnitTester()
 {
     import std.datetime.stopwatch;
     import core.runtime : UnitTestResult;
-    
+
+    string[] args = Runtime.args;
+    string rootModule = "";
+    string[] excludePatterns;
+    auto opts = getopt(
+        args,
+        "module", &rootModule,
+        "exclude", &excludePatterns,
+    );
+
     auto sw = StopWatch(AutoStart.yes);
     TestStats stats;
     
@@ -60,10 +73,16 @@ UnitTestResult customUnitTester()
     // Collect modules with unit tests
     ModuleInfo*[] modules;
     foreach (m; ModuleInfo) {
+        if (!(m.name).startsWith(rootModule)) {
+            continue;
+        }
         if (m !is null && m.unitTest !is null) {
             modules ~= m;
         }
     }
+
+    // Sort the modules so they are easier to look through
+    modules.sort!((a, b) => a.name < b.name);
     
     if (modules.length == 0) {
         writeln("No tests found.");
@@ -73,53 +92,42 @@ UnitTestResult customUnitTester()
     writefln("collected %d test module%s", modules.length, modules.length == 1 ? "" : "s");
     writeln();
     
-    // Progress bar style output
-    write("Running tests: ");
-    stdout.flush();
-    
+    // Verbose pytest-style output
     foreach (i, m; modules) {
-        string moduleName = m.name;
-        
-        // Shorten module names for cleaner display
-        if (moduleName.canFind('.')) {
-            auto parts = moduleName.split('.');
-            moduleName = parts[$ - 1]; // Just the last part
-        }
+        string testName = m.name ~ "::unittest";
+        write(testName ~ " ... ");
+        stdout.flush();
         
         try {
-            m.unitTest()();  // Call the function pointer correctly
-            write(GREEN ~ "." ~ RESET);
+            auto testFunc = m.unitTest();
+            testFunc();
+            writeln(GREEN ~ "PASSED" ~ RESET);
             stats.passed++;
         } catch (AssertError e) {
-            write(RED ~ "F" ~ RESET);
+            writeln(RED ~ "FAILED" ~ RESET);
             stats.failed++;
             
             // Store failure info for later display
-            auto failureMsg = format("%s::%s\n    %s:%s - %s", 
-                                   moduleName, 
-                                   "unittest", 
+            auto failureMsg = format("%s\n    %s:L%s - %s", 
+                                   testName,
                                    e.file.split('/').back.split('\\').back, // Just filename
                                    e.line, 
                                    e.msg.length ? e.msg : "assertion failed");
             stats.failures ~= failureMsg;
         } catch (Throwable t) {
-            write(YELLOW ~ "E" ~ RESET);
+            writeln(YELLOW ~ "ERROR" ~ RESET);
             stats.failed++;
             
-            auto failureMsg = format("%s::%s\n    ERROR: %s", 
-                                   moduleName, 
-                                   "unittest", 
+            auto failureMsg = format("%s\n    ERROR: %s", 
+                                   testName,
                                    t.msg);
             stats.failures ~= failureMsg;
         }
-        
-        stdout.flush();
     }
     
     sw.stop();
     stats.duration = sw.peek().total!"msecs" / 1000.0;
     
-    writeln();
     writeln();
     
     // Show failures if any
@@ -138,24 +146,21 @@ UnitTestResult customUnitTester()
     string summaryColor = stats.failed > 0 ? RED : GREEN;
     string status = stats.failed > 0 ? "FAILED" : "PASSED";
     
-    write(summaryColor ~ BOLD);
-    
     if (stats.failed > 0) {
         string summaryText = format(" %s, %d failed, %d passed in %.2fs ", 
                                    status, stats.failed, stats.passed, stats.duration);
-        writef(summaryColor ~ BOLD ~ centerPadded(summaryText, '=') ~ RESET);
+        writeln(summaryColor ~ BOLD ~ centerPadded(summaryText, '=') ~ RESET);
     } else {
         string summaryText = format(" %d passed in %.2fs ", stats.passed, stats.duration);
-        writef(summaryColor ~ BOLD ~ centerPadded(summaryText, '=') ~ RESET);
+        writeln(summaryColor ~ BOLD ~ centerPadded(summaryText, '=') ~ RESET);
     }
     
-    writeln(RESET);
-    
     return UnitTestResult(
-        stats.passed + stats.failed,  // executed
-        stats.passed,                 // passed
-        false,                       // summarize - suppress default message
-        stats.failed == 0            // result
+        executed: stats.passed + stats.failed,  // executed
+        passed: stats.passed,                 // passed
+        summarize: false,                       // summarize - suppress default message
+        runMain: true,
+        // stats.failed == 0            // result
     );
 }
 
@@ -164,7 +169,4 @@ static this()
     Runtime.extendedModuleUnitTester = &customUnitTester;
 }
 
-void main()
-{
-    writeln("Test discovery and execution handled by custom runner...");
-}
+void main() {}

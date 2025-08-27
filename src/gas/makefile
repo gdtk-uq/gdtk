@@ -286,6 +286,18 @@ univariate_lut_demo: univariate_lut_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_L
 
 # Individual test targets
 
+.PHONY: test2
+test2: test_runner
+	- exec ./test_runner --module gas
+
+test_runner: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
+	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
+	$(LIBEQC) $(LIBLUA) test_runner.d
+	$(DMD) $(OF)$@ $(DFLAGS) --unittest test_runner.d \
+		$(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
+		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+
 cea_therm_cond_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(LIBEQC) $(LIBLUA)
@@ -301,15 +313,6 @@ chemkin_therm_cond_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-test_runner: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA) test_runner.d
-	$(DMD) $(OF)$@ $(DFLAGS) --unittest test_runner.d \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-	- ./test_runner
 
 chemkin_viscosity_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
@@ -514,14 +517,6 @@ wilke_mixing_therm_cond_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
 
 wilke_mixing_viscosity_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-co2gas_sw_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(LIBEQC) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
