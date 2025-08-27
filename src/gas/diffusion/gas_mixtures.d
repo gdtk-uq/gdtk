@@ -76,31 +76,27 @@ private:
 }
 
 
-version(gas_mixtures_test) {
-    int main() {
-        import util.msg_service;
+unittest {
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
-        string[] speciesNames;
-        getArrayOfStrings(L, "species", speciesNames);
-        auto tp = new GasMixtureTransProps(L, speciesNames);
-        lua_close(L);
+    auto L = init_lua_State();
+    doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
+    string[] speciesNames;
+    getArrayOfStrings(L, "species", speciesNames);
+    auto tp = new GasMixtureTransProps(L, speciesNames);
+    lua_close(L);
 
-        auto gs = GasState(5, 0);
-        gs.p = 1.0e6;
-        gs.T = 4000.0;
-        gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-        tp.updateTransProps(gs);
-        assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6), failedUnitTest());
+    auto gs = GasState(5, 0);
+    gs.p = 1.0e6;
+    gs.T = 4000.0;
+    gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
+    tp.updateTransProps(gs);
+    assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6));
 
-        return 0;
-    }
 }

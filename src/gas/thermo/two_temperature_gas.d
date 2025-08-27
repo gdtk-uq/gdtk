@@ -701,37 +701,31 @@ private:
     } // version()
 }
 
-version(two_temperature_gas_test) {
-    int main() {
-        import util.msg_service;
+unittest {
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    auto L = init_lua_State();
+    doLuaFile(L, "sample-data/five-species-air.lua");
+    string[] speciesNames;
+    getArrayOfStrings(L, "species", speciesNames);
+    auto tm = new TwoTemperatureGasMixture(L, speciesNames);
+    lua_close(L);
+    auto gs = GasState(5, 1);
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/five-species-air.lua");
-        string[] speciesNames;
-        getArrayOfStrings(L, "species", speciesNames);
-        auto tm = new TwoTemperatureGasMixture(L, speciesNames);
-        lua_close(L);
-        auto gs = GasState(5, 1);
+    gs.p = 1.0e6;
+    gs.T = 2000.0;
+    gs.T_modes[0] = gs.T;
+    gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
+    tm.updateFromPT(gs);
+    assert(approxEqualNumbers(to!number(11_801_825.6), gs.u + gs.u_modes[0], 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6));
 
-        gs.p = 1.0e6;
-        gs.T = 2000.0;
-        gs.T_modes[0] = gs.T;
-        gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-        tm.updateFromPT(gs);
-        assert(approxEqualNumbers(to!number(11801825.6), gs.u + gs.u_modes[0], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6), failedUnitTest());
-
-        tm.updateFromRhoU(gs);
-        assert(approxEqualNumbers(to!number(2000.0), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(2000.0), gs.T_modes[0], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1e6), gs.p, 1.0e-6), failedUnitTest());
-
-        return 0;
-    }
+    tm.updateFromRhoU(gs);
+    assert(approxEqualNumbers(to!number(2000.0), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(2000.0), gs.T_modes[0], 1.0e-6));
+    assert(approxEqualNumbers(to!number(1e6), gs.p, 1.0e-6));
 }
