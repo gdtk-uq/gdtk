@@ -59,6 +59,9 @@ class LmrConfig:
 # We will use Enums and NamedTuples to label the available metadata
 # and make it conveniently findable in the Python module.
 
+Face = Enum('Face', ['west', 'east', 'south', 'north', 'bottom', 'top'])
+FaceDict = {'west':0, 'east':1, 'south':2, 'north':3, 'bottom':4, 'top':5}
+
 DomainType = Enum('DomainType', ['FLUID', 'SOLID'])
 
 GridType = Enum('GridType', ['STRUCTURED', 'UNSTRUCTURED'])
@@ -305,13 +308,14 @@ class SimInfo:
             pv_data = pv_data.cell_data_to_point_data()
         return pv_data
 
-    def read_loads(self, indx, group):
+    def read_loads(self, indx, group, bf_list=None):
         """
         Returns a Pandas DataFrame with the surface loads for the specified group.
 
         Args:
         indx: int index of the loads files to be read
         group: string name of the group associated with the required loads
+        bf_list: list of tuples that specify, in order, particular block+face pairs to load
 
         The order in which the loads files are appended to the DateFrame
         is determined by the directory listing, so it may make sense to
@@ -319,15 +323,22 @@ class SimInfo:
         """
         if not HAVE_PANDAS:
             raise RuntimeError("pandas module is not loaded")
-        # Locate the files by name, filtering for the group name.
         d = os.path.join(self.loads_dir, ('%04d' % indx))
-        names = os.listdir(d)
-        target_str = '-' + group + '.'
-        names = [n for n in names if n.find(target_str) > 0]
+        if bf_list:
+            # We have been given a list of block+face tuples.
+            names = []
+            for blk,face in bf_list:
+                if isinstance(face, str): face = FaceDict[face.lower()]
+                names.append('blk-%04d-bndry-%d-%s.dat' % (blk, face, group))
+        else:
+            # Locate the files by name, filtering for the group name.
+            names = os.listdir(d)
+            target_str = '-' + group + '.'
+            names = [n for n in names if n.find(target_str) > 0]
         blk_dfs = []
         for n in names:
             f = os.path.join(d, n)
-            blk_dfs.append(pd.read_table(f, sep='\s+'))
+            blk_dfs.append(pd.read_table(f, sep=r'\s+'))
         df = pd.concat(blk_dfs)
         return df
 
