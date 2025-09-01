@@ -604,6 +604,36 @@ function ThermionicElectronFlux:tojson()
    return str
 end
 
+AblatingSpeciesFlux = BoundaryFluxEffect:new{mass_flow_rate=nil, pyrolysis_gas_density=nil,
+                                             pyrolysis_gas_mass_fractions={1.0}}
+AblatingSpeciesFlux.type = "ablating_species_flux"
+function AblatingSpeciesFlux:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "mass_flow_rate": %.18e,', self.mass_flow_rate)
+   str = str .. string.format(' "pyrolysis_gas_density": %.18e, ', self.pyrolysis_gas_density)
+   str = str .. string.format(' "pyrolysis_gas_mass_fractions": [')
+   local gm = getGasModel()
+   local nsp = gm:nSpecies()
+   for k,v in pairs(self.pyrolysis_gas_mass_fractions) do
+       print(k, v)
+   end
+   for isp=0,nsp-1 do
+      local spName = gm:speciesName(isp);
+      print("isp: ", isp, "spName: ", spName)
+      if self.pyrolysis_gas_mass_fractions[spName] ~= nil then
+          str = str .. string.format("%.18e", self.pyrolysis_gas_mass_fractions[spName])
+      else
+          str = str .. string.format("%.18e", 0.0)
+      end
+      if isp<nsp-1 then
+          str = str .. ', '
+      end
+   end
+   str = str .. ']'
+   str = str .. '}'
+   return str
+end
+
 -- Data for field boundaries (NNG)
 FieldBoundary = {
    name = "unspecified",
@@ -856,7 +886,7 @@ function WallBC_NoSlip_FixedT0:new(o)
    flag = checkAllowedNames(o, {"Twall", "wall_function", "field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts",
-                                "user_post_diff_flux"})
+                                "post_diff_flux"})
    if not flag then
       error("Invalid name for item supplied to WallBC_NoSlip_FixedT0 constructor.", 2)
    end
@@ -887,8 +917,8 @@ function WallBC_NoSlip_FixedT0:new(o)
       end
    end
 
-   if o.user_post_diff_flux then
-      o.postDiffFluxAction = {UserDefinedFlux:new{fileName=o.user_post_diff_flux}}
+   if o.post_diff_flux then
+      o.postDiffFluxAction = {o.post_diff_flux}
    end
    o.is_configured = true
    return o

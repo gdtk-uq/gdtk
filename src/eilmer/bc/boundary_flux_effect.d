@@ -38,6 +38,7 @@ import gas;
 import bc;
 import flowgradients;
 import mass_diffusion;
+import conservedquantities;
 //import nm.ridder;
 //import nm.bracketing;
 
@@ -79,6 +80,12 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         double Ar = getJSONdouble(jsonData, "Ar", 0.0);
         double phi = getJSONdouble(jsonData, "phi", 0.0);
         newBFE = new BFE_ThermionicElectronFlux(blk_id, boundary, Ar, phi, GlobalConfig.gmodel_master);
+        break;
+    case "ablating_species_flux":
+        double mass_flow_rate = getJSONdouble(jsonData, "mass_flow_rate", 0.0);
+        double pyrolysis_gas_density = getJSONdouble(jsonData, "pyrolysis_gas_density", 0.0);
+        double[] pyrolysis_gas_mass_fractions = getJSONdoublearray(jsonData, "pyrolysis_gas_mass_fractions", []);
+        newBFE = new BFE_AblatingSpeciesFlux(blk_id, boundary, mass_flow_rate, pyrolysis_gas_density, pyrolysis_gas_mass_fractions);
         break;
     default:
         string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
@@ -803,3 +810,82 @@ protected:
     }
 
 } // end class BFE_ThermionicElectronFlux
+
+class BFE_AblatingSpeciesFlux : BoundaryFluxEffect {
+    this(int id, int boundary, double mass_flow_rate, double pyrolysis_gas_density, double[] pyrolysis_gas_mass_fractions)
+    {
+        super(id, boundary, "AblatingSpeciesFlux");
+        this.mass_flow_rate = mass_flow_rate;
+        this.pyrolysis_gas_density = pyrolysis_gas_density;
+        this.pyrolysis_gas_mass_fractions = pyrolysis_gas_mass_fractions;
+    }
+
+    override string toString() const
+    {
+        return "BFE_AblatingSpeciesFlux(" ~
+            "mass_flow_rate =" ~ to!string(mass_flow_rate) ~
+            "pyrolysis_gas_density =" ~ to!string(pyrolysis_gas_density) ~
+            ", pyrolysis_gas_mass_fractions=" ~ to!string(pyrolysis_gas_mass_fractions) ~
+            ")";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto cqi = blk.myConfig.cqi;
+        int sign = blk.bc[which_boundary].outsigns[f.i_bndry];
+        apply_to_face(f, sign, *cqi);
+    }
+
+    @nogc
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        auto cqi = blk.myConfig.cqi;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            int sign = bc.outsigns[i];
+            apply_to_face(f, sign, *cqi);
+        }
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto cqi = blk.myConfig.cqi;
+        int sign = blk.bc[which_boundary].outsigns[f.i_bndry];
+        apply_to_face(f, sign, *cqi);
+    }
+
+    @nogc
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto cqi = blk.myConfig.cqi;
+        //
+        foreach (i, f; bc.faces) {
+            int sign = bc.outsigns[i];
+            apply_to_face(f, sign, *cqi);
+        }
+    }
+
+protected:
+    double mass_flow_rate;
+    double pyrolysis_gas_density;
+    double[] pyrolysis_gas_mass_fractions;
+
+    @nogc
+    void apply_to_face(FVInterface f, int sign, ref ConservedQuantitiesIndices cqi){
+        //double velocity = mass_flow_rate/area/pyrolysis_gas_density;
+        // Hum so should we account for the influence of the pyrolysis gas on
+        // the momentum and energy? 
+        if (cqi.mass==0) {
+            f.F[cqi.mass] += -1.0*sign*mass_flow_rate;
+            debug{
+                writefln("f.pos %s F %e s*mdot %e", f.pos, f.F[cqi.mass], sign*mass_flow_rate);
+            }
+        }
+        foreach(isp; 0 .. blk.myConfig.n_species){
+            f.F[cqi.species+isp] += -1.0*sign*mass_flow_rate*pyrolysis_gas_mass_fractions[isp];
+        }
+    }
+} // end class BFE_AblatingSpeciesFlux
