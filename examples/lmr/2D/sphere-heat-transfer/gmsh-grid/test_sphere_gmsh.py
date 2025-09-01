@@ -46,16 +46,8 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    # KAD, 2025-08-20
-    # Values for macos added.
-    # Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
-    # CPU: Apple M1 Pro
-    if (sys.platform == 'linux'):
-        expected_number_steps = 55
-        expected_final_cfl = 1.945e+05
-    else:
-        expected_number_steps = 55
-        expected_final_cfl = 1.526e+05
+    expected_number_steps = 56
+    expected_final_cfl = 2.068e+05
     reason = ""
     steps = 0
     cfl = 0.0
@@ -89,10 +81,10 @@ def test_solution():
     # file names
     if (sys.platform == 'linux'):
         ref_solution_file = "reference_solution_linux.dat"
-        solution_file = "lmrsim/loads/0054/blk-0000-bndry-1-wall.dat"
+        solution_file = "lmrsim/loads/0055/blk-0000-bndry-1-wall.dat"
     else:
         ref_solution_file = "reference_solution_macos.dat"
-        solution_file = "lmrsim/loads/0054/blk-0000-bndry-1-wall.dat"
+        solution_file = "lmrsim/loads/0055/blk-0000-bndry-1-wall.dat"
 
     # read in data
     ref_data = read_file(ref_solution_file)

@@ -39,19 +39,8 @@ def test_run_steady():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    # RJG, 2024-02-25
-    # This case behaves subtly differently on linux and macos
-    # The macos version takes one extra step to convergence,
-    # but because of how we grow the CFL with a power law
-    # that extra step makes quite a difference in expected CFL.
-    #
-    # So we specialise the expected values based on OS
-    if (sys.platform == 'linux'):
-        expected_number_steps = 43
-        expected_final_cfl = 6.994e+03
-    else:
-        expected_number_steps = 42
-        expected_final_cfl = 4.581e+03
+    expected_number_steps = 35
+    expected_final_cfl = 6.106e+03
     reason = ""
     steps = 0
     cfl = 0.0

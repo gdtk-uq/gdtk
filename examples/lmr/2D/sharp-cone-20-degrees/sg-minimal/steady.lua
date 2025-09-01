@@ -24,6 +24,7 @@ makeFluidBlocks(bcDict, flowDict)
 -- 3. Simulation parameters.
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
+config.extrema_clipping = false
 
 NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 3,

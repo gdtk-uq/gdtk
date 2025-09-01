@@ -56,16 +56,8 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    # KAD, 2025-08-21
-    # Values for macos added.
-    # Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
-    # CPU: Apple M1 Pro
-    if (sys.platform == 'linux'):
-        expected_number_steps = 309
-        expected_final_cfl = 5.641e+05
-    else:
-        expected_number_steps = 299
-        expected_final_cfl = 6.034e+05
+    expected_number_steps = 290
+    expected_final_cfl = 1.000e+06
     reason = ""
     steps = 0
     cfl = 0.0

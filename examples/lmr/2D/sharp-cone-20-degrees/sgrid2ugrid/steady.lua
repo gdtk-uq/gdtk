@@ -24,6 +24,7 @@ makeFluidBlocks(bcDict, flowDict)
 -- 3. Simulation parameters.
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
+config.extrema_clipping = false
 
 config.boundary_groups_for_loads = "wall"
 
