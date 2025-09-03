@@ -371,7 +371,7 @@ endef
 buildinfo.json:
 	@echo "Creating 'buildinfo.json'..."
 	# Ensure the define becomes a proper multi-line string.
-	@echo '$(subst $(nl),\n,${buildinfo})' > $@
+	@printf '%b' '$(subst ${nl},\n,${buildinfo})' > $@
 
 LMR_SRC_DEPS := \
 	$(DYAML_FILES) \
