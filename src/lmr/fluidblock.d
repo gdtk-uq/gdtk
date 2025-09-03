@@ -52,6 +52,7 @@ import lmr.lua_helper;
 import lmr.sfluidblock; // needed for some special-case processing, below
 import lmr.shockdetectors;
 import lmr.user_defined_source_terms;
+import lmr.mass_diffusion;
 
 // version(diagnostics) {
 // import plt = matplotlibd.pyplot;
