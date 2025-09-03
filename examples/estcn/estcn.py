@@ -84,6 +84,8 @@ def str_with_units(gs, lead_str='  '):
               (gs.R, gs.gamma, gs.Cp, gs.a, gs.entropy)
     if gs.gmodel.type_str == "CEAGas":
         result += '\n'+lead_str+('CEA-massf: %s' % gs.ceaSavedData['massf'])
+    if gs.gmodel.type_str == "EquilibriumGas":
+        result += '\n'+lead_str+('eqc-massf: %s' % gs.savedMassFractions)
     return result
 
 

@@ -33,6 +33,8 @@ ffi.cdef("""
     int gas_state_get_ceaSavedData_massf(int gs_i, char* species_name, double* value);
     int gas_state_get_ceaSavedData_species_names(int gs_i, char* dest_str, int n);
     int gas_state_copy_values(int gs_to_i, int gs_from_i);
+    int gas_state_get_saved_species_names(int gs_i, char* dest_str, int n);
+    int gas_state_get_saved_massf(int gs_i, int isp, double* value);
 
     int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i);
     int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i);
@@ -620,6 +622,27 @@ class GasState(object):
             massf_data[name] = valuep[0]
         my_data["massf"] = massf_data
         return my_data
+
+    @property
+    def savedMassFractions(self):
+        """
+        The eqc gas model has a whole gas state living inside it. This function
+        can be called to retrieve the mass fractions from that model, without
+        the trouble of creating an entire Python GasState.
+        @author: Nick Gibbons
+        """
+        buf = ffi.new("char[]", b'\000'*1024)
+        flag = so.gas_state_get_saved_species_names(self.gmodel.id, buf, 1024)
+        species_names = ffi.string(buf).decode('utf-8').split("\t")
+        if flag < 0: raise Exception("could not get savedGasState species_names.")
+
+        massf = {}
+        valuep = ffi.new("double *")
+        for isp, name in enumerate(species_names):
+            flag = so.gas_state_get_saved_massf(self.gmodel.id, isp, valuep)
+            if flag < 0: raise Exception("could not get savedGasState mass fraction.")
+            massf[name] = valuep[0]
+        return massf
 
     def copy_values(self, gstate):
         flag = so.gas_state_copy_values(self.id, gstate.id)

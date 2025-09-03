@@ -20,6 +20,8 @@ import std.math;
 import gas.gas_model;
 import gas.gas_state;
 import gas.init_gas_model;
+import gas.equilibrium_gas;
+import gas.therm_perf_gas_equil;
 
 import kinetics.thermochemical_reactor;
 import kinetics.init_thermochemical_reactor;
@@ -416,6 +418,50 @@ extern (C) int gas_state_copy_values(int gs_to_i, int gs_from_i)
         stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
+}
+
+extern (C) int gas_state_get_saved_species_names(int gm_i, char* dest_str, int n)
+{
+    // All of the species names will be copied into char* array.
+    // It is presumed that sufficient space (n chars, including \0) was allocated previously.
+    EquilibriumGas gm_eq = cast(EquilibriumGas) gas_models[gm_i];
+    if (gm_eq is null) {
+        stderr.writeln("Error: Not using EquilibriumGas Model: ");
+        return -1;
+    }
+
+    ThermallyPerfectGasEquilibrium tpgm = gm_eq.savedGasModel();
+
+    try {
+        string[] species_names_list;
+        foreach(isp; 0 .. tpgm.n_species){
+            species_names_list ~= tpgm.species_name(isp);
+        }
+        string src_str = species_names_list.join("\t");
+        strncpy(dest_str, src_str.toStringz, n);
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_get_saved_massf(int gm_i, int isp, double* value)
+{
+    EquilibriumGas gm_eq = cast(EquilibriumGas) gas_models[gm_i];
+    if (gm_eq is null) {
+        stderr.writeln("Error: Not using EquilibriumGas Model: ");
+        return -1;
+    }
+
+    try {
+        *value = gm_eq.savedGasState.massf[isp];
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+
 }
 
 //---------------------------------------------------------------------------
