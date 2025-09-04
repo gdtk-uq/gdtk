@@ -47,7 +47,16 @@ class ElectricField {
         A.length = N*nbands;
         Ai.length = N*nbands;
         b.length = N;
-        max_iter = N; // eventually you need to do something about this.
+
+        if (GlobalConfig.electric_field_gmres_iters > 0) {
+            max_iter = GlobalConfig.electric_field_gmres_iters;
+        } else {
+            max_iter = N;
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &max_iter, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            }
+        }
+
         phi.length = N;
         phi0.length = N;
         auto gmodel = GlobalConfig.gmodel_master;

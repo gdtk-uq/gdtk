@@ -1215,6 +1215,7 @@ final class GlobalConfig {
     shared static double divB_damping_length = 1.0;
     // Activate the electric field solver by Nick Gibbons
     shared static int electric_field_count = 1000000000;
+    shared static int electric_field_gmres_iters = -1;
     shared static bool solve_electric_field = false;
     shared static string conductivity_model_name = "none";
 
@@ -1516,6 +1517,7 @@ public:
     double divB_damping_length;
     int electric_field_count;
     bool solve_electric_field;
+    int electric_field_gmres_iters;
     string conductivity_model_name;
     //
     bool viscous;
@@ -1706,6 +1708,7 @@ public:
         c_h = cfg.c_h;
         divB_damping_length = cfg.divB_damping_length;
         electric_field_count = cfg.electric_field_count;
+        electric_field_gmres_iters = cfg.electric_field_gmres_iters;
         solve_electric_field = cfg.solve_electric_field;
         conductivity_model_name = cfg.conductivity_model_name;
         //
@@ -2066,6 +2069,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
     mixin(update_int("electric_field_count", "electric_field_count"));
+    mixin(update_int("electric_field_gmres_iters", "electric_field_gmres_iters"));
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
     mixin(update_string("conductivity_model_name", "conductivity_model_name"));
 
@@ -2159,6 +2163,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  divergence_cleaning: ", cfg.divergence_cleaning);
         writeln("  divB_damping_length: ", cfg.divB_damping_length);
         writeln("  electric_field_count: ", cfg.electric_field_count);
+        writeln("  electric_field_gmres_iters: ", cfg.electric_field_gmres_iters);
         writeln("  solve_electric_field: ", cfg.solve_electric_field);
         writeln("  conductivity_model_name: ", cfg.conductivity_model_name);
         writeln("  electric_field_work: ", cfg.electric_field_work);
