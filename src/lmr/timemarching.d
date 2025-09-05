@@ -261,8 +261,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     if (cfg.compute_run_time_loads) initRunTimeLoads();
 
-    // [TODO] RJG, 2024-02-07
-    // Configure Nick's electric field solver.
+    if (cfg.solve_electric_field) initElectricField();
 
     // Keep our memory foot-print small.
     if (GlobalConfig.verbosity_level >= 2) { writeln("Before GC.collect."); }
@@ -479,14 +478,7 @@ int integrateInTime(double targetTimeAsRequested)
                 if (GlobalConfig.is_master_task) writeln("Called field.solve_efield(): ...");
                 eField.solve_efield(localFluidBlocks, GlobalConfig.is_master_task);
                 eField.compute_electric_field_vector(localFluidBlocks);
-
-                double current_in, current_out;
-                eField.compute_boundary_current(localFluidBlocks, current_in, current_out);
-                if (GlobalConfig.is_master_task) {
-                    writeln("Called field.compute_boundary_current() ...");
-                    writefln("    Current in:  %f (A/m)", current_in);
-                    writefln("    Current out: %f (A/m)", current_out);
-                }
+                // eField.compute_boundary_current code removed 05/09/25 NNG
             }
 
             // 3.0 Update the time record and (occasionally) print status.

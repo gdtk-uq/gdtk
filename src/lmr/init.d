@@ -50,6 +50,7 @@ import lmr.solid.solid_gas_full_face_copy;
 import lmr.solid.solidfvinterface : initPropertiesAtSolidInterfaces;
 import lmr.solid.ssolidblock : SSolidBlock;
 import lmr.ufluidblock : UFluidBlock;
+import lmr.efield.efield: ElectricField;
 
 version(mpi_parallel) {
     import mpi;
@@ -803,6 +804,18 @@ void initRunTimeLoads()
     string content = readText(lmrCfg.cfgFile);
     JSONValue jsonData = parseJSON!string(content);
     initRunTimeLoads(jsonData["run_time_loads"]);
+}
+
+/**
+ * Initialise the electric field solver
+ *
+ * Authors: NNG
+ * Date: 2025-09-04
+ */
+void initElectricField()
+{
+    // eField lives in globaldata.d
+    eField = new ElectricField(localFluidBlocks, GlobalConfig.conductivity_model_name);
 }
 
 

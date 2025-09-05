@@ -118,6 +118,11 @@ string[] buildFluidVariables()
     if (cfg.conductivity_model_name != "none") {
         variables ~= "sigma";
     }
+    if (cfg.solve_electric_field) {
+        variables ~= "E.x";
+        variables ~= "E.y";
+        variables ~= "phi";
+    }
     //
     return variables;
 } // end buildFluidVariables()
@@ -252,6 +257,9 @@ public:
         case "e": return fcell.fs.gas.u.re;
         case "T": return fcell.fs.gas.T.re;
         case "sigma": return fcell.fs.gas.sigma.re;
+        case "E.x": return fcell.electric_field[0];
+        case "E.y": return fcell.electric_field[1];
+        case "phi": return fcell.electric_potential;
         default:
             throw new LmrException("Invalid selection for cell variable: " ~ var);
         }
@@ -309,6 +317,9 @@ public:
         case "e": fcell.fs.gas.u.re = value; return fcell.fs.gas.u.re;
         case "T": fcell.fs.gas.T.re = value; return fcell.fs.gas.T.re;
         case "sigma": fcell.fs.gas.sigma.re = value; return fcell.fs.gas.sigma.re;
+        case "E.x": fcell.electric_field[0] = value; return fcell.electric_field[0];
+        case "E.y": fcell.electric_field[1] = value; return fcell.electric_field[1];
+        case "phi": fcell.electric_potential = value; return fcell.electric_potential;
         default:
             throw new LmrException("Invalid selection for cell variable: " ~ var);
         }
