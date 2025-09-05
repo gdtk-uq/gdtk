@@ -71,6 +71,7 @@ import lmr.grid_motion;
 import lmr.grid_motion_udf;
 import lmr.grid_motion_shock_fitting;
 import lmr.lmrwarnings;
+import lmr.dualtimestepping: addUnsteadyTermToResiduals;
 
 version(mpi_parallel) {
     import mpi;
@@ -143,6 +144,7 @@ PreconditionerType preconditionerTypeFromName(string name)
  */
 
 struct NKGlobalConfig {
+    bool dualTime = false;
     // global control based on step
     int numberOfStepsForSettingReferenceResiduals = 0;
     // stopping criterion
@@ -451,7 +453,6 @@ private:
  */
 
 static int fnCount = 0;
-immutable double dummySimTime = -1.0;
 immutable double minScaleFactor = 1.0;
 immutable string refResidFname = "config/reference-residuals.saved";
 
@@ -857,6 +858,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
      * Initialisation
      *----------------------------------------------
      */
+    SimState.time = -1.0; // Newton-Krylov solver doesn't have any physical time dependence
     if (nkCfg.usePreconditioner) initPreconditioner();
     size_t nConserved = cfg.cqi.n;
     referenceResiduals = new ConservedQuantities(nConserved);
@@ -1688,6 +1690,13 @@ double setDtInCells(double cfl, bool useLocalTimestep)
         }
     }
 
+    // store the inverse dt for use later
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (cell; blk.cells) {
+            cell.dt_inv = 1.0/cell.dt_local;
+        }
+    }
+
     return dt;
 }
 
@@ -1800,6 +1809,8 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     evalResidual(0);
 
     setResiduals();
+
+    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
 
     if (nkCfg.useRealValuedFrechetDerivative) { setR0(); }
 
@@ -1971,6 +1982,8 @@ void solveNewtonStepFGMRES()
 
     setResiduals();
 
+    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
+
     if (nkCfg.useRealValuedFrechetDerivative) { setR0(); }
 
     computeGlobalResidual();
@@ -2085,14 +2098,14 @@ void solveNewtonStepFGMRES()
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-void setResiduals()
+void setResiduals(int ftl=0)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t startIdx = 0;
         foreach (i, cell; blk.cells) {
             foreach (ivar; 0 .. nConserved) {
-                blk.R[startIdx+ivar] = cell.dUdt[0][ivar].re;
+                blk.R[startIdx+ivar] = cell.dUdt[ftl][ivar].re;
             }
             startIdx += nConserved;
         }
@@ -3116,14 +3129,13 @@ void evalAugmentedJacobianVectorProduct(bool for_preconditioning = false)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t startIdx = 0;
         foreach (cell; blk.cells) {
-            double dtInv = 1.0/cell.dt_local;
-            blk.w[startIdx .. startIdx + nConserved] = dtInv*blk.zed[startIdx .. startIdx + nConserved];
+            blk.w[startIdx .. startIdx + nConserved] = cell.dt_inv*blk.zed[startIdx .. startIdx + nConserved];
             startIdx += nConserved;
         }
 
         if (GlobalConfig.grid_motion == GridMotion.shock_fitting) {
             // assume global time stepping
-            double dtInv = 1.0 / blk.cells[0].dt_local;
+            double dtInv = blk.cells[0].dt_inv;
             int dim = GlobalConfig.dimensions;
             foreach (vtx; blk.vertices) {
                 if (!vtx.solve_position) continue;
@@ -3181,9 +3193,7 @@ void evalResidual(int ftl)
 {
     fnCount++;
     int gtl = (GlobalConfig.grid_motion != GridMotion.none) ? ftl : 0;
-    double dummySimTime = -1.0;
 
-    
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
@@ -3198,9 +3208,9 @@ void evalResidual(int ftl)
         exchange_ghost_cell_geometry_data();
     }
 
-    exchange_ghost_cell_boundary_data(dummySimTime, gtl, ftl);
+    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
     foreach (blk; localFluidBlocks) {
-        blk.applyPreReconAction(dummySimTime, gtl, ftl);
+        blk.applyPreReconAction(SimState.time, gtl, ftl);
     }
 
     if (GlobalConfig.grid_motion == GridMotion.shock_fitting) {
@@ -3237,7 +3247,7 @@ void evalResidual(int ftl)
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach(boundary; blk.bc) {
             if (boundary.preSpatialDerivActionAtBndryFaces[0].desc == "CopyCellData") {
-                boundary.preSpatialDerivActionAtBndryFaces[0].apply(dummySimTime, gtl, ftl);
+                boundary.preSpatialDerivActionAtBndryFaces[0].apply(SimState.time, gtl, ftl);
             }
         }
     }
@@ -3253,7 +3263,7 @@ void evalResidual(int ftl)
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
     if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
-        exchange_ghost_cell_boundary_convective_gradient_data(dummySimTime, gtl, ftl);
+        exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -3262,7 +3272,7 @@ void evalResidual(int ftl)
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
     if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
-        exchange_ghost_cell_boundary_convective_gradient_data(dummySimTime, gtl, ftl);
+        exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -3270,20 +3280,20 @@ void evalResidual(int ftl)
     }
 
     foreach (blk; localFluidBlocks) {
-        blk.applyPostConvFluxAction(dummySimTime, gtl, ftl);
+        blk.applyPostConvFluxAction(SimState.time, gtl, ftl);
     }
 
     if (GlobalConfig.viscous) {
         foreach (blk; localFluidBlocks) {
-            blk.applyPreSpatialDerivActionAtBndryFaces(dummySimTime, gtl, ftl);
-            blk.applyPreSpatialDerivActionAtBndryCells(dummySimTime, gtl, ftl);
+            blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+            blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.flow_property_spatial_derivatives(gtl);
         }
         // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
         // we need to transfer the viscous gradients before the flux calc
-        exchange_ghost_cell_boundary_viscous_gradient_data(dummySimTime, gtl, ftl);
+        exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
         foreach (blk; parallel(localFluidBlocks,1)) {
             // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
             // at the cell interfaces before the viscous flux calculation.
@@ -3303,7 +3313,7 @@ void evalResidual(int ftl)
             blk.viscous_flux();
         }
         foreach (blk; localFluidBlocks) {
-            blk.applyPostDiffFluxAction(dummySimTime, gtl, ftl);
+            blk.applyPostDiffFluxAction(SimState.time, gtl, ftl);
         }
     }
 
@@ -3726,18 +3736,7 @@ double applyLineSearch(double omega)
     while (reduceLambda) {
 
 	//----
-	// 1. Compute unsteady term
-	//----
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-		blk.R[startIdx .. startIdx+nConserved] = -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
-		startIdx += nConserved;
-	    }
-	}
-
-	//----
-	// 2. Compute residual at updated state
+	// 1. Compute residual at updated state
 	//----
 	foreach (blk; parallel(localFluidBlocks,1)) {
 	    size_t startIdx = 0;
@@ -3751,15 +3750,24 @@ double applyLineSearch(double omega)
 	    }
 	}
 	evalResidual(1);
+    setResiduals(1);
+    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
 	foreach (blk; parallel(localFluidBlocks,1)) {
 	    size_t startIdx = 0;
 	    foreach (cell; blk.cells) {
-		foreach (ivar; 0 .. nConserved) {
-                    blk.R[startIdx+ivar] += cell.dUdt[1][ivar].re;
-                }
-                // return cell to original state
-		cell.decode_conserved(0, 0, 0.0);
-		startIdx += nConserved;
+            // return cell to original state
+            cell.decode_conserved(0, 0, 0.0);
+	    }
+	}
+
+    //----
+	// 2. Compute unsteady term
+	//----
+	foreach (blk; parallel(localFluidBlocks,1)) {
+	    size_t startIdx = 0;
+	    foreach (cell; blk.cells) {
+            blk.R[startIdx .. startIdx+nConserved] += -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
+            startIdx += nConserved;
 	    }
 	}
 

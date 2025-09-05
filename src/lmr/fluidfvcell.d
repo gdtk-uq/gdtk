@@ -72,6 +72,7 @@ public:
     // local time-stepping
     double dt_local;
     double t_local;
+    double dt_inv;
     // super time-stepping
     number signal_hyp;
     number signal_parab;
@@ -786,7 +787,9 @@ public:
                 // Oops, it seems that the thermo update has failed to work
                 // using the internal energy and density that have been
                 // decoded from the current conserved quantities.
-                if (myConfig.solverMode != SolverMode.steady && myConfig.ignore_low_T_thermo_update_failure && (rho > 0.0)) {
+                if (myConfig.solverMode != SolverMode.steady &&
+                    myConfig.solverMode != SolverMode.dual_time_stepping &&
+                    myConfig.ignore_low_T_thermo_update_failure && (rho > 0.0)) {
                     // This small-energy, hopefully-transient error may get
                     // washed out of the flow field, so let's try to keep going.
                     // We reset the thermo data to an acceptable low-T state

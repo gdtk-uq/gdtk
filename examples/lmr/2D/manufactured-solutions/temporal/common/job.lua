@@ -25,6 +25,7 @@ setGasModel('very-viscous-air.lua')
 dofile('fill-fn.lua')
 flowStates = {initial=gasFillFn}
 
+-- ==========================================================
 -- Define the flow domain using an native grid
 -- ==========================================================
 config.dimensions = 2
@@ -87,6 +88,7 @@ makeFluidBlocks(bcs, flowStates)
 -- ==========================================================
 -- Solver settings
 -- ==========================================================
+config.solver_mode = solver_mode
 config.apply_bcs_in_parallel = false
 
 -- invsicid flux settings
@@ -105,7 +107,11 @@ config.udf_source_terms_file               = 'udf-source-terms.lua'
 config.eval_udf_source_terms_at_each_stage = true
 
 -- Set temporal integration settings
-config.gasdynamic_update_scheme = gasdynamic_update_scheme
+if config.solver_mode == 'dual_time_stepping' then
+   config.dualtimestepping_update_scheme = update_scheme
+else
+   config.gasdynamic_update_scheme = update_scheme
+end
 config.max_time                 = 1.75*0.001 - 1.0e-08 -- to allow for round-off when trying to hit 0.001 
 config.dt_init                  = dt
 config.fixed_time_step          = true
@@ -115,4 +121,56 @@ config.dt_plot                  = config.max_time/20
 
 -- These are settings from Rowan's LMR Navier-stokes MMS
 config.include_ghost_cells_in_spatial_deriv_clouds = true
+
+-- These are settings used only for dual time stepping schemes
+NewtonKrylovGlobalConfig{
+   -- phases
+   number_of_phases = 1,
+
+   -- preconditioner settings
+   use_preconditioner = true,
+   preconditioner_perturbation = 1.0e-50,
+   preconditioner = "ilu",
+   ilu_fill = 0,
+
+   -- nonlinear system solver settings
+   max_newton_steps = 100,
+   max_consecutive_bad_steps = 10,
+   stop_on_relative_residual = 1.0e-10,
+
+   -- linear system solver settings
+   frechet_derivative_perturbation = 1.0e-50,
+   use_scaling = true,
+   max_linear_solver_iterations = 100,
+   max_linear_solver_restarts = 0,
+
+   -- continuation settings
+   inviscid_cfl_only = true,
+   use_line_search = false,
+   use_residual_smoothing = false,
+   use_physicality_check = true,
+   allowable_relative_mass_change = 0.9,
+   min_relaxation_factor_for_update = 0.1,
+   min_relaxation_factor_for_cfl_growth = 0.5,
+}
+
+NewtonKrylovPhase:new{
+   -- preconditioner settings
+   frozen_preconditioner = true,
+   use_adaptive_preconditioner = true,
+   steps_between_preconditioner_update = 5,
+
+   -- linear system solver settings
+   linear_solve_tolerance = 0.001,
+   residual_interpolation_order = 2,
+   jacobian_interpolation_order = 1,
+
+   -- cfl settings
+   use_auto_cfl = true,
+   use_local_timestep = true,
+   threshold_relative_residual_for_cfl_growth = 0.99,
+   start_cfl = 1.0e+01,
+   max_cfl = 1.0e6,
+   auto_cfl_exponent = 1.0
+}
 

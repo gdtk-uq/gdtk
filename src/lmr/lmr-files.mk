@@ -38,6 +38,7 @@ LMR_CORE_FILES = $(LMR)/block.d \
 	$(LMR)/lua_helper.d \
 	$(LMR)/mass_diffusion.d \
 	$(LMR)/newtonkrylovsolver.d \
+	$(LMR)/dualtimestepping.d \
 	$(LMR)/onedinterp.d \
 	$(LMR)/sfluidblock.d \
 	$(LMR)/shockdetectors.d \

@@ -90,6 +90,7 @@ struct FlowStateLimits {
 enum SolverMode {
     transient,
     steady,
+    dual_time_stepping,
     block_marching
 }
 
@@ -99,6 +100,7 @@ string solverModeName(SolverMode sm)
     final switch (sm) {
     case SolverMode.transient: return "transient";
     case SolverMode.steady: return "steady";
+    case SolverMode.dual_time_stepping: return "dual-time-stepping";
     case SolverMode.block_marching: return "block-marching";
     }
 }
@@ -110,6 +112,7 @@ SolverMode solverModeFromName(string name)
     case "transient": return SolverMode.transient;
     case "time-marching": return SolverMode.transient; // Alias for "transient"
     case "steady": return SolverMode.steady;
+    case "dual-time-stepping": return SolverMode.dual_time_stepping;
     case "block-marching": return SolverMode.block_marching;
     default:
         string msg = format("Invalid solver mode '%s' selected.", name);
@@ -235,6 +238,42 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "classic_rk4": return GasdynamicUpdate.classic_rk4;
     default:
         string msg = format("Invalid gasdynamic update scheme '%s' selected.", name);
+        throw new Error(msg);
+    }
+}  // end scheme_from_name()
+
+// Symbolic names for the dual time stepping schemes used to update the gasdynamic eqn.
+enum DualTimeSteppingUpdate {
+    bdf1,
+    bdf2
+}
+
+@nogc
+string dualtimestepping_update_scheme_name(DualTimeSteppingUpdate dtsu)
+{
+    final switch ( dtsu ) {
+    case DualTimeSteppingUpdate.bdf1: return "bdf1";
+    case DualTimeSteppingUpdate.bdf2: return "bdf2";
+    }
+} // end dualtimestepping_update_scheme_name()
+
+@nogc
+size_t number_of_stages_for_update_scheme(DualTimeSteppingUpdate dtsu)
+{
+    final switch (dtsu) {
+    case DualTimeSteppingUpdate.bdf1: return 2;
+    case DualTimeSteppingUpdate.bdf2: return 3;
+    }
+} // end number_of_stages_for_update_scheme()
+
+DualTimeSteppingUpdate update_dualtimestepping_scheme_from_name(string name)
+{
+    string name_ = name.replace("-", "_");
+    switch (name_) {
+    case "bdf1": return DualTimeSteppingUpdate.bdf1;
+    case "bdf2": return DualTimeSteppingUpdate.bdf2;
+    default:
+        string msg = format("Invalid dual time stepping update scheme '%s' selected.", name);
         throw new Error(msg);
     }
 }  // end scheme_from_name()
@@ -943,6 +982,7 @@ final class GlobalConfig {
     //
     // Parameters controlling update
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
+    shared static DualTimeSteppingUpdate dualtimestepping_update_scheme = DualTimeSteppingUpdate.bdf1;
     shared static bool eval_udf_source_terms_at_each_stage = false;
     shared static size_t n_flow_time_levels = 3;
     shared static bool residual_smoothing = false;
@@ -1395,6 +1435,7 @@ public:
     Vector3 gravity;
     ConservedQuantitiesIndices* cqi;
     GasdynamicUpdate gasdynamic_update_scheme;
+    DualTimeSteppingUpdate dualtimestepping_update_scheme;
     bool eval_udf_source_terms_at_each_stage;
     size_t n_flow_time_levels;
     bool residual_smoothing;
@@ -1580,6 +1621,7 @@ public:
         // Presumably these times, not all of the GlobalConfig is needed, so press on doing what can be done.
         if (cfg.cqi) { cqi = new ConservedQuantitiesIndices(*(cfg.cqi)); }
         gasdynamic_update_scheme = cfg.gasdynamic_update_scheme;
+        dualtimestepping_update_scheme = cfg.dualtimestepping_update_scheme;
         eval_udf_source_terms_at_each_stage = cfg.eval_udf_source_terms_at_each_stage;
         n_flow_time_levels = cfg.n_flow_time_levels;
         residual_smoothing = cfg.residual_smoothing;
@@ -1887,6 +1929,7 @@ void set_config_for_core(JSONValue jsonData)
     // Parameters controlling convective update
     //
     mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
+    mixin(update_enum("dualtimestepping_update_scheme", "dualtimestepping_update_scheme", "update_dualtimestepping_scheme_from_name"));
     mixin(update_bool("eval_udf_source_terms_at_each_stage", "eval_udf_source_terms_at_each_stage"));
     // The CFL schedule arrives as a pair of tables that should have at least one entry each.
     int cfl_schedule_length = getJSONint(jsonData, "cfl_schedule_length", 1);
@@ -2026,6 +2069,7 @@ void set_config_for_core(JSONValue jsonData)
     //
     if (cfg.verbosity_level > 1) {
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(cfg.gasdynamic_update_scheme));
+        writeln("  dualtimestepping_update_scheme: ", dualtimestepping_update_scheme_name(cfg.dualtimestepping_update_scheme));
         writeln("  eval_udf_source_terms_at_each_stage: ", cfg.eval_udf_source_terms_at_each_stage);
         writeln("  cfl_schedule: ", cfg.cfl_schedule);
         writeln("  dt_plot_schedule: ", cfg.dt_plot_schedule);
@@ -2358,6 +2402,8 @@ void set_config_for_core(JSONValue jsonData)
     // Parameters controlling size of storage arrays - we set this here since we key it off some of the other config parameters
     if (cfg.solverMode == SolverMode.steady) {
         cfg.n_flow_time_levels = 2;
+    } else if (cfg.solverMode == SolverMode.dual_time_stepping) {
+        cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.dualtimestepping_update_scheme);
     } else {
         cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
     }

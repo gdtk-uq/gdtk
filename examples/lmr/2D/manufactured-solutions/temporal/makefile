@@ -17,6 +17,9 @@ run-rk4:
 run-rkl2:
 	lmr-verify --norms="rho" --case-tag="rkl2"
 
+run-bdf2:
+	lmr-verify --norms="rho" --case-tag="bdf2"
+
 ooa-pc:
 	@echo -n "Observed Order of Accuracy (Predictor Corrector): "
 	@cat case-predictor_corrector/observed-order-case-predictor_corrector.dat | awk 'NR == 2 {print $$3}'
@@ -32,6 +35,10 @@ ooa-rk4:
 ooa-rkl2:
 	@echo -n "Observed Order of Accuracy (STS RKL2):            "
 	@cat case-rkl2/observed-order-case-rkl2.dat | awk 'NR == 2 {print $$3}'
+
+ooa-bdf2:
+	@echo -n "Observed Order of Accuracy (DTS BDF2):            "
+	@cat case-bdf2/observed-order-case-bdf2.dat | awk 'NR == 2 {print $$3}'
 
 demo: run-pc run-rk3 run-rk4 run-rkl2 ooa-pc ooa-rk3 ooa-rk4 ooa-rkl2
 	@echo "Done"

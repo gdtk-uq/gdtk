@@ -1,13 +1,21 @@
 ---
-gasdynamic_update_scheme: 'predictor_corrector'
+update_scheme: 'predictor_corrector'
+solver_mode: 'transient'
 tag: predictor_corrector 
 ---
-gasdynamic_update_scheme: 'classic_rk3'
+update_scheme: 'classic_rk3'
+solver_mode: 'transient'
 tag: classic_rk3 
 ---
-gasdynamic_update_scheme: 'classic_rk4'
+update_scheme: 'classic_rk4'
+solver_mode: 'transient'
 tag: classic_rk4 
 ---
-gasdynamic_update_scheme: 'rkl2'
+update_scheme: 'rkl2'
+solver_mode: 'transient'
 tag: rkl2
+---
+update_scheme: 'bdf2'
+solver_mode: 'dual_time_stepping'
+tag: bdf2
 ...

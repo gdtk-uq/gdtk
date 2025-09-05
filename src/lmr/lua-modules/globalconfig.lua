@@ -39,6 +39,7 @@ configOptionsHidden = { -- hidden from user
    --
    strang_splitting = "full_T_full_R",
    gasdynamic_update_scheme = "predictor_corrector",
+   dualtimestepping_update_scheme = "bdf1",
    eval_udf_source_terms_at_each_stage = false,
    residual_smoothing = false,
    residual_smoothing_weight = 0.2,

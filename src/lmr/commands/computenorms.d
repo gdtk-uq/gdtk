@@ -176,7 +176,7 @@ int main_(string[] args)
      * When doing time-marching, also add timestep information.
      */
     double[] times;
-    if (GlobalConfig.solverMode == SolverMode.transient) {
+    if (GlobalConfig.solverMode == SolverMode.transient || GlobalConfig.solverMode == SolverMode.dual_time_stepping) {
         times = mapTimesToSnapshots(snaps2process);
     }
 
@@ -188,7 +188,7 @@ int main_(string[] args)
         if (verbosity > 1) {
             writefln("lmr %s: Computing norms for fluid snapshot %s.", cmdName, snap);
         }
-        double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
+        double simTime = (GlobalConfig.solverMode == SolverMode.transient || GlobalConfig.solverMode == SolverMode.dual_time_stepping) ? times[isnap] : -1.0;
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks, simTime);
         outfile.writeln("---"); // YAML document opener
         outfile.writefln("snapshot: %s", snap);

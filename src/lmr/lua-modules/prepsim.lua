@@ -376,7 +376,7 @@ function buildRuntimeConfigFiles()
    end
    write_block_list_file(lmrconfig.blockListFilename())
    write_mpimap_file(lmrconfig.mpimapFilename())
-   if (config.solver_mode == "steady") then
+   if (config.solver_mode == "steady" or config.solver_mode == "dual_time_stepping") then
       nkconfig.setIgnoreFlagInPhases(nkPhases)
       nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())
    end

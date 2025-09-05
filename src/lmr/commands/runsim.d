@@ -32,6 +32,7 @@ import lmr.lmrbuild;
 import lmr.lmrconfig;
 import lmr.newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
 import lmr.timemarching : initTimeMarchingSimulation, integrateInTime, finalizeSimulation_timemarching;
+import lmr.dualtimestepping : initDualTimeNewtonKrylovSimulation, performDualTimeNewtonKrylovUpdates;
 
 version(mpi_parallel) {
     import mpi;
@@ -152,6 +153,7 @@ int delegateAndExecute(string[] args, NumberType numberType)
     string shellStr;
 
     final switch(solverMode) {
+    case SolverMode.dual_time_stepping:
     case SolverMode.steady:
         // Our first choice is to run with complex values.
         final switch(numberType) {
@@ -353,6 +355,13 @@ int main(string[] args)
         auto flag = integrateInTime(GlobalConfig.max_time);
         if (flag != 0 && GlobalConfig.is_master_task) writeln("Note that integrateInTime failed.");
         finalizeSimulation_timemarching();
+        break;
+    case SolverMode.dual_time_stepping:
+        if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise Newton-Krylov simulation.");
+        initDualTimeNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+
+        if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform dual time steps.");
+        performDualTimeNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);
         break;
     case SolverMode.block_marching:
         writeln("NOT IMPLEMENTED: block marching is not available right now.");

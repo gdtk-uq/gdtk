@@ -92,12 +92,10 @@ public:
          */
 
         foreach ( ref entry; local.aa) { entry *= -1; }
-        double dtInv;
         foreach (i, cell; cells) {
             foreach (j; 0..nConserved) {
-                dtInv = 1.0/cell.dt_local;
                 size_t idx = i*nConserved + j;
-                local[idx,idx] = local[idx,idx] + dtInv;
+                local[idx,idx] = local[idx,idx] + cell.dt_inv;
             }
         }
 

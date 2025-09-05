@@ -909,7 +909,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     case GasdynamicUpdate.rkl2: assert(false, "invalid option");
     case GasdynamicUpdate.moving_grid_1_stage:
     case GasdynamicUpdate.moving_grid_2_stage: assert(false, "invalid option");
-    case GasdynamicUpdate.classic_rk4: c2 = 0.5; c3 = 0.5; c4 = 1.0;
+    case GasdynamicUpdate.classic_rk4: c2 = 0.5; c3 = 0.5; c4 = 1.0; break;
     }
     //
     int attempt_number = 0;

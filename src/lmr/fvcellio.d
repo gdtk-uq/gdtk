@@ -114,7 +114,9 @@ string[] buildFluidVariables()
         variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
         variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
     }
-    if (cfg.with_local_time_stepping || cfg.solverMode == SolverMode.steady) variables ~= "dt_local";
+    if (cfg.with_local_time_stepping ||
+        cfg.solverMode == SolverMode.steady ||
+        cfg.solverMode == SolverMode.dual_time_stepping) variables ~= "dt_local";
     if (cfg.conductivity_model_name != "none") {
         variables ~= "sigma";
     }
