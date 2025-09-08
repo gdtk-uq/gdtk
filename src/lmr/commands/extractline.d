@@ -194,13 +194,24 @@ int main_(string[] args)
     outfile.writeln(headerStr);
     //
     size_t[2][] cells_found; // accumulate the identies of the cells found here
-    foreach (lineStr; lineListStr.split(";")) {
+    auto lineStrs = lineListStr.split(";");
+    foreach (iStr, lineStr; lineStrs) {
         auto items = lineStr.split(",");
         if (items.length != 7) {
-            string errMsg = "The 'extract-line' string requires exactly 7 values.\n";
-            errMsg ~= format("You have provided %d items.\n", items.length);
-            errMsg ~= format("The problematic string is: %s\n", lineStr);
-            throw new Error(errMsg);
+            if (iStr == lineStrs.length-1) {
+                // We allow a trailing ';' in extract-line list,
+                // so we may actually have nothing to process here
+                // if we are trying to parse an empty string on the
+                // other side of a trailing ';'.
+                // In this case, we can break.
+                break;
+            }
+            else {
+                string errMsg = "The 'extract-line' string requires exactly 7 values.\n";
+                errMsg ~= format("You have provided %d items.\n", items.length);
+                errMsg ~= format("The problematic string is: %s\n", lineStr);
+                throw new Error(errMsg);
+            }
         }
         Vector3 p0 = Vector3(to!double(items[0]), to!double(items[1]), to!double(items[2]));
         Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
