@@ -85,6 +85,7 @@ unittest {
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
     auto L = init_lua_State();
+    GasModel gm = new CompositeGas("sample-data/therm-perf-5-species-air.lua");
     doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
     string[] speciesNames;
     getArrayOfStrings(L, "species", speciesNames);
@@ -95,7 +96,7 @@ unittest {
     gs.p = 1.0e6;
     gs.T = 4000.0;
     gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-    tp.updateTransProps(gs);
+    tp.updateTransProps(gs, gm);
     assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6));
     assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6));
 
