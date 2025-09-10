@@ -252,14 +252,6 @@ luagas_model_demo: luagas_model_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_F
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) $(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-# Jonathan's programs that were moved out of nm.
-
-build_tree: build_tree.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) build_tree.d -dip1008 $(OF)build_tree \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
 univariate_lut_demo: univariate_lut_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(LIBEQC) $(LIBLUA)
 	$(DMD) -debug -dip1008 univariate_lut_demo.d $(OF)univariate_lut_demo \
@@ -279,15 +271,6 @@ test_runner: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-gas_mixtures_test: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ diffusion/transport_properties_model.d diffusion/gas_mixtures.d \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
 
 two_temp_air_ci_dump: $(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 	$(LIBEQC) $(LIBLUA)
