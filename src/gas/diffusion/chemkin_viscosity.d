@@ -182,7 +182,7 @@ unittest {
                              "A":-2.000056657134e+01, "B":2.898260367046e+00,
                              "C":-3.018511062902e-01, "D":1.346540184145e-02];
     auto chemkinCurve = ChemkinViscCurve(params);
-    assert(isClose(14.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6));
+    assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6));
 
     /*
     /// Next, let's test the creation and functionality
@@ -196,9 +196,4 @@ unittest {
     Q.T = 1500.0;
     assert(isClose(6.238853e-05, o2chemkin.eval(Q), 1.0e-6), failedUnitTest());
     */
-}
-
-@("Hello!")
-unittest {
-    assert(isClose(1.0, 1.0));
 }
