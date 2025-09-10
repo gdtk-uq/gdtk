@@ -107,7 +107,7 @@ unittest {
     assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-5));
 
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/O2-viscosity.lua");
+    doLuaFile(L, "O2-viscosity.lua");
     lua_getglobal(L, "Sutherland");
     vm = createSutherlandViscosity(L);
     lua_close(L);

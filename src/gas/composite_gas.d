@@ -261,7 +261,7 @@ unittest {
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
     //
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
+    doLuaFile(L, "therm-perf-5-species-air.lua");
     auto gm = new CompositeGas(L);
     lua_close(L);
     auto gs = GasState(5, 0);

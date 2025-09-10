@@ -419,8 +419,8 @@ version(three_temperature_trans_props_test)
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
         auto L = init_lua_State();
-        GasModel gm = new CompositeGas("sample-data/N2-N.lua");
-        doLuaFile(L, "sample-data/N2-N.lua");
+        GasModel gm = new CompositeGas("N2-N.lua");
+        doLuaFile(L, "N2-N.lua");
         string[] speciesNames;
         getArrayOfStrings(L, "species", speciesNames);
         auto ttp = new ThreeTemperatureTransProps(L, speciesNames);

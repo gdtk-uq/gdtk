@@ -186,7 +186,7 @@ private:
 unittest {
     // 1. Test CEA thermo curve for monatomic oxygen
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/O-thermo.lua");
+    doLuaFile(L, "O-thermo.lua");
     lua_getglobal(L, "CEA_coeffs");
     double R = 8.31451/0.0159994;
     auto oThermo = new CEAThermoCurve(L, R);

@@ -555,7 +555,7 @@ unittest {
     // Copied from https://dlang.org/library/std/math/floating_point_control.html
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
     //
-    auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
+    auto gm = new ThermallyPerfectGas("therm-perf-5-species-air.lua");
     auto gd = GasState(5, 0);
     assert(isClose(3.621, gm.LJ_sigmas[0]));
     assert(isClose(97.530, gm.LJ_epsilons[0]));

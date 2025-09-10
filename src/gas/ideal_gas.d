@@ -212,7 +212,7 @@ private:
 
 unittest {
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/ideal-air-gas-model.lua");
+    doLuaFile(L, "ideal-air-gas-model.lua");
     auto gm = new IdealGas(L);
     lua_close(L);
     auto gd = GasState(1, 0);

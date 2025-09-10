@@ -164,7 +164,7 @@ unittest {
     /// Next, let's test the creation and functionality
     /// of a CEAThermalConductivity object.
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/CO2-therm-cond.lua");
+    doLuaFile(L, "CO2-therm-cond.lua");
     lua_getglobal(L, "cea");
     auto co2CEA = createCEAThermalConductivity(L);
     lua_close(L);

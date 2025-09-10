@@ -709,7 +709,7 @@ unittest {
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/five-species-air.lua");
+    doLuaFile(L, "five-species-air.lua");
     string[] speciesNames;
     getArrayOfStrings(L, "species", speciesNames);
     auto tm = new TwoTemperatureGasMixture(L, speciesNames);

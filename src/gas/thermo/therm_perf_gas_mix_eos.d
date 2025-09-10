@@ -179,7 +179,7 @@ version(therm_perf_gas_mix_eos_test) {
     import util.msg_service;
     int main() {
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/O2-N2-H2.lua");
+        doLuaFile(L, "O2-N2-H2.lua");
         string[] species;
         getArrayOfStrings(L, "species", species);
         ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);

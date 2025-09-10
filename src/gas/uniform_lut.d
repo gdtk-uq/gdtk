@@ -597,7 +597,7 @@ unittest {
     GasModel gm;
     try {
         lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/cea-lut-air-version-test.lua");
+        doLuaFile(L, "cea-lut-air-version-test.lua");
         gm = new UniformLUT(L);
     }
     catch (Exception e) {

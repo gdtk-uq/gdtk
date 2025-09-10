@@ -85,8 +85,8 @@ unittest {
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
     auto L = init_lua_State();
-    GasModel gm = new CompositeGas("sample-data/therm-perf-5-species-air.lua");
-    doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
+    GasModel gm = new CompositeGas("therm-perf-5-species-air.lua");
+    doLuaFile(L, "therm-perf-5-species-air.lua");
     string[] speciesNames;
     getArrayOfStrings(L, "species", speciesNames);
     auto tp = new GasMixtureTransProps(L, speciesNames);

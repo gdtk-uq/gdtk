@@ -453,7 +453,7 @@ version(vib_specific_co_test) {
         //doLuaFile(L, );
         //auto gm = new VibSpecificCO(L);
         //lua_close(L);
-        auto gm = new VibSpecificCO("sample-data/vib-specific-CO-gas.lua");
+        auto gm = new VibSpecificCO("vib-specific-CO-gas.lua");
         auto Q = GasState(gm.n_species, 0);
 
         // Practice problem to match the data in table II
@@ -491,7 +491,7 @@ version(vib_specific_co_test) {
 unittest {
     import std.stdio;
 
-    auto gm = new VibSpecificCOMixture("sample-data/vib-specific-CO-mixture.lua");
+    auto gm = new VibSpecificCOMixture("vib-specific-CO-mixture.lua");
     auto Q = GasState(gm.n_species, 0);
 
     // Practice problem to match the data in table II
@@ -530,7 +530,7 @@ unittest {
 
     // ---------------------------------------------------------------------------
     // Now check that we match the N2 model when only N2 is present
-    auto cgm = new CompositeGas("sample-data/thermally-perfect-n2.lua");
+    auto cgm = new CompositeGas("thermally-perfect-n2.lua");
     auto cgs = GasState(cgm);
     cgs.p = 26.7;  // Pa
     cgs.T = 175.0; // K

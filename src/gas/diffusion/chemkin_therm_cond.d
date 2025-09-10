@@ -161,7 +161,7 @@ version(chemkin_therm_cond_test) {
         /// Next, let's test the creation and functionality
         /// of a ChemkinThermalConductivity object.
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/CO2-therm-cond.lua");
+        doLuaFile(L, "CO2-therm-cond.lua");
         lua_getglobal(L, "chemkin");
         auto co2Chemkin = createChemkinThermalConductivity(L);
         lua_close(L);
@@ -188,7 +188,7 @@ unittest {
     /// Next, let's test the creation and functionality
     /// of a ChemkinThermalConductivity object.
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/CO2-therm-cond.lua");
+    doLuaFile(L, "CO2-therm-cond.lua");
     lua_getglobal(L, "chemkin");
     auto co2Chemkin = createChemkinThermalConductivity(L);
     lua_close(L);

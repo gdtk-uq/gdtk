@@ -187,7 +187,7 @@ unittest {
     import gas.init_gas_model: init_gas_model;
     GasModel gm;
     try {
-        gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
+        gm = init_gas_model("ideal-air-gas-model.lua");
     }
     catch (Exception e) {
         writeln(e.msg);

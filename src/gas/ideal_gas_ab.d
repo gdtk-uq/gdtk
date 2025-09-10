@@ -187,7 +187,7 @@ unittest {
     import std.stdio;
 
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/ideal-gas-ab-model.lua");
+    doLuaFile(L, "ideal-gas-ab-model.lua");
     auto gm = new IdealGasAB(L);
     lua_close(L);
     auto gd = GasState(2, 0);

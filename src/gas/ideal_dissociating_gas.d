@@ -195,7 +195,7 @@ unittest {
     import std.stdio;
 
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/idg-nitrogen.lua");
+    doLuaFile(L, "idg-nitrogen.lua");
     auto gm = new IdealDissociatingGas(L);
     lua_close(L);
     auto gd = GasState(2, 0);
@@ -231,7 +231,7 @@ unittest {
     gd.T = 5000.0;
     gd.p = 1.0e5;
     gm.update_thermo_from_pT(gd);
-    auto reactor = new UpdateIDG("sample-data/idg-nitrogen.lua", gm);
+    auto reactor = new UpdateIDG("idg-nitrogen.lua", gm);
     number[] params; // empty
     number dtSuggest; // to receive value
     reactor(gd, 1.0e-3, dtSuggest, params);

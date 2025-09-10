@@ -50,7 +50,7 @@ unittest {
     // Copied from https://dlang.org/library/std/math/floating_point_control.html
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
     //
-    auto gm = new ThermallyPerfectGasEquilibrium("sample-data/therm-perf-equil-5-species-air.lua");
+    auto gm = new ThermallyPerfectGasEquilibrium("therm-perf-equil-5-species-air.lua");
 
     auto gd = GasState(5, 0);
     assert(isClose(3.621, gm.LJ_sigmas[0]));

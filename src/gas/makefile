@@ -262,7 +262,9 @@ univariate_lut_demo: univariate_lut_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_L
 
 .PHONY: test2
 test2: test_runner
-	- exec ./test_runner --module gas
+	# Most tests need the sample data to exist in the working directory.
+	# Changing directory is easier than moving all the files over.
+	- cd sample-data && exec ../test_runner --module gas
 
 test_runner: $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \

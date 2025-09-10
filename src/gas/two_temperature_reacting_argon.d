@@ -224,7 +224,7 @@ unittest {
     import std.math : isClose;
 
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/two-temperature-reacting-argon-model.lua");
+    doLuaFile(L, "two-temperature-reacting-argon-model.lua");
     auto gm = new TwoTemperatureReactingArgon(L);
     lua_close(L);
     auto gd = GasState(3, 1);

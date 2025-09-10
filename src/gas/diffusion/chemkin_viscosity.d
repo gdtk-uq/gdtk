@@ -161,7 +161,7 @@ version(chemkin_viscosity_test) {
         /// Next, let's test the creation and functionality
         /// of a ChemkinViscosity object.
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/O2-viscosity.lua");
+        doLuaFile(L, "O2-viscosity.lua");
         lua_getglobal(L, "chemkin");
         auto o2Chemkin = createChemkinViscosity(L);
         lua_close(L);
@@ -188,7 +188,7 @@ unittest {
     /// Next, let's test the creation and functionality
     /// of a ChemkinViscosity object.
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/O2-viscosity.lua");
+    doLuaFile(L, "O2-viscosity.lua");
     lua_getglobal(L, "chemkin");
     auto o2Chemkin = createChemkinViscosity(L);
     lua_close(L);

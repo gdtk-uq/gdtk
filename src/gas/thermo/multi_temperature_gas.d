@@ -745,7 +745,7 @@ unittest {
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
     auto L = init_lua_State();
-    doLuaFile(L, "sample-data/air-5sp-5T-gas-model.lua");
+    doLuaFile(L, "air-5sp-5T-gas-model.lua");
     string[] speciesNames;
     string[] energy_mode_names;
     getArrayOfStrings(L, "species", speciesNames);

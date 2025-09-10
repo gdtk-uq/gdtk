@@ -580,7 +580,7 @@ private:
 
 unittest {
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/cea-air5species-gas-model.lua");
+    doLuaFile(L, "cea-air5species-gas-model.lua");
     auto gm = new CEAGas(L);
     lua_close(L);
 

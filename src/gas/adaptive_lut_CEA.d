@@ -714,7 +714,7 @@ unittest {
 
     try {
         lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/cea-adaptive-lut-air-bezier.lua");
+        doLuaFile(L, "cea-adaptive-lut-air-bezier.lua");
         gm = new AdaptiveLUT(L);
     }
     catch (Exception e) {
@@ -775,7 +775,7 @@ unittest {
     // Now do the same test for the linear implementation
     try {
         lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/cea-adaptive-lut-air-linear.lua");
+        doLuaFile(L, "cea-adaptive-lut-air-linear.lua");
         gm = new AdaptiveLUT(L);
     }
     catch (Exception e) {

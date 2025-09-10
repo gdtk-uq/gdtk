@@ -208,7 +208,7 @@ unittest {
     import std.stdio;
 
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/vib-specific-N2-gas.lua");
+    doLuaFile(L, "vib-specific-N2-gas.lua");
     auto gm = new VibSpecificNitrogen(L);
     lua_close(L);
     auto Q = GasState(gm.numVibLevels, 0);

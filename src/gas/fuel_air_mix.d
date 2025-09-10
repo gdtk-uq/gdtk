@@ -79,7 +79,7 @@ unittest {
     [FIXME] We don't even have a fuel-air-mix lua model.
 
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/fuel-air-mix-model.lua");
+    doLuaFile(L, "fuel-air-mix-model.lua");
     auto gm = new FuelAirMix(L);
     lua_close(L);
     auto gd = GasState(2, 0);

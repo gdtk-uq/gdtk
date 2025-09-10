@@ -917,7 +917,7 @@ version(three_temperature_gas_test)
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/N2_3T.lua");
+        doLuaFile(L, "N2_3T.lua");
         string[] speciesNames;
         getArrayOfStrings(L, "species", speciesNames);
         auto tm = new ThreeTemperatureGasMixture(L, speciesNames);

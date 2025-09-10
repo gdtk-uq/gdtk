@@ -143,7 +143,6 @@ UnitTestResult customUnitTester() {
     string[] excludePatterns;
     auto opts = getopt(args, "module", &rootModule, "exclude", &excludePatterns);
 
-    // Header like pytest
     writefln(BOLD ~ center(" test session starts ", OUTPUT_WIDTH, '=') ~ RESET);
 
     ModuleInfo*[] allModules;
@@ -167,7 +166,6 @@ UnitTestResult customUnitTester() {
 
     auto sw = StopWatch(AutoStart.yes);
     TestInfo[] allTests;
-    Summary summary;
 
     // Verbose pytest-style output
     foreach (i, m; modules) {
@@ -188,11 +186,7 @@ UnitTestResult customUnitTester() {
     }
 
     sw.stop();
-    summary.duration = sw.peek().total!"msecs" / 1000.0;
-
     auto failedTests = allTests.filter!(t => t.result != TestResult.PASSED).array();
-    summary.failed = failedTests.length;
-    summary.passed = allTests.length - summary.failed;
 
     writeln();
 
@@ -205,13 +199,16 @@ UnitTestResult customUnitTester() {
         }
     }
 
+    Summary summary = {
+        duration: sw.peek().total!"msecs" / 1000.0, failed: failedTests.length,
+        passed: allTests.length - failedTests.length
+    };
     writeln(summary);
 
     UnitTestResult result = {
         executed: summary.passed + summary.failed, passed: summary.passed,
         summarize: false, runMain: true
     };
-
     return result;
 }
 

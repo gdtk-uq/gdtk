@@ -406,7 +406,7 @@ version(pseudo_species_gas_test) {
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/pseudo-species-49-components.lua");
+        doLuaFile(L, "pseudo-species-49-components.lua");
         auto gm = new PseudoSpeciesGas(L);
         // writeln("gm.n_species = ", gm.n_species);
         assert(gm.n_species == 49, failedUnitTest());

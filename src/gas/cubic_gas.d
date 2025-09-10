@@ -210,7 +210,7 @@ private:
 
 unittest {
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/cubic-gas-model.lua");
+    doLuaFile(L, "cubic-gas-model.lua");
     auto gm = new CubicGas(L);
     lua_close(L);
     auto gd = GasState(1, 0);

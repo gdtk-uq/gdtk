@@ -710,7 +710,7 @@ version(electronically_specific_gas_test) {
         import util.msg_service;
 
         auto L = init_lua_State();
-        doLuaFile(L,"sample-data/electronic-and-macro-species.lua");
+        doLuaFile(L,"electronic-and-macro-species.lua");
 
         auto gm = new ElectronicallySpecificGas(L);
         auto gd = GasState(gm.n_species,1);
@@ -1235,7 +1235,7 @@ version(electronically_specific_gas_test) {
     {
         import util.msg_service;
 
-        string filename = "sample-data/electronic_composition.lua";
+        string filename = "electronic_composition.lua";
 
         auto L = init_lua_State();
         doLuaFile(L, relativePath(filename));

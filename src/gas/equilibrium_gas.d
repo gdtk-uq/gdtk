@@ -275,7 +275,7 @@ unittest {
     import std.process;
 
     // Before running this test, we need the gas model files in place.
-    auto cmd = executeShell("cp sample-data/air-5sp-eq.lua .");
+    auto cmd = executeShell("cp air-5sp-eq.lua .");
     assert(cmd.status == 0);
     cmd = executeShell("cp ../../examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .");
     assert(cmd.status == 0);
