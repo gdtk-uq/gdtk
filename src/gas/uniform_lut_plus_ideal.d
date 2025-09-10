@@ -534,8 +534,6 @@ unittest {
     writeln("T=", gd.T);
     assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
 
-    assert(false);
-
     version(complex_numbers) {
         // Check du/dT = Cv
         number u0 = gd.u; // copy unperturbed value, but we don't really need it
