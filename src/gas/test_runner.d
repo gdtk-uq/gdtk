@@ -97,7 +97,7 @@ struct Summary {
             summaryText ~= BOLD ~ format("%d failed", failed) ~ RESET ~ ", ";
             summaryText ~= GREEN ~ format("%d passed", passed) ~ summaryColour;
         } else {
-            summaryText ~= format("%d passed");
+            summaryText ~= format("%d passed", passed);
         }
         summaryText ~= format(" in %.2fs", duration);
         return summaryColour ~ center(" " ~ summaryText ~ " ", OUTPUT_WIDTH, '=') ~ RESET;
