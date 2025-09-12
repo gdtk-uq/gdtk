@@ -1,4 +1,6 @@
 // test_runner.d
+module util.test_runner;
+
 import core.exception;
 import core.runtime;
 
@@ -53,7 +55,7 @@ enum TestResult {
     ERROR,
 }
 
-string toColour(TestResult r) {
+string getColour(TestResult r) {
     final switch (r) {
     case TestResult.PASSED:
         return GREEN;
@@ -75,7 +77,7 @@ struct TestInfo {
             return "";
         }
 
-        string output = result.toColour();
+        string output = result.getColour();
         output ~= center(" " ~ name ~ " ", OUTPUT_WIDTH, '_') ~ RESET ~ "\n";
         output ~= context ~ (context.length ? "\n" : "");
         output ~= "  " ~ BOLD ~ message ~ RESET ~ "\n";
@@ -178,7 +180,7 @@ UnitTestResult customUnitTester() {
         testInfo.name = testName;
 
         write("\b\b\b\b\b "); // Erase the string " ... "
-        write(testInfo.result.toColour());
+        write(testInfo.result.getColour());
         write(testInfo.result);
         writeln(RESET);
 
@@ -216,5 +218,7 @@ static this() {
     Runtime.extendedModuleUnitTester = &customUnitTester;
 }
 
-void main() {
+version (unittest) {
+    void main() {
+    }
 }
