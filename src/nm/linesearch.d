@@ -49,22 +49,20 @@ void minimize(alias f, T)(ref T a, ref T b, double tol=1.0e-4)
  } // end minimize()
 
 
-version(linesearch_test) {
+unittest {
     import std.math;
-    import util.msg_service;
     import nm.number;
     import ntypes.complex;
 
-    int main() {
-        number fdemo(number x) {
-            return exp(x) + 2.0 - cos(x);
-        }
-        number a = -3;
-        number b = 1;
-        minimize!(fdemo,number)(a, b, 1.0e-6);
-        number xminimum = -0.588534;
-        assert(fabs(a - xminimum) < 1.0e-4, failedUnitTest());
-        assert(fabs(b - xminimum) < 1.0e-4, failedUnitTest());
-        return 0;
+    number fdemo(number x) {
+        return exp(x) + 2.0 - cos(x);
     }
+
+    number a = -3;
+    number b = 1;
+    minimize!(fdemo,number)(a, b, 1.0e-6);
+    number xminimum = -0.588534;
+
+    assert(fabs(a - xminimum) < 1.0e-4);
+    assert(fabs(b - xminimum) < 1.0e-4);
 }
