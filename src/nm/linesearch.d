@@ -52,6 +52,7 @@ void minimize(alias f, T)(ref T a, ref T b, double tol=1.0e-4)
 unittest {
     import std.math;
     import nm.number;
+    import ntypes.complex;
 
     number fdemo(number x) {
         return exp(x) + 2.0 - cos(x);
