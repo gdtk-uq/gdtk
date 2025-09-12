@@ -53,22 +53,20 @@ T solve(alias f, T)(T x0, T x1, double tol=1.0e-11,
     throw new Exception("Did not converge after max iterations.");
 } // end solve()
 
-version(secant_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
     import nm.number;
-    int main() {
-        number test_fun_1(number x) {
-            return pow(x,3) + pow(x,2) - 3*x - 3;
-        }
-        number test_fun_2(number x, number a) {
-            return a*x + sin(x) - exp(x);
-        }
-        assert(fabs(solve!(test_fun_1,number)(to!number(1.5), to!number(1)) - 1.732051) < 1.0e-5, failedUnitTest());
-        number my_a = 3.0;
-        auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
-        assert(fabs(solve!(test_fun_3,number)(to!number(0), to!number(0.1)) - 0.3604217) < 1.0e-5, failedUnitTest());
 
-        return 0;
+    number test_fun_1(number x) {
+        return pow(x,3) + pow(x,2) - 3*x - 3;
     }
+
+    number test_fun_2(number x, number a) {
+        return a*x + sin(x) - exp(x);
+    }
+
+    assert(fabs(solve!(test_fun_1,number)(to!number(1.5), to!number(1)) - 1.732051) < 1.0e-5);
+    number my_a = 3.0;
+    auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
+    assert(fabs(solve!(test_fun_3,number)(to!number(0), to!number(0.1)) - 0.3604217) < 1.0e-5);
 }

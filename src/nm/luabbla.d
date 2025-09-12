@@ -533,13 +533,12 @@ void registerBBLA(lua_State *L)
 
 }
 
-version(luabbla_test) {
-    import util.msg_service;
-    int main() {
-        auto L = luaL_newstate();
-        luaL_openlibs(L);
-        registerBBLA(L);
-        string testCode = `
+unittest {
+
+    auto L = luaL_newstate();
+    luaL_openlibs(L);
+    registerBBLA(L);
+    string testCode = `
 a = Matrix:new{n=4}
 assert(a:nrows() == 4)
 assert(a:ncols() == 4)
@@ -575,8 +574,7 @@ assert(math.abs(b2:get(0,0) - b:get(0,0)) < 1.0e-6)
 assert(math.abs(b2:get(1,0) - b:get(1,0)) < 1.0e-6)
 assert(math.abs(b2:get(2,0) - b:get(2,0)) < 1.0e-6)
 assert(math.abs(b2:get(3,0) - b:get(3,0)) < 1.0e-6)
-        `;
-        assert(luaL_dostring(L, toStringz(testCode)) == 0, failedUnitTest());
-        return 0;
-    }
+    `;
+
+    assert(luaL_dostring(L, toStringz(testCode)) == 0);
 }

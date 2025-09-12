@@ -68,20 +68,17 @@ int bracket(alias f, T)(ref T x1, ref T x2,
     return -1;
 } // end bracket()
 
-version(bracketing_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
     import nm.number;
-    int main() {
-        number test_fun_2(number x, number a) {
-            return a*x + sin(x) - exp(x);
-        }
-        number my_a = 3.0;
-        auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
-        number x1 = 0.4;
-        number x2 = 0.5;
-        assert(bracket!(test_fun_3,number)(x1, x2) == to!number(0), failedUnitTest());
 
-        return 0;
+    number test_fun_2(number x, number a) {
+        return a*x + sin(x) - exp(x);
     }
+
+    number my_a = 3.0;
+    auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
+    number x1 = 0.4;
+    number x2 = 0.5;
+    assert(bracket!(test_fun_3,number)(x1, x2) == to!number(0));
 }

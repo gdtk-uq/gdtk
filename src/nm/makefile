@@ -93,6 +93,13 @@ clean:
 
 # Specific targets, for individual artefacts.
 
+test_runner: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
+	@echo "Compiling test runner..."
+	$(DMD) -of$@ -d-debug -g -w -dip1008 --unittest $^ $(DLINKFLAGS)
+
+test2: test_runner
+	- exec ./test_runner --module nm
+	
 $(LIBLUA):
 	cd $(LUA); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
