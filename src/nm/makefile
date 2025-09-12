@@ -141,7 +141,7 @@ ridder_test: $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 ridder_complex_test: $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_numbers \
 		$(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 secant_test: $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
@@ -149,7 +149,7 @@ secant_test: $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 secant_complex_test: $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=secant_test -version=complex_numbers \
 		$(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 rungekutta_test: $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d

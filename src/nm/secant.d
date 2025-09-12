@@ -64,10 +64,10 @@ version(secant_test) {
         number test_fun_2(number x, number a) {
             return a*x + sin(x) - exp(x);
         }
-        assert(fabs(solve!(test_fun_1,number)(1.5, 1) - 1.732051) < 1.0e-5, failedUnitTest());
+        assert(fabs(solve!(test_fun_1,number)(to!number(1.5), to!number(1)) - 1.732051) < 1.0e-5, failedUnitTest());
         number my_a = 3.0;
         auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
-        assert(fabs(solve!(test_fun_3,number)(0, 0.1) - 0.3604217) < 1.0e-5, failedUnitTest());
+        assert(fabs(solve!(test_fun_3,number)(to!number(0), to!number(0.1)) - 0.3604217) < 1.0e-5, failedUnitTest());
 
         return 0;
     }
