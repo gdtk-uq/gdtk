@@ -1112,340 +1112,394 @@ do {
     return x.dup();
 }
 
+unittest {
 
+    // This example matrix is from Saad (2003), Sec. 3.4
+    auto a = new SMatrix!number([
+        to!number(1.), to!number(2.), to!number(3.), to!number(4.),
+        to!number(5.), to!number(6.), to!number(7.), to!number(8.),
+        to!number(9.), to!number(10.), to!number(11.), to!number(12.)
+    ],
+    [0, 3, 0, 1, 3, 0, 2, 3, 4, 2, 3, 4],
+    [0, 2, 5, 9, 11, 12]);
+    // Test construction of matrix row by row
+    auto b = new SMatrix!number();
+    b.addRow([to!number(1.), to!number(2.)], [0, 3]);
+    b.addRow([to!number(3.), to!number(4.), to!number(5.)], [0, 1, 3]);
+    b.addRow([to!number(6.), to!number(7.), to!number(8.), to!number(9.)], [0, 2, 3, 4]);
+    b.addRow([to!number(10.), to!number(11.)], [2, 3]);
+    b.addRow([to!number(12.)], [4]);
+    assert(approxEqualMatrix(a, b));
 
-version(smla_test) {
-    import util.msg_service;
-    int main() {
-        // This example matrix is from Saad (2003), Sec. 3.4
-        auto a = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(4.),
-                                     to!number(5.), to!number(6.), to!number(7.), to!number(8.),
-                                     to!number(9.), to!number(10.), to!number(11.), to!number(12.)],
-                                    [0, 3, 0, 1, 3, 0, 2, 3, 4, 2, 3, 4],
-                                    [0, 2, 5, 9, 11, 12]);
-        // Test construction of matrix row by row
-        auto b = new SMatrix!number();
-        b.addRow([to!number(1.), to!number(2.)], [0, 3]);
-        b.addRow([to!number(3.), to!number(4.), to!number(5.)], [0, 1, 3]);
-        b.addRow([to!number(6.), to!number(7.), to!number(8.), to!number(9.)], [0, 2, 3, 4]);
-        b.addRow([to!number(10.), to!number(11.)], [2, 3]);
-        b.addRow([to!number(12.)], [4]);
-        assert(approxEqualMatrix(a, b), failedUnitTest());
-        // Test dropping rows
-        auto aa = new SMatrix!number(a);
-        aa.dropRows(2);
-        auto aaRef = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(4.),
-                                         to!number(5.), to!number(6.), to!number(7.), to!number(8.),
-                                         to!number(9.)],
-                                        [0, 3, 0, 1, 3, 0, 2, 3, 4],
-                                        [0, 2, 5, 9]);
-        assert(approxEqualMatrix(aa, aaRef), failedUnitTest());
-        // Test matrix multiply
-        number[] v = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.)];
-        number[] c;
-        c.length = v.length;
-        multiply(a, v, c);
-        number[] expected_c = [to!number(9.), to!number(31.), to!number(104.), to!number(74.), to!number(60.)];
-        foreach ( i; 0 .. c.length ) {
-            assert(approxEqualNumbers(c[i], expected_c[i]), failedUnitTest());
-        }
-	// Test transpose
-	auto cc = new SMatrix!double();
-	cc.addRow([1.0, 3.0], [0, 2]);
-	cc.addRow([4.0], [2]);
-	cc.addRow([7.0], [1]);
-	auto ccT = cc.transpose();
+    // Test dropping rows
+    auto aa = new SMatrix!number(a);
+    aa.dropRows(2);
+    auto aaRef = new SMatrix!number([
+        to!number(1.), to!number(2.), to!number(3.), to!number(4.),
+        to!number(5.), to!number(6.), to!number(7.), to!number(8.),
+        to!number(9.)
+    ],
+    [0, 3, 0, 1, 3, 0, 2, 3, 4],
+    [0, 2, 5, 9]);
+    assert(approxEqualMatrix(aa, aaRef));
 
-	double[] ccT_aa_exp = [1.0, 7.0, 3.0, 4.0];
-	size_t[] ccT_ja_exp = [0, 2, 0, 1];
-	size_t[] ccT_ia_exp = [0, 1, 2, 4];
-	foreach (i; 0 .. ccT.aa.length) {
-	    assert(isClose(ccT.aa[i], ccT_aa_exp[i]));
-	}
-	foreach (i; 0 .. ccT.ja.length) {
-	    assert(ccT.ja[i] == ccT_ja_exp[i]);
-	}
-	foreach (i; 0 .. ccT.ia.length) {
-	    assert(ccT.ia[i] == ccT_ia_exp[i]);
-	}
-        // Test decompILU0
-        // This example matrix and decomposition is from Gerard and Wheatley, 6th ed, Sec. 2.4
-        auto d = new SMatrix!number();
-        d.addRow([to!number(-4.), to!number(2.)], [0, 1]);
-        d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [0, 1, 2]);
-        d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [1, 2, 3]);
-        d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [2, 3, 4]);
-        d.addRow([to!number(2.), to!number(-4.)], [3, 4]);
-        decompILU0(d);
-        auto dLU = new SMatrix!number();
-        dLU.addRow([to!number(-4.), to!number(2.)], [0, 1]);
-        dLU.addRow([to!number(-0.25), to!number(-3.5), to!number(1.)], [0, 1, 2]);
-        dLU.addRow([to!number(-0.2857), to!number(-3.7143), to!number(1.)], [1, 2, 3]);
-        dLU.addRow([to!number(-0.2692), to!number(-3.7308), to!number(1.)], [2, 3, 4]);
-        dLU.addRow([to!number(-0.5361), to!number(-3.4639)], [3, 4]);
-        assert(approxEqualMatrix(d, dLU), failedUnitTest());
-        // Test solve.
-        // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
-        // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3.
-	auto e = new SMatrix!number();
-        e.addRow([to!number(2.), to!number(-1.)], [0, 1]);
-        e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
-        e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
-        e.addRow([to!number(-1.), to!number(2.)], [2, 3]);
+    // Test matrix multiply
+    number[] v = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.)];
+    number[] c;
+    c.length = v.length;
+    multiply(a, v, c);
+    number[] expected_c = [
+        to!number(9.), to!number(31.), to!number(104.), to!number(74.), to!number(60.)
+    ];
+    foreach (i; 0 .. c.length) {
+        assert(approxEqualNumbers(c[i], expected_c[i]));
+    }
 
-        number[] B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
-        solve(e, B);
-        number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
-        foreach ( i; 0 .. B.length ) {
-            assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
-        }
+    // Test transpose
+    auto cc = new SMatrix!double();
+    cc.addRow([1.0, 3.0], [0, 2]);
+    cc.addRow([4.0], [2]);
+    cc.addRow([7.0], [1]);
+    auto ccT = cc.transpose();
 
-        // Now let's see how we go at an approximate solve by using a non-triangular matrix.
-        // This is example 2.2 from Gerard and Wheatley, 6th edition
-        auto f = new SMatrix!number();
-        f.addRow([to!number(3.), to!number(2.), to!number(-1.), to!number(2.)], [0, 1, 2, 3]);
-        f.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
-        f.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
-        f.addRow([to!number(1.), to!number(1.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
-	decompILU0(f);
-	number[] C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
-        solve(f, C);
-        number[] C_exp = [to!number(0.333333), to!number(0.666667), to!number(-1), to!number(-0.666667)];
-        foreach ( i; 0 .. C.length ) {
-            assert(approxEqualNumbers(C[i], C_exp[i]), failedUnitTest());
-        }
-        // Let's test the ILU(p) method
-        auto s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
-                                     to!number(4.), to!number(1.), to!number(2.), to!number(1.),
-                                     to!number(8.), to!number(2.), to!number(4.), to!number(1.),
-                                     to!number(3.), to!number(6.), to!number(2.), to!number(1.)],
-                                    [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
-                                    [0, 3, 6, 10, 12, 16]);
-        int p;
+    double[] ccT_aa_exp = [1.0, 7.0, 3.0, 4.0];
+    size_t[] ccT_ja_exp = [0, 2, 0, 1];
+    size_t[] ccT_ia_exp = [0, 1, 2, 4];
+    foreach (i; 0 .. ccT.aa.length) {
+        assert(isClose(ccT.aa[i], ccT_aa_exp[i]));
+    }
+    foreach (i; 0 .. ccT.ja.length) {
+        assert(ccT.ja[i] == ccT_ja_exp[i]);
+    }
+    foreach (i; 0 .. ccT.ia.length) {
+        assert(ccT.ia[i] == ccT_ia_exp[i]);
+    }
 
-        // test for ILU(p=2)
-        s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
-                                to!number(4.), to!number(1.), to!number(2.), to!number(1.),
-                                to!number(8.), to!number(2.), to!number(4.), to!number(1.),
-                                to!number(3.), to!number(6.), to!number(2.), to!number(1.)],
-                               [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
-                               [0, 3, 6, 10, 12, 16]);
-        p = 2;
-        decompILUp(s, p);
-        auto sol1 = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
-                                        to!number(4.), to!number(1.), to!number(2.), to!number(-0.5),
-                                        to!number(10.), to!number(2.), to!number(-7.5), to!number(0.4),
-                                        to!number(0.2), to!number(3.), to!number(3.), to!number(1.5),
-                                        to!number(-0.4), to!number(4.), to!number(-27.5)],
-                                       [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
-                                       [0, 3, 6, 11, 14, 19]);
-	assert(approxEqualMatrix!number(s, sol1), failedUnitTest());
+    // Test decompILU0
+    // This example matrix and decomposition is from Gerard and Wheatley, 6th ed, Sec. 2.4
+    auto d = new SMatrix!number();
+    d.addRow([to!number(-4.), to!number(2.)], [0, 1]);
+    d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [0, 1, 2]);
+    d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [1, 2, 3]);
+    d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [2, 3, 4]);
+    d.addRow([to!number(2.), to!number(-4.)], [3, 4]);
+    decompILU0(d);
+    auto dLU = new SMatrix!number();
+    dLU.addRow([to!number(-4.), to!number(2.)], [0, 1]);
+    dLU.addRow([to!number(-0.25), to!number(-3.5), to!number(1.)], [0, 1, 2]);
+    dLU.addRow([to!number(-0.2857), to!number(-3.7143), to!number(1.)], [1, 2, 3]);
+    dLU.addRow([to!number(-0.2692), to!number(-3.7308), to!number(1.)], [2, 3, 4]);
+    dLU.addRow([to!number(-0.5361), to!number(-3.4639)], [3, 4]);
+    assert(approxEqualMatrix(d, dLU));
+    // Test solve.
+    // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
+    // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3.
+    auto e = new SMatrix!number();
+    e.addRow([to!number(2.), to!number(-1.)], [0, 1]);
+    e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
+    e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
+    e.addRow([to!number(-1.), to!number(2.)], [2, 3]);
 
-        // Test GMRES on Faires and Burden problem.
+    number[] B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
+    solve(e, B);
+    number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
+    foreach (i; 0 .. B.length) {
+        assert(approxEqualNumbers(B[i], B_exp[i]));
+    }
 
-        auto g = new SMatrix!number();
-        g.addRow([to!number(2.), to!number(-1.)], [0, 1]);
-        g.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
-        g.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
-        g.addRow([to!number(-1.), to!number(2.)], [2, 3]);
-        number[] B1 = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
-        number[] x0 = [to!number(1.2), to!number(0.8), to!number(0.9), to!number(1.1)];
+    // Now let's see how we go at an approximate solve by using a non-triangular matrix.
+    // This is example 2.2 from Gerard and Wheatley, 6th edition
+    auto f = new SMatrix!number();
+    f.addRow([to!number(3.), to!number(2.), to!number(-1.), to!number(2.)], [0, 1, 2, 3]);
+    f.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
+    f.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
+    f.addRow([to!number(1.), to!number(1.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
+    decompILU0(f);
+    number[] C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
+    solve(f, C);
+    number[] C_exp = [
+        to!number(0.333333), to!number(0.666667), to!number(-1), to!number(-0.666667)
+    ];
+    foreach (i; 0 .. C.length) {
+        assert(approxEqualNumbers(C[i], C_exp[i]));
+    }
+    // Let's test the ILU(p) method
+    auto s = new SMatrix!number([
+        to!number(1.), to!number(1.), to!number(4.), to!number(2.),
+        to!number(4.), to!number(1.), to!number(2.), to!number(1.),
+        to!number(8.), to!number(2.), to!number(4.), to!number(1.),
+        to!number(3.), to!number(6.), to!number(2.), to!number(1.)
+    ],
+    [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+    [0, 3, 6, 10, 12, 16]);
+    int p;
 
+    // test for ILU(p=2)
+    s = new SMatrix!number([
+        to!number(1.), to!number(1.), to!number(4.), to!number(2.),
+        to!number(4.), to!number(1.), to!number(2.), to!number(1.),
+        to!number(8.), to!number(2.), to!number(4.), to!number(1.),
+        to!number(3.), to!number(6.), to!number(2.), to!number(1.)
+    ],
+    [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+    [0, 3, 6, 10, 12, 16]);
+    p = 2;
+    decompILUp(s, p);
+    auto sol1 = new SMatrix!number([
+        to!number(1.), to!number(1.), to!number(4.), to!number(2.),
+        to!number(4.), to!number(1.), to!number(2.), to!number(-0.5),
+        to!number(10.), to!number(2.), to!number(-7.5), to!number(0.4),
+        to!number(0.2), to!number(3.), to!number(3.), to!number(1.5),
+        to!number(-0.4), to!number(4.), to!number(-27.5)
+    ],
+    [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
+    [0, 3, 6, 11, 14, 19]);
+    assert(approxEqualMatrix!number(s, sol1));
 
-        auto x = gmres!number(g, B1, x0, 4);
-        foreach (i; 0 .. x.length) {
-            assert(approxEqualNumbers(x[i], B_exp[i]), failedUnitTest());
-        }
+    // Test GMRES on Faires and Burden problem.
 
-        x = gmres2!number(g, B1, x0, 5, 1.0e-10);
-        foreach (i; 0 .. x.length) {
-            assert(approxEqualNumbers(x[i], B_exp[i]), failedUnitTest());
-        }
+    auto g = new SMatrix!number();
+    g.addRow([to!number(2.), to!number(-1.)], [0, 1]);
+    g.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
+    g.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
+    g.addRow([to!number(-1.), to!number(2.)], [2, 3]);
+    number[] B1 = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
+    number[] x0 = [to!number(1.2), to!number(0.8), to!number(0.9), to!number(1.1)];
 
-        // Test pre-conditioned GMRES on Gerald and Wheatley problem.
-        // This time we expect the exact answer. Earlier we only used
-        // an incomplete LU factorisation and so the result was
-        // only approximate.
-        auto h = new SMatrix!number();
-        h.addRow([to!number(3.), to!number(2.), to!number(-1.), to!number(2.)], [0, 1, 2, 3]);
-        h.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
-        h.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
-        h.addRow([to!number(1.), to!number(1.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
-        auto Ph = new SMatrix!number(h);
-        decompILU0!number(Ph);
-        number[] C1 = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
-        x0 = [to!number(0.2), to!number(0.5), to!number(-1.1), to!number(-0.6)];
-        int maxIters = 5;
-        auto gws = GMRESWorkSpace!number(x0.length, maxIters);
-        rpcGMRES!number(h, Ph, C1, x0, x, maxIters, 1.0e-15, gws);
-        number[] C1_exp = [to!number(0.273), to!number(0.773), to!number(-1.0), to!number(-0.682)];
+    auto x = gmres!number(g, B1, x0, 4);
+    foreach (i; 0 .. x.length) {
+        assert(approxEqualNumbers(x[i], B_exp[i]));
+    }
 
-        foreach (i; 0 .. x.length) {
-            assert(approxEqualNumbers(x[i], C1_exp[i]), failedUnitTest());
-        }
+    x = gmres2!number(g, B1, x0, 5, 1.0e-10);
+    foreach (i; 0 .. x.length) {
+        assert(approxEqualNumbers(x[i], B_exp[i]));
+    }
 
-        auto Pi = new SMatrix!number();
-        Pi.addRow([to!number(1.),], [0]);
-        Pi.addRow([to!number(1.),], [1]);
-        Pi.addRow([to!number(1.),], [2]);
-        Pi.addRow([to!number(1.),], [3]);
+    // Test pre-conditioned GMRES on Gerald and Wheatley problem.
+    // This time we expect the exact answer. Earlier we only used
+    // an incomplete LU factorisation and so the result was
+    // only approximate.
+    auto h = new SMatrix!number();
+    h.addRow([to!number(3.), to!number(2.), to!number(-1.), to!number(2.)], [0, 1, 2, 3]);
+    h.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
+    h.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
+    h.addRow([to!number(1.), to!number(1.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
+    auto Ph = new SMatrix!number(h);
+    decompILU0!number(Ph);
+    number[] C1 = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
+    x0 = [to!number(0.2), to!number(0.5), to!number(-1.1), to!number(-0.6)];
+    int maxIters = 5;
+    auto gws = GMRESWorkSpace!number(x0.length, maxIters);
+    rpcGMRES!number(h, Ph, C1, x0, x, maxIters, 1.0e-15, gws);
+    number[] C1_exp = [to!number(0.273), to!number(0.773), to!number(-1.0), to!number(-0.682)];
 
-        x = fGMRES!number(h, Pi, C1, x0, 5, 3);
-        foreach (i; 0 .. x.length) {
-            assert(approxEqualNumbers(x[i], C1_exp[i]), failedUnitTest());
-        }
+    foreach (i; 0 .. x.length) {
+        assert(approxEqualNumbers(x[i], C1_exp[i]));
+    }
 
-        // Test pre-conditioned restarted GMRES on the linear system problem
-        // outlined in Section III from:
-        // Implementation of GMRES for chemically reacting flows by Maclean and White, 2012.
-        auto mat_A = new SMatrix!number([to!number(1.), to!number(2.), to!number(-1.), to!number(3.), to!number(2.), to!number(-1.), to!number(-2.),
-                                         to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.), to!number(2.),
-                                         to!number(-2.), to!number(1.), to!number(5.), to!number(-1.), to!number(-1.), to!number(6.), to!number(-2.),
-                                         to!number(-2.), to!number(3.), to!number(-1.), to!number(-1.), to!number(-5.), to!number(4.), to!number(3.),
-                                         to!number(-2.), to!number(1.), to!number(2.), to!number(1.), to!number(-1.), to!number(3.), to!number(4.)],
-                                        [0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9, 4, 8, 9],
-                                        [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
-        auto pc_A = new SMatrix!number(mat_A);
-        decompILU0!number(pc_A);
-	number[] vec_b   = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
-                            to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
-        number[] vec_x0  = [to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.),
-                            to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.)];
-        number[] vec_x   = [to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.),
-                            to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.)];
-        number[] vec_ref = [to!number(5.29051), to!number(-1.20438), to!number(4.15595), to!number(2.22681), to!number(0.0574555),
-                            to!number(1.88175), to!number(3.65341), to!number(2.60547), to!number(6.66703), to!number(-2.48591)];
-        int max_iterations = 5;
-        int max_restarts   = 20;
-        auto gws2 = GMRESWorkSpace!number(vec_x0.length, max_iterations);
-        rpcGMRES!number(mat_A, pc_A, vec_b, vec_x0, vec_x, max_iterations, 1.0e-14, gws2, max_restarts);
-        foreach (i; 0 .. vec_x.length) {
-            assert(approxEqualNumbers(vec_x[i], vec_ref[i]), failedUnitTest());
-        }
+    auto Pi = new SMatrix!number();
+    Pi.addRow([to!number(1.),], [0]);
+    Pi.addRow([to!number(1.),], [1]);
+    Pi.addRow([to!number(1.),], [2]);
+    Pi.addRow([to!number(1.),], [3]);
 
-        // This example tests the addition of values to zero-entries
-        auto z = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(4.),
-                                     to!number(5.), to!number(6.), to!number(7.), to!number(8.),
-                                     to!number(9.), to!number(10.), to!number(11.), to!number(12.)],
-                                    [0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3],
-                                    [0, 3, 6, 9, 12]);
-        z[0,3] = to!number(99.0);
-        z[1,2] = to!number(99.0);
-        z[2,1] = to!number(99.0);
-        z[3,0] = to!number(99.0);
-        auto w = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(99.),
-                                     to!number(4.), to!number(5.), to!number(99.), to!number(6.),
-                                     to!number(7.), to!number(99.), to!number(8.), to!number(9.),
-                                     to!number(99.), to!number(10.), to!number(11.), to!number(12.)],
-                                    [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
-                                    [0, 4, 8, 12, 16]);
-        assert(approxEqualMatrix!number(z, w), failedUnitTest());
+    x = fGMRES!number(h, Pi, C1, x0, 5, 3);
+    foreach (i; 0 .. x.length) {
+        assert(approxEqualNumbers(x[i], C1_exp[i]));
+    }
 
-        // Test initialisation from a sparse triplet matrix
-        string fName = "test_data/b1_ss.mtx";
-        auto matrix = readFromMatrixMarketFile!double(fName);
-        auto testMat = new SMatrix!double(matrix);
-        assert(approxEqualNumbers(testMat[4,0], -0.03599942, 1.0e-7), failedUnitTest());
-        assert(approxEqualNumbers(testMat[6,6], 1.0, 1.0e-7), failedUnitTest());
+    // Test pre-conditioned restarted GMRES on the linear system problem
+    // outlined in Section III from:
+    // Implementation of GMRES for chemically reacting flows by Maclean and White, 2012.
+    auto mat_A = new SMatrix!number([
+        to!number(1.), to!number(2.), to!number(-1.), to!number(3.), to!number(2.), to!number(-1.),
+        to!number(-2.),
+        to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.),
+        to!number(2.),
+        to!number(-2.), to!number(1.), to!number(5.), to!number(-1.), to!number(-1.), to!number(6.),
+        to!number(-2.),
+        to!number(-2.), to!number(3.), to!number(-1.), to!number(-1.), to!number(-5.), to!number(4.),
+        to!number(3.),
+        to!number(-2.), to!number(1.), to!number(2.), to!number(1.), to!number(-1.), to!number(3.),
+        to!number(4.)
+    ],
+    [
+        0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9,
+        4, 8, 9
+    ],
+    [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
+    auto pc_A = new SMatrix!number(mat_A);
+    decompILU0!number(pc_A);
+    number[] vec_b = [
+        to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
+        to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)
+    ];
+    number[] vec_x0 = [
+        to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.),
+        to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.)
+    ];
+    number[] vec_x = [
+        to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.),
+        to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.)
+    ];
+    number[] vec_ref = [
+        to!number(5.29051), to!number(-1.20438), to!number(4.15595), to!number(2.22681),
+        to!number(0.0574555),
+        to!number(1.88175), to!number(3.65341), to!number(2.60547), to!number(6.66703),
+        to!number(-2.48591)
+    ];
+    int max_iterations = 5;
+    int max_restarts = 20;
+    auto gws2 = GMRESWorkSpace!number(vec_x0.length, max_iterations);
+    rpcGMRES!number(mat_A, pc_A, vec_b, vec_x0, vec_x, max_iterations, 1.0e-14, gws2, max_restarts);
+    foreach (i; 0 .. vec_x.length) {
+        assert(approxEqualNumbers(vec_x[i], vec_ref[i]));
+    }
 
-        // We will test the suite of block sparse matrix methods by solving a linear system using two common iterative solution methods
-        size_t blk_size = 2;
-        size_t nblks = 5;
-        auto A = new SMatrix!number([to!number(10.), to!number(2.),  to!number(-1.),
-                                     to!number(3.),  to!number(20.), to!number(-1.), to!number(-2.),
-                                     to!number(2.),  to!number(30.), to!number(-2.), to!number(-1.),
-                                     to!number(2.),  to!number(40.), to!number(2.),  to!number(-2.),
-                                     to!number(1.),  to!number(50.), to!number(-1.),
-                                     to!number(-1.), to!number(60.),
-                                     to!number(-2.), to!number(-2.), to!number(30.), to!number(-1.),
-                                     to!number(-1.), to!number(-5.), to!number(40.), to!number(3.),
-                                     to!number(-2.), to!number(1.),  to!number(20.), to!number(1.),
-                                     to!number(-1.), to!number(3.),  to!number(40.),],
-                                    [0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9, 4, 8, 9],
-                                    [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
-        number[] R = [to!number(1.), to!number(2.0), to!number(3.0), to!number(4.0), to!number(5.0), to!number(6.0), to!number(7.0), to!number(8.0), to!number(9.0), to!number(10.0)];
-        number[] sol = [to!number(0.0865856), to!number(0.117794), to!number(0.106302), to!number(0.111582), to!number(0.102159),
-                        to!number(0.101443), to!number(0.254665), to!number(0.201483), to!number(0.440107), to!number(0.219546)];
+    // This example tests the addition of values to zero-entries
+    auto z = new SMatrix!number([
+        to!number(1.), to!number(2.), to!number(3.), to!number(4.),
+        to!number(5.), to!number(6.), to!number(7.), to!number(8.),
+        to!number(9.), to!number(10.), to!number(11.), to!number(12.)
+    ],
+    [0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3],
+    [0, 3, 6, 9, 12]);
+    z[0, 3] = to!number(99.0);
+    z[1, 2] = to!number(99.0);
+    z[2, 1] = to!number(99.0);
+    z[3, 0] = to!number(99.0);
+    auto w = new SMatrix!number([
+        to!number(1.), to!number(2.), to!number(3.), to!number(99.),
+        to!number(4.), to!number(5.), to!number(99.), to!number(6.),
+        to!number(7.), to!number(99.), to!number(8.), to!number(9.),
+        to!number(99.), to!number(10.), to!number(11.), to!number(12.)
+    ],
+    [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+    [0, 4, 8, 12, 16]);
+    assert(approxEqualMatrix!number(z, w));
 
-        // test multiplying only the block diagonal of a sparse matrix by a vector
-        number[] DdotR;
-        DdotR.length = R.length;
-        DdotR[] = to!number(0.0);
-        multiply_block_diagonal(A, R, DdotR, nblks, blk_size);
-        number[] s0 = [to!number(14.0), to!number(43.0), to!number(82.0), to!number(166.0), to!number(250.0),
-                         to!number(360.0), to!number(202.0), to!number(285.0), to!number(190.0), to!number(427.0)];
-        foreach (i; 0 .. s0.length) {
-            assert(approxEqualNumbers(DdotR[i], s0[i]), failedUnitTest());
-        }
+    // Test initialisation from a sparse triplet matrix
+    string fName = "test_data/b1_ss.mtx";
+    auto matrix = readFromMatrixMarketFile!double(fName);
+    auto testMat = new SMatrix!double(matrix);
+    assert(approxEqualNumbers(testMat[4, 0], -0.03599942, 1.0e-7));
+    assert(approxEqualNumbers(testMat[6, 6], 1.0, 1.0e-7));
 
-        // test multiplying only the block lower triangular portion of a sparse matrix by a vector
-        number[] LdotR;
-        LdotR.length = R.length;
-        LdotR[] = to!number(0.0);
-        nm.smla.multiply_block_lower_triangular(A, R, LdotR, nblks, blk_size);
-        number[] s1 = [to!number(0.0), to!number(0.0), to!number(4.0), to!number(0.0), to!number(4.0),
-                         to!number(-1.0), to!number(-16.0), to!number(-3.0), to!number(0.0), to!number(-5.0)];
-        foreach (i; 0 .. s1.length) {
-            assert(approxEqualNumbers(LdotR[i], s1[i]), failedUnitTest());
-        }
+    // We will test the suite of block sparse matrix methods by solving a linear system using two common iterative solution methods
+    size_t blk_size = 2;
+    size_t nblks = 5;
+    auto A = new SMatrix!number([
+        to!number(10.), to!number(2.), to!number(-1.),
+        to!number(3.), to!number(20.), to!number(-1.), to!number(-2.),
+        to!number(2.), to!number(30.), to!number(-2.), to!number(-1.),
+        to!number(2.), to!number(40.), to!number(2.), to!number(-2.),
+        to!number(1.), to!number(50.), to!number(-1.),
+        to!number(-1.), to!number(60.),
+        to!number(-2.), to!number(-2.), to!number(30.), to!number(-1.),
+        to!number(-1.), to!number(-5.), to!number(40.), to!number(3.),
+        to!number(-2.), to!number(1.), to!number(20.), to!number(1.),
+        to!number(-1.), to!number(3.), to!number(40.),
+    ],
+    [
+        0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9,
+        4, 8, 9
+    ],
+    [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
+    number[] R = [
+        to!number(1.), to!number(2.0), to!number(3.0), to!number(4.0), to!number(5.0), to!number(6.0),
+        to!number(7.0), to!number(8.0), to!number(9.0), to!number(10.0)
+    ];
+    number[] sol = [
+        to!number(0.0865856), to!number(0.117794), to!number(0.106302), to!number(0.111582),
+        to!number(0.102159),
+        to!number(0.101443), to!number(0.254665), to!number(0.201483), to!number(0.440107),
+        to!number(0.219546)
+    ];
 
-        // test multiplying only the block upper triangular portion of a sparse matrix by a vector
-        number[] UdotR;
-        UdotR.length = R.length;
-        UdotR[] = to!number(0.0);
-        nm.smla.multiply_block_upper_triangular(A, R, UdotR, nblks, blk_size);
-        number[] s2 = [to!number(-6.0), to!number(-17.0), to!number(-8.0), to!number(-8.0), to!number(-10.0),
-                         to!number(0.0), to!number(0.0), to!number(27.0), to!number(0.0), to!number(0.0)];
-        foreach (i; 0 .. s2.length) {
-            assert(approxEqualNumbers(UdotR[i], s2[i]), failedUnitTest());
-        }
+    // test multiplying only the block diagonal of a sparse matrix by a vector
+    number[] DdotR;
+    DdotR.length = R.length;
+    DdotR[] = to!number(0.0);
+    multiply_block_diagonal(A, R, DdotR, nblks, blk_size);
+    number[] s0 = [
+        to!number(14.0), to!number(43.0), to!number(82.0), to!number(166.0), to!number(250.0),
+        to!number(360.0), to!number(202.0), to!number(285.0), to!number(190.0), to!number(427.0)
+    ];
+    foreach (i; 0 .. s0.length) {
+        assert(approxEqualNumbers(DdotR[i], s0[i]));
+    }
 
-        // invert block diagonal in place => A = L + D^(-1) + U
-        Matrix!number D; Matrix!number Dinv;
-        D = new Matrix!number(blk_size,blk_size);
-        Dinv = new Matrix!number(blk_size,blk_size);
-        invert_block_diagonal(A, D, Dinv, nblks, blk_size,);
+    // test multiplying only the block lower triangular portion of a sparse matrix by a vector
+    number[] LdotR;
+    LdotR.length = R.length;
+    LdotR[] = to!number(0.0);
+    nm.smla.multiply_block_lower_triangular(A, R, LdotR, nblks, blk_size);
+    number[] s1 = [
+        to!number(0.0), to!number(0.0), to!number(4.0), to!number(0.0), to!number(4.0),
+        to!number(-1.0), to!number(-16.0), to!number(-3.0), to!number(0.0), to!number(-5.0)
+    ];
+    foreach (i; 0 .. s1.length) {
+        assert(approxEqualNumbers(LdotR[i], s1[i]));
+    }
 
-        // initialise data arrays
-        number[] rhs;
-        rhs.length = R.length;
-        number[] x_curr;
-        x_curr.length = R.length;
+    // test multiplying only the block upper triangular portion of a sparse matrix by a vector
+    number[] UdotR;
+    UdotR.length = R.length;
+    UdotR[] = to!number(0.0);
+    nm.smla.multiply_block_upper_triangular(A, R, UdotR, nblks, blk_size);
+    number[] s2 = [
+        to!number(-6.0), to!number(-17.0), to!number(-8.0), to!number(-8.0), to!number(-10.0),
+        to!number(0.0), to!number(0.0), to!number(27.0), to!number(0.0), to!number(0.0)
+    ];
+    foreach (i; 0 .. s2.length) {
+        assert(approxEqualNumbers(UdotR[i], s2[i]));
+    }
+
+    // invert block diagonal in place => A = L + D^(-1) + U
+    Matrix!number D;
+    Matrix!number Dinv;
+    D = new Matrix!number(blk_size, blk_size);
+    Dinv = new Matrix!number(blk_size, blk_size);
+    invert_block_diagonal(A, D, Dinv, nblks, blk_size,);
+
+    // initialise data arrays
+    number[] rhs;
+    rhs.length = R.length;
+    number[] x_curr;
+    x_curr.length = R.length;
+    x_curr[] = to!number(0.0);
+
+    // perform 8 iterations of the Jacobi method
+    x_curr[] = to!number(0.0);
+    foreach (k; 0 .. 8) {
+        rhs[] = to!number(0.0);
+        multiply_block_upper_triangular(A, x_curr, rhs, nblks, blk_size);
+        multiply_block_lower_triangular(A, x_curr, rhs, nblks, blk_size);
+        rhs[] = R[] - rhs[];
         x_curr[] = to!number(0.0);
+        multiply_block_diagonal(A, rhs, x_curr, nblks, blk_size);
+    }
+    foreach (i; 0 .. sol.length) {
+        assert(approxEqualNumbers(x_curr[i], sol[i]));
+    }
 
-        // perform 8 iterations of the Jacobi method
-        x_curr[] = to!number(0.0);
-        foreach (k; 0..8) {
-            rhs[] = to!number(0.0);
-            multiply_block_upper_triangular(A, x_curr, rhs, nblks, blk_size);
-            multiply_block_lower_triangular(A, x_curr, rhs, nblks, blk_size);
-            rhs[] = R[] - rhs[];
-            x_curr[] = to!number(0.0);
-            multiply_block_diagonal(A, rhs, x_curr, nblks, blk_size);
-        }
-        foreach (i; 0 .. sol.length) {
-            assert(approxEqualNumbers(x_curr[i], sol[i]), failedUnitTest());
-        }
+    // perform 4 iterations of the Symmetric Gauss-Seidel method
+    x_curr[] = to!number(0.0);
+    foreach (k; 0 .. 4) {
+        // forward sweep
+        rhs[] = to!number(0.0);
+        multiply_block_upper_triangular(A, x_curr, rhs, nblks, blk_size);
+        rhs[] = R[] - rhs[];
+        block_lower_triangular_solve(A, rhs, x_curr, nblks, blk_size);
 
-        // perform 4 iterations of the Symmetric Gauss-Seidel method
-        x_curr[] = to!number(0.0);
-        foreach (k; 0..4) {
-            // forward sweep
-            rhs[] = to!number(0.0);
-            multiply_block_upper_triangular(A, x_curr, rhs, nblks, blk_size);
-            rhs[] = R[] - rhs[];
-            block_lower_triangular_solve(A, rhs, x_curr, nblks, blk_size);
-
-            // backward sweep
-            rhs[] = to!number(0.0);
-            multiply_block_lower_triangular(A, x_curr, rhs, nblks, blk_size);
-            rhs[] = R[] - rhs[];
-            block_upper_triangular_solve(A, rhs, x_curr, nblks, blk_size);
-        }
-        foreach (i; 0 .. sol.length) {
-            assert(approxEqualNumbers(x_curr[i], sol[i]), failedUnitTest());
-        }
-
-        return 0;
+        // backward sweep
+        rhs[] = to!number(0.0);
+        multiply_block_lower_triangular(A, x_curr, rhs, nblks, blk_size);
+        rhs[] = R[] - rhs[];
+        block_upper_triangular_solve(A, rhs, x_curr, nblks, blk_size);
+    }
+    foreach (i; 0 .. sol.length) {
+        assert(approxEqualNumbers(x_curr[i], sol[i]));
     }
 }

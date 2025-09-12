@@ -91,33 +91,30 @@ private:
 } // end class CubicSpline
 
 
-version(spline_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
     import nm.number;
-    int main() {
-        double runge(double x) { return 1.0/(1.0 + 25* x * x); }
-        int N = 20;
-        double x0 = -1.0;
-        double x1 = 1.0;
-        double dx = (x1-x0)/(N-1);
-        double[] x_sample, y_sample;
-        foreach (i; 0 .. N) {
-            double xx = x0 + dx*i;
-            x_sample ~= xx;
-            y_sample ~= runge(xx);
-        }
-        auto s = new CubicSpline(x_sample, y_sample);
-        N = 100;
-        dx = (x1-x0)/(N-1);
-        foreach (i; 0 .. N) {
-            double xx = x0 + dx*i;
-            double y_runge = runge(xx);
-            double y_spline = s(xx);
-            double dy = y_spline - y_runge;
-            // writefln("%g %g %g %g", xx, y_runge, y_spline, dy);
-            assert(fabs(dy) < 0.02, failedUnitTest());
-        }
-        return 0;
-    } // end main()
+
+    double runge(double x) { return 1.0/(1.0 + 25* x * x); }
+    int N = 20;
+    double x0 = -1.0;
+    double x1 = 1.0;
+    double dx = (x1-x0)/(N-1);
+    double[] x_sample, y_sample;
+    foreach (i; 0 .. N) {
+        double xx = x0 + dx*i;
+        x_sample ~= xx;
+        y_sample ~= runge(xx);
+    }
+    auto s = new CubicSpline(x_sample, y_sample);
+    N = 100;
+    dx = (x1-x0)/(N-1);
+    foreach (i; 0 .. N) {
+        double xx = x0 + dx*i;
+        double y_runge = runge(xx);
+        double y_spline = s(xx);
+        double dy = y_spline - y_runge;
+        // writefln("%g %g %g %g", xx, y_runge, y_spline, dy);
+        assert(fabs(dy) < 0.02);
+    }
 }

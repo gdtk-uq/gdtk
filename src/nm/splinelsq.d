@@ -122,40 +122,40 @@ private:
     CubicSpline spl; // The underlying spline model.
 } // end class CubicSplineLsq
 
-
-version(splinelsq_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
     import nm.number;
-    int main() {
-        double runge(double x) { return 1.0/(1.0 + 25* x * x); }
-        int N = 200;
-        double x0 = -1.0;
-        double x1 = 1.0;
-        double dx = (x1-x0)/(N-1);
-        double[] x_sample, y_sample, w_sample;
-        foreach (i; 0 .. N) {
-            double xx = x0 + dx*i;
-            x_sample ~= xx;
-            y_sample ~= runge(xx);
-            w_sample ~= 1.0;
-        }
-        w_sample[0] = 100.0; w_sample[$-1]=100.0;
-        double[] xs;
-        auto s = new CubicSplineLsq(x_sample, y_sample, w_sample, xs, 10);
-        N = 100;
-        dx = (x1-x0)/(N-1);
-        double max_dy = 0.0;
-        foreach (i; 0 .. N) {
-            double xx = x0 + dx*i;
-            double y_runge = runge(xx);
-            double y_spline = s(xx);
-            double dy = y_spline - y_runge;
-            max_dy = fmax(max_dy, fabs(dy));
-            // writefln("%g %g %g %g", xx, y_runge, y_spline, dy);
-            assert(fabs(dy) < 0.02, failedUnitTest());
-        }
-        // writeln("max_dy=", max_dy);
-        return 0;
-    } // end main()
+
+    double runge(double x) {
+        return 1.0 / (1.0 + 25 * x * x);
+    }
+
+    int N = 200;
+    double x0 = -1.0;
+    double x1 = 1.0;
+    double dx = (x1 - x0) / (N - 1);
+    double[] x_sample, y_sample, w_sample;
+    foreach (i; 0 .. N) {
+        double xx = x0 + dx * i;
+        x_sample ~= xx;
+        y_sample ~= runge(xx);
+        w_sample ~= 1.0;
+    }
+    w_sample[0] = 100.0;
+    w_sample[$ - 1] = 100.0;
+    double[] xs;
+    auto s = new CubicSplineLsq(x_sample, y_sample, w_sample, xs, 10);
+    N = 100;
+    dx = (x1 - x0) / (N - 1);
+    double max_dy = 0.0;
+    foreach (i; 0 .. N) {
+        double xx = x0 + dx * i;
+        double y_runge = runge(xx);
+        double y_spline = s(xx);
+        double dy = y_spline - y_runge;
+        max_dy = fmax(max_dy, fabs(dy));
+        writefln("%g %g %g %g", xx, y_runge, y_spline, dy);
+        assert(fabs(dy) < 0.02);
+    }
+    writeln("max_dy=", max_dy);
 }

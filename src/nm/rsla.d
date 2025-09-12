@@ -191,65 +191,67 @@ void solveWithInverse(size_t N, size_t NDIM, size_t NDIM2, T)
 } // end solveWithInverse()()
 
 
-version(rsla_test) {
-    import util.msg_service;
+unittest {
     import nm.number;
-    int main() {
-        number[8][4] A = [[to!number(0.0),  to!number(2.0),  to!number(0.0),  to!number(1.0),
-                           to!number(1.0), to!number(0.0), to!number(0.0), to!number(0.0)],
-                          [to!number(2.0),  to!number(2.0),  to!number(3.0),  to!number(2.0),
-                           to!number(0.0), to!number(1.0), to!number(0.0), to!number(0.0)],
-                          [to!number(4.0), to!number(-3.0),  to!number(0.0),  to!number(1.0),
-                           to!number(0.0), to!number(0.0), to!number(1.0), to!number(0.0)],
-                          [to!number(6.0),  to!number(1.0), to!number(-6.0), to!number(-5.0),
-                           to!number(0.0), to!number(0.0), to!number(0.0), to!number(1.0)]];
-        assert(approxEqualNumbers(normInf!(4,4,8,number)(A), to!number(18.0)), failedUnitTest());
-        computeInverse!(4,4,8,number)(A);
-        number[4] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
-        number[4] x;
-        solveWithInverse!(4,4,8,number)(A, b, x);
-        assert(approxEqualNumbers(x[0], to!number(-0.5)) &&
-               approxEqualNumbers(x[1], to!number(1.0)) &&
-               approxEqualNumbers(x[2], to!number(1.0/3)) &&
-               approxEqualNumbers(x[3], to!number(-2.0)),
-               failedUnitTest());
+    int isSingular;
 
-        // Try same workspace with a smaller 2x2 system.
-        x[0] = -0.5; x[1] = 1.0;
-        A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 1.0; A[0][3] = 0.0;
-        A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 0.0; A[1][3] = 1.0;
-        b[0] = A[0][0]*x[0] + A[0][1]*x[1];
-        b[1] = A[1][0]*x[0] + A[1][1]*x[1];
-        assert(approxEqualNumbers(normInf!(2,4,8,number)(A), to!number(4.0)),
-               failedUnitTest());
-        computeInverse!(2,4,8,number)(A);
-        x[0] = 0.0; x[1] = 0.0;
-        solveWithInverse!(2,4,8,number)(A, b, x);
-        assert(approxEqualNumbers(x[0], to!number(-0.5)) &&
-               approxEqualNumbers(x[1], to!number(1.0)),
-               failedUnitTest());
+    number[8][4] A = [[to!number(0.0),  to!number(2.0),  to!number(0.0),  to!number(1.0),
+                       to!number(1.0), to!number(0.0), to!number(0.0), to!number(0.0)],
+                      [to!number(2.0),  to!number(2.0),  to!number(3.0),  to!number(2.0),
+                       to!number(0.0), to!number(1.0), to!number(0.0), to!number(0.0)],
+                      [to!number(4.0), to!number(-3.0),  to!number(0.0),  to!number(1.0),
+                       to!number(0.0), to!number(0.0), to!number(1.0), to!number(0.0)],
+                      [to!number(6.0),  to!number(1.0), to!number(-6.0), to!number(-5.0),
+                       to!number(0.0), to!number(0.0), to!number(0.0), to!number(1.0)]];
+    assert(approxEqualNumbers(normInf!(4,4,8,number)(A), to!number(18.0)));
+    isSingular = computeInverse!(4,4,8,number)(A);
+    assert(isSingular == 0, "Matrix `A` is singular");
 
-        // and again, with a 3x3 system.
-        x[0] = -0.5; x[1] = 1.0; x[2] = 1.0/3;
-        A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 0.0;
-        A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 3.0;
-        A[2][0] = 4.0; A[2][1] = -3.0; A[2][2] = 0.0;
-        A[0][3] = 1.0; A[0][4] = 0.0; A[0][5] = 0.0;
-        A[1][3] = 0.0; A[1][4] = 1.0; A[1][5] = 0.0;
-        A[2][3] = 0.0; A[2][4] = 0.0; A[2][5] = 1.0;
-        b[0] = A[0][0]*x[0] + A[0][1]*x[1] + A[0][2]*x[2];
-        b[1] = A[1][0]*x[0] + A[1][1]*x[1] + A[1][2]*x[2];
-        b[2] = A[2][0]*x[0] + A[2][1]*x[1] + A[2][2]*x[2];
-        assert(approxEqualNumbers(normInf!(3,4,8,number)(A), to!number(7.0)),
-               failedUnitTest());
-        computeInverse!(3,4,8,number)(A);
-        x[0] = 0.0; x[1] = 0.0; x[2] = 0.0;
-        solveWithInverse!(3,4,8,number)(A, b, x);
-        assert(approxEqualNumbers(x[0], to!number(-0.5)) &&
-               approxEqualNumbers(x[1], to!number(1.0)) &&
-               approxEqualNumbers(x[2], to!number(1.0/3)),
-               failedUnitTest());
+    number[4] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
+    number[4] x;
+    solveWithInverse!(4,4,8,number)(A, b, x);
 
-        return 0;
-    }
+    assert(approxEqualNumbers(x[0], to!number(-0.5)));
+    assert(approxEqualNumbers(x[1], to!number(1.0)));
+    assert(approxEqualNumbers(x[2], to!number(1.0/3)));
+    assert(approxEqualNumbers(x[3], to!number(-2.0)));
+
+    // Try same workspace with a smaller 2x2 system.
+    x[0] = -0.5; x[1] = 1.0;
+    A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 1.0; A[0][3] = 0.0;
+    A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 0.0; A[1][3] = 1.0;
+    b[0] = A[0][0]*x[0] + A[0][1]*x[1];
+    b[1] = A[1][0]*x[0] + A[1][1]*x[1];
+    assert(approxEqualNumbers(normInf!(2,4,8,number)(A), to!number(4.0)));
+
+    isSingular = computeInverse!(2,4,8,number)(A);
+    assert(isSingular == 0, "Matrix `A` is singular");
+
+    x[0] = 0.0;
+    x[1] = 0.0;
+    solveWithInverse!(2,4,8,number)(A, b, x);
+    assert(approxEqualNumbers(x[0], to!number(-0.5)));
+    assert(approxEqualNumbers(x[1], to!number(1.0)));
+
+    // and again, with a 3x3 system.
+    x[0] = -0.5; x[1] = 1.0; x[2] = 1.0/3;
+    A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 0.0;
+    A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 3.0;
+    A[2][0] = 4.0; A[2][1] = -3.0; A[2][2] = 0.0;
+    A[0][3] = 1.0; A[0][4] = 0.0; A[0][5] = 0.0;
+    A[1][3] = 0.0; A[1][4] = 1.0; A[1][5] = 0.0;
+    A[2][3] = 0.0; A[2][4] = 0.0; A[2][5] = 1.0;
+    b[0] = A[0][0]*x[0] + A[0][1]*x[1] + A[0][2]*x[2];
+    b[1] = A[1][0]*x[0] + A[1][1]*x[1] + A[1][2]*x[2];
+    b[2] = A[2][0]*x[0] + A[2][1]*x[1] + A[2][2]*x[2];
+    assert(approxEqualNumbers(normInf!(3,4,8,number)(A), to!number(7.0)));
+
+    isSingular = computeInverse!(3,4,8,number)(A);
+    assert(isSingular == 0, "Matrix `A` is singular");
+
+    x[0] = 0.0; x[1] = 0.0; x[2] = 0.0;
+    solveWithInverse!(3,4,8,number)(A, b, x);
+    assert(approxEqualNumbers(x[0], to!number(-0.5)));
+    assert(approxEqualNumbers(x[1], to!number(1.0)));
+    assert(approxEqualNumbers(x[2], to!number(1.0/3)));
 }
