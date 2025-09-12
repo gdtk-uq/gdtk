@@ -16,6 +16,8 @@ import std.math;
 import ntypes.complex;
 import std.exception;
 
+import nm.number;
+
 class Matrix(T) {
     size_t _nrows;
     size_t _ncols;
@@ -661,49 +663,37 @@ do {
     }
 }
 
-
-version(bbla_test) {
-    import util.msg_service;
+@("test_basic_operations")
+unittest {
     import std.conv;
     import ntypes.complex;
     import nm.number;
-    int test_basic_operations() {
-        Matrix!number a = eye!number(3);
-        assert(approxEqualMatrix!number(a, new Matrix!number([[1,0,0],[0,1,0],[0,0,1]])),
-               failedUnitTest());
-        Matrix!number b = zeros!number(2,3);
-        Matrix!number c = transpose!number(b);
-        b[1,2] = to!number(99.0);
-        c[0,0] = to!number(1.0); c[1,1] = to!number(1.0);
-        assert(approxEqualMatrix!number(b, new Matrix!number([[0,0,0],[0,0,99]])),
-               failedUnitTest());
-        assert(approxEqualMatrix!number(c, new Matrix!number([[1,0],[0,1],[0,0]])),
-               failedUnitTest());
 
-        Matrix!number e = new Matrix!number([1.0, 2.0, 3.0]);
-        assert(approxEqualMatrix!number(e, new Matrix!number([[1],[2],[3]])),
-               failedUnitTest());
-        Matrix!number e2 = new Matrix!number([1, 2, 3], "row");
-        assert(approxEqualMatrix!number(e2, new Matrix!number([[1,2,3]])),
-               failedUnitTest());
+    Matrix!number a = eye!number(3);
+    assert(approxEqualMatrix!number(a, new Matrix!number([[1, 0, 0], [0, 1, 0], [0, 0, 1]])));
+    Matrix!number b = zeros!number(2, 3);
+    Matrix!number c = transpose!number(b);
+    b[1, 2] = to!number(99.0);
+    c[0, 0] = to!number(1.0);
+    c[1, 1] = to!number(1.0);
+    assert(approxEqualMatrix!number(b, new Matrix!number([[0, 0, 0], [0, 0, 99]])));
+    assert(approxEqualMatrix!number(c, new Matrix!number([[1, 0], [0, 1], [0, 0]])));
 
-        Matrix!number f = new Matrix!number([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
-        Matrix!number g = dot!number(f,c);
-        assert(approxEqualMatrix!number(g, new Matrix!number([[1,2],[4,5]])),
-               failedUnitTest());
-        g.zeros();
-        assert(approxEqualMatrix!number(g, new Matrix!number([[0,0],[0,0]])).
-               failedUnitTest());
-        dot!number(f, c, g);
-        assert(approxEqualMatrix!number(g, new Matrix!number([[1,2],[4,5]])),
-               failedUnitTest());
+    Matrix!number e = new Matrix!number([1.0, 2.0, 3.0]);
+    assert(approxEqualMatrix!number(e, new Matrix!number([[1], [2], [3]])));
+    Matrix!number e2 = new Matrix!number([1, 2, 3], "row");
+    assert(approxEqualMatrix!number(e2, new Matrix!number([[1, 2, 3]])));
 
-        g.eye();
-        assert(approxEqualMatrix!number(g, new Matrix!number([[1,0],[0,1]])),
-               failedUnitTest());
+    Matrix!number f = new Matrix!number([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    Matrix!number g = dot!number(f, c);
+    assert(approxEqualMatrix!number(g, new Matrix!number([[1, 2], [4, 5]])));
+    g.zeros();
+    assert(approxEqualMatrix!number(g, new Matrix!number([[0, 0], [0, 0]])));
+    dot!number(f, c, g);
+    assert(approxEqualMatrix!number(g, new Matrix!number([[1, 2], [4, 5]])));
 
-        return 0;
-    }
+    g.eye();
+    assert(approxEqualMatrix!number(g, new Matrix!number([[1, 0], [0, 1]])));
 }
 
 
@@ -740,28 +730,30 @@ void gaussJordanElimination(T)(ref Matrix!T c, double very_small_value=1.0e-16)
     } // end foreach j
 } // end gaussJordanElimination()
 
-version(bbla_test) {
-    int test_elimination() {
-        Matrix!number A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
-                                             [2.0,  2.0,  3.0,  2.0],
-                                             [4.0, -3.0,  0.0,  1.0],
-                                             [6.0,  1.0, -6.0, -5.0]]);
-        Matrix!number b = new Matrix!number([0.0, -2.0, -7.0, 6.0], "column");
-        Matrix!number Ab = hstack!number([A,b]);
-        Matrix!number Aonly = Ab.sliceDup(0, 4, 0, 4);
-        Matrix!number bonly = Ab.sliceDup(0, 4, 4, 5);
-        gaussJordanElimination!number(Ab);
-        assert(approxEqualMatrix!number(Ab, new Matrix!number([[1,0,0,0,-0.5],[0,1.0,0,0,1],
-                                                               [0,0,1,0,1.0/3],[0,0,0,1,-2.0]])),
-               failedUnitTest());
-        number[] x = Ab.getColumn(4);
-        Matrix!number new_rhs = dot!number(Aonly, new Matrix!number(x));
-        assert(approxEqualMatrix!number(new_rhs, bonly), failedUnitTest());
-        Matrix!number residual = new_rhs - b;
-        assert(approxEqualMatrix!number(residual, new Matrix!number([0,0,0,0])), failedUnitTest());
-
-        return 0;
-    }
+@("test_elimination")
+unittest {
+    Matrix!number A = new Matrix!number([
+        [0.0, 2.0, 0.0, 1.0],
+        [2.0, 2.0, 3.0, 2.0],
+        [4.0, -3.0, 0.0, 1.0],
+        [6.0, 1.0, -6.0, -5.0]
+    ]);
+    Matrix!number b = new Matrix!number([0.0, -2.0, -7.0, 6.0], "column");
+    Matrix!number Ab = hstack!number([A, b]);
+    Matrix!number Aonly = Ab.sliceDup(0, 4, 0, 4);
+    Matrix!number bonly = Ab.sliceDup(0, 4, 4, 5);
+    gaussJordanElimination!number(Ab);
+    assert(approxEqualMatrix!number(Ab, new Matrix!number([
+                [1, 0, 0, 0, -0.5],
+                [0, 1.0, 0, 0, 1],
+                [0, 0, 1, 0, 1.0 / 3],
+                [0, 0, 0, 1, -2.0]
+    ])));
+    number[] x = Ab.getColumn(4);
+    Matrix!number new_rhs = dot!number(Aonly, new Matrix!number(x));
+    assert(approxEqualMatrix!number(new_rhs, bonly));
+    Matrix!number residual = new_rhs - b;
+    assert(approxEqualMatrix!number(residual, new Matrix!number([0, 0, 0, 0])));
 }
 
 /**
@@ -891,27 +883,23 @@ do {
     }
 }
 
+@("test_decomp_and_inverse")
+unittest {
+    auto A = new Matrix!number([
+        [0.0, 2.0, 0.0, 1.0], [2.0, 2.0, 3.0, 2.0], [4.0, -3.0, 0.0, 1.0], [
+            6.0, 1.0, -6.0, -5.0
+        ]
+    ]);
+    auto b = new Matrix!number([0.0, -2.0, -7.0, 6.0], "column");
+    auto c = new Matrix!number(A);
+    auto perm = decomp!number(c);
+    auto x = new Matrix!number(b);
+    solve!number(c, x, perm);
+    auto residual = b - dot!number(A, x);
+    assert(approxEqualMatrix!number(residual, new Matrix!number([0, 0, 0, 0])));
 
-version(bbla_test) {
-    int test_decomp_and_inverse() {
-        auto A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
-                                    [2.0,  2.0,  3.0,  2.0],
-                                    [4.0, -3.0,  0.0,  1.0],
-                                    [6.0,  1.0, -6.0, -5.0]]);
-        auto b = new Matrix!number([0.0, -2.0, -7.0, 6.0], "column");
-        auto c = new Matrix!number(A);
-        auto perm = decomp!number(c);
-        auto x = new Matrix!number(b);
-        solve!number(c, x, perm);
-        auto residual = b - dot!number(A,x);
-        assert(approxEqualMatrix!number(residual, new Matrix!number([0,0,0,0])),
-               failedUnitTest());
-
-        auto y = inverse!number(A);
-        assert(approxEqualMatrix!number(dot!number(A,y), eye!number(4)), failedUnitTest());
-
-        return 0;
-    }
+    auto y = inverse!number(A);
+    assert(approxEqualMatrix!number(dot!number(A, y), eye!number(4)));
 }
 
 /**
@@ -953,25 +941,20 @@ Matrix!T lsqsolve(T)(const Matrix!T c, const Matrix!T rhs)
     return x;
 } // end lsqsolve()()
 
-version(bbla_test) {
-    int test_lsqsolve() {
-        auto A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
-                                    [2.0,  2.0,  3.0,  2.0],
-                                    [4.0,  4.0,  6.0,  4.0],
-                                    [4.0, -3.0,  0.0,  1.0],
-                                    [4.0, -3.0,  0.0,  1.0],
-                                    [6.0,  1.0, -6.0, -5.0]]);
-        auto b = new Matrix!number([[ 0.0],
-                                    [-2.0],
-                                    [-4.0],
-                                    [-7.0],
-                                    [-7.0],
-                                    [ 6.0]]);
-        auto xx = lsqsolve!number(A, b);
-        auto expected_xx = new Matrix!number([-0.5, 1, 1.0/3, -2], "column");
-        assert(approxEqualMatrix!number(xx, expected_xx), failedUnitTest());
-        return 0;
-    }
+@("test_lsqsolve")
+unittest {
+    auto A = new Matrix!number([
+        [0.0, 2.0, 0.0, 1.0],
+        [2.0, 2.0, 3.0, 2.0],
+        [4.0, 4.0, 6.0, 4.0],
+        [4.0, -3.0, 0.0, 1.0],
+        [4.0, -3.0, 0.0, 1.0],
+        [6.0, 1.0, -6.0, -5.0]
+    ]);
+    auto b = new Matrix!number([[0.0], [-2.0], [-4.0], [-7.0], [-7.0], [6.0]]);
+    auto xx = lsqsolve!number(A, b);
+    auto expected_xx = new Matrix!number([-0.5, 1, 1.0 / 3, -2], "column");
+    assert(approxEqualMatrix!number(xx, expected_xx));
 }
 
 /**
@@ -1076,50 +1059,34 @@ do {
     }
 }
 
-version(bbla_test) {
-    int test_Crout_decomp_and_solve() {
-        auto A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
-                                    [2.0,  2.0,  3.0,  2.0],
-                                    [4.0, -3.0,  0.0,  1.0],
-                                    [6.0,  1.0, -6.0, -5.0]]);
-        number[] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
-        int[] pivot;
-        pivot.length = 4;
-        number[] x;
-        x.length = 4;
+@("test_Crout_decomp_and_solve")
+unittest {
+    auto A = new Matrix!number([
+        [0.0, 2.0, 0.0, 1.0],
+        [2.0, 2.0, 3.0, 2.0],
+        [4.0, -3.0, 0.0, 1.0],
+        [6.0, 1.0, -6.0, -5.0]
+    ]);
+    number[] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
+    int[] pivot;
+    pivot.length = 4;
+    number[] x;
+    x.length = 4;
 
-        LUDecomp!number(A, pivot);
-        LUSolve!number(A, pivot, b, x);
+    LUDecomp!number(A, pivot);
+    LUSolve!number(A, pivot, b, x);
 
-        // Reset A since it was converted to LU format.
-        A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
-                               [2.0,  2.0,  3.0,  2.0],
-                               [4.0, -3.0,  0.0,  1.0],
-                               [6.0,  1.0, -6.0, -5.0]]);
+    // Reset A since it was converted to LU format.
+    A = new Matrix!number([
+        [0.0, 2.0, 0.0, 1.0],
+        [2.0, 2.0, 3.0, 2.0],
+        [4.0, -3.0, 0.0, 1.0],
+        [6.0, 1.0, -6.0, -5.0]
+    ]);
 
-        number[] Ax;
-        Ax.length = 4;
-        dot(A, x, Ax);
+    number[] Ax;
+    Ax.length = 4;
+    dot(A, x, Ax);
 
-        assert(approxEqualNumbers(b, Ax), failedUnitTest());
-
-        return 0;
-    }
-
-    int main() {
-        if ( test_basic_operations() != 0 )
-            return 1;
-        if ( test_elimination() != 0 )
-            return 1;
-        if ( test_decomp_and_inverse() != 0 )
-            return 1;
-        if ( test_lsqsolve() != 0 )
-            return 1;
-        if ( test_Crout_decomp_and_solve() != 0 )
-            return 1;
-
-        return 0;
-    }
-
-
+    assert(approxEqualNumbers(b, Ax));
 }
