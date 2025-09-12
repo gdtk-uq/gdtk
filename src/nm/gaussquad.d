@@ -81,17 +81,13 @@ T integrate(alias f, T)(T a, T b, double tol=1.0e-5)
     return I;
 }
 
-version(gaussquad_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
     import nm.number;
-    int main() {
-        number fun1(number x) { return abs(x) < to!number(1.0) ? sqrt(1.0 - x*x): to!number(0.0); }
-        number fun2(number x) { return 1.0 / (1.0 + x * x); }
-        assert(approxEqualNumbers(to!number(PI/4), integrate!fun1(to!number(0.0), to!number(1.0)), 1.0e-6), failedUnitTest()); 
-        assert(approxEqualNumbers(to!number(PI/4), integrate!fun2(to!number(0.0), to!number(1.0)), 1.0e-6), failedUnitTest());
-        
-        return 0;
-    }
+
+    number fun1(number x) { return abs(x) < to!number(1.0) ? sqrt(1.0 - x*x): to!number(0.0); }
+    number fun2(number x) { return 1.0 / (1.0 + x * x); }
+    assert(approxEqualNumbers(to!number(PI/4), integrate!fun1(to!number(0.0), to!number(1.0)), 1.0e-6)); 
+    assert(approxEqualNumbers(to!number(PI/4), integrate!fun2(to!number(0.0), to!number(1.0)), 1.0e-6));
 }
 

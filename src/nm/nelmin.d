@@ -325,97 +325,108 @@ public:
 
 //-----------------------------------------------------------------------
 
-version(nelmin_test) {
+unittest {
     import std.math;
-    import util.msg_service;
     import nm.number;
-    int main() {
-        // Test objective function 1.
-        //   x is expected to be a list of coordinates.
-        //   Returns a single float value.
-        number testFunction1(number[] x)
-        {
-            number sum = 0.0;
-            foreach (elem; x) sum += (elem - 1.0) * (elem - 1.0);
-            return sum;
-        }
-        number[] x = [to!number(0.0), to!number(0.0), to!number(0.0), to!number(0.0)];
-        number[] dx;
-        number fx;
-        int nfe, nres;
-        bool conv_flag = minimize!(testFunction1,number)(x, fx, nfe, nres, dx);
-        // writeln("x = ", x, " fx = ", fx);
-        // writeln("convergence-flag = ", conv_flag);
-        // writeln("number-of-fn-evaluations = ", nfe);
-        // writeln("number-of-restarts = ", nres);
-        assert(conv_flag, failedUnitTest());
-        assert(approxEqualNumbers(x, [to!number(1.0), to!number(1.0),
-                                      to!number(1.0), to!number(1.0)]),
-               failedUnitTest());
-        assert(approxEqualNumbers(fx, to!number(0.0)), failedUnitTest());
-        assert((nfe > 425) && (nfe < 435), failedUnitTest()); // 428
-        assert(nres < 6, failedUnitTest()); // 5
 
-        // Test objective function 2.
-        // Example 3.3 from Olsson and Nelson.
-        number testFunction2(number[] x)
-        {
-            number x1 = x[0]; number x2 = x[1];   // rename to match the paper
-            if ( (x1 * x1 + x2 * x2) > 1.0 ) {
-                return to!number(1.0e38);
-            } else {
-                number yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1
-                    + 6.43 * x2 * x2 + 11.36 * x1 * x2;
-                number ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1
-                    - 8.76 * x2 * x2 - 7.20 * x1 * x2;
-                return -yp + fabs(ys - 87.8);
-            }
-        }
-        number[] x2 = [to!number(0.0), to!number(0.0)];
-        number[] dx2 = [to!number(0.5), to!number(0.5)];
-        conv_flag = minimize!(testFunction2,number)(x2, fx, nfe, nres, dx2, 1.0e-4);
-        // writeln("x = ", x2, " fx = ", fx);
-        // writeln("convergence-flag = ", conv_flag);
-        // writeln("number-of-fn-evaluations = ", nfe);
-        // writeln("number-of-restarts =", nres);
-        assert(conv_flag, failedUnitTest());
-        assert(approxEqualNumbers(x2, [to!number(0.811295), to!number(-0.584636)]),
-               failedUnitTest());
-        assert(approxEqualNumbers(fx, to!number(-67.1077)), failedUnitTest());
-        assert((nfe > 80) && (nfe < 90), failedUnitTest()); // 86
-        assert(nres == 0, failedUnitTest());
-
-        // Test objective function 3.
-        // Example 3.5 from Olsson and Nelson; least-squares.
-        double testFunction3(double[] z)
-        {
-            double[] x = [0.25, 0.50, 1.00, 1.70, 2.00, 4.00];
-            double[] y = [0.25, 0.40, 0.60, 0.58, 0.54, 0.27];
-            double a1 = z[0]; double a2 = z[1];
-            double alpha1 = z[2]; double alpha2 = z[3];
-            double sum_residuals = 0.0;
-            foreach (i; 0 .. 6) {
-                double t = x[i];
-                double eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t);
-                double r = y[i] - eta;
-                sum_residuals += r * r;
-            }
-            return sum_residuals;
-        }
-        double[] x3 = [1.0, 1.0, -0.5, -2.5];
-        double[] dx3 = [0.1, 0.1, 0.1, 0.1];
-        double fx3;
-        conv_flag = minimize!(testFunction3,double)(x3, fx3, nfe, nres, dx3, 1.0e-9, 2, 800);
-        // writeln("x = ", x3, " fx = ", fx3);
-        // writeln("convergence-flag = ", conv_flag);
-        // writeln("number-of-fn-evaluations = ", nfe);
-        // writeln("number-of-restarts = ", nres);
-        assert(conv_flag, failedUnitTest());
-        assert(approxEqualNumbers(x3, [1.80105, -1.84177, -0.463388, -1.20508]), failedUnitTest());
-        assert(approxEqualNumbers(fx3, 0.000908953), failedUnitTest());
-        assert((nfe > 500) && (nfe < 505), failedUnitTest()); // 503
-        assert(nres == 0, failedUnitTest());
-
-        return 0;
+    // Test objective function 1.
+    //   x is expected to be a list of coordinates.
+    //   Returns a single float value.
+    number testFunction1(number[] x) {
+        number sum = 0.0;
+        foreach (elem; x)
+            sum += (elem - 1.0) * (elem - 1.0);
+        return sum;
     }
-} // end version(nelmin_test)
+
+    number[] x = [to!number(0.0), to!number(0.0), to!number(0.0), to!number(0.0)];
+    number[] dx;
+    number fx;
+    int nfe, nres;
+    bool conv_flag = minimize!(testFunction1, number)(x, fx, nfe, nres, dx);
+    // writeln("x = ", x, " fx = ", fx);
+    // writeln("convergence-flag = ", conv_flag);
+    // writeln("number-of-fn-evaluations = ", nfe);
+    // writeln("number-of-restarts = ", nres);
+    assert(conv_flag);
+    assert(approxEqualNumbers(x, [
+        to!number(1.0), to!number(1.0),
+        to!number(1.0), to!number(1.0)
+    ]));
+    assert(approxEqualNumbers(fx, to!number(0.0)));
+    assert((nfe > 425) && (nfe < 435)); // 428
+    assert(nres < 6); // 5
+}
+
+unittest {
+    import nm.number;
+
+    // Test objective function 2.
+    // Example 3.3 from Olsson and Nelson.
+    number testFunction2(number[] x) {
+        number x1 = x[0];
+        number x2 = x[1]; // rename to match the paper
+        if ((x1 * x1 + x2 * x2) > 1.0) {
+            return to!number(1.0e38);
+        } else {
+            number yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1
+                + 6.43 * x2 * x2 + 11.36 * x1 * x2;
+            number ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1
+                - 8.76 * x2 * x2 - 7.20 * x1 * x2;
+            return -yp + fabs(ys - 87.8);
+        }
+    }
+
+    number fx;
+    int nfe, nres;
+    number[] x2 = [to!number(0.0), to!number(0.0)];
+    number[] dx2 = [to!number(0.5), to!number(0.5)];
+    bool conv_flag = minimize!(testFunction2, number)(x2, fx, nfe, nres, dx2, 1.0e-4);
+    writeln("x = ", x2, " fx = ", fx);
+    writeln("convergence-flag = ", conv_flag);
+    writeln("number-of-fn-evaluations = ", nfe);
+    writeln("number-of-restarts =", nres);
+    assert(conv_flag);
+    assert(approxEqualNumbers(x2, [to!number(0.811295), to!number(-0.584636)]));
+    assert(approxEqualNumbers(fx, to!number(-67.1077)));
+    assert((nfe > 80) && (nfe < 90)); // 86
+    assert(nres == 0);
+}
+
+unittest {
+    import nm.number;
+
+    // Test objective function 3.
+    // Example 3.5 from Olsson and Nelson; least-squares.
+    double testFunction3(double[] z) {
+        double[] x = [0.25, 0.50, 1.00, 1.70, 2.00, 4.00];
+        double[] y = [0.25, 0.40, 0.60, 0.58, 0.54, 0.27];
+        double a1 = z[0];
+        double a2 = z[1];
+        double alpha1 = z[2];
+        double alpha2 = z[3];
+        double sum_residuals = 0.0;
+        foreach (i; 0 .. 6) {
+            double t = x[i];
+            double eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t);
+            double r = y[i] - eta;
+            sum_residuals += r * r;
+        }
+        return sum_residuals;
+    }
+
+    int nfe, nres;
+    double[] x3 = [1.0, 1.0, -0.5, -2.5];
+    double[] dx3 = [0.1, 0.1, 0.1, 0.1];
+    double fx3;
+    bool conv_flag = minimize!(testFunction3, double)(x3, fx3, nfe, nres, dx3, 1.0e-9, 2, 800);
+    writeln("x = ", x3, " fx = ", fx3);
+    writeln("convergence-flag = ", conv_flag);
+    writeln("number-of-fn-evaluations = ", nfe);
+    writeln("number-of-restarts = ", nres);
+    assert(conv_flag);
+    assert(approxEqualNumbers(x3, [1.80105, -1.84177, -0.463388, -1.20508]));
+    assert(approxEqualNumbers(fx3, 0.000908953));
+    assert((nfe > 500) && (nfe < 505)); // 503
+    assert(nres == 0);
+}

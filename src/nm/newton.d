@@ -138,36 +138,36 @@ if ( (is(typeof(f(0.0)) == double) && is(typeof(dfdx(0.0)) == double)) ||
     }
  }
 
-version(newton_test) {
+unittest {
     import std.conv;
-    import util.msg_service;
     import nm.number;
-    int main() {
-        @nogc number test_fun_1(number x) {
-            return pow(x,3) + pow(x,2) - 3*x - 3;
-        }
-        @nogc number test_dfun_1(number x) {
-            return 3.0*pow(x,2) + 2.0*x - 3.0;
-        }
-        assert(fabs(solve!(test_fun_1, test_dfun_1, number)(to!number(1.0), to!number(-5.0), to!number(5.0)) - 1.732051) < 1.0e-5,
-               failedUnitTest());
 
-
-        @nogc number test_fun_2(number x, number a) {
-            return a*x + sin(x) - exp(x);
-        }
-        @nogc number test_dfun_2(number x, number a) {
-            return a + cos(x) - exp(x);
-        }
-        number my_a = 3.0;
-        @nogc number test_fun_3 (number x) {
-            return test_fun_2(x, my_a);
-        }
-        @nogc number test_dfun_3 (number x) {
-            return test_dfun_2(x, my_a);
-        }
-        assert(fabs(solve!(test_fun_3, test_dfun_3, number)(to!number(0.2), to!number(0.0), to!number(1.0)) - 0.3604217) < 1.0e-5,
-               failedUnitTest());
-        return 0;
+    @nogc number test_fun_1(number x) {
+        return pow(x, 3) + pow(x, 2) - 3 * x - 3;
     }
+
+    @nogc number test_dfun_1(number x) {
+        return 3.0 * pow(x, 2) + 2.0 * x - 3.0;
+    }
+
+    assert(fabs(solve!(test_fun_1, test_dfun_1, number)(to!number(1.0), to!number(-5.0), to!number(5.0)) - 1.732051) < 1.0e-5);
+
+    @nogc number test_fun_2(number x, number a) {
+        return a * x + sin(x) - exp(x);
+    }
+
+    @nogc number test_dfun_2(number x, number a) {
+        return a + cos(x) - exp(x);
+    }
+
+    number my_a = 3.0;
+    @nogc number test_fun_3(number x) {
+        return test_fun_2(x, my_a);
+    }
+
+    @nogc number test_dfun_3(number x) {
+        return test_dfun_2(x, my_a);
+    }
+
+    assert(fabs(solve!(test_fun_3, test_dfun_3, number)(to!number(0.2), to!number(0.0), to!number(1.0)) - 0.3604217) < 1.0e-5);
 }

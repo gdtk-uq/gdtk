@@ -100,34 +100,30 @@ T rkf45_step(alias f, T)(T t0, T h, T[] y0, ref T[] y1, ref T[] err,
     return t0 + h;
 } // end rkf45_step()
 
-version(rungekutta_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
     import nm.number;
-    int main() {
-        number[] testSystem1(number t, number[] x)
-        {
-            number dx0dt =  -8.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 12.0;
-            number dx1dt = -17.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 29.0;
-            number dx2dt = -35.0/3.0*x[0] + 14.0/3.0*x[1] - 2.0*x[2] + 48.0;
-            return [dx0dt, dx1dt, dx2dt];
-        }
-        number[] solution1(number t)
-        {
-            number x = exp(-3.0*t)/6.0*(6.0-50.0*exp(t)+10.0*exp(2.0*t)+34.0*exp(3.0*t));
-            number y = exp(-3.0*t)/6.0*(12.0-125.0*exp(t)+40.0*exp(2.0*t)+73.0*exp(3.0*t));
-            number z = exp(-3.0*t)/6.0*(14.0-200.0*exp(t)+70.0*exp(2.0*t)+116.0*exp(3.0*t));
-            return [x, y, z];
-        }
-        number[] x0=[to!number(0.0), to!number(0.0), to!number(0.0)];
-        number[] x1=x0.dup;
-        number[] err=x0.dup;
-        auto work = allocate_rk45_workspace!number(3);
-        number t0 = 0.0;
-        number h = 0.2;
-        number t1 = rkf45_step!(testSystem1, number)(t0, h, x0, x1, err, work);
-        assert(approxEqualNumbers(x1, solution1(t1), 1.0e-5), failedUnitTest());
 
-        return 0;
+    number[] testSystem1(number t, number[] x) {
+        number dx0dt = -8.0 / 3.0 * x[0] - 4.0 / 3.0 * x[1] + x[2] + 12.0;
+        number dx1dt = -17.0 / 3.0 * x[0] - 4.0 / 3.0 * x[1] + x[2] + 29.0;
+        number dx2dt = -35.0 / 3.0 * x[0] + 14.0 / 3.0 * x[1] - 2.0 * x[2] + 48.0;
+        return [dx0dt, dx1dt, dx2dt];
     }
+
+    number[] solution1(number t) {
+        number x = exp(-3.0 * t) / 6.0 * (6.0 - 50.0 * exp(t) + 10.0 * exp(2.0 * t) + 34.0 * exp(3.0 * t));
+        number y = exp(-3.0 * t) / 6.0 * (12.0 - 125.0 * exp(t) + 40.0 * exp(2.0 * t) + 73.0 * exp(3.0 * t));
+        number z = exp(-3.0 * t) / 6.0 * (14.0 - 200.0 * exp(t) + 70.0 * exp(2.0 * t) + 116.0 * exp(3.0 * t));
+        return [x, y, z];
+    }
+
+    number[] x0 = [to!number(0.0), to!number(0.0), to!number(0.0)];
+    number[] x1 = x0.dup;
+    number[] err = x0.dup;
+    auto work = allocate_rk45_workspace!number(3);
+    number t0 = 0.0;
+    number h = 0.2;
+    number t1 = rkf45_step!(testSystem1, number)(t0, h, x0, x1, err, work);
+    assert(approxEqualNumbers(x1, solution1(t1), 1.0e-5));
 }
