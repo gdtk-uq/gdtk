@@ -53,6 +53,8 @@ version(linesearch_test) {
     import std.math;
     import util.msg_service;
     import nm.number;
+    import ntypes.complex;
+
     int main() {
         number fdemo(number x) {
             return exp(x) + 2.0 - cos(x);
@@ -63,7 +65,6 @@ version(linesearch_test) {
         number xminimum = -0.588534;
         assert(fabs(a - xminimum) < 1.0e-4, failedUnitTest());
         assert(fabs(b - xminimum) < 1.0e-4, failedUnitTest());
-
         return 0;
     }
 }
