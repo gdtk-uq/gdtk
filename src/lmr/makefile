@@ -237,7 +237,7 @@ ifeq ($(DMD), ldc2)
 	DLINKFLAGS := $(DLINKFLAGS) -L-ldl
 	ifeq ($(PLATFORM), linux)
 		# For note on "-Wl,-E", see: https://web.tecgraf.puc-rio.br/~lhf/ftp/lua/install.html#adding
-		DLINKFLAGS += -L-Wl,-E
+		DLINKFLAGS += -L-E
 	endif
     ifeq ($(PLATFORM), macosx)
 		DLINKFLAGS += -L-ld_classic

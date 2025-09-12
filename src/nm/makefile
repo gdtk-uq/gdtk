@@ -53,6 +53,35 @@ endif
 # See notes in src/eilmer/makefile.
 DFLAGS += -dip1008 -preview=in
 
+INCLUDES := 
+PREVIEWS := in dip1008
+VERSIONS := complex_numbers
+
+COMPILER_FLAGS := -w -O -release
+
+LINKER_LIBS := dl
+LINKER_PATHS := $(LIBLUAPATH)
+LINKER_FLAGS :=
+
+COMPILER_FLAGS += $(addprefix -I=,$(INCLUDES))
+COMPILER_FLAGS += $(addprefix -L-l,$(LINKER_LIBS))
+COMPILER_FLAGS += $(addprefix -L-L,$(LINKER_PATHS))
+COMPILER_FLAGS += $(addprefix -preview=,$(PREVIEWS))
+
+ifeq ($(DMD), ldc2)
+	COMPILER_FLAGS += $(addprefix -d-version=,$(VERSIONS))
+endif
+ifeq ($(DMD), ldmd2)
+	COMPILER_FLAGS += $(addprefix -version=,$(VERSIONS))
+endif
+
+ifeq ($(PLATFORM), macosx)
+	LINKER_LIBS += d_classic
+endif
+
+pretty:
+	@echo "$(DMD) $(COMPILER_FLAGS)"
+
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
 #
@@ -60,13 +89,20 @@ DFLAGS += -dip1008 -preview=in
 # if you are invoking this makefile from within the gas models directory.
 # ----------------------------------------------------------------------
 
+all-d-files := $(wildcard *.d)
+exclude-files := $(wildcard *_demo.d)
+src-files := $(filter-out $(exclude-files), $(all-d-files))
+
+list:
+	@echo $(src-files)
+
 test_runner: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
 	@echo "Compiling test runner..."
-	$(DMD) -of$@ -d-debug -g -w -dip1008 --unittest $^ $(DLINKFLAGS)
+	$(DMD) -of$@ -debug -g -w -dip1008 --unittest $^ $(DLINKFLAGS)
 
 test_runner_complex: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
 	@echo "Compiling test runner with complex numbers..."
-	$(DMD) -of$@ -d-debug -g -w -dip1008 --unittest -d-version=complex_numbers $^ $(DLINKFLAGS)
+	$(DMD) -of$@ -debug -g -w -dip1008 --unittest -version=complex_numbers $^ $(DLINKFLAGS)
 
 test: test_runner
 	- exec ./test_runner --module nm
