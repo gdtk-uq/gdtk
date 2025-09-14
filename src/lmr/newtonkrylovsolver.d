@@ -1488,7 +1488,7 @@ void initPreconditioner()
         // initialize the flow Jacobians used as local precondition matrices for GMRES
         final switch (nkCfg.preconditioner) {
         case PreconditionerType.jacobi:
-            foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1, nkCfg.preconditionerPerturbation); }
+            foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, nkCfg.preconditionerPerturbation); }
             break;
         case PreconditionerType.ilu:
             foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, nkCfg.preconditionerPerturbation, nkCfg.iluFill); }
@@ -1497,7 +1497,7 @@ void initPreconditioner()
             foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, nkCfg.preconditionerPerturbation); }
             break;
         case PreconditionerType.diagonal:
-            // do nothing
+            foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1, nkCfg.preconditionerPerturbation); }
             break;
         } // end switch
     }
