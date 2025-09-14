@@ -39,6 +39,7 @@ import util.lua;
 import util.lua_service;
 import util.time_utils : timeStringToSeconds;
 
+import lmr.special_block_init;
 import lmr.bc;
 import lmr.blockio;
 import lmr.conservedquantities : ConservedQuantities, copy_values_from;
@@ -1034,6 +1035,21 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
+        }
+
+        // We can apply a special initialisation to the flow field, if requested.
+        // This will take viscous boundary conditions and diffuse them into the
+        // nearby domain.
+        if (cfg.diffuseWallBCsOnInit) {
+            if (cfg.is_master_task) {
+                writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+                writefln("%d passes of the near-wall flow averaging operation will be performed.", cfg.nInitPasses);
+            }
+            foreach (myblk; localFluidBlocks) {
+                // 2023-07-04 PJ: Make this loop serial
+                // because we are having trouble with parallel and GC.
+                diffuseWallBCsIntoBlock(myblk, cfg.nInitPasses, cfg.initTWall);
+            }
         }
 
         // On fresh start, may need to set reference residuals based on initial condition.
