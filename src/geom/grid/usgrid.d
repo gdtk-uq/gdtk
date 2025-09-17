@@ -2481,43 +2481,44 @@ public:
 
 //-----------------------------------------------------------------
 
-version(usgrid_test) {
-    import util.msg_service;
-    int main() {
-        auto p00 = Vector3(0.0, 0.1);
-        auto p10 = Vector3(1.0, 0.1);
-        auto p11 = Vector3(1.0, 1.1);
-        auto p01 = Vector3(0.0, 1.1);
-        auto my_patch = new CoonsPatch(p00, p10, p11, p01);
-        auto cf = [new LinearFunction(), new LinearFunction(),
-                   new LinearFunction(), new LinearFunction()];
-        auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
-        my_grid.set_tag(Face.north, "my-special-boundary");
-        string repr = to!string(my_grid);
-        // writeln("my_grid=", repr);
-        assert(repr.canFind("my-special-boundary"), failedUnitTest());
-        assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35)),
-               failedUnitTest());
-        // writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
-        auto usg = new UnstructuredGrid(my_grid);
-        string usg_repr = to!string(usg);
-        // writeln("usg=", usg_repr);
-        assert(usg_repr.canFind("my-special-boundary"), failedUnitTest());
-        usg.sort_cells_into_bins(10, 10);
-        Vector3 my_point = Vector3(0.55, 0.325);
-        size_t cell_indx = 0; bool found = false;
-        usg.find_enclosing_cell(my_point, cell_indx, found);
-        // writeln("Search for cell enclosing my_point= ", my_point);
-        // if (found) {
-        //     writeln("    cell found, index= ", cell_indx);
-        //     writeln("    cell barycentre= ", usg.cell_barycentre(cell_indx));
-        // } else {
-        //     writeln("    cell not found");
-        // }
-        assert(found == true, failedUnitTest());
-        assert(cell_indx == 45, failedUnitTest());
-        assert(approxEqualVectors(usg.cell_barycentre(cell_indx), Vector3(0.55, 0.325)),
-               failedUnitTest());
-        return 0;
+unittest {
+    auto p00 = Vector3(0.0, 0.1);
+    auto p10 = Vector3(1.0, 0.1);
+    auto p11 = Vector3(1.0, 1.1);
+    auto p01 = Vector3(0.0, 1.1);
+    auto my_patch = new CoonsPatch(p00, p10, p11, p01);
+    auto cf = [new LinearFunction(), new LinearFunction(),
+               new LinearFunction(), new LinearFunction()];
+    auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
+    my_grid.set_tag(Face.north, "my-special-boundary");
+    string repr = to!string(my_grid);
+    writeln("my_grid=", repr);
+
+    assert(repr.canFind("my-special-boundary"));
+    assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35)));
+
+    writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
+
+    auto usg = new UnstructuredGrid(my_grid);
+    string usg_repr = to!string(usg);
+    writeln("usg=", usg_repr);
+
+    assert(usg_repr.canFind("my-special-boundary"));
+
+    usg.sort_cells_into_bins(10, 10);
+    Vector3 my_point = Vector3(0.55, 0.325);
+    size_t cell_indx = 0; bool found = false;
+    usg.find_enclosing_cell(my_point, cell_indx, found);
+
+    writeln("Search for cell enclosing my_point= ", my_point);
+    if (found) {
+        writeln("    cell found, index= ", cell_indx);
+        writeln("    cell barycentre= ", usg.cell_barycentre(cell_indx));
+    } else {
+        writeln("    cell not found");
     }
-} // end sgrid_test
+
+    assert(found == true);
+    assert(cell_indx == 45);
+    assert(approxEqualVectors(usg.cell_barycentre(cell_indx), Vector3(0.55, 0.325)));
+}

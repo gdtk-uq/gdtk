@@ -359,10 +359,6 @@ public:
     }
 } // end class SVGContext   
 
-version(svg_test) {
-    import util.msg_service;
-    int main() {
-        // [TODO] fill me in with something meaningful.
-        return 0;
-    }
-} // end svg_test
+unittest {
+    // [TODO] fill me in with something meaningful.
+}
