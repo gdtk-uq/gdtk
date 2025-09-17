@@ -159,57 +159,52 @@ class Arc3 : Arc {
     }
 } // end class Arc3
 
-version(arc_test) {
-    import util.msg_service;
-    int main() {
-        // Some simple evaluations.
-        auto a = Vector3([2.0, 2.0, 0.0]);
-        auto b = Vector3([1.0, 2.0, 1.0]);
-        auto c = Vector3([1.0, 2.0, 0.0]);
-        auto abc = new Arc(a, b, c);
-        auto d = abc(0.5);
-        assert(approxEqualVectors(d, Vector3(1.7071068, 2.0, 0.7071068)),
-               failedUnitTest());
-        auto adb = new Arc3(a, d, b);
-        assert(approxEqualVectors(d, adb(0.5)), "Arc3");
-        //
-        // Set up an intersection that should be found on Line
-        auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
-        auto ps = Vector3(0.5,0.5);
-        auto dir = Vector3(0.0,1.0);
-        double t;
-        auto found = pth.intersect2D(ps, dir, t, 10);
-        assert(found, failedUnitTest());
-        // intersect2D parametric location on Arc3
-        assert(isClose(t,0.5), failedUnitTest());
-        //
-        version(complex_numbers) {
-            // Try out the complex derivative evaluation.
-            auto pc = Vector3(0.0, 0.0);
-            double alpha = 1.0;
-            auto pa = Vector3(0.0, alpha);
-            auto pb = Vector3(alpha, 0.0);
-            auto arc0 = new Arc(pa, pb, pc);
-            double h = 1.0e-20;
-            number ih = complex(0,h);
-            number zero = 0.0;
-            auto pa_dash = Vector3(zero, alpha+ih);
-            auto pb_dash = Vector3(alpha+ih, zero);
-            auto arc1 = new Arc(pa_dash, pb_dash, pc);
-            // import std.stdio;
-            // writeln("arc0=", arc0, " arc1=", arc1);
-            // writeln("arc0(0.5)=", arc0(0.5), " arc1(0.5)=", arc1(0.5));
-            // What we want to compute is the sensitivity
-            // of the midpoint of the arc with respect to alpha.
-            double dpmid_da_x = arc1(0.5).x.im / h;
-            double dpmid_da_y = arc1(0.5).y.im / h;
-            double dpmid_da_z = arc1(0.5).z.im / h;
-            // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
-            assert(isClose(dpmid_da_x,1.0/sqrt(2.0)), failedUnitTest());
-            assert(isClose(dpmid_da_y,1.0/sqrt(2.0)), failedUnitTest());
-            assert(isClose(dpmid_da_z,0.0), failedUnitTest());
-        }
-        //
-        return 0;
+unittest {
+    import std.stdio;
+
+    // Some simple evaluations.
+    auto a = Vector3([2.0, 2.0, 0.0]);
+    auto b = Vector3([1.0, 2.0, 1.0]);
+    auto c = Vector3([1.0, 2.0, 0.0]);
+    auto abc = new Arc(a, b, c);
+    auto d = abc(0.5);
+    assert(approxEqualVectors(d, Vector3(1.7071068, 2.0, 0.7071068)));
+    auto adb = new Arc3(a, d, b);
+    assert(approxEqualVectors(d, adb(0.5)), "Arc3");
+    //
+    // Set up an intersection that should be found on Line
+    auto pth = new Arc3(Vector3(0.0, 1.0), Vector3(0.5, 1.2), Vector3(1.0, 1.0));
+    auto ps = Vector3(0.5, 0.5);
+    auto dir = Vector3(0.0, 1.0);
+    double t;
+    auto found = pth.intersect2D(ps, dir, t, 10);
+    assert(found);
+    // intersect2D parametric location on Arc3
+    assert(isClose(t, 0.5));
+    //
+    version (complex_numbers) {
+        // Try out the complex derivative evaluation.
+        auto pc = Vector3(0.0, 0.0);
+        double alpha = 1.0;
+        auto pa = Vector3(0.0, alpha);
+        auto pb = Vector3(alpha, 0.0);
+        auto arc0 = new Arc(pa, pb, pc);
+        double h = 1.0e-20;
+        number ih = complex(0, h);
+        number zero = 0.0;
+        auto pa_dash = Vector3(zero, alpha + ih);
+        auto pb_dash = Vector3(alpha + ih, zero);
+        auto arc1 = new Arc(pa_dash, pb_dash, pc);
+        writeln("arc0=", arc0, " arc1=", arc1);
+        writeln("arc0(0.5)=", arc0(0.5), " arc1(0.5)=", arc1(0.5));
+        // What we want to compute is the sensitivity
+        // of the midpoint of the arc with respect to alpha.
+        double dpmid_da_x = arc1(0.5).x.im / h;
+        double dpmid_da_y = arc1(0.5).y.im / h;
+        double dpmid_da_z = arc1(0.5).z.im / h;
+        writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
+        assert(isClose(dpmid_da_x, 1.0 / sqrt(2.0)));
+        assert(isClose(dpmid_da_y, 1.0 / sqrt(2.0)));
+        assert(isClose(dpmid_da_z, 0.0));
     }
-} // end arc_test
+}

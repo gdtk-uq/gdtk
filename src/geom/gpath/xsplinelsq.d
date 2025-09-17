@@ -99,39 +99,45 @@ public:
 
 } // end class XSplineLsq
 
-version(xsplinelsq_test) {
-    import util.msg_service;
-    import std.stdio: writeln, writefln;
-    int main() {
-        double runge(double x) { return 1.0/(1.0 + 25* x * x); }
+unittest {
+    import std.stdio : writeln, writefln;
+    import util.test_runner : skip;
+
+    version (complex_numbers) {
+        // FIXME: XSplineLsq is incompatible with complex numbers
+        skip();
+    } else {
+        double runge(double x) {
+            return 1.0 / (1.0 + 25 * x * x);
+        }
+
         int N = 200;
         double x0 = -1.0;
         double x1 = 1.0;
-        double dx = (x1-x0)/(N-1);
+        double dx = (x1 - x0) / (N - 1);
         double[] x_sample, y_sample, w_sample;
         foreach (i; 0 .. N) {
-            double xx = x0 + dx*i;
+            double xx = x0 + dx * i;
             x_sample ~= xx;
             y_sample ~= runge(xx);
             w_sample ~= 1.0;
         }
-        w_sample[0] = 100.0; w_sample[$-1]=100.0;
+        w_sample[0] = 100.0;
+        w_sample[$ - 1] = 100.0;
         double[] xs;
         auto s = new XSplineLsq(x_sample, y_sample, w_sample, xs, 10);
         N = 100;
         double max_dy = 0.0;
-        double dt = 1.0/(N-1);
+        double dt = 1.0 / (N - 1);
         foreach (i; 0 .. N) {
             double t = dt * i;
             Vector3 p = s(t);
             double y_runge = runge(p.x);
             double dy = p.y - y_runge;
             max_dy = fmax(max_dy, fabs(dy));
-            // writefln("%g %g %g %g", p.x, y_runge, p.y, dy);
-            assert(fabs(dy) < 0.02, failedUnitTest());
+            writefln("%g %g %g %g", p.x, y_runge, p.y, dy);
+            assert(fabs(dy) < 0.02);
         }
-        // writeln("max_dy=", max_dy);
-        return 0;
+        writeln("max_dy=", max_dy);
     }
-} // end xsplinelsq_test
-
+}

@@ -98,5 +98,3 @@ public:
         return repr;
     }
 } // end class MeshPatch
-
-// [TODO] version(meshpatch_test)

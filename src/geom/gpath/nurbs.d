@@ -98,15 +98,17 @@ private:
 
 }
 
-version(nurbs_test) {
-    import util.msg_service;
-    int main() {
-        double[4][] Pw = [[-4.0, -4.0, 0.0, 1.0], [-2.0, 4.0, 0.0, 1.0], [2.0*5, -4.0*5, 0.0, 5], [4.0, 4.0, 0.0, 1.0], [3.778, 1.836, 2.933, 1.0], [4*2.772, -4*3.875, 4*1.736, 4.0]];
-        int p = 2;
-        double[] U = [0.0, 0.0, 0.0, 0.375, 0.5, 0.625, 1.0, 1.0, 1.0];
-        auto ncurve = new NURBS(Pw, U, p);
-        assert(approxEqualVectors(Vector3(3.782, 2.939, 0.435), ncurve(0.6)), failedUnitTest());
-        return 0;
-    }
+unittest {
+    double[4][] Pw = [
+        [-4.0, -4.0, 0.0, 1.0],
+        [-2.0, 4.0, 0.0, 1.0],
+        [2.0 * 5, -4.0 * 5, 0.0, 5],
+        [4.0, 4.0, 0.0, 1.0],
+        [3.778, 1.836, 2.933, 1.0],
+        [4 * 2.772, -4 * 3.875, 4 * 1.736, 4.0]
+    ];
+    int p = 2;
+    double[] U = [0.0, 0.0, 0.0, 0.375, 0.5, 0.625, 1.0, 1.0, 1.0];
+    auto ncurve = new NURBS(Pw, U, p);
+    assert(approxEqualVectors(Vector3(3.782, 2.939, 0.435), ncurve(0.6)));
 }
-
