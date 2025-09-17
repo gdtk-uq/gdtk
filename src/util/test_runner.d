@@ -28,6 +28,27 @@ immutable string WHITE = "\x1b[37m";
 immutable string BOLD = "\x1b[1m";
 immutable string RESET = "\x1b[0m";
 
+// Allows us to detect skips, and differentiate them from assert errors
+// However, with a standard test runner, it will still throw errors, meaning
+// they can be caught.
+class SkipError : AssertError {
+    @safe pure nothrow @nogc this(string file, size_t line) {
+        this(cast(Throwable) null, file, line);
+    }
+
+    @safe pure nothrow @nogc this(Throwable next, string file = __FILE__, size_t line = __LINE__) {
+        this("Skipped test", file, line, next);
+    }
+
+    @safe pure nothrow @nogc this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) {
+        super(msg, file, line, next);
+    }
+}
+
+void skip(string message = "Skipped test") {
+    throw new SkipError(message);
+}
+
 size_t visualWidth(string text) {
     static auto ansiRegex = ctRegex!(r"\x1b\[[0-9;]*[A-Za-z]");
     return replaceAll(text, ansiRegex, "").length;
@@ -52,6 +73,7 @@ string leftJustify(string text, size_t width, dchar fillChar = ' ') {
 enum TestResult {
     PASSED = 0,
     FAILED,
+    SKIPPED,
     ERROR,
 }
 
@@ -61,7 +83,7 @@ string getColour(TestResult r) {
         return GREEN;
     case TestResult.FAILED:
         return RED;
-    case TestResult.ERROR:
+    case TestResult.SKIPPED, TestResult.ERROR:
         return YELLOW;
     }
 }
@@ -89,6 +111,7 @@ struct TestInfo {
 struct Summary {
     size_t passed;
     size_t failed;
+    size_t skipped;
     double duration;
 
     string toString() const {
@@ -97,9 +120,10 @@ struct Summary {
 
         if (failed > 0) {
             summaryText ~= BOLD ~ format("%d failed", failed) ~ RESET ~ ", ";
-            summaryText ~= GREEN ~ format("%d passed", passed) ~ summaryColour;
-        } else {
-            summaryText ~= format("%d passed", passed);
+        }
+        summaryText ~= GREEN ~ format("%d passed", passed) ~ summaryColour;
+        if (skipped > 0) {
+            summaryText ~= RESET ~ ", " ~ YELLOW ~ format("%d skipped", skipped) ~ summaryColour;
         }
         summaryText ~= format(" in %.2fs", duration);
         return summaryColour ~ center(" " ~ summaryText ~ " ", OUTPUT_WIDTH, '=') ~ RESET;
@@ -119,6 +143,9 @@ TestInfo captureTest(void function() testFunc) {
     try {
         testFunc();
         testInfo.result = TestResult.PASSED;
+    } catch (SkipError e) {
+        testInfo.message = format("%s:L%s - %s", baseName(e.file), e.line, e.msg.length ? e.msg : "test skipped");
+        testInfo.result = TestResult.SKIPPED;
     } catch (AssertError e) {
         // Store failure info for later display
         testInfo.message = format("%s:L%s - %s", baseName(e.file), e.line,
@@ -168,7 +195,6 @@ UnitTestResult customUnitTester() {
 
     auto sw = StopWatch(AutoStart.yes);
     TestInfo[] allTests;
-    Summary summary;
 
     // Verbose pytest-style output
     foreach (i, m; modules) {
@@ -189,11 +215,9 @@ UnitTestResult customUnitTester() {
     }
 
     sw.stop();
-    summary.duration = sw.peek().total!"msecs" / 1000.0;
-
-    auto failedTests = allTests.filter!(t => t.result != TestResult.PASSED).array();
-    summary.failed = failedTests.length;
-    summary.passed = allTests.length - summary.failed;
+    auto failedTests = allTests.filter!(t => (t.result == TestResult.ERROR) || (t.result == TestResult.FAILED)).array();
+    auto numSkippedTests = allTests.filter!(t => t.result == TestResult.SKIPPED).count();
+    auto numPassedTests = allTests.filter!(t => t.result == TestResult.PASSED).count();
 
     writeln();
 
@@ -206,6 +230,12 @@ UnitTestResult customUnitTester() {
         }
     }
 
+    Summary summary = {
+        duration: sw.peek().total!"msecs" / 1000.0,
+        passed: numPassedTests,
+        failed: failedTests.length,
+        skipped: numSkippedTests
+    };
     writeln(summary);
 
     UnitTestResult result = {
@@ -216,11 +246,11 @@ UnitTestResult customUnitTester() {
     return result;
 }
 
-static this() {
-    Runtime.extendedModuleUnitTester = &customUnitTester;
-}
-
 version (unittest) {
+    static this() {
+        Runtime.extendedModuleUnitTester = &customUnitTester;
+    }
+
     void main() {
     }
 }
