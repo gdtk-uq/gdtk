@@ -1,0 +1,12 @@
+# test.yaml
+# Example config file for cold condition 
+# Nick Gibbons (2025-Sept)
+
+R:  287.1
+gamma:  1.4
+Pr:  0.71
+p_e:  2.303e3
+u_e:  604.5
+T_e:  108.1
+T_wall:  269.5
+x:  0.28

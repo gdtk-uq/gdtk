@@ -44,6 +44,8 @@ include::2D/wedge/README.adoc[tag=description]
 
 include::2D/diffuser-busemann/README.adoc[tag=description]
 
+include::2D/laminar-flat-plate/README.adoc[tag=description]
+
 include::2D/turbulent-flat-plate/README.adoc[tag=description]
 
 include::2D/steepening-wave/README.adoc[tag=description]
