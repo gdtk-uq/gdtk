@@ -61,52 +61,46 @@ public:
     }
 } // end class Line
 
-
-version(line_test) {
-    import util.msg_service;
-    int main() {
-        // Some simple evaluations.
-        auto a = Vector3([1.0, 2.2, 3.0]);
-        auto b = Vector3(1.0);
-        auto ab = new Line(a, b);
-        auto c = ab(0.5);
-        assert(approxEqualVectors(c, Vector3(1.0, 1.1, 1.5)), failedUnitTest());
-        auto ab2 = ab.dup();
-        auto d = ab2(0.5);
-        assert(approxEqualVectors(c, d), failedUnitTest());
-        //
-        // Set up an intersection that should be found on Line.
-        auto pth = new Line(Vector3(0.0,1.0), Vector3(1.0,1.0));
-        auto ps = Vector3(0.5,0.5);
-        auto dir = Vector3(0.0,1.0);
-        double t;
-        auto found = pth.intersect2D(ps, dir, t);
-        assert(found, failedUnitTest());
-        // intersect2D parametric location on Line
-        assert(isClose(t,0.5), failedUnitTest());
-        //
-        version(complex_numbers) {
-            // Try out the complex derivative evaluation.
-            auto p0 = Vector3(0.0, 0.0);
-            double alpha = 1.0;
-            auto p1 = Vector3(alpha, alpha);
-            auto line0 = new Line(p0, p1);
-            double h = 1.0e-20;
-            number ih = complex(0,h);
-            auto p1_dash = Vector3(alpha+ih, alpha+ih);
-            auto line1 = new Line(p0, p1_dash);
-            // What we want to compute is the sensitivity
-            // of the midpoint with respect to alpha.
-            double dpmid_da_x = line1(0.5).x.im / h;
-            double dpmid_da_y = line1(0.5).y.im / h;
-            double dpmid_da_z = line1(0.5).z.im / h;
-            // import std.stdio;
-            // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
-            assert(isClose(dpmid_da_x,0.5), failedUnitTest());
-            assert(isClose(dpmid_da_y,0.5), failedUnitTest());
-            assert(isClose(dpmid_da_z,0.0), failedUnitTest());
-        }
-        //
-        return 0;
+unittest {
+    // Some simple evaluations.
+    auto a = Vector3([1.0, 2.2, 3.0]);
+    auto b = Vector3(1.0);
+    auto ab = new Line(a, b);
+    auto c = ab(0.5);
+    assert(approxEqualVectors(c, Vector3(1.0, 1.1, 1.5)));
+    auto ab2 = ab.dup();
+    auto d = ab2(0.5);
+    assert(approxEqualVectors(c, d));
+    //
+    // Set up an intersection that should be found on Line.
+    auto pth = new Line(Vector3(0.0, 1.0), Vector3(1.0, 1.0));
+    auto ps = Vector3(0.5, 0.5);
+    auto dir = Vector3(0.0, 1.0);
+    double t;
+    auto found = pth.intersect2D(ps, dir, t);
+    assert(found);
+    // intersect2D parametric location on Line
+    assert(isClose(t, 0.5));
+    //
+    version (complex_numbers) {
+        // Try out the complex derivative evaluation.
+        auto p0 = Vector3(0.0, 0.0);
+        double alpha = 1.0;
+        auto p1 = Vector3(alpha, alpha);
+        auto line0 = new Line(p0, p1);
+        double h = 1.0e-20;
+        number ih = complex(0, h);
+        auto p1_dash = Vector3(alpha + ih, alpha + ih);
+        auto line1 = new Line(p0, p1_dash);
+        // What we want to compute is the sensitivity
+        // of the midpoint with respect to alpha.
+        double dpmid_da_x = line1(0.5).x.im / h;
+        double dpmid_da_y = line1(0.5).y.im / h;
+        double dpmid_da_z = line1(0.5).z.im / h;
+        // import std.stdio;
+        // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
+        assert(isClose(dpmid_da_x, 0.5));
+        assert(isClose(dpmid_da_y, 0.5));
+        assert(isClose(dpmid_da_z, 0.0));
     }
-} // end line_test
+}
