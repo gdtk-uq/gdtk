@@ -86,5 +86,3 @@ public:
             ", ruled_direction=" ~ ruled_direction ~ ", pure2D=" ~ to!string(pure2D) ~ ")";
     }
 } // end class RuledSurface
-
-// [TODO] version(ruledsurface_test)
