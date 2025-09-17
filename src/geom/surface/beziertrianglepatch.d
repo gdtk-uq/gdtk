@@ -664,58 +664,60 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     return myBezTriPatch;
 }
 
-version(beziertrianglepatch_test) {
-    import util.msg_service;
-    import std.stdio;
+unittest {
     import std.math;
-    int main()
-    {
-        // Example on 17.1 on p. 312 in Farin (2001)
-        Vector3[] B = [Vector3(6, 0, 9),
-                       Vector3(3, 3, 6), Vector3(3, 0, 0),
-                       Vector3(0, 6, 0), Vector3(0, 3, 0), Vector3(0, 0, 0)];
-        auto btp = new BezierTrianglePatch(B, 2);
-        double u = 1./3;
-        double v = 1./3;
-        auto p = btp(u, v);
-        // Farin gives results as (2, 2, 7/3);
-        assert(approxEqualVectors(p, Vector3(2, 2, 7./3)), failedUnitTest());
 
-        // Test projection of point that is ON surface
-        Vector3 q;
-        auto dist = btp.projectPoint(p, q, u, v);
-        assert(dist < 1.0e-6, failedUnitTest());
-        assert(approxEqualVectors(q, Vector3(2, 2, 7./3)), failedUnitTest());
-        assert(isClose(u, 1./3, 1.0e-6), failedUnitTest());
-        assert(isClose(v, 1./3, 1.0e-6), failedUnitTest());
+    // Example on 17.1 on p. 312 in Farin (2001)
+    Vector3[] B = [
+        Vector3(6, 0, 9),
+        Vector3(3, 3, 6), Vector3(3, 0, 0),
+        Vector3(0, 6, 0), Vector3(0, 3, 0), Vector3(0, 0, 0)
+    ];
+    auto btp = new BezierTrianglePatch(B, 2);
+    double u = 1. / 3;
+    double v = 1. / 3;
+    auto p = btp(u, v);
+    // Farin gives results as (2, 2, 7/3);
+    assert(approxEqualVectors(p, Vector3(2, 2, 7. / 3)));
 
-        // Test optimizer with this surface.
-        // 1. Generate a bunch of points
-        Vector3[] points;
-        double du = 1.0/4;
-        double dv = du;
-        foreach (uu; iota(0.0, 1.0+0.5*du, du)) {
-            foreach (vv; iota(0.0, (1.0-uu)+0.5*dv, dv)) {
-                if ((uu + vv) > 1.0) continue;
-                points ~= btp(uu, vv);
-            }
+    // Test projection of point that is ON surface
+    Vector3 q;
+    auto dist = btp.projectPoint(p, q, u, v);
+    assert(dist < 1.0e-6);
+    assert(approxEqualVectors(q, Vector3(2, 2, 7. / 3)));
+    assert(isClose(u, 1. / 3, 1.0e-6));
+    assert(isClose(v, 1. / 3, 1.0e-6));
+
+    // Test optimizer with this surface.
+    // 1. Generate a bunch of points
+    Vector3[] points;
+    double du = 1.0 / 4;
+    double dv = du;
+    foreach (uu; iota(0.0, 1.0 + 0.5 * du, du)) {
+        foreach (vv; iota(0.0, (1.0 - uu) + 0.5 * dv, dv)) {
+            if ((uu + vv) > 1.0)
+                continue;
+            points ~= btp(uu, vv);
         }
-        // 2. Find Bezier triangle to fit this point cloud.
-        auto p0 = Vector3(6, 0, 9);
-        auto p1 = Vector3(0, 6, 0);
-        auto p2 = Vector3(0, 0, 0);
-        // Let's perturb the points a little as an initial guess.
-        B[1].x = 3.1; B[1].y = 2.9; B[1].z = 6.2;
-        B[2].x = 2.8; B[2].y = 0.15; B[2].z = -0.05;
-        B[4].x = -0.3; B[4].y = 2.85; B[4].z = -0.1;
-        auto guess = new BezierTrianglePatch(B, 2);
-        auto testPatch = bezierTriangleFromPointCloud(points, p0, p1, p2, 2, guess);
-
-        p = testPatch(0.2, 0.3);
-        q = btp(0.2, 0.3);
-        assert(distance_between(p, q) < 0.1);
-
-        return 0;
     }
+    // 2. Find Bezier triangle to fit this point cloud.
+    auto p0 = Vector3(6, 0, 9);
+    auto p1 = Vector3(0, 6, 0);
+    auto p2 = Vector3(0, 0, 0);
+    // Let's perturb the points a little as an initial guess.
+    B[1].x = 3.1;
+    B[1].y = 2.9;
+    B[1].z = 6.2;
+    B[2].x = 2.8;
+    B[2].y = 0.15;
+    B[2].z = -0.05;
+    B[4].x = -0.3;
+    B[4].y = 2.85;
+    B[4].z = -0.1;
+    auto guess = new BezierTrianglePatch(B, 2);
+    auto testPatch = bezierTriangleFromPointCloud(points, p0, p1, p2, 2, guess);
 
+    p = testPatch(0.2, 0.3);
+    q = btp(0.2, 0.3);
+    assert(distance_between(p, q) < 0.1);
 }
