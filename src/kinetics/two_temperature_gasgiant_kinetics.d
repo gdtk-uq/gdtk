@@ -45,40 +45,37 @@ private:
     // Put specific data or helper functions here.
 } // end class UpdateGasGiant
 
-
-version(two_temperature_gasgiant_kinetics_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
     import std.math : isClose;
     import gas.two_temperature_gasgiant;
-    void main() {
-        auto gm = new TwoTemperatureGasGiant();
-        auto gd = GasState(6, 1);
-        gd.p = 1.0e5;
-        gd.T = 310.0;
-        gd.T_modes[0] = 310;
-        gd.massf[gas.two_temperature_gasgiant.Species.H2] = 1.0;
-        gd.massf[gas.two_temperature_gasgiant.Species.H] = 0.0;
-        gd.massf[gas.two_temperature_gasgiant.Species.Hplus] = 0.0;
-        gd.massf[gas.two_temperature_gasgiant.Species.eminus] = 0.0;
-        gd.massf[gas.two_temperature_gasgiant.Species.He] = 0.0;
-        gd.massf[gas.two_temperature_gasgiant.Species.Heplus] = 0.0;
-        assert(isClose(gm.R(gd), 4124.506, 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 1, failedUnitTest());
-        assert(gm.n_species == 6, failedUnitTest());
-        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.T, 310.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.H2], 1.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.H], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.Hplus], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.eminus], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.He], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.Heplus], 0.0, 1.0e-6), failedUnitTest());
 
-        gm.update_thermo_from_pT(gd);
-        double my_rho = 1.0e5 / (4124.506 * 310.0);
-        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
-        // Put some discerning tests here.
-        assert(isClose(1.0, 1.0, 1.0e2), failedUnitTest());
-    }
+    auto gm = new TwoTemperatureGasGiant();
+    auto gd = GasState(6, 1);
+    gd.p = 1.0e5;
+    gd.T = 310.0;
+    gd.T_modes[0] = 310;
+    gd.massf[gas.two_temperature_gasgiant.Species.H2] = 1.0;
+    gd.massf[gas.two_temperature_gasgiant.Species.H] = 0.0;
+    gd.massf[gas.two_temperature_gasgiant.Species.Hplus] = 0.0;
+    gd.massf[gas.two_temperature_gasgiant.Species.eminus] = 0.0;
+    gd.massf[gas.two_temperature_gasgiant.Species.He] = 0.0;
+    gd.massf[gas.two_temperature_gasgiant.Species.Heplus] = 0.0;
+    assert(isClose(gm.R(gd), 4124.506, 1.0e-4));
+    assert(gm.n_modes == 1);
+    assert(gm.n_species == 6);
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 310.0, 1.0e-6));
+    assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.H2], 1.0, 1.0e-6));
+    assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.H], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.Hplus], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.eminus], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.He], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[gas.two_temperature_gasgiant.Species.Heplus], 0.0, 1.0e-6));
+
+    gm.update_thermo_from_pT(gd);
+    double my_rho = 1.0e5 / (4124.506 * 310.0);
+    assert(isClose(gd.rho, my_rho, 1.0e-4));
+    // Put some discerning tests here.
+    assert(isClose(1.0, 1.0, 1.0e2));
 }
