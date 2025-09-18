@@ -99,16 +99,11 @@ private:
 } // end class UpdateArgonFracWithIdeal
 
 
-version(two_temperature_argon_with_ideal_gas_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
     import std.math : isClose;
-    import gas.two_temperature_argon_plus_ideal;
-    void main() {
-        // [TODO] Put a meaningful test in this place.
-        assert(isClose(1.0, 1.0, 1.0e-3), failedUnitTest());
-    } // end main()
-} // end two_temperature_argon_with_ideal_gas_test
 
-
-
+    import util.test_runner : skip;
+    // [TODO] Put a meaningful test in this place.
+    skip("We haven't written any tests!");
+}
