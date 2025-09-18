@@ -57,8 +57,8 @@ luminances = {k:0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2] for k,v in rgbs.items()}
 COLOURS = [name for name,luminance in luminances.items() if luminance<220]
 
 class ResidualPlot(object):
-    keys = [['linear-solve-residual-achieved', 'mass-balance', 'global-residual-rel'],
-            ['n-iters', 'n-restarts', 'relaxation-factor']]
+    keys = [['linear-solve-residual-rel-achieved', 'mass-balance', 'global-residual-rel', 'CFL'],
+            ['n-iters', 'n-restarts', 'relaxation-factor',]]
     yscales = ['log', 'linear']
 
     def __init__(self, filename):
