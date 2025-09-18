@@ -696,59 +696,56 @@ static this()
     A_MW["NO+"] = 168.0;
 }
 
-version(electronically_specific_kinetics_test) {
-    int main()
+unittest {
+    import std.file;
+
     {
-        //writeln("---------Start Test---------");
-        import util.msg_service;
+        // Look for lua files in ../gas/sample-data
+        auto thisDir = getcwd();
+        chdir("../gas/sample-data");
+        scope (exit)
+            chdir(thisDir);
 
         auto L = init_lua_State();
-        string filename = "../gas/sample-data/electronic-and-macro-species.lua";
+        string filename = "electronic-and-macro-species.lua";
         doLuaFile(L, filename);
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = GasState(gm.n_species,1);
+        auto gd = GasState(gm.n_species, 1);
         lua_close(L);
-        //writeln("----------Initialised Gas model and state-----------");
-        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ES_files.lua",gm);
-
-        //writeln("--------Initialised kinetics-------------");
-
-        gd.massf[] = 0;
-        gd.massf[16] = 0.78;
-        gd.massf[16 + 1] = 0.22;
-
-        gd.p = 21478.7;
-        gd.T = 25000.9;
-        gd.T_modes[0] = 20000.0;
-        gm.update_thermo_from_pT(gd);
-        // writeln(gd);
-        double _dt = 1e-9;
-        double dtSuggest = 1e-10;
-        number[maxParams] params;
-
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        esk(gd, _dt, dtSuggest, params);
-        // writeln("The final gas state after the kinetics steps is: ");
-        // writeln(gd);
-
-        double massfsum=0.0;
-        foreach(number eachmassf;gd.massf) {
-            massfsum += eachmassf;
-        }
-        assert(isClose(massfsum, 1.0, 1e-2), failedUnitTest());
-
-
-
-        return 0;
     }
+    ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ES_files.lua", gm);
+
+    gd.massf[] = 0;
+    gd.massf[16] = 0.78;
+    gd.massf[16 + 1] = 0.22;
+
+    gd.p = 21_478.7;
+    gd.T = 25_000.9;
+    gd.T_modes[0] = 20_000.0;
+    gm.update_thermo_from_pT(gd);
+    // writeln(gd);
+    double _dt = 1e-9;
+    double dtSuggest = 1e-10;
+    number[maxParams] params;
+
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    esk(gd, _dt, dtSuggest, params);
+    // writeln("The final gas state after the kinetics steps is: ");
+    // writeln(gd);
+
+    double massfsum = 0.0;
+    foreach (number eachmassf; gd.massf) {
+        massfsum += eachmassf;
+    }
+    assert(isClose(massfsum, 1.0, 1e-2));
 }
 
 //Everything from here is old, will delete when appropriate
@@ -1041,71 +1038,61 @@ private:
 
 }
 
-version(electronically_specific_kinetics_test) {
-    int main()
-    {
-        return 0;
-    }
-}
 */
 /*
-version(electronically_specific_kinetics_test)
+unittest
 {
-    int main()
-    {
-        import util.msg_service;
+{
+    import util.msg_service;
 
-        auto L = init_lua_State();
-        string filename = "../gas/sample-data/electronic_composition.lua";
-        doLuaFile(L, filename);
-        auto gm = new ElectronicallySpecificGas(L);
-        auto gd = GasState(gm.n_species,1);
+    auto L = init_lua_State();
+    string filename = "../gas/sample-data/electronic_composition.lua";
+    doLuaFile(L, filename);
+    auto gm = new ElectronicallySpecificGas(L);
+    auto gd = GasState(gm.n_species,1);
 
-        number initial_uNoneq=0.0;
+    number initial_uNoneq=0.0;
 
-        // gd.massf[] = 0.0;
-        // gd.massf[0] = 0.037041674288877; //initialises massf of NI
-        // gd.massf[9] = 0.010577876366622; //initialises massf of OI
-        // gd.massf[19] = 0.74082290750449; //N2
-        // gd.massf[20] = 0.21155752733244; //O2
-        // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
-        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07,
-        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005,
-        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08,
-        //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
-        gd.massf[] = 0;
-        gd.massf[gm.n_species-3] = 1e-8;
-        gd.massf[gm.n_species-2] = 0.78;
-        gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
+    // gd.massf[] = 0.0;
+    // gd.massf[0] = 0.037041674288877; //initialises massf of NI
+    // gd.massf[9] = 0.010577876366622; //initialises massf of OI
+    // gd.massf[19] = 0.74082290750449; //N2
+    // gd.massf[20] = 0.21155752733244; //O2
+    // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
+    // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07,
+    //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005,
+    //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08,
+    //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
+    gd.massf[] = 0;
+    gd.massf[gm.n_species-3] = 1e-8;
+    gd.massf[gm.n_species-2] = 0.78;
+    gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
 
-        gd.p = 64502.1;
-        gd.T = 54826.4;
-        gd.T_modes[0] = 15000.0;
-        gm.update_thermo_from_pT(gd);
+    gd.p = 64502.1;
+    gd.T = 54826.4;
+    gd.T_modes[0] = 15000.0;
+    gm.update_thermo_from_pT(gd);
 
-        lua_close(L);
+    lua_close(L);
 
-        double _dt = 1e-9;
-        double _duration = 1e-7;
-        double _t = 0.0;
+    double _dt = 1e-9;
+    double _duration = 1e-7;
+    double _t = 0.0;
 
-        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ESK-N.txt","sample-input/ESK-O.txt",gm);
+    ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ESK-N.txt","sample-input/ESK-O.txt",gm);
 
-        double dtSuggest = 1e-9;
-        number[maxParams] params;
-        while (_t < _duration+_dt) {
-            esk(gd, _dt, dtSuggest, params);
-            _t+=_dt;
-        }
-        double massfsum=0.0;
-        foreach(number eachmassf;gd.massf) {
-            massfsum += eachmassf;
-        }
-        assert(isClose(massfsum, 1.0, 1e-2), failedUnitTest());
-
-        return 0;
-
+    double dtSuggest = 1e-9;
+    number[maxParams] params;
+    while (_t < _duration+_dt) {
+        esk(gd, _dt, dtSuggest, params);
+        _t+=_dt;
     }
+    double massfsum=0.0;
+    foreach(number eachmassf;gd.massf) {
+        massfsum += eachmassf;
+    }
+    assert(isClose(massfsum, 1.0, 1e-2));
+
 }
 
 //arrhenius mol/cm^3
