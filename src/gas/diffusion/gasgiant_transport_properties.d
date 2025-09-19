@@ -759,34 +759,6 @@ private:
         return ne;
     }
 }
-
-
-version(gasgiant_transport_properties_test) {
-    import std.stdio;
-    int main()
-    {
-        GasGiantViscosity ggv = new GasGiantViscosity();
-        auto Q = GasState(1, 1);
-        auto f = File("gasgiant-visc-test.dat", "w");
-        f.writeln("# T(K)   mu-He  mu-H2  mu-H");
-        double T = 300.0;
-        double dT = 100.0;
-        double Tmax = 10000.0;
-        /*
-          while (T <= Tmax) {
-          Q.T = T;
-          auto mu0 = ggv.selfViscosity(Q.T, 0, 0, 0, 0.0);
-          auto mu1 = ggv.selfViscosity(Q.T, 1, 1, 0, 0.0);
-          auto mu2 = ggv.selfViscosity(Q.T, 2, 2, 0, 0.0);
-          f.writefln("%f %.8e %.8e %.8e", T, mu0, mu1, mu2);
-          T += dT;
-          }
-        */
-        f.close();
-        return 0;
-    }
-}
-
 static double[6] _M;
 static double[6] _m;
 static double[6][3] _al;
@@ -958,4 +930,36 @@ void setGasGiantModelParameters()
     a_11["He:e"]  = [10.59136372,-1.52697125,0.021889243,-17.3791485,1.99019765,19.13183426,-3.87345716,52.39042];
     a_11["H2:e"]  = [7.61552567,-1.31152238,1.0876703,-0.085847868,0.60307406,5.01125522,9.07403916,1.92416429];
     a_11["H:e"] = [10.35291134,-1.58301162,12.45844036,-0.2328519,0.053662857,-5.34372929,9.35561752,-2.15463427];
+}
+
+
+unittest {
+    import std.file;
+    import std.stdio;
+    import util.test_runner : skip;
+
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
+
+    // [FIXME]: The GasGiantViscosity now takes dbOption, which is undocumented.
+    // It is unclear which option is being tested here.
+    // [FIXME]: There are no assert statements here.
+    GasGiantViscosity ggv = new GasGiantViscosity("Bruno");
+    auto Q = GasState(1, 1);
+    writeln("# T(K)   mu-He  mu-H2  mu-H");
+    double T = 300.0;
+    double dT = 100.0;
+    double Tmax = 10_000.0;
+    /*
+      while (T <= Tmax) {
+      Q.T = T;
+      auto mu0 = ggv.selfViscosity(Q.T, 0, 0, 0, 0.0);
+      auto mu1 = ggv.selfViscosity(Q.T, 1, 1, 0, 0.0);
+      auto mu2 = ggv.selfViscosity(Q.T, 2, 2, 0, 0.0);
+      f.writefln("%f %.8e %.8e %.8e", T, mu0, mu1, mu2);
+      T += dT;
+      }
+    */
+    skip();
 }

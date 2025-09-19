@@ -204,47 +204,47 @@ public:
     }
 } // end class VibSpecificNitrogen
 
-version(vib_specific_nitrogen_test) {
+unittest {
+    import std.file;
     import std.stdio;
-    import util.msg_service;
 
-    int main() {
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/vib-specific-N2-gas.lua");
-        auto gm = new VibSpecificNitrogen(L);
-        lua_close(L);
-        auto Q = GasState(gm.numVibLevels, 0);
-        Q.p = 1.0e5;
-        Q.T = 300.0;
-        // Set up the species mass fractions assuming equilibrium.
-        foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] = gm.boltzmann_eq_species(i, Q.T); }
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        double R_N2 = 296.805; // gas constant for N2
-        double M_N2 = 0.0280134; // kg/mole
-        double gamma = 7.0/5.0; // ratio of specific heats.
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "vib-specific-N2-gas.lua");
+    auto gm = new VibSpecificNitrogen(L);
+    lua_close(L);
+    auto Q = GasState(gm.numVibLevels, 0);
+    Q.p = 1.0e5;
+    Q.T = 300.0;
+    // Set up the species mass fractions assuming equilibrium.
+    foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] = gm.boltzmann_eq_species(i, Q.T); }
 
-        gm.update_thermo_from_pT(Q);
-        double my_rho = 1.0e5 / (R_N2 * 300.0);
-        assert(isClose(Q.rho, my_rho, 1.0e-6), failedUnitTest());
+    double R_N2 = 296.805; // gas constant for N2
+    double M_N2 = 0.0280134; // kg/mole
+    double gamma = 7.0/5.0; // ratio of specific heats.
 
-        double my_u = 2.5 * R_N2 * 300.0;
-        foreach (i; 0 .. gm.numVibLevels) {
-            my_u += (Avogadro_number/M_N2) * gm.vib_energy(i) * Q.massf[i];
-        }
-        assert(isClose(Q.u, my_u, 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_pT(Q);
+    double my_rho = 1.0e5 / (R_N2 * 300.0);
+    assert(isClose(Q.rho, my_rho, 1.0e-6));
 
-        double Tvib = gm.compute_Tvib(Q, 400.0);
-        assert(isClose(Tvib, Q.T, 1.0e-3));
-
-        gm.update_trans_coeffs(Q);
-        assert(isClose(Q.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(Q.k, 0.0, 1.0e-6), failedUnitTest());
-
-        gm.update_sound_speed(Q);
-        double my_a = sqrt(gamma * R_N2 * 300.0);
-        assert(isClose(Q.a, my_a, 1.0e-6), failedUnitTest());
-
-        return 0;
+    double my_u = 2.5 * R_N2 * 300.0;
+    foreach (i; 0 .. gm.numVibLevels) {
+        my_u += (Avogadro_number/M_N2) * gm.vib_energy(i) * Q.massf[i];
     }
-}
+    assert(isClose(Q.u, my_u, 1.0e-6));
 
+    double Tvib = gm.compute_Tvib(Q, 400.0);
+    assert(isClose(Tvib, Q.T, 1.0e-3));
+
+    gm.update_trans_coeffs(Q);
+    assert(isClose(Q.mu, 0.0, 1.0e-6));
+    assert(isClose(Q.k, 0.0, 1.0e-6));
+
+    gm.update_sound_speed(Q);
+    double my_a = sqrt(gamma * R_N2 * 300.0);
+    assert(isClose(Q.a, my_a, 1.0e-6));
+}

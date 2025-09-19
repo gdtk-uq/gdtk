@@ -705,108 +705,100 @@ private:
     double[4] _Cp_hat, _gamma_hat, _mu, _k;
 }
 
-
-
-
 // These test functions are the same as in uniform_lut.d
-version(adaptive_lut_CEA_test)
-{
-    import util.msg_service;
+unittest {
+    import std.file;
 
-    int main() {
-        GasModel gm;
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        try {
-            lua_State* L = init_lua_State();
-            doLuaFile(L, "sample-data/cea-adaptive-lut-air-bezier.lua");
-            gm = new AdaptiveLUT(L);
-        }
-        catch (Exception e) {
-            writeln(e.msg);
-            string msg;
-            msg ~= "Test of look up table in adaptive_lut_CEA.d require file:";
-            msg ~= "cea-adaptive-lut-air-bezier.lua ";
-            msg ~= " in directory: gas/sample_data";
-            throw new Exception(msg);
-        }
+    GasModel gm;
 
-        // An arbitrary state was defined for 'Air', massf=1, in CEA2
-        // using the utility cea2_gas.py
-        double p_given = 1.0e6; // Pa
-        double T_given = 1.0e3; // K
-        double rho_given = 3.4837; // kg/m^^3
-        // CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
-        // temperature was offset by amount e_offset
-        double e_CEA =  456600; // J/kg
-        double e_offset = 303949.904; // J/kg
-        double e_given = e_CEA + e_offset; // J/kg
-        double h_CEA = 743650; // J/kg
-        double h_given = h_CEA + e_offset; // J/kg
-        double a_given = 619.2; // m/s
-        double s_given = 7475.7; // J(kg.K)
-        double R_given = 287.036; // J/(kg.K)
-        double gamma_given = 1.3866;
-        double Cp_given = 1141; // J/(kg.K)
-        double mu_given = 4.3688e-05; // Pa.s
-        double k_given = 0.0662; // W/(m.K)
-        double Cv_given = e_given / T_given; // J/(kg.K)
-
-
-        auto Q = GasState(gm, p_given, T_given);
-        // Return values not stored in the GasState
-        // The constructor of the gas state will call update_thermo_from_pT
-        // which itself calls update_thermo_from_rhou, so we are testing both
-        double Cv = gm.dudT_const_v(Q);
-        double Cp = gm.dhdT_const_p(Q);
-        double R = gm.gas_constant(Q);
-        double h = gm.enthalpy(Q);
-        double s = gm.entropy(Q);
-
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 1, failedUnitTest());
-        assert(isClose(e_given, Q.u, 1.0e-4), failedUnitTest());
-        assert(isClose(rho_given, Q.rho, 1.0e-4), failedUnitTest());
-        assert(isClose(a_given, Q.a, 1.0e-4), failedUnitTest());
-        assert(isClose(Cp_given, Cp, 1.0e-3), failedUnitTest());
-        assert(isClose(h_given, h, 1.0e-4), failedUnitTest());
-        assert(isClose(mu_given, Q.mu, 1.0e-4), failedUnitTest());
-        assert(isClose(k_given, Q.k, 1.0e-4), failedUnitTest());
-        assert(isClose(s_given, s, 1.0e-4), failedUnitTest());
-        assert(isClose(R_given, R, 1.0e-4), failedUnitTest());
-
-
-
-        // Now do the same test for the linear implementation
-        try {
-            lua_State* L = init_lua_State();
-            doLuaFile(L, "sample-data/cea-adaptive-lut-air-linear.lua");
-            gm = new AdaptiveLUT(L);
-        }
-        catch (Exception e) {
-            writeln(e.msg);
-            string msg;
-            msg ~= "Test of look up table in adaptive_lut_CEA.d require file:";
-            msg ~= "cea-adaptive-lut-air-linear.lua";
-            msg ~= " in directory: gas/sample_data";
-            throw new Exception(msg);
-        }
-
-        Q = GasState(gm, p_given, T_given);
-
-        // Note that the unit tests are to a higher error tolerance
-        // because the look-up table was generated higher error allowed
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 1, failedUnitTest());
-        assert(isClose(e_given, Q.u, 1.0e-3), failedUnitTest());
-        assert(isClose(rho_given, Q.rho, 1.0e-3), failedUnitTest());
-        assert(isClose(a_given, Q.a, 1.0e-3), failedUnitTest());
-        assert(isClose(Cp_given, Cp, 1.0e-3), failedUnitTest());
-        assert(isClose(h_given, h, 1.0e-3), failedUnitTest());
-        assert(isClose(mu_given, Q.mu, 1.0e-2), failedUnitTest());
-        assert(isClose(k_given, Q.k, 1.0e-3), failedUnitTest());
-        assert(isClose(s_given, s, 1.0e-3), failedUnitTest());
-        assert(isClose(R_given, R, 1.0e-3), failedUnitTest());
-
-        return 0;
+    try {
+        lua_State* L = init_lua_State();
+        doLuaFile(L, "cea-adaptive-lut-air-bezier.lua");
+        gm = new AdaptiveLUT(L);
+    } catch (Exception e) {
+        writeln(e.msg);
+        string msg;
+        msg ~= "Test of look up table in adaptive_lut_CEA.d require file:";
+        msg ~= "cea-adaptive-lut-air-bezier.lua ";
+        msg ~= " in directory: gas/sample_data";
+        throw new Exception(msg);
     }
+
+    // An arbitrary state was defined for 'Air', massf=1, in CEA2
+    // using the utility cea2_gas.py
+    double p_given = 1.0e6; // Pa
+    double T_given = 1.0e3; // K
+    double rho_given = 3.4837; // kg/m^^3
+    // CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
+    // temperature was offset by amount e_offset
+    double e_CEA = 456600; // J/kg
+    double e_offset = 303949.904; // J/kg
+    double e_given = e_CEA + e_offset; // J/kg
+    double h_CEA = 743650; // J/kg
+    double h_given = h_CEA + e_offset; // J/kg
+    double a_given = 619.2; // m/s
+    double s_given = 7475.7; // J(kg.K)
+    double R_given = 287.036; // J/(kg.K)
+    double gamma_given = 1.3866;
+    double Cp_given = 1141; // J/(kg.K)
+    double mu_given = 4.3688e-05; // Pa.s
+    double k_given = 0.0662; // W/(m.K)
+    double Cv_given = e_given / T_given; // J/(kg.K)
+
+    auto Q = GasState(gm, p_given, T_given);
+    // Return values not stored in the GasState
+    // The constructor of the gas state will call update_thermo_from_pT
+    // which itself calls update_thermo_from_rhou, so we are testing both
+    double Cv = gm.dudT_const_v(Q);
+    double Cp = gm.dhdT_const_p(Q);
+    double R = gm.gas_constant(Q);
+    double h = gm.enthalpy(Q);
+    double s = gm.entropy(Q);
+
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 1);
+    assert(isClose(e_given, Q.u, 1.0e-4));
+    assert(isClose(rho_given, Q.rho, 1.0e-4));
+    assert(isClose(a_given, Q.a, 1.0e-4));
+    assert(isClose(Cp_given, Cp, 1.0e-3));
+    assert(isClose(h_given, h, 1.0e-4));
+    assert(isClose(mu_given, Q.mu, 1.0e-4));
+    assert(isClose(k_given, Q.k, 1.0e-4));
+    assert(isClose(s_given, s, 1.0e-4));
+    assert(isClose(R_given, R, 1.0e-4));
+
+    // Now do the same test for the linear implementation
+    try {
+        lua_State* L = init_lua_State();
+        doLuaFile(L, "cea-adaptive-lut-air-linear.lua");
+        gm = new AdaptiveLUT(L);
+    } catch (Exception e) {
+        writeln(e.msg);
+        string msg;
+        msg ~= "Test of look up table in adaptive_lut_CEA.d require file:";
+        msg ~= "cea-adaptive-lut-air-linear.lua";
+        msg ~= " in directory: gas/sample_data";
+        throw new Exception(msg);
+    }
+
+    Q = GasState(gm, p_given, T_given);
+
+    // Note that the unit tests are to a higher error tolerance
+    // because the look-up table was generated higher error allowed
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 1);
+    assert(isClose(e_given, Q.u, 1.0e-3));
+    assert(isClose(rho_given, Q.rho, 1.0e-3));
+    assert(isClose(a_given, Q.a, 1.0e-3));
+    assert(isClose(Cp_given, Cp, 1.0e-3));
+    assert(isClose(h_given, h, 1.0e-3));
+    assert(isClose(mu_given, Q.mu, 1.0e-2));
+    assert(isClose(k_given, Q.k, 1.0e-3));
+    assert(isClose(s_given, s, 1.0e-3));
+    assert(isClose(R_given, R, 1.0e-3));
 }

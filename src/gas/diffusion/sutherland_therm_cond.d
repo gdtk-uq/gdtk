@@ -87,20 +87,19 @@ SutherlandThermCond createSutherlandThermalConductivity(lua_State* L)
     return new SutherlandThermCond(T_ref, k_ref, S);
 }
 
-version(sutherland_therm_cond_test) {
+unittest {
     import std.conv;
-    int main() {
-        number T = 300.0;
-        double T_ref = 273.0;
-        double k_ref = 0.0241;
-        double S = 194.0;
-        assert(approxEqualNumbers(sutherland_thermal_conductivity(T, T_ref, k_ref, S), to!number(0.0262449),
-                                  1.0e-6), failedUnitTest());
 
-        auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
-        double k = tcm.eval(300.0);
-        assert(approxEqualNumbers(k, to!number(0.0262449), 1.0e-6), failedUnitTest());
+    number T = 300.0;
+    double T_ref = 273.0;
+    double k_ref = 0.0241;
+    double S = 194.0;
+    assert(approxEqualNumbers(
+        sutherland_thermal_conductivity(T, T_ref, k_ref, S),
+        to!number(0.0262449), 1.0e-6
+    ));
 
-        return 0;
-    }
+    auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
+    double k = tcm.eval(300.0);
+    assert(approxEqualNumbers(k, to!number(0.0262449), 1.0e-6));
 }

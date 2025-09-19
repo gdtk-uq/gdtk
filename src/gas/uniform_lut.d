@@ -593,66 +593,67 @@ private:
     GasState* Q_temp;
 } // End of uniformLUT class
 
-version(uniform_lut_test)
-{
-    import util.msg_service;
-    int main() {
-        GasModel gm;
-        try {
-            lua_State* L = init_lua_State();
-            doLuaFile(L, "sample-data/cea-lut-air-version-test.lua");
-            gm = new UniformLUT(L);
-        }
-        catch (Exception e) {
-            writeln(e.msg);
-            string msg;
-            msg ~= "Test of look up table in uniform_lut.d require file:";
-            msg ~= " cea-lut-air-version-test.lua ";
-            msg ~= " in directory: gas/sample_data";
-            throw new Exception(msg);
-        }
+unittest {
+    import std.file;
 
-        // An arbitrary state was defined for 'Air', massf=1, in CEA2
-        // using the utility cea2_gas.py
-        number p_given = 1.0e6; // Pa
-        number T_given = 1.0e3; // K
-        number rho_given = 3.4837; // kg/m^^3
-        // CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
-        // temperature was offset by amount e_offset
-        number e_CEA =  456600; // J/kg
-        number e_offset = 303949.904; // J/kg
-        number e_given = e_CEA + e_offset; // J/kg
-        number h_CEA = 743650; // J/kg
-        number h_given = h_CEA + e_offset; // J/kg
-        number a_given = 619.2; // m/s
-        number s_given = 7475.7; // J(kg.K)
-        number R_given = 287.036; // J/(kg.K)
-        number gamma_given = 1.3866;
-        number Cp_given = 1141; // J/(kg.K)
-        number mu_given = 4.3688e-05; // Pa.s
-        number k_given = 0.0662; // W/(m.K)
-        number Cv_given = e_given / T_given; // J/(kg.K)
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        auto Q = GasState(gm, p_given, T_given);
-        // Return values not stored in the GasState
-        number Cv = gm.dudT_const_v(Q);
-        number Cp = gm.dhdT_const_p(Q);
-        number R = gm.gas_constant(Q);
-        number h = gm.enthalpy(Q);
-        number s = gm.entropy(Q);
-
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 1, failedUnitTest());
-        assert(isClose(e_given, Q.u, 1.0e-4), failedUnitTest());
-        assert(isClose(rho_given, Q.rho, 1.0e-4), failedUnitTest());
-        assert(isClose(a_given, Q.a, 1.0e-4), failedUnitTest());
-        assert(isClose(Cp_given, Cp, 1.0e-3), failedUnitTest());
-        assert(isClose(h_given, h, 1.0e-4), failedUnitTest());
-        assert(isClose(mu_given, Q.mu, 1.0e-3), failedUnitTest());
-        assert(isClose(k_given, Q.k, 1.0e-3), failedUnitTest());
-        assert(isClose(s_given, s, 1.0e-4), failedUnitTest());
-        assert(isClose(R_given, R, 1.0e-4), failedUnitTest());
-
-        return 0;
+    GasModel gm;
+    try {
+        lua_State* L = init_lua_State();
+        doLuaFile(L, "cea-lut-air-version-test.lua");
+        gm = new UniformLUT(L);
     }
+    catch (Exception e) {
+        writeln(e.msg);
+        string msg;
+        msg ~= "Test of look up table in uniform_lut.d require file:";
+        msg ~= " cea-lut-air-version-test.lua ";
+        msg ~= " in directory: gas/sample_data";
+        throw new Exception(msg);
+    }
+
+    // An arbitrary state was defined for 'Air', massf=1, in CEA2
+    // using the utility cea2_gas.py
+    number p_given = 1.0e6; // Pa
+    number T_given = 1.0e3; // K
+    number rho_given = 3.4837; // kg/m^^3
+    // CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
+    // temperature was offset by amount e_offset
+    number e_CEA =  456_600; // J/kg
+    number e_offset = 303_949.904; // J/kg
+    number e_given = e_CEA + e_offset; // J/kg
+    number h_CEA = 743_650; // J/kg
+    number h_given = h_CEA + e_offset; // J/kg
+    number a_given = 619.2; // m/s
+    number s_given = 7475.7; // J(kg.K)
+    number R_given = 287.036; // J/(kg.K)
+    number gamma_given = 1.3866;
+    number Cp_given = 1141; // J/(kg.K)
+    number mu_given = 4.3688e-05; // Pa.s
+    number k_given = 0.0662; // W/(m.K)
+    number Cv_given = e_given / T_given; // J/(kg.K)
+
+    auto Q = GasState(gm, p_given, T_given);
+    // Return values not stored in the GasState
+    number Cv = gm.dudT_const_v(Q);
+    number Cp = gm.dhdT_const_p(Q);
+    number R = gm.gas_constant(Q);
+    number h = gm.enthalpy(Q);
+    number s = gm.entropy(Q);
+
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 1);
+    assert(isClose(e_given, Q.u, 1.0e-4));
+    assert(isClose(rho_given, Q.rho, 1.0e-4));
+    assert(isClose(a_given, Q.a, 1.0e-4));
+    assert(isClose(Cp_given, Cp, 1.0e-3));
+    assert(isClose(h_given, h, 1.0e-4));
+    assert(isClose(mu_given, Q.mu, 1.0e-3));
+    assert(isClose(k_given, Q.k, 1.0e-3));
+    assert(isClose(s_given, s, 1.0e-4));
+    assert(isClose(R_given, R, 1.0e-4));
 }

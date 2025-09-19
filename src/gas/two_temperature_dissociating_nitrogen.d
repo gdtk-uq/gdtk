@@ -461,11 +461,10 @@ private:
 
 }
 
-version(two_temperature_dissociating_nitrogen_test) {
-    int main()
-    {
-        return 0;
-    }
+unittest {
+    import util.test_runner : skip;
+    // FIXME: No tests here
+    skip();
 }
 
 double[string] A_11, B_11, C_11, D_11;

@@ -432,71 +432,70 @@ private:
 }
 
 
-version(multi_temperature_trans_props_test)
-{
-    int main()
-    {
-        import util.msg_service;
-        import gas.composite_gas;
+unittest {
+    import std.file;
+    import gas.composite_gas;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        auto L = init_lua_State();
-        GasModel gm = new CompositeGas("sample-data/N2-N.lua");
-        doLuaFile(L, "sample-data/N2-N.lua");
-        string[] speciesNames;
-        getArrayOfStrings(L, "species", speciesNames);
-        auto ttp = new TwoTemperatureTransProps(L, speciesNames);
-        lua_close(L);
-        auto gs = GasState(2, 1);
-        gs.p = 1.0e5;
-        gs.T = 2000.0;
-        gs.T_modes[0] = 3000.0;
-        gs.massf[0] = 0.8;
-        gs.massf[1] = 0.2;
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        ttp.updateTransProps(gs, gm);
+    auto L = init_lua_State();
+    GasModel gm = new CompositeGas("N2-N.lua");
+    doLuaFile(L, "N2-N.lua");
+    string[] speciesNames;
+    getArrayOfStrings(L, "species", speciesNames);
+    auto ttp = new TwoTemperatureTransProps(L, speciesNames);
+    lua_close(L);
+    auto gs = GasState(2, 1);
+    gs.p = 1.0e5;
+    gs.T = 2000.0;
+    gs.T_modes[0] = 3000.0;
+    gs.massf[0] = 0.8;
+    gs.massf[1] = 0.2;
 
-        import std.stdio;
-        writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
+    ttp.updateTransProps(gs, gm);
 
-        gs.T_modes[0] = 300.0;
-        ttp.updateTransProps(gs, gm);
-        writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
+    import std.stdio;
+    writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
 
-        //auto L = init_lua_State();
-        //GasModel gm = new CompositeGas("gm-air11-2T.lua");
-        //doLuaFile(L, "gm-air11-2T.lua");
-        //string[] speciesNames;
-        //getArrayOfStrings(L, "species", speciesNames);
-        //auto ttp = new TwoTemperatureTransProps(L, speciesNames);
-        //lua_close(L);
-        //auto gs = GasState(11, 1);
-        //gs.p = 0.1*101.35e3;
-        //gs.T = 1000.0;
-        //gs.T_modes[0] = 3000.0;
+    gs.T_modes[0] = 300.0;
+    ttp.updateTransProps(gs, gm);
+    writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
 
-        //gs.massf[0] =     7.455871e-01; // N2
-        //gs.massf[1] =     2.543794e-01; // O2
-        //gs.massf[2] =     0.000000e+00; // N
-        //gs.massf[3] =     1.310344e-10; // O
-        //gs.massf[4] =     3.355965e-05; // NO
-        //gs.massf[5] =     0.000000e+00; // N2+
-        //gs.massf[6] =     0.000000e+00; // O2+
-        //gs.massf[7] =     0.000000e+00; // N+
-        //gs.massf[8] =     0.000000e+00; // O+
-        //gs.massf[9] =     0.000000e+00; // NO+
-        //gs.massf[10] =     0.000000e+00; // e-
+    //auto L = init_lua_State();
+    //GasModel gm = new CompositeGas("gm-air11-2T.lua");
+    //doLuaFile(L, "gm-air11-2T.lua");
+    //string[] speciesNames;
+    //getArrayOfStrings(L, "species", speciesNames);
+    //auto ttp = new TwoTemperatureTransProps(L, speciesNames);
+    //lua_close(L);
+    //auto gs = GasState(11, 1);
+    //gs.p = 0.1*101.35e3;
+    //gs.T = 1000.0;
+    //gs.T_modes[0] = 3000.0;
+
+    //gs.massf[0] =     7.455871e-01; // N2
+    //gs.massf[1] =     2.543794e-01; // O2
+    //gs.massf[2] =     0.000000e+00; // N
+    //gs.massf[3] =     1.310344e-10; // O
+    //gs.massf[4] =     3.355965e-05; // NO
+    //gs.massf[5] =     0.000000e+00; // N2+
+    //gs.massf[6] =     0.000000e+00; // O2+
+    //gs.massf[7] =     0.000000e+00; // N+
+    //gs.massf[8] =     0.000000e+00; // O+
+    //gs.massf[9] =     0.000000e+00; // NO+
+    //gs.massf[10] =     0.000000e+00; // e-
 
 
-        //gm.update_thermo_from_pT(gs);
-        //ttp.updateTransProps(gs, gm);
-        //import std.stdio;
-        //writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
-        return 0;
-    }
+    //gm.update_thermo_from_pT(gs);
+    //ttp.updateTransProps(gs, gm);
+    //import std.stdio;
+    //writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
 }

@@ -548,78 +548,80 @@ protected:
 } // end class ThermallyPerfectGas
 
 
-version(therm_perf_gas_test) {
-    int main() {
-        import util.msg_service;
+unittest {
+    import std.file;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-        //
-        auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
-        auto gd = GasState(5, 0);
-        assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
-        assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        gd.p = 1.0e6;
-        gd.T = 2000.0;
-        gd.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-        gm.update_thermo_from_pT(gd);
-        assert(approxEqualNumbers(to!number(11801825.6), gd.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.2840117), gd.rho, 1.0e-6), failedUnitTest());
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    //
+    auto gm = new ThermallyPerfectGas("therm-perf-5-species-air.lua");
+    auto gd = GasState(5, 0);
+    assert(isClose(3.621, gm.LJ_sigmas[0]));
+    assert(isClose(97.530, gm.LJ_epsilons[0]));
 
-        gd.rho = 2.0;
-        gd.u = 14.0e6;
-        gm.update_thermo_from_rhou(gd);
-        assert(approxEqualNumbers(to!number(3373757.4), gd.p, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(4331.944), gd.T, 1.0e-6), failedUnitTest());
+    gd.p = 1.0e6;
+    gd.T = 2000.0;
+    gd.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
+    gm.update_thermo_from_pT(gd);
+    assert(approxEqualNumbers(to!number(11_801_825.6), gd.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.2840117), gd.rho, 1.0e-6));
 
-        gd.T = 10000.0;
-        gd.rho = 1.5;
+    gd.rho = 2.0;
+    gd.u = 14.0e6;
+    gm.update_thermo_from_rhou(gd);
+    assert(approxEqualNumbers(to!number(3373_757.4), gd.p, 1.0e-6));
+    assert(approxEqualNumbers(to!number(4331.944), gd.T, 1.0e-6));
+
+    gd.T = 10_000.0;
+    gd.rho = 1.5;
+    gm.update_thermo_from_rhoT(gd);
+    assert(approxEqualNumbers(to!number(5_841_068.3), gd.p, 1.0e-6));
+    assert(approxEqualNumbers(to!number(20_340_105.9), gd.u, 1.0e-6));
+
+    gd.rho = 10.0;
+    gd.p = 5.0e6;
+    gm.update_thermo_from_rhop(gd);
+    assert(approxEqualNumbers(to!number(11_164_648.5), gd.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1284.012), gd.T, 1.0e-6));
+
+    gd.p = 1.0e6;
+    number s = 10_000.0;
+    gm.update_thermo_from_ps(gd, s);
+    assert(approxEqualNumbers(to!number(2560.118), gd.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(12_313_952.52), gd.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.00309), gd.rho, 1.0e-6));
+
+    s = 11_000.0;
+    number h = 17.0e6;
+    gm.update_thermo_from_hs(gd, h, s);
+    assert(approxEqualNumbers(to!number(5273.103), gd.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(14_946_629.7), gd.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.4603513), gd.rho, 1.0e-6));
+    assert(approxEqualNumbers(to!number(945_271.84), gd.p, 1.0e-4));
+
+    gd.T = 4000.0;
+    gm.update_trans_coeffs(gd);
+    assert(approxEqualNumbers(to!number(0.00012591), gd.mu, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.2448263), gd.k, 1.0e-6));
+
+    version(complex_numbers) {
+        // Check du/dT = Cv
+        number u0 = gd.u; // copy unperturbed value, but we don't really need it
+        double ih = 1.0e-20;
+        gd.T += complex(0.0,ih);
         gm.update_thermo_from_rhoT(gd);
-        assert(approxEqualNumbers(to!number(5841068.3), gd.p, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(20340105.9), gd.u, 1.0e-6), failedUnitTest());
+        double myCv = gd.u.im/ih;
+        assert(isClose(myCv, gm.dudT_const_v(gd).re));
+    }
 
-        gd.rho = 10.0;
-        gd.p = 5.0e6;
-        gm.update_thermo_from_rhop(gd);
-        assert(approxEqualNumbers(to!number(11164648.5), gd.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1284.012), gd.T, 1.0e-6), failedUnitTest());
-
-        gd.p = 1.0e6;
-        number s = 10000.0;
-        gm.update_thermo_from_ps(gd, s);
-        assert(approxEqualNumbers(to!number(2560.118), gd.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(12313952.52), gd.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.00309), gd.rho, 1.0e-6), failedUnitTest());
-
-        s = 11000.0;
-        number h = 17.0e6;
-        gm.update_thermo_from_hs(gd, h, s);
-        assert(approxEqualNumbers(to!number(5273.103), gd.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(14946629.7), gd.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.4603513), gd.rho, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(945271.84), gd.p, 1.0e-4), failedUnitTest());
-
-        gd.T = 4000.0;
-        gm.update_trans_coeffs(gd);
-        assert(approxEqualNumbers(to!number(0.00012591), gd.mu, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.2448263), gd.k, 1.0e-6), failedUnitTest());
-
-        version(complex_numbers) {
-            // Check du/dT = Cv
-            number u0 = gd.u; // copy unperturbed value, but we don't really need it
-            double ih = 1.0e-20;
-            gd.T += complex(0.0,ih);
-            gm.update_thermo_from_rhoT(gd);
-            double myCv = gd.u.im/ih;
-            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
-        }
-
-        // [TODO]
-        // entropy, enthalpy and sound speed tests
-        return 0;
-    } // end main()
+    // [TODO]
+    // entropy, enthalpy and sound speed tests
 }
