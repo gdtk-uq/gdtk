@@ -153,28 +153,28 @@ CEAThermalConductivity createCEAThermalConductivity(lua_State* L)
     return new CEAThermalConductivity(curves);
 }
 
-version(cea_therm_cond_test) {
-    import util.msg_service;
-    int main() {
+unittest {
+    import std.file;
 
-        /// First, let's test the CEAThermCondCurve on its own.
-        double[string] params = ["T_lower":500.0, "T_upper":15000.0,
-                                 "A":0.76269502, "B":0.62341752e3,
-                                 "C":-0.71899552e6, "D":0.56927918];
-        auto ceaCurve = CEAThermCondCurve(params);
-        assert(isClose(0.1662583, ceaCurve.eval(7200.0), 1.0e-6), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        /// Next, let's test the creation and functionality
-        /// of a CEAThermalConductivity object.
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/CO2-therm-cond.lua");
-        lua_getglobal(L, "cea");
-        auto co2CEA = createCEAThermalConductivity(L);
-        lua_close(L);
-        auto Q = GasState(1, 1);
-        Q.T = 3500.0;
-        assert(isClose(1.859070e-01, co2CEA.eval(Q.T), 1.0e-6), failedUnitTest());
+    /// First, let's test the CEAThermCondCurve on its own.
+    double[string] params = ["T_lower":500.0, "T_upper":15_000.0,
+                             "A":0.76269502, "B":0.62341752e3,
+                             "C":-0.71899552e6, "D":0.56927918];
+    auto ceaCurve = CEAThermCondCurve(params);
+    assert(isClose(0.1662583, ceaCurve.eval(7200.0), 1.0e-6));
 
-        return 0;
-    }
+    /// Next, let's test the creation and functionality
+    /// of a CEAThermalConductivity object.
+    auto L = init_lua_State();
+    doLuaFile(L, "CO2-therm-cond.lua");
+    lua_getglobal(L, "cea");
+    auto co2CEA = createCEAThermalConductivity(L);
+    lua_close(L);
+    auto Q = GasState(1, 1);
+    Q.T = 3500.0;
+    assert(isClose(1.859070e-01, co2CEA.eval(Q.T), 1.0e-6));
 }

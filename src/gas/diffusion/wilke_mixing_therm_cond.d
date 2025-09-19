@@ -103,25 +103,20 @@ private:
 }
 
 
-version(wilke_mixing_therm_cond_test) {
-    int main()
-    {
-        import std.stdio;
-        import gas.diffusion.sutherland_therm_cond;
-        // Placeholder test. Redo with CEA curves.
-        number T = 300.0;
-        auto tcm_N2 = new SutherlandThermCond(273.0, 0.0242, 150.0);
-        auto tcm_O2 = new SutherlandThermCond(273.0, 0.0244, 240.0);
-        auto tcm = new WilkeMixingThermCond([tcm_N2, tcm_O2], [28.0e-3, 32.0e-3]);
+unittest {
+    import gas.diffusion.sutherland_therm_cond;
 
-        auto gd = GasState(2, 0);
-        gd.T = T;
-        gd.massf[0] = 0.8;
-        gd.massf[1] = 0.2;
-        tcm.update_thermal_conductivity(gd);
-        assert(isClose(0.0263063, gd.k, 1.0e-3), failedUnitTest());
+    // Placeholder test. Redo with CEA curves.
+    number T = 300.0;
+    auto tcm_N2 = new SutherlandThermCond(273.0, 0.0242, 150.0);
+    auto tcm_O2 = new SutherlandThermCond(273.0, 0.0244, 240.0);
+    auto tcm = new WilkeMixingThermCond([tcm_N2, tcm_O2], [28.0e-3, 32.0e-3]);
 
-        return 0;
-    }
+    auto gd = GasState(2, 0);
+    gd.T = T;
+    gd.massf[0] = 0.8;
+    gd.massf[1] = 0.2;
+    tcm.update_thermal_conductivity(gd);
+    assert(isClose(0.0263063, gd.k, 1.0e-3));
 }
 
