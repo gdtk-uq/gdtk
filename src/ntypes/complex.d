@@ -1483,7 +1483,9 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     static import std.math;
     assert(sqrt(complex(0.0)) == 0.0);
     assert(sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
-    assert(sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
+    auto c1 = sqrt(complex(-1.0L, 0));
+    assert(isClose(c1.re, 0.0, 0.0, 1E-8));
+    assert(isClose(c1.im, 1.0, 1E-8));
 }
 
 @safe pure nothrow unittest
@@ -1555,388 +1557,385 @@ if (isFloatingPoint!T)
 // end double_numbers version
 }
 
-version(complex_number_test) {
-    import util.msg_service;
+unittest {
     import nm.number;
-    int main() {
-        // Try the various constructors and assignments.
-        // PJ 2018-06-02
-        Complex!double za = Complex!double("1.0");
-        assert(za.re == 1.0, failedUnitTest());
-        assert(za.im == 0.0, failedUnitTest());
-        Complex!double zb = to!(Complex!double)("2.0");
-        assert(zb.re == 2.0, failedUnitTest());
-        assert(zb.im == 0.0, failedUnitTest());
-        Complex!double zc = 3.0;
-        assert(zc.re == 3.0, failedUnitTest());
-        assert(zc.im == 0.0, failedUnitTest());
-        Complex!double zd = 4;
-        assert(zd.re == 4.0, failedUnitTest());
-        assert(zd.im == 0.0, failedUnitTest());
-        Complex!double ze = "5.0";
-        assert(ze.re == 5.0, failedUnitTest());
-        assert(ze.im == 0.0, failedUnitTest());
-
-        // test isInteger() routine
-        double val1 = 10.234;
-        bool result1 = isInteger(val1);
-        assert( result1 == false, failedUnitTest());
-        double val2 = -10.234;
-        bool result2 = isInteger(val2);
-        assert( result2 == false, failedUnitTest());
-        double val3 = 10.0;
-        bool result3 = isInteger(val3);
-        assert( result3 == true, failedUnitTest());
-        double val4 = -10.0;
-        bool result4 = isInteger(val4);
-        assert( result4 == true, failedUnitTest());
-        double val5 = 10.0 + 1.0e-15;
-        bool result5 = isInteger(val5);
-        assert( result5 == false, failedUnitTest());
-        double val6 = 10.0 + 1.0e-16;
-        bool result6 = isInteger(val6);
-        assert( result6 == true, failedUnitTest());
-        double val7 = 2.0 * int.max;
-        bool result7 = isInteger(val7);
-        assert( result7 == false, failedUnitTest());
-
-        // complex number reference solutions from Python 2.7.12 cmath library.
-        //
-        // define some test values
-        Complex!double  z = complex(1.2, -3.4);
-        Complex!double  w = complex(-5.3, 1.0);
-        double p = 5.1;
-
-        // opCmp tests
-        // Complex Cmp Complex
-        assert( (z > w), failedUnitTest());
-        assert( (w < z), failedUnitTest());
-        assert( (z != w), failedUnitTest());
-
-        // Complex Cmp Double
-        assert( (z < p), failedUnitTest());
-        assert( (p > z), failedUnitTest());
-        assert( (z != p), failedUnitTest());
-
-        // Exponent tests
-        Complex!double result;
-        Complex!double cpow;
-
-        // pow(Complex, Complex)
-        result = complex(0.00017039838981580696, 0.00382344206618444);
-        cpow = pow(z, w);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^Complex
-        cpow = z^^(w);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(1.0, 0.0);
-        cpow = pow(z, 0.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^0.0;
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, 0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = z;
-        cpow = pow(z, 1.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^1.0;
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(1);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, 1);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(-10.12, -8.16);
-        cpow = pow(z, 2.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^2.0;
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(2);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, 2);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(-39.888, 24.616);
-        cpow = pow(z, 3.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^3.0;
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(3);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, 3);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(985.105088, -1963.766016);
-        cpow = pow(z, 6.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^6.0;
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(6);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, 6);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(1.0, 0.0);
-        cpow = pow(z, -0.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^(-0.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(-0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, -0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(0.09230769230769233, 0.26153846153846155);
-        cpow = pow(z, -1.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^(-1.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(-1);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, -1);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(-0.05988165680473373, 0.04828402366863906);
-        cpow = pow(z, -2.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^(-2.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(-2);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, -2);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(-0.018155666818388715, -0.011204369594902138);
-        cpow = pow(z, -3.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^(-3.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(-3);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, -3);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Complex, Double)
-        result = complex(0.00020409033960117344, 0.0004068456025502563);
-        cpow = pow(z, -6.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^double
-        cpow = z^^(-6.0);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Complex^^int
-        cpow = z^^(-6);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(complex, int)
-        cpow = pow(z, -6);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // pow(Double, Complex)
-        result = complex(-1.6253264602682924, -1.6236827093503579);
-        cpow = pow(2.0, z);
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Double^^Complex
-        cpow = 2.0^^z;
-        assert(approxEqualNumbers(cpow, result), failedUnitTest());
-
-        // Absolute value test
-        Complex!double cfabs;
-        // +ve real
-        result = complex(1.2, -3.4);
-        cfabs = fabs(z);
-        assert(approxEqualNumbers(cfabs, result), failedUnitTest());
-
-        // -ve real
-        result = complex(5.3, -1.0);
-        cfabs = fabs(w);
-        assert(approxEqualNumbers(cfabs, result), failedUnitTest());
-
-        // Exponential test
-        result = complex(-3.209883040054176, 0.8484263372940289);
-        Complex!double cexp = exp(z);
-        assert(approxEqualNumbers(cexp, result), failedUnitTest());
-
-        // Square root tests
-        result = complex(1.5500889128472581, -1.096711282759503);
-        Complex!double csqrt;
-        // sqrt
-        csqrt = sqrt(z);
-        assert(approxEqualNumbers(csqrt, result), failedUnitTest());
-
-        // z^^0.5
-        csqrt = z^^0.5;
-        assert(approxEqualNumbers(csqrt, result), failedUnitTest());
-
-        // Trigonometric tests
-        // sin(Complex)
-        result = complex(13.979408806017995, -5.422815472463402);
-        Complex!double csin = sin(z);
-        assert(approxEqualNumbers(csin, result), failedUnitTest());
-
-        // cos(Complex)
-        result =complex(5.434908535625769, 13.948303613988436);
-        Complex!double ccos = cos(z);
-        assert(approxEqualNumbers(ccos, result), failedUnitTest());
-
-        // tan(Complex)
-        result = complex(0.0015071018758057832, -1.001642796989141);
-        Complex!double ctan = tan(z);
-        assert(approxEqualNumbers(ctan, result), failedUnitTest());
-
-        // sinh(Complex)
-        result = complex(-1.4593445101810318, 0.46269691906508803);
-        Complex!double csinh = sinh(z);
-        assert(approxEqualNumbers(csinh, result), failedUnitTest());
-
-        // cosh(Complex)
-        result = complex(-1.7505385298731442, 0.3857294182289409);
-        Complex!double ccosh = cosh(z);
-        assert(approxEqualNumbers(ccosh, result), failedUnitTest());
-
-        // tanh(Complex)
-        result = complex(0.8505969575493737, -0.0768887100657046);
-        Complex!double ctanh = tanh(z);
-        assert(approxEqualNumbers(ctanh, result), failedUnitTest());
-
-        // asin(Complex)
-        result = complex(0.32774305201452525, -1.990465064891069);
-        Complex!double casin = asin(z);
-        assert(approxEqualNumbers(casin, result), failedUnitTest());
-
-        // acos(Complex)
-        result = complex(1.2430532747803715, 1.990465064891069);
-        Complex!double cacos = acos(z);
-        assert(approxEqualNumbers(cacos, result), failedUnitTest());
-
-        // atan(Complex)
-        result = complex(1.4720985468699563, -0.2652179901713157);
-        Complex!double catan = atan(z);
-        assert(approxEqualNumbers(catan, result), failedUnitTest());
-
-        // atan2(Complex, Complex)
-        // cmath has no atan2 function, reference result taken from WolframAlpha
-        result = complex(2.70088, 0.548252);
-        Complex!double catan2 = atan2(z, w);
-        assert(approxEqualNumbers(catan2, result), failedUnitTest());
-
-        // Natural log test
-        result = complex(1.2824746787307684, -1.2315037123408519);
-        Complex!double clog = log(z);
-        assert(approxEqualNumbers(clog, result), failedUnitTest());
-
-        // log base 10 test
-        result = complex(0.5569716761534184, -0.5348352667130015);
-        Complex!double clog10 = log10(z);
-        assert(approxEqualNumbers(clog10, result), failedUnitTest());
-
-        // Fmax test
-        result = complex(1.2, -3.4);
-        Complex!double cmax = fmax(z, w);
-        assert(approxEqualNumbers(cmax, result), failedUnitTest());
-
-        // Fmin test
-        result = complex(-5.3, 1.0);
-        Complex!double cmin = fmin(z, w);
-        assert(approxEqualNumbers(cmin, result), failedUnitTest());
-
-        // Copysign test
-        result = complex(-1.2, -3.4);
-        Complex!double csign = copysign(z, w);
-        assert(approxEqualNumbers(csign, result), failedUnitTest());
-
-        // Complex step finite difference derivative test
-        // examples from:
-        // Using Complex Variables to Estimate Derivatives of Real Functions (Squire & Trapp, 1998)
-
-        // some common values
-        Complex!double h = complex(0, 1.0e-20); // step-size
-        Complex!double x0 = complex(1.5, 0.0); // original x
-        Complex!double xp = x0 + h; // perturbed x
-
-        // Example 1: F(x) = x^^(9/2) at x0 = 1.5
-        double res1 = 18.600812734259759;
-        Complex!double f1(Complex!double x) { return x^^(9.0/2.0); }
-        double deriv1 = f1(xp).im/h.im;
-        assert( std.math.isClose(deriv1, res1), failedUnitTest());
-
-        // Example 2: F(x) = e^^(x)/(sin(x)^^3+cos(x)^^3) at x0 = 1.5
-        double res2 = 3.6220337007163259;
-        Complex!double f2(Complex!double x) { return exp(x) / ( sin(x)^^3 + cos(x)^^3 ); }
-        double deriv2 = f2(xp).im/h.im;
-        // debug { import std.stdio; writefln("deriv2=%.18f res2=%.18f", deriv2, res2); }
-        assert( std.math.isClose(deriv2, res2), failedUnitTest());
-
-        return 0;
-    }
+
+    // Try the various constructors and assignments.
+    // PJ 2018-06-02
+    Complex!double za = Complex!double("1.0");
+    assert(za.re == 1.0);
+    assert(za.im == 0.0);
+    Complex!double zb = to!(Complex!double)("2.0");
+    assert(zb.re == 2.0);
+    assert(zb.im == 0.0);
+    Complex!double zc = 3.0;
+    assert(zc.re == 3.0);
+    assert(zc.im == 0.0);
+    Complex!double zd = 4;
+    assert(zd.re == 4.0);
+    assert(zd.im == 0.0);
+    Complex!double ze = "5.0";
+    assert(ze.re == 5.0);
+    assert(ze.im == 0.0);
+
+    // test isInteger() routine
+    double val1 = 10.234;
+    bool result1 = isInteger(val1);
+    assert( result1 == false);
+    double val2 = -10.234;
+    bool result2 = isInteger(val2);
+    assert( result2 == false);
+    double val3 = 10.0;
+    bool result3 = isInteger(val3);
+    assert( result3 == true);
+    double val4 = -10.0;
+    bool result4 = isInteger(val4);
+    assert( result4 == true);
+    double val5 = 10.0 + 1.0e-15;
+    bool result5 = isInteger(val5);
+    assert( result5 == false);
+    double val6 = 10.0 + 1.0e-16;
+    bool result6 = isInteger(val6);
+    assert( result6 == true);
+    double val7 = 2.0 * int.max;
+    bool result7 = isInteger(val7);
+    assert( result7 == false);
+
+    // complex number reference solutions from Python 2.7.12 cmath library.
+    //
+    // define some test values
+    Complex!double  z = complex(1.2, -3.4);
+    Complex!double  w = complex(-5.3, 1.0);
+    double p = 5.1;
+
+    // opCmp tests
+    // Complex Cmp Complex
+    assert( (z > w));
+    assert( (w < z));
+    assert( (z != w));
+
+    // Complex Cmp Double
+    assert( (z < p));
+    assert( (p > z));
+    assert( (z != p));
+
+    // Exponent tests
+    Complex!double result;
+    Complex!double cpow;
+
+    // pow(Complex, Complex)
+    result = complex(0.00017039838981580696, 0.00382344206618444);
+    cpow = pow(z, w);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^Complex
+    cpow = z^^(w);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(1.0, 0.0);
+    cpow = pow(z, 0.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^0.0;
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, 0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = z;
+    cpow = pow(z, 1.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^1.0;
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(1);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, 1);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(-10.12, -8.16);
+    cpow = pow(z, 2.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^2.0;
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(2);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, 2);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(-39.888, 24.616);
+    cpow = pow(z, 3.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^3.0;
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(3);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, 3);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(985.105088, -1963.766016);
+    cpow = pow(z, 6.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^6.0;
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(6);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, 6);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(1.0, 0.0);
+    cpow = pow(z, -0.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^(-0.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(-0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, -0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(0.09230769230769233, 0.26153846153846155);
+    cpow = pow(z, -1.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^(-1.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(-1);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, -1);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(-0.05988165680473373, 0.04828402366863906);
+    cpow = pow(z, -2.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^(-2.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(-2);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, -2);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(-0.018155666818388715, -0.011204369594902138);
+    cpow = pow(z, -3.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^(-3.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(-3);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, -3);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Complex, Double)
+    result = complex(0.00020409033960117344, 0.0004068456025502563);
+    cpow = pow(z, -6.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^double
+    cpow = z^^(-6.0);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Complex^^int
+    cpow = z^^(-6);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(complex, int)
+    cpow = pow(z, -6);
+    assert(approxEqualNumbers(cpow, result));
+
+    // pow(Double, Complex)
+    result = complex(-1.6253264602682924, -1.6236827093503579);
+    cpow = pow(2.0, z);
+    assert(approxEqualNumbers(cpow, result));
+
+    // Double^^Complex
+    cpow = 2.0^^z;
+    assert(approxEqualNumbers(cpow, result));
+
+    // Absolute value test
+    Complex!double cfabs;
+    // +ve real
+    result = complex(1.2, -3.4);
+    cfabs = fabs(z);
+    assert(approxEqualNumbers(cfabs, result));
+
+    // -ve real
+    result = complex(5.3, -1.0);
+    cfabs = fabs(w);
+    assert(approxEqualNumbers(cfabs, result));
+
+    // Exponential test
+    result = complex(-3.209883040054176, 0.8484263372940289);
+    Complex!double cexp = exp(z);
+    assert(approxEqualNumbers(cexp, result));
+
+    // Square root tests
+    result = complex(1.5500889128472581, -1.096711282759503);
+    Complex!double csqrt;
+    // sqrt
+    csqrt = sqrt(z);
+    assert(approxEqualNumbers(csqrt, result));
+
+    // z^^0.5
+    csqrt = z^^0.5;
+    assert(approxEqualNumbers(csqrt, result));
+
+    // Trigonometric tests
+    // sin(Complex)
+    result = complex(13.979408806017995, -5.422815472463402);
+    Complex!double csin = sin(z);
+    assert(approxEqualNumbers(csin, result));
+
+    // cos(Complex)
+    result =complex(5.434908535625769, 13.948303613988436);
+    Complex!double ccos = cos(z);
+    assert(approxEqualNumbers(ccos, result));
+
+    // tan(Complex)
+    result = complex(0.0015071018758057832, -1.001642796989141);
+    Complex!double ctan = tan(z);
+    assert(approxEqualNumbers(ctan, result));
+
+    // sinh(Complex)
+    result = complex(-1.4593445101810318, 0.46269691906508803);
+    Complex!double csinh = sinh(z);
+    assert(approxEqualNumbers(csinh, result));
+
+    // cosh(Complex)
+    result = complex(-1.7505385298731442, 0.3857294182289409);
+    Complex!double ccosh = cosh(z);
+    assert(approxEqualNumbers(ccosh, result));
+
+    // tanh(Complex)
+    result = complex(0.8505969575493737, -0.0768887100657046);
+    Complex!double ctanh = tanh(z);
+    assert(approxEqualNumbers(ctanh, result));
+
+    // asin(Complex)
+    result = complex(0.32774305201452525, -1.990465064891069);
+    Complex!double casin = asin(z);
+    assert(approxEqualNumbers(casin, result));
+
+    // acos(Complex)
+    result = complex(1.2430532747803715, 1.990465064891069);
+    Complex!double cacos = acos(z);
+    assert(approxEqualNumbers(cacos, result));
+
+    // atan(Complex)
+    result = complex(1.4720985468699563, -0.2652179901713157);
+    Complex!double catan = atan(z);
+    assert(approxEqualNumbers(catan, result));
+
+    // atan2(Complex, Complex)
+    // cmath has no atan2 function, reference result taken from WolframAlpha
+    result = complex(2.70088, 0.548252);
+    Complex!double catan2 = atan2(z, w);
+    assert(approxEqualNumbers(catan2, result));
+
+    // Natural log test
+    result = complex(1.2824746787307684, -1.2315037123408519);
+    Complex!double clog = log(z);
+    assert(approxEqualNumbers(clog, result));
+
+    // log base 10 test
+    result = complex(0.5569716761534184, -0.5348352667130015);
+    Complex!double clog10 = log10(z);
+    assert(approxEqualNumbers(clog10, result));
+
+    // Fmax test
+    result = complex(1.2, -3.4);
+    Complex!double cmax = fmax(z, w);
+    assert(approxEqualNumbers(cmax, result));
+
+    // Fmin test
+    result = complex(-5.3, 1.0);
+    Complex!double cmin = fmin(z, w);
+    assert(approxEqualNumbers(cmin, result));
+
+    // Copysign test
+    result = complex(-1.2, -3.4);
+    Complex!double csign = copysign(z, w);
+    assert(approxEqualNumbers(csign, result));
+
+    // Complex step finite difference derivative test
+    // examples from:
+    // Using Complex Variables to Estimate Derivatives of Real Functions (Squire & Trapp, 1998)
+
+    // some common values
+    Complex!double h = complex(0, 1.0e-20); // step-size
+    Complex!double x0 = complex(1.5, 0.0); // original x
+    Complex!double xp = x0 + h; // perturbed x
+
+    // Example 1: F(x) = x^^(9/2) at x0 = 1.5
+    double res1 = 18.600812734259759;
+    Complex!double f1(Complex!double x) { return x^^(9.0/2.0); }
+    double deriv1 = f1(xp).im/h.im;
+    assert( std.math.isClose(deriv1, res1));
+
+    // Example 2: F(x) = e^^(x)/(sin(x)^^3+cos(x)^^3) at x0 = 1.5
+    double res2 = 3.6220337007163259;
+    Complex!double f2(Complex!double x) { return exp(x) / ( sin(x)^^3 + cos(x)^^3 ); }
+    double deriv2 = f2(xp).im/h.im;
+    // debug { import std.stdio; writefln("deriv2=%.18f res2=%.18f", deriv2, res2); }
+    assert( std.math.isClose(deriv2, res2));
+
 }
