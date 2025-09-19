@@ -251,81 +251,81 @@ private:
 }
 
 
-version(composite_gas_test) {
-    int main() {
-        import util.msg_service;
-        import std.math;
+unittest {
+    import std.file;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-        //
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
-        auto gm = new CompositeGas(L);
-        lua_close(L);
-        auto gs = GasState(5, 0);
-        assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
-        assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        gs.p = 1.0e6;
-        gs.T = 2000.0;
-        gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-        gm.update_thermo_from_pT(gs);
-        assert(approxEqualNumbers(to!number(11801825.6), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6), failedUnitTest());
+    import std.math;
 
-        gs.rho = 2.0;
-        gs.u = 14.0e6;
-        gm.update_thermo_from_rhou(gs);
-        assert(approxEqualNumbers(to!number(3373757.4), gs.p, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(4331.944), gs.T, 1.0e-6), failedUnitTest());
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    //
+    auto L = init_lua_State();
+    doLuaFile(L, "therm-perf-5-species-air.lua");
+    auto gm = new CompositeGas(L);
+    lua_close(L);
+    auto gs = GasState(5, 0);
+    assert(isClose(3.621, gm.LJ_sigmas[0]));
+    assert(isClose(97.530, gm.LJ_epsilons[0]));
 
-        gs.T = 10000.0;
-        gs.rho = 1.5;
+    gs.p = 1.0e6;
+    gs.T = 2000.0;
+    gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
+    gm.update_thermo_from_pT(gs);
+    assert(approxEqualNumbers(to!number(11_801_825.6), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6));
+
+    gs.rho = 2.0;
+    gs.u = 14.0e6;
+    gm.update_thermo_from_rhou(gs);
+    assert(approxEqualNumbers(to!number(3_373_757.4), gs.p, 1.0e-6));
+    assert(approxEqualNumbers(to!number(4331.944), gs.T, 1.0e-6));
+
+    gs.T = 10_000.0;
+    gs.rho = 1.5;
+    gm.update_thermo_from_rhoT(gs);
+    assert(approxEqualNumbers(to!number(5_841_068.3), gs.p, 1.0e-6));
+    assert(approxEqualNumbers(to!number(20_340_105.9), gs.u, 1.0e-6));
+
+    gs.rho = 10.0;
+    gs.p = 5.0e6;
+    gm.update_thermo_from_rhop(gs);
+    assert(approxEqualNumbers(to!number(11_164_648.5), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1284.012), gs.T, 1.0e-6));
+
+    gs.p = 1.0e6;
+    number s = 10_000.0;
+    gm.update_thermo_from_ps(gs, s);
+    assert(approxEqualNumbers(to!number(2560.118), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(12_313_952.52), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.00309), gs.rho, 1.0e-6));
+
+    s = 11_000.0;
+    number h = 17.0e6;
+    gm.update_thermo_from_hs(gs, h, s);
+    assert(approxEqualNumbers(to!number(5273.103), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(14_946_629.7), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.4603513), gs.rho, 1.0e-6));
+    assert(approxEqualNumbers(to!number(945_271.84), gs.p, 1.0e-4));
+
+    gs.T = 4000.0;
+    gm.update_trans_coeffs(gs);
+    assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6));
+
+    version(complex_numbers) {
+        // Check du/dT = Cv
+        number u0 = gs.u; // copy unperturbed value, but we don't really need it
+        double ih = 1.0e-20;
+        gs.T += complex(0.0,ih);
         gm.update_thermo_from_rhoT(gs);
-        assert(approxEqualNumbers(to!number(5841068.3), gs.p, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(20340105.9), gs.u, 1.0e-6), failedUnitTest());
-
-        gs.rho = 10.0;
-        gs.p = 5.0e6;
-        gm.update_thermo_from_rhop(gs);
-        assert(approxEqualNumbers(to!number(11164648.5), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1284.012), gs.T, 1.0e-6), failedUnitTest());
-
-        gs.p = 1.0e6;
-        number s = 10000.0;
-        gm.update_thermo_from_ps(gs, s);
-        assert(approxEqualNumbers(to!number(2560.118), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(12313952.52), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.00309), gs.rho, 1.0e-6), failedUnitTest());
-
-        s = 11000.0;
-        number h = 17.0e6;
-        gm.update_thermo_from_hs(gs, h, s);
-        assert(approxEqualNumbers(to!number(5273.103), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(14946629.7), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.4603513), gs.rho, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(945271.84), gs.p, 1.0e-4), failedUnitTest());
-
-        gs.T = 4000.0;
-        gm.update_trans_coeffs(gs);
-        assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6), failedUnitTest());
-
-        version(complex_numbers) {
-            // Check du/dT = Cv
-            number u0 = gs.u; // copy unperturbed value, but we don't really need it
-            double ih = 1.0e-20;
-            gs.T += complex(0.0,ih);
-            gm.update_thermo_from_rhoT(gs);
-            double myCv = gs.u.im/ih;
-            assert(isClose(myCv, gm.dudT_const_v(gs).re), failedUnitTest());
-        }
-
-        return 0;
-    } // end main()
-
+        double myCv = gs.u.im/ih;
+        assert(isClose(myCv, gm.dudT_const_v(gs).re));
+    }
 }
