@@ -174,25 +174,27 @@ ThermallyPerfectGasMixEOS createThermallyPerfectGasMixEOS(string[] species, lua_
     return new ThermallyPerfectGasMixEOS(R, curves);
 }
 
-version(therm_perf_gas_mix_eos_test) {
+unittest {
+    import std.file;
     import std.math;
-    import util.msg_service;
-    int main() {
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/O2-N2-H2.lua");
-        string[] species;
-        getArrayOfStrings(L, "species", species);
-        ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
-        auto Q = GasState(3, 1);
-        Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
-        Q.T = 1000.0;
-        tpgm.update_energy(Q);
-        assert(isClose(1031849.875, Q.u, 1.0e-6), failedUnitTest());
-        // Now set T a little off, say 1500.0.
-        Q.T = 1500.0;
-        tpgm.update_temperature(Q);
-        assert(isClose(1000.0, Q.T, 1.0e-6), failedUnitTest());
 
-        return 0;
-    }
+    // Look for lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
+
+    auto L = init_lua_State();
+    doLuaFile(L, "O2-N2-H2.lua");
+    string[] species;
+    getArrayOfStrings(L, "species", species);
+    ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
+    auto Q = GasState(3, 1);
+    Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
+    Q.T = 1000.0;
+    tpgm.update_energy(Q);
+    assert(isClose(1_031_849.875, Q.u, 1.0e-6));
+    // Now set T a little off, say 1500.0.
+    Q.T = 1500.0;
+    tpgm.update_temperature(Q);
+    assert(isClose(1000.0, Q.T, 1.0e-6));
 }

@@ -444,120 +444,124 @@ private:
     }
 }
 
-version(vib_specific_co_test) {
+unittest {
+    import std.file;
     import std.stdio;
-    import util.msg_service;
 
-    int main() {
-        //lua_State* L = init_lua_State();
-        //doLuaFile(L, );
-        //auto gm = new VibSpecificCO(L);
-        //lua_close(L);
-        auto gm = new VibSpecificCO("sample-data/vib-specific-CO-gas.lua");
-        auto Q = GasState(gm.n_species, 0);
+    // Look for lua files in /sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        // Practice problem to match the data in table II
-        Q.p = 26.7;  // Pa
-        Q.T = 175.0; // K
-        // Set up the species mass fractions assuming equilibrium.
-        foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
+    //lua_State* L = init_lua_State();
+    //doLuaFile(L, );
+    //auto gm = new VibSpecificCO(L);
+    //lua_close(L);
+    auto gm = new VibSpecificCO("vib-specific-CO-gas.lua");
+    auto Q = GasState(gm.n_species, 0);
 
-        double R_CO = 296.8379191791532; // gas constant for CO
-        double M_CO = 0.0280101; // kg/mole
-        double gamma = 7.0/5.0; // ratio of specific heats.
+    // Practice problem to match the data in table II
+    Q.p = 26.7;  // Pa
+    Q.T = 175.0; // K
+    // Set up the species mass fractions assuming equilibrium.
+    foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
 
-        gm.update_thermo_from_pT(Q);
-        double my_rho = 26.7 / (R_CO * 175.0);
-        assert(isClose(Q.rho, my_rho, 1.0e-6), failedUnitTest());
+    double R_CO = 296.8379191791532; // gas constant for CO
+    double M_CO = 0.0280101; // kg/mole
+    double gamma = 7.0/5.0; // ratio of specific heats.
 
-        double my_u = 2.5 * R_CO * 175.0;
-        foreach (i; 0 .. gm.n_vibe_states) {
-            my_u += (Avogadro_number/M_CO) * gm.vib_energy(i) * Q.massf[i];
-        }
-        assert(isClose(Q.u, my_u, 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_pT(Q);
+    double my_rho = 26.7 / (R_CO * 175.0);
+    assert(isClose(Q.rho, my_rho, 1.0e-6));
 
-        //gm.update_trans_coeffs(Q);
-        //assert(isClose(Q.mu, 0.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(Q.k, 0.0, 1.0e-6), failedUnitTest());
-
-        gm.update_sound_speed(Q);
-        double my_a = sqrt(gamma * R_CO * 175.0);
-        assert(isClose(Q.a, my_a, 1.0e-6), failedUnitTest());
-
-        return 0;
+    double my_u = 2.5 * R_CO * 175.0;
+    foreach (i; 0 .. gm.n_vibe_states) {
+        my_u += (Avogadro_number/M_CO) * gm.vib_energy(i) * Q.massf[i];
     }
+    assert(isClose(Q.u, my_u, 1.0e-6));
+
+    //gm.update_trans_coeffs(Q);
+    //assert(isClose(Q.mu, 0.0, 1.0e-6));
+    //assert(isClose(Q.k, 0.0, 1.0e-6));
+
+    gm.update_sound_speed(Q);
+    double my_a = sqrt(gamma * R_CO * 175.0);
+    assert(isClose(Q.a, my_a, 1.0e-6));
+
 }
 
-version(vib_specific_co_mixture_test) {
+unittest {
+    import std.file;
     import std.stdio;
-    import util.msg_service;
 
-    int main() {
-        auto gm = new VibSpecificCOMixture("sample-data/vib-specific-CO-mixture.lua");
-        auto Q = GasState(gm.n_species, 0);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        // Practice problem to match the data in table II
-        Q.p = 26.7;  // Pa
-        Q.T = 175.0; // K
-        // Set up the species mass fractions assuming equilibrium and no N2.
-        foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
-        Q.massf[gm.n_vibe_states] = 0.0;
+    auto gm = new VibSpecificCOMixture("vib-specific-CO-mixture.lua");
+    auto Q = GasState(gm.n_species, 0);
 
-        double R_CO = 296.8379191791532; // gas constant for CO
-        double M_CO = 0.0280101; // kg/mole
-        double gamma = 7.0/5.0; // ratio of specific heats.
+    // Practice problem to match the data in table II
+    Q.p = 26.7;  // Pa
+    Q.T = 175.0; // K
+    // Set up the species mass fractions assuming equilibrium and no N2.
+    foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
+    Q.massf[gm.n_vibe_states] = 0.0;
 
-        gm.update_thermo_from_pT(Q);
-        double my_rho = 26.7 / (R_CO * 175.0);
-        assert(isClose(Q.rho, my_rho, 1.0e-6), failedUnitTest());
+    double R_CO = 296.8379191791532; // gas constant for CO
+    double M_CO = 0.0280101; // kg/mole
+    double gamma = 7.0/5.0; // ratio of specific heats.
 
-        double my_u = 2.5 * R_CO * 175.0;
-        foreach (i; 0 .. gm.n_vibe_states) {
-            my_u += (Avogadro_number/M_CO) * gm.vib_energy(i) * Q.massf[i];
-        }
-        assert(isClose(Q.u, my_u, 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_pT(Q);
+    double my_rho = 26.7 / (R_CO * 175.0);
+    assert(isClose(Q.rho, my_rho, 1.0e-6));
 
-        //gm.update_trans_coeffs(Q);
-        //assert(isClose(Q.mu, 0.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(Q.k, 0.0, 1.0e-6), failedUnitTest());
-
-        gm.update_sound_speed(Q);
-        double my_a = sqrt(gamma * R_CO * 175.0);
-        assert(isClose(Q.a, my_a, 1.0e-6), failedUnitTest());
-
-        number save_T = Q.T;
-        Q.T = 300.0;
-        gm.update_thermo_from_rhou(Q);
-        assert(isClose(Q.T, save_T, 1.0e-6), failedUnitTest());
-
-        // ---------------------------------------------------------------------------
-        // Now check that we match the N2 model when only N2 is present
-        auto cgm = new CompositeGas("sample-data/thermally-perfect-n2.lua");
-        auto cgs = GasState(cgm);
-        cgs.p = 26.7;  // Pa
-        cgs.T = 175.0; // K
-        cgs.massf[0] = 1.0;
-        cgm.update_thermo_from_pT(cgs);
-        cgm.update_sound_speed(cgs);
-
-        // Practice problem to match the data in table II
-        Q.p = 26.7;  // Pa
-        Q.T = 175.0; // K
-        // Set up the species mass fractions assuming equilibrium and no N2.
-        foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = 0.0; }
-        Q.massf[gm.n_vibe_states] = 1.0;
-        gm.update_thermo_from_pT(Q);
-        gm.update_sound_speed(Q);
-
-        assert(isClose(Q.rho, cgs.rho, 1.0e-6), failedUnitTest());
-        assert(isClose(Q.u, cgs.u, 1.0e-6), failedUnitTest());
-        assert(isClose(Q.a, cgs.a, 1.0e-6), failedUnitTest());
-
-        save_T = Q.T;
-        Q.T = 300.0;
-        gm.update_thermo_from_rhou(Q);
-        assert(isClose(Q.T, save_T, 1.0e-6), failedUnitTest());
-
-        return 0;
+    double my_u = 2.5 * R_CO * 175.0;
+    foreach (i; 0 .. gm.n_vibe_states) {
+        my_u += (Avogadro_number/M_CO) * gm.vib_energy(i) * Q.massf[i];
     }
+    assert(isClose(Q.u, my_u, 1.0e-6));
+
+    //gm.update_trans_coeffs(Q);
+    //assert(isClose(Q.mu, 0.0, 1.0e-6));
+    //assert(isClose(Q.k, 0.0, 1.0e-6));
+
+    gm.update_sound_speed(Q);
+    double my_a = sqrt(gamma * R_CO * 175.0);
+    assert(isClose(Q.a, my_a, 1.0e-6));
+
+    number save_T = Q.T;
+    Q.T = 300.0;
+    gm.update_thermo_from_rhou(Q);
+    assert(isClose(Q.T, save_T, 1.0e-6));
+
+    // ---------------------------------------------------------------------------
+    // Now check that we match the N2 model when only N2 is present
+    auto cgm = new CompositeGas("thermally-perfect-n2.lua");
+    auto cgs = GasState(cgm);
+    cgs.p = 26.7;  // Pa
+    cgs.T = 175.0; // K
+    cgs.massf[0] = 1.0;
+    cgm.update_thermo_from_pT(cgs);
+    cgm.update_sound_speed(cgs);
+
+    // Practice problem to match the data in table II
+    Q.p = 26.7;  // Pa
+    Q.T = 175.0; // K
+    // Set up the species mass fractions assuming equilibrium and no N2.
+    foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = 0.0; }
+    Q.massf[gm.n_vibe_states] = 1.0;
+    gm.update_thermo_from_pT(Q);
+    gm.update_sound_speed(Q);
+
+    assert(isClose(Q.rho, cgs.rho, 1.0e-6));
+    assert(isClose(Q.u, cgs.u, 1.0e-6));
+    assert(isClose(Q.a, cgs.a, 1.0e-6));
+
+    save_T = Q.T;
+    Q.T = 300.0;
+    gm.update_thermo_from_rhou(Q);
+    assert(isClose(Q.T, save_T, 1.0e-6));
+
 }

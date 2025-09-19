@@ -483,70 +483,71 @@ private:
     immutable double massf_tiny = 1.0e-6;
 } // end class UniformLUTPlusIdealGas
 
-version(uniform_lut_plus_ideal_test) {
-    import std.stdio;
-    import util.msg_service;
+unittest {
+    import std.file;
 
-    int main() {
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "uniform-lut-plus-ideal-air-gas-model.lua");
-        auto gm = new UniformLUTPlusIdealGas(L);
-        lua_close(L);
-        auto gd = GasState(2, 0);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.massf[0] = 0.5;
-        gd.massf[1] = 0.5;
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 2, failedUnitTest());
-        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[0], to!number(0.5), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[1], to!number(0.5), 1.0e-6), failedUnitTest());
-        writeln("rho=", gd.rho);
-        assert(approxEqualNumbers(gd.rho, to!number(1.16113), 1.0e-4), failedUnitTest());
-        writeln("u=", gd.u);
-        assert(approxEqualNumbers(gd.u, to!number(215643.0), 1.0e-4), failedUnitTest());
-        writeln("a=", gd.a);
-        assert(approxEqualNumbers(gd.a, to!number(346.625), 1.0e-4), failedUnitTest());
-        gm.update_trans_coeffs(gd);
-        writeln("mu=", gd.mu);
-        assert(approxEqualNumbers(gd.mu, to!number(1.97489e-05), 1.0e-6), failedUnitTest());
-        writeln("k=", gd.k);
-        assert(approxEqualNumbers(gd.k, to!number(0.028169), 1.0e-6), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        gm.update_thermo_from_rhou(gd);
-        writeln("same condition: p=", gd.p);
-        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
-        writeln("T=", gd.T);
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "uniform-lut-plus-ideal-air-gas-model.lua");
+    auto gm = new UniformLUTPlusIdealGas(L);
+    lua_close(L);
+    auto gd = GasState(2, 0);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.massf[0] = 0.5;
+    gd.massf[1] = 0.5;
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4));
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 2);
+    assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6));
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[0], to!number(0.5), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[1], to!number(0.5), 1.0e-6));
+    writeln("rho=", gd.rho);
+    assert(approxEqualNumbers(gd.rho, to!number(1.16113), 1.0e-4));
+    writeln("u=", gd.u);
+    assert(approxEqualNumbers(gd.u, to!number(215_643.0), 1.0e-4));
+    writeln("a=", gd.a);
+    assert(approxEqualNumbers(gd.a, to!number(346.625), 1.0e-4));
+    gm.update_trans_coeffs(gd);
+    writeln("mu=", gd.mu);
+    assert(approxEqualNumbers(gd.mu, to!number(1.97489e-05), 1.0e-6));
+    writeln("k=", gd.k);
+    assert(approxEqualNumbers(gd.k, to!number(0.028169), 1.0e-6));
 
-        gd.u *= 1.2;
-        gm.update_thermo_from_rhou(gd);
-        writeln("increase u: p=", gd.p);
-        assert(approxEqualNumbers(gd.p, to!number(1.2e5), 1.0e-6), failedUnitTest());
-        writeln("T=", gd.T);
-        assert(approxEqualNumbers(gd.T, to!number(360.0), 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_rhou(gd);
+    writeln("same condition: p=", gd.p);
+    assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6));
+    writeln("T=", gd.T);
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
 
-        gd.p /= 1.2;
-        gm.update_thermo_from_rhop(gd);
-        writeln("decrease p: u=", gd.u);
-        assert(approxEqualNumbers(gd.u, to!number(215643.0), 1.0e-4), failedUnitTest());
-        writeln("T=", gd.T);
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
+    gd.u *= 1.2;
+    gm.update_thermo_from_rhou(gd);
+    writeln("increase u: p=", gd.p);
+    assert(approxEqualNumbers(gd.p, to!number(1.2e5), 1.0e-6));
+    writeln("T=", gd.T);
+    assert(approxEqualNumbers(gd.T, to!number(360.0), 1.0e-6));
 
-        version(complex_numbers) {
-            // Check du/dT = Cv
-            number u0 = gd.u; // copy unperturbed value, but we don't really need it
-            double h = 1.0e-20;
-            gd.T += complex(0.0,h);
-            gm.update_thermo_from_rhoT(gd);
-            double myCv = gd.u.im/h;
-            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
-        }
-        return 0;
+    gd.p /= 1.2;
+    gm.update_thermo_from_rhop(gd);
+    writeln("decrease p: u=", gd.u);
+    assert(approxEqualNumbers(gd.u, to!number(215_643.0), 1.0e-4));
+    writeln("T=", gd.T);
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
+
+    version(complex_numbers) {
+        // Check du/dT = Cv
+        number u0 = gd.u; // copy unperturbed value, but we don't really need it
+        double h = 1.0e-20;
+        gd.T += complex(0.0,h);
+        gm.update_thermo_from_rhoT(gd);
+        double myCv = gd.u.im/h;
+        assert(isClose(myCv, gm.dudT_const_v(gd).re));
     }
 }

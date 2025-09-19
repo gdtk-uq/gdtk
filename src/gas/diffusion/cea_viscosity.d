@@ -156,28 +156,28 @@ CEAViscosity createCEAViscosity(lua_State* L)
     return new CEAViscosity(curves);
 }
 
-version(cea_viscosity_test) {
+unittest {
+    import std.file;
 
-    import util.msg_service;
-    int main() {
-        /// First, let's test the CEAViscCurve on its own.
-        double[string] params = ["T_lower":200.0, "T_upper":1000.0,
-                                 "A":0.62526577, "B":-0.31779652e2,
-                                 "C":-0.1640798e4, "D":0.17454992e01];
-        auto ceaCurve = CEAViscCurve(params);
-        assert(isClose(3.8818e-5, ceaCurve.eval(900.0), 1.0e-3), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        /// Next, let's test the creation and functionality
-        /// of a CEAViscosity object.
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/O2-viscosity.lua");
-        lua_getglobal(L, "cea");
-        auto o2CEA = createCEAViscosity(L);
-        lua_close(L);
-        auto Q = GasState(1, 1);
-        Q.T = 1500.0;
-        assert(isClose(6.407851e-05, o2CEA.eval(Q.T), 1.0e-3), failedUnitTest());
+    /// First, let's test the CEAViscCurve on its own.
+    double[string] params = ["T_lower":200.0, "T_upper":1000.0,
+                             "A":0.62526577, "B":-0.31779652e2,
+                             "C":-0.1640798e4, "D":0.17454992e01];
+    auto ceaCurve = CEAViscCurve(params);
+    assert(isClose(3.8818e-5, ceaCurve.eval(900.0), 1.0e-3));
 
-        return 0;
-    }
+    /// Next, let's test the creation and functionality
+    /// of a CEAViscosity object.
+    auto L = init_lua_State();
+    doLuaFile(L, "O2-viscosity.lua");
+    lua_getglobal(L, "cea");
+    auto o2CEA = createCEAViscosity(L);
+    lua_close(L);
+    auto Q = GasState(1, 1);
+    Q.T = 1500.0;
+    assert(isClose(6.407851e-05, o2CEA.eval(Q.T), 1.0e-3));
 }

@@ -15,7 +15,7 @@ import util.lua_service;
 void main() {
     writeln("Begin demonstration of using the IdealGas and GasState classes...");
     lua_State* L = init_lua_State();
-    doLuaFile(L, "sample-data/ideal-air-gas-model.lua");
+    doLuaFile(L, "ideal-air-gas-model.lua");
     auto gm = new IdealGas(L);
     writeln("species name=", gm.species_name(0));
     writeln("gm=", gm);
