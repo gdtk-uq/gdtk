@@ -136,75 +136,71 @@ protected:
 } // end class Bezier
 
 
-version(bezier_test) {
-    import util.msg_service;
-    int main() {
-        import geom.gpath.arc;
-        auto a = Vector3([2.0, 2.0, 0.0]);
-        auto b = Vector3([1.0, 2.0, 1.0]);
-        auto c = Vector3([1.0, 2.0, 0.0]);
-        auto abc = new Arc(a, b, c);
-        auto d = abc(0.5);
-        auto adb = new Bezier([a, d, b]);
-        auto e = adb(0.5);
-        assert(approxEqualVectors(e, Vector3(1.60355, 2, 0.603553)), failedUnitTest());
-        auto ab = new Bezier([a, b]);
-        assert(approxEqualVectors(ab.dpdt(0.5), Vector3(-1, 0, 1)), failedUnitTest());
-        assert(approxEqualVectors(ab.d2pdt2(0.5), Vector3(0)), failedUnitTest());
-        auto acb = new Bezier([a, c, b]);
-        assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)), failedUnitTest());
-        assert(approxEqualVectors(acb.d2pdt2(0.5), Vector3(2,0,2)), failedUnitTest());
-        //
-        auto adbCopy = adb.dup();
-        adbCopy.elevateDegree(4);
-        assert(approxEqualVectors(adb(0.5), adbCopy(0.5)), failedUnitTest());
-        version(complex_numbers) {
-            // Try out the complex derivative evaluation.
-            double cubic_bezier_analytic_derivative(double t, size_t pt) {
-                // compute the analytic derivative of cubic Bezier curve.
-                double value;
-                if (pt == 0) value = (1-t)^^3;
-                else if (pt == 1) value = 3*t*(1-t)^^2;
-                else if (pt == 2) value = 3*(1-t)*t^^2;
-                else value = t^^3; // assume pt = 3
-                return value;
-            }
-            // define cubic Bezier curve
-            auto P0 = Vector3([2.0, 2.0, 0.0]);
-            auto P1 = Vector3([1.0, 2.0, 1.0]);
-            auto P2 = Vector3([1.0, 2.0, 0.0]);
-            auto P3 = Vector3([2.0, 2.0, 1.0]);
-            auto myBez = new Bezier([P0, P1, P2, P3]);
-            Vector3[] P; // copy of points to be perturbed
-            P ~= P0; P ~= P1; P ~= P2; P ~= P3;
-            Vector3[] Po; // copy of original points
-            Po ~= P0; Po ~= P1; Po ~= P2; Po ~= P3;
-            Bezier myNewBez; double dPt_dP_analytic;
-            double dPt_dP_complex_x;
-            double dPt_dP_complex_y;
-            double dPt_dP_complex_z;
-            double h = 1.0e-20;
-            number ih = complex(0, h); // complex step-size
-            double t = 0.5;
-            // we will compute the sensitivity of the midpoint of the Bezier curve
-            // with respect to x-coord of each Bezier point.
-            foreach ( idx; 0..P.length) {
-                // compute analytical derivative
-                dPt_dP_analytic = cubic_bezier_analytic_derivative(t, idx);
-                // compute complex step derivative
-                P[idx].x += ih;
-                myNewBez = new Bezier([P[0], P[1], P[2], P[3]]); // perturbed Bezier curve
-                dPt_dP_complex_x = myNewBez(t).x.im/ih.im;
-                dPt_dP_complex_y = myNewBez(t).y.im/ih.im;
-                dPt_dP_complex_z = myNewBez(t).z.im/ih.im;
-                // compare deriatives
-                assert(std.math.isClose(dPt_dP_analytic, dPt_dP_complex_x), failedUnitTest());
-                assert(std.math.isClose(0.0, dPt_dP_complex_y), failedUnitTest());
-                assert(std.math.isClose(0.0, dPt_dP_complex_z), failedUnitTest());
-                // restore point to original position
-                P[idx].x = Po[idx].x;
-            }
+unittest {
+    import geom.gpath.arc;
+    auto a = Vector3([2.0, 2.0, 0.0]);
+    auto b = Vector3([1.0, 2.0, 1.0]);
+    auto c = Vector3([1.0, 2.0, 0.0]);
+    auto abc = new Arc(a, b, c);
+    auto d = abc(0.5);
+    auto adb = new Bezier([a, d, b]);
+    auto e = adb(0.5);
+    assert(approxEqualVectors(e, Vector3(1.60355, 2, 0.603553)));
+    auto ab = new Bezier([a, b]);
+    assert(approxEqualVectors(ab.dpdt(0.5), Vector3(-1, 0, 1)));
+    assert(approxEqualVectors(ab.d2pdt2(0.5), Vector3(0)));
+    auto acb = new Bezier([a, c, b]);
+    assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)));
+    assert(approxEqualVectors(acb.d2pdt2(0.5), Vector3(2,0,2)));
+    //
+    auto adbCopy = adb.dup();
+    adbCopy.elevateDegree(4);
+    assert(approxEqualVectors(adb(0.5), adbCopy(0.5)));
+    version(complex_numbers) {
+        // Try out the complex derivative evaluation.
+        double cubic_bezier_analytic_derivative(double t, size_t pt) {
+            // compute the analytic derivative of cubic Bezier curve.
+            double value;
+            if (pt == 0) value = (1-t)^^3;
+            else if (pt == 1) value = 3*t*(1-t)^^2;
+            else if (pt == 2) value = 3*(1-t)*t^^2;
+            else value = t^^3; // assume pt = 3
+            return value;
         }
-        return 0;
+        // define cubic Bezier curve
+        auto P0 = Vector3([2.0, 2.0, 0.0]);
+        auto P1 = Vector3([1.0, 2.0, 1.0]);
+        auto P2 = Vector3([1.0, 2.0, 0.0]);
+        auto P3 = Vector3([2.0, 2.0, 1.0]);
+        auto myBez = new Bezier([P0, P1, P2, P3]);
+        Vector3[] P; // copy of points to be perturbed
+        P ~= P0; P ~= P1; P ~= P2; P ~= P3;
+        Vector3[] Po; // copy of original points
+        Po ~= P0; Po ~= P1; Po ~= P2; Po ~= P3;
+        Bezier myNewBez; double dPt_dP_analytic;
+        double dPt_dP_complex_x;
+        double dPt_dP_complex_y;
+        double dPt_dP_complex_z;
+        double h = 1.0e-20;
+        number ih = complex(0, h); // complex step-size
+        double t = 0.5;
+        // we will compute the sensitivity of the midpoint of the Bezier curve
+        // with respect to x-coord of each Bezier point.
+        foreach ( idx; 0..P.length) {
+            // compute analytical derivative
+            dPt_dP_analytic = cubic_bezier_analytic_derivative(t, idx);
+            // compute complex step derivative
+            P[idx].x += ih;
+            myNewBez = new Bezier([P[0], P[1], P[2], P[3]]); // perturbed Bezier curve
+            dPt_dP_complex_x = myNewBez(t).x.im/ih.im;
+            dPt_dP_complex_y = myNewBez(t).y.im/ih.im;
+            dPt_dP_complex_z = myNewBez(t).z.im/ih.im;
+            // compare deriatives
+            assert(std.math.isClose(dPt_dP_analytic, dPt_dP_complex_x));
+            assert(std.math.isClose(0.0, dPt_dP_complex_y));
+            assert(std.math.isClose(0.0, dPt_dP_complex_z));
+            // restore point to original position
+            P[idx].x = Po[idx].x;
+        }
     }
-} // end bezier_test
+}

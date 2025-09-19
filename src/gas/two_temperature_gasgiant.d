@@ -674,61 +674,58 @@ static this()
 }
 
 
-version(two_temperature_gasgiant_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
     import std.math : isClose;
-    int main() {
-        // Comment out lines that write to console
-        // to avoid triggering a test failure.
-        // writeln("Beginning the unit test...");
-        // writeln("Testing the gas state functions...");
-        auto gm = new TwoTemperatureGasGiant();
-        auto gd = GasState(6, 1);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.T_modes[0] = 1000.0;
-        gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0; gd.massf[3] = 0.0; gd.massf[4] = 0.0, gd.massf[5] = 0.0;
-        //assert(isClose(gm.R(gd), 4124.506, 1.0e-4), failedUnitTest());
-        //assert(gm.n_modes == 1, failedUnitTest());
-        //assert(gm.n_species == 5, failedUnitTest());
-        //assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        //assert(isClose(gd.T, 310.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(gd.massf[3], 0.0, 1.0e-6), failedUnitTest());
-        //assert(isClose(gd.massf[4], 0.0, 1.0e-6), failedUnitTest());
-        /*
-        writeln("before update_thermo_from_pT");
-        writeln(gd);
-        gm.update_thermo_from_pT(gd);
-        writeln("after update_thermo_from_pT");
-        writeln(gd);
-        gd.T_modes[0] = 2000.0;
-        writeln("before update_thermo_from_rhou");
-        writeln(gd);
-        gm.update_thermo_from_rhou(gd);
-        writeln("after update_thermo_from_rhou");
-        writeln(gd);
-        */
-        /*
-		//writeln("Cv");
-		//writeln(gm. vibSpecHeatConstV(dg, 600);
-		//writeln("T_modes");
-		//writeln(gd);
-        gm.update_trans_coeffs(gd);
-        writeln("after update_trans_coeffs");
-		////assert(isClose(Cp, 169739.4, 1.0e-1), failedUnitTest());
-        writeln(gd);
-		//gm.update_thermo_from_rhoT(gd);
-		//writeln(gd);
-		//gm.update_thermo_from_rhop(gd);
-		//gm.dudT_const_v(gd);
-		//writeln(gm.dudT_const_v(gd));
-        writeln("enthalpy");
-        writeln(gm.enthalpy(gd));
-        */
-        return 0;
-    }
+    import util.test_runner : skip;
+
+    writeln("Beginning the unit test...");
+    writeln("Testing the gas state functions...");
+    auto gm = new TwoTemperatureGasGiant();
+    auto gd = GasState(6, 1);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.T_modes[0] = 1000.0;
+    gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0; gd.massf[3] = 0.0; gd.massf[4] = 0.0, gd.massf[5] = 0.0;
+
+    skip("Tests are awfully broken");
+    /* FIXME: These test are broken */
+    assert(isClose(gm.R(gd), 4124.506, 1.0e-4));
+    assert(gm.n_modes == 1);
+    assert(gm.n_species == 5);
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 310.0, 1.0e-6));
+    assert(isClose(gd.massf[0], 1.0, 1.0e-6));
+    assert(isClose(gd.massf[1], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[2], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[3], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[4], 0.0, 1.0e-6));
+    writeln("before update_thermo_from_pT");
+    writeln(gd);
+    gm.update_thermo_from_pT(gd);
+    writeln("after update_thermo_from_pT");
+    writeln(gd);
+    gd.T_modes[0] = 2000.0;
+    writeln("before update_thermo_from_rhou");
+    writeln(gd);
+    gm.update_thermo_from_rhou(gd);
+    writeln("after update_thermo_from_rhou");
+    writeln(gd);
+    writeln("Cv");
+    // FIXME: This isn't valid code
+    // writeln(gm, vibSpecHeatConstV(gd, 600));
+    writeln("T_modes");
+    writeln(gd);
+    gm.update_trans_coeffs(gd);
+    writeln("after update_trans_coeffs");
+    // FIXME: Cp is never defined
+    // assert(isClose(Cp, 169_739.4, 1.0e-1));
+    writeln(gd);
+    gm.update_thermo_from_rhoT(gd);
+    writeln(gd);
+    gm.update_thermo_from_rhop(gd);
+    gm.dudT_const_v(gd);
+    writeln(gm.dudT_const_v(gd));
+    writeln("enthalpy");
+    writeln(gm.enthalpy(gd));
 }
