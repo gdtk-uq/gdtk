@@ -146,30 +146,50 @@ ChemkinViscosity createChemkinViscosity(lua_State* L)
     return new ChemkinViscosity(curves);
 }
 
-version(chemkin_viscosity_test) {
+unittest {
+    /// First, let's test the ChemkinViscCurve on its own.
+    double[string] params = [
+        "T_lower": 200.0, "T_upper": 3500.0,
+        "A": -2.000056657134e+01, "B": 2.898260367046e+00,
+        "C": -3.018511062902e-01, "D": 1.346540184145e-02
+    ];
+    auto chemkinCurve = ChemkinViscCurve(params);
+    assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6));
 
-    import util.msg_service;
-    int main() {
-        /// First, let's test the ChemkinViscCurve on its own.
-        double[string] params = ["T_lower":200.0, "T_upper":3500.0,
-                                 "A":-2.000056657134e+01, "B":2.898260367046e+00,
-                                 "C":-3.018511062902e-01, "D":1.346540184145e-02];
-        auto chemkinCurve = ChemkinViscCurve(params);
-        assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6), failedUnitTest());
+    /*
+    /// Next, let's test the creation and functionality
+    /// of a ChemkinViscosity object.
+    auto L = init_lua_State();
+    doLuaFile(L, "O2-viscosity.lua");
+    lua_getglobal(L, "chemkin");
+    auto o2Chemkin = createChemkinViscosity(L);
+    lua_close(L);
+    auto Q = GasState(1, 1);
+    Q.T = 1500.0;
+    assert(isClose(6.238853e-05, o2chemkin.eval(Q), 1.0e-6));
+    */
+}
 
-        /*
-        /// Next, let's test the creation and functionality
-        /// of a ChemkinViscosity object.
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/O2-viscosity.lua");
-        lua_getglobal(L, "chemkin");
-        auto o2Chemkin = createChemkinViscosity(L);
-        lua_close(L);
-        auto Q = GasState(1, 1);
-        Q.T = 1500.0;
-        assert(isClose(6.238853e-05, o2chemkin.eval(Q), 1.0e-6), failedUnitTest());
-        */
+unittest {
+    /// First, let's test the ChemkinViscCurve on its own.
+    double[string] params = [
+        "T_lower": 200.0, "T_upper": 3500.0,
+        "A": -2.000056657134e+01, "B": 2.898260367046e+00,
+        "C": -3.018511062902e-01, "D": 1.346540184145e-02
+    ];
+    auto chemkinCurve = ChemkinViscCurve(params);
+    assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6));
 
-        return 0;
-    }
+    /*
+    /// Next, let's test the creation and functionality
+    /// of a ChemkinViscosity object.
+    auto L = init_lua_State();
+    doLuaFile(L, "O2-viscosity.lua");
+    lua_getglobal(L, "chemkin");
+    auto o2Chemkin = createChemkinViscosity(L);
+    lua_close(L);
+    auto Q = GasState(1, 1);
+    Q.T = 1500.0;
+    assert(isClose(6.238853e-05, o2chemkin.eval(Q), 1.0e-6));
+    */
 }

@@ -12,7 +12,7 @@ import gas.gas_state;
 
 void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes...");
-    auto gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
+    auto gm = init_gas_model("ideal-air-gas-model.lua");
     foreach(i; 0 .. gm.n_species) {
         writeln("species[", i, "] name=", gm.species_name(i));
     }
