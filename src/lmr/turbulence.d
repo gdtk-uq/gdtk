@@ -168,7 +168,7 @@ Object representating the wilcox k-omega turbulence model.
   - See "Suitability of the k-w turbulence model for scramjet flowfield simulations"
     W. Y. K. Chan and P. A. Jacobs and D. J. Mee
     Int. J. Numer. Meth. Fluids (2011)
-  - Added the vorticity-based source term option. KAD 2022-11-09
+  - Added the vorticity-based source term option --> @author: K. A. Damm (2022-11-09)
     This modification was originally suggested in ref. [1] for airfoils,
     and suggested for blunt-body flows in ref. [2]. It is referred to as the
     Wilcox k-omega Two-Equation Models with Vorticity Source Term in ref. [3].
@@ -176,6 +176,13 @@ Object representating the wilcox k-omega turbulence model.
     [1] Improved Two-Equation k-omega Turbulence Models for Aerodynamic Flows, F. R. Menter, NASA TM 103975 (1992)
     [2] Turbulence on Blunt Bodies at Reentry Speeds, S. Sefidbakht, Ohio State University Thesis (2011)
     [3] https://turbmodels.larc.nasa.gov/wilcox.html
+  - Added log(omega) formulation --> @author: K. A. Damm (2025-09-22)
+    Ref. [1] and [2] demonstrate that the logarithmic formulation is effective at dampening excessively high values of omega,
+    effectively smoothing sharp peaks. Additionally, it naturally prevents the occurrence of non-physical negative omega values.
+    Note neither of the references apply the cross-diff term, refer to Kyle's notes for explanation why this term doesn't change.
+    references:
+    [1] Discontinuous Galerkin solution of the Reynolds-averaged Navier–Stokes and k–omega turbulence model equations, Computers & Fluid, Bassi et al. (2005)
+    [2] A logarithmic omega-equation formulation for tubulence models in harmonic balance solvers, ECCM6/ECFD7, M. Muller and C. Morsbach (2018)
 */
 class kwTurbulenceModel : TurbulenceModel {
     this (){
@@ -184,31 +191,33 @@ class kwTurbulenceModel : TurbulenceModel {
         int dimensions         = GlobalConfig.dimensions;
         number max_mu_t_factor = GlobalConfig.max_mu_t_factor;
         bool use_vorticity_based_source_term = false;
-        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor, use_vorticity_based_source_term);
+        bool use_log_omega_form = false;
+        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor, use_vorticity_based_source_term, use_log_omega_form);
     }
 
-    this (const JSONValue config, bool use_vorticity_based_source_term = false){
+    this (const JSONValue config, bool use_vorticity_based_source_term, bool use_log_omega_form){
         // What to do about default values? inherit from globalconfig??? Throw an error if not found?
         number Pr_t            = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
         bool axisymmetric      = getJSONbool(config, "axisymmetric", false);
         int dimensions         = getJSONint(config, "dimensions", 2);
         number max_mu_t_factor = getJSONdouble(config, "max_mu_t_factor", 300.0);
-        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor, use_vorticity_based_source_term);
+        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor, use_vorticity_based_source_term, use_log_omega_form);
     }
 
     this (kwTurbulenceModel other){
-        this(other.Pr_t, other.axisymmetric, other.dimensions, other.max_mu_t_factor, other.use_vorticity_based_source_term);
+        this(other.Pr_t, other.axisymmetric, other.dimensions, other.max_mu_t_factor, other.use_vorticity_based_source_term, other.use_log_omega_form);
         return;
     }
 
-    this (number Pr_t, bool axisymmetric, int dimensions, number max_mu_t_factor, bool use_vorticity_based_source_term) {
+    this (number Pr_t, bool axisymmetric, int dimensions, number max_mu_t_factor, bool use_vorticity_based_source_term, bool use_log_omega_form) {
         this.Pr_t = Pr_t;
         this.axisymmetric = axisymmetric;
         this.dimensions = dimensions;
         this.max_mu_t_factor = max_mu_t_factor ;
         this.use_vorticity_based_source_term = use_vorticity_based_source_term;
-	_varindices["tke"] = 0;
-	_varindices["omega"] = 1;
+        this.use_log_omega_form = use_log_omega_form;
+        _varindices["tke"] = 0;
+        _varindices["omega"] = 1;
     }
     @nogc final override string modelName() const {return "k_omega";}
     @nogc final override size_t nturb() const {return 2;}
@@ -254,7 +263,8 @@ class kwTurbulenceModel : TurbulenceModel {
         number domegadx = grad.turb[1][0];
         number domegady = grad.turb[1][1];
         number tke = fs.turb[0];
-        number omega = fs.turb[1];
+        number omega = omega(fs.turb[1]);
+
         if ( dimensions == 2 ) {
             // 2D cartesian or 2D axisymmetric
             if ( axisymmetric ) {
@@ -319,20 +329,35 @@ class kwTurbulenceModel : TurbulenceModel {
                 + 0.25 * (dvdx - dudy) * (dudz - dwdx) * (dwdy + dvdx) ;
         } // end if myConfig.dimensions
 
+        // tke destruction term
         D_K = beta_star * fs.gas.rho * tke * omega;
 
-        // Apply a limit to the tke production as suggested by Jeff White, November 2007.
+        // tke production term, we apply a limit as suggested by Jeff White, November 2007.
         const double P_OVER_D_LIMIT = 25.0;
         P_K = fmin(P_K, P_OVER_D_LIMIT*D_K);
 
+        // omega production term
+        if (use_log_omega_form) {
+            number grad2 = domegadx * domegadx + domegady * domegady;
+            if (dimensions == 3) { grad2 += grad.turb[1][2] * grad.turb[1][2]; }
+            P_W = alpha / fmax(tke, small_tke) * P_K
+                + (fs.gas.mu + _sigmas[1] * fs.mu_t)*grad2;
+        } else {
+            P_W = alpha * omega / fmax(tke, small_tke) * P_K;
+        }
+        // add the cross-diff term to the omega production term
         if ( cross_diff > 0 ) sigma_d = 0.125;
-        P_W = alpha * omega / fmax(tke, small_tke) * P_K +
-            sigma_d * fs.gas.rho / fmax(omega, small_omega) * cross_diff;
+        P_W += sigma_d * fs.gas.rho / fmax(omega, small_omega) * cross_diff;
 
+        // omega destruction term
         X_w = fabs(WWS / pow(beta_star*fmax(omega, small_omega), 3)) ;
         f_beta = (1.0 + 85.0 * X_w) / (1.0 + 100.0 * X_w) ;
         beta = beta_0 * f_beta;
-        D_W = beta * fs.gas.rho * omega * omega;
+        if (use_log_omega_form) {
+            D_W = beta * fs.gas.rho * omega;
+        } else {
+            D_W = beta * fs.gas.rho * omega * omega;
+        }
 
         source[0] = P_K - D_K;
         source[1] = P_W - D_W;
@@ -396,7 +421,7 @@ class kwTurbulenceModel : TurbulenceModel {
         }
         S_bar_squared = fmax(0.0, S_bar_squared);
         number tke = fs.turb[0];
-        number omega = fs.turb[1];
+        number omega = omega(fs.turb[1]);
         number omega_t = fmax(omega, C_lim*sqrt(2.0*S_bar_squared/beta_star));
         number mu_t = fs.gas.rho * tke / omega_t;
         return mu_t;
@@ -407,7 +432,7 @@ class kwTurbulenceModel : TurbulenceModel {
         return k_t;
     }
     @nogc final override number turbulent_signal_frequency(ref const(FlowState) fs) const {
-        number turb_signal = fs.turb[1];
+        number turb_signal = omega(fs.turb[1]);
         return turb_signal;
     }
 
@@ -447,7 +472,9 @@ class kwTurbulenceModel : TurbulenceModel {
         For line 657 of fvinterface, where k and w have slightly different transport coefficients
         */
         number sigma = _sigmas[i];
-        number mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.turb[0] / fs.turb[1];
+        number tke = fs.turb[0];
+        number omega = omega(fs.turb[1]);
+        number mu_effective = fs.gas.mu + sigma * fs.gas.rho * tke / omega;
         return mu_effective;
     }
 
@@ -492,6 +519,7 @@ private:
     immutable number small_tke = 0.1;
     immutable number small_omega = 1.0;
     immutable bool use_vorticity_based_source_term;
+    immutable bool use_log_omega_form;
 
     @nogc bool is_tke_valid(ref const(FlowStateLimits) flowstate_limits, const number tke) const {
         if (!isFinite(tke.re)) {
@@ -536,7 +564,21 @@ private:
         // Note: d0 is half_cell_width_at_wall.
         number nu = cell.fs.gas.mu / cell.fs.gas.rho;
         double beta1 = 0.075;
-        return 10 * (6 * nu) / (beta1 * d0 * d0);
+        number omega = 10 * (6 * nu) / (beta1 * d0 * d0);
+        if (use_log_omega_form) {
+            return log(omega);
+        } else {
+            return omega;
+        }
+    }
+
+    @nogc const
+    number omega(const number omega) {
+        if (use_log_omega_form) {
+            return exp(omega);
+        } else {
+            return omega;
+        }
     }
 
 }
@@ -1156,10 +1198,16 @@ TurbulenceModel init_turbulence_model(const string turbulence_model_name, const 
         break;
 version(turbulence){
     case "k_omega":
-        turbulence_model = new kwTurbulenceModel(config);
+        turbulence_model = new kwTurbulenceModel(config, false, false);
+        break;
+    case "k_log_omega":
+        turbulence_model = new kwTurbulenceModel(config, false, true);
         break;
     case "k_omega_vorticity":
-        turbulence_model = new kwTurbulenceModel(config, true);
+        turbulence_model = new kwTurbulenceModel(config, true, false);
+        break;
+    case "k_log_omega_vorticity":
+        turbulence_model = new kwTurbulenceModel(config, true, true);
         break;
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel(config);
