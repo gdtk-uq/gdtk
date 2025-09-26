@@ -1538,25 +1538,6 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }
 
-// end of version(complex_numbers)
-
-} else {
-    // Presume that we are building for double_numbers
-    // and we do not need all the complex numbers machinery,
-    // just enough to define Complex!double
-
-import std.traits;
-
-struct Complex(T)
-if (isFloatingPoint!T)
-{
-    T re;
-    T im;
-}
-
-// end double_numbers version
-}
-
 unittest {
     import nm.number;
 
@@ -1939,3 +1920,23 @@ unittest {
     assert( std.math.isClose(deriv2, res2));
 
 }
+
+// end of version(complex_numbers)
+
+} else {
+    // Presume that we are building for double_numbers
+    // and we do not need all the complex numbers machinery,
+    // just enough to define Complex!double
+
+import std.traits;
+
+struct Complex(T)
+if (isFloatingPoint!T)
+{
+    T re;
+    T im;
+}
+
+// end double_numbers version
+}
+
