@@ -28,97 +28,41 @@ LIBEQC := $(EQC_DIR)/libeqc.a
 include $(EQC_DIR)/eqc_files.mk
 
 NTYPES_DIR := ../ntypes
-NTYPES_FILES := $(NTYPES_DIR)/complex.d
-
 UTIL_DIR := ../util
-include $(UTIL_DIR)/util_files.mk
-
 NM_DIR := ../nm
-include $(NM_DIR)/nm_files.mk
-
 KINETICS_DIR := ../kinetics
-include $(KINETICS_DIR)/kinetics_files.mk
-
 GASDYN_DIR := ../gasdyn
-include $(GASDYN_DIR)/gasdyn_files.mk
-
 GEOM_DIR := ../geom
-include $(GEOM_DIR)/geom_files.mk
-
-GZIP_DIR := ../extern/gzip
-GZIP_FILES := $(GZIP_DIR)/gzip.d
-
-include gas_files.mk
 
 ifeq ($(DMD), dmd)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
-    endif
     PIC := -fPIC
-    DVERSION := -version=
-    OF := -of
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldmd2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -inline -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
-    endif
+else ifeq ($(DMD), ldmd2)
     PIC := -fPIC
-    DVERSION := -version=
-    OF := -of
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldc2)
+else ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -link-defaultlib-debug -d-debug -d-version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        # -fprofile-generate will result in profraw files being written
-        # that may be viewed, showing the top 10 functions with internal block counts
-        # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math
-        ifeq ($(PLATFORM), linux)
-	    # Full link-time optimization does not play nicely on macOS
-	    DFLAGS += -flto=full
-        endif
+        DFLAGS := -link-defaultlib-debug
     endif
     PIC := --relocation-model=pic
-    DVERSION := -d-version=
-    OF := -of=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
 endif
 
-ifeq ($(WITH_FPE),1)
-    DFLAGS += $(DVERSION)enable_fp_exceptions
-endif
+include ../universal.mk
 
-# DIP1008 allows throwing of exceptions in @nogc code.
-# See notes in src/eilmer/makefile.
-DFLAGS += -dip1008 -preview=in
+d_previews := in dip1008
+d_versions := flavour_$(FLAVOUR) \
+	$(if $(filter 1,$(WITH_FPE)), enable_fp_exceptions)
+
+# External dependencies
+imports := eqc gzip
+import_paths := \
+	../extern/eqc/source \
+	../extern/gzip
+
+# Internal dependencies (all from gdtk/src)
+imports += gas gasdyn geom grid kinetics nm ntypes util
+import_paths += ..
+
+# Non-d files to include
+extra_deps := $(LIBLUA) $(LIBEQC)
 
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
@@ -161,23 +105,23 @@ install: build-prep-gas build-libgas
 .PHONY: test-all test-real
 test-all: test-real
 
-test-real: test_runner_real
+test-real: gas-calc test_runner_real
 	@echo "Running tests"
 	- ./test_runner_real --module gas
 
 # We need to pull the test_runner.d to the front to ensure no linker errors
-test_runner_real: test_gas_calc.d $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
-		$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(LIBEQC) $(LIBLUA) | gas-calc
+test_runner_real: FLAVOUR = debug
+test_runner_real: compiler_flags += -unittest
+test_runner_real: test_gas_calc.d package.d $(extra_deps)
 	@echo "Compiling test runner..."
-	$(DMD) $(OF)$@ $(DFLAGS) --unittest $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< package.d $(extra_deps)
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
 
 clean:
 	- rm -f *.o *.so *.a *.obj *.lib
+	- rm -f .reqs-*.mk
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
@@ -207,31 +151,23 @@ clean:
 
 # Specific targets for individual artefacts.
 
-gas-calc: gas_calc.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(GEOM_FILES) $(GZIP_FILES) \
-	$(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA)
-	$(DMD) $(OF)gas-calc $(DFLAGS) gas_calc.d \
-		$(GAS_FILES) $(GAS_LUA_FILES) \
-		$(NM_FILES) $(NTYPES_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
-		$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
+# Include all possible target requirement files
+# The pattern is `.reqs-[...].mk`
+-include $(wildcard .reqs-*.mk)
 
-libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
-	$(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) $(KINETICS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) -op \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(GASDYN_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
-	$(DMD) $(OF)libgas.so gas_cwrap.o $(PIC) $(DFLAGS) -op -shared \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+# compiler_flags is lazily defined in universal.mk
+gas-calc: gas_calc.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(extra_deps)
+
+# TODO: Fold PIC (position independent code) into universal.mk
+%.o: compiler_flags += -c -op $(PIC)
+%.o: %.d
+	$(DMD) -of=$@ -makedeps=.reqs-$*.mk $(compiler_flags) $<
+
+libgas.so: linker_paths += $(INSTALL_DIR)/lib
+libgas.so: compiler_flags += -op -shared $(PIC)
+libgas.so: gas_cwrap.o $(extra_deps)
+	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
@@ -244,36 +180,23 @@ species-database/species-database.lua :
 
 # Some demo targets. These are left over from the early days of development.
 
-gas_model_demo: gas_model_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+ideal_gas_demo: ideal_gas_demo.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(extra_deps)
 
-ideal_gas_demo: ideal_gas_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+luagas_model_demo: luagas_model_demo.d $(extra_deps)
+	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
 
-luagas_model_demo: luagas_model_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(LIBEQC) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) luagas_model_demo.d $(OF)luagas_model_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) $(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
+# FIXME: Neither of these demos compile due to changed source code.
+# The files they rely on have changed or been removed.
+univariate_lut_demo: univariate_lut_demo.d $(extra_deps)
+	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
 
-univariate_lut_demo: univariate_lut_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -debug -dip1008 univariate_lut_demo.d $(OF)univariate_lut_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+gas_model_demo: gas_model_demo.d $(extra_deps)
+	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
 
 # Individual test targets
 
-two_temp_air_ci_dump: $(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+two_temp_air_ci_dump: d_versions += two_temp_air_ci_dump
+two_temp_air_ci_dump: two_temperature_air.d $(extra_deps)
+	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
 
