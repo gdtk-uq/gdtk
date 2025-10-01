@@ -20,36 +20,14 @@ PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
 
-UTIL_DIR := ../util
-include $(UTIL_DIR)/util_files.mk
-
-NM_DIR := ../nm
-include $(NM_DIR)/nm_files.mk
-
 NML_DIR := ../lib
 include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
-include $(GAS_DIR)/gas_files.mk
-
 KINETICS_DIR := ../kinetics
-include $(KINETICS_DIR)/kinetics_files.mk
-
-GEOM_DIR := ../geom
-include $(GEOM_DIR)/geom_files.mk
-
-GASDYN_DIR := ../gasdyn
-include $(GASDYN_DIR)/gasdyn_files.mk
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
-include $(EQC_DIR)/eqc_files.mk
-
-NTYPES_DIR := ../ntypes
-NTYPES_FILES := $(NTYPES_DIR)/complex.d
-
-GZIP_DIR := ../extern/gzip
-GZIP_FILES := $(GZIP_DIR)/gzip.d
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
@@ -67,73 +45,6 @@ ifneq ("$(wildcard $(REPO_DIR)/.git)","")
     REVISION_STRING := $(shell git rev-parse --short HEAD)
 else
     REVISION_STRING := unknown
-endif
-
-ifeq ($(DMD), dmd)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug -version=enable_fp_exceptions
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
-    endif
-    OF := -of
-    DVERSION := -version=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldmd2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug -version=enable_fp_exceptions
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
-    endif
-    OF := -of
-    DVERSION := -version=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldc2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug -d-version=enable_fp_exceptions
-    endif
-    ifeq ($(FLAVOUR), profile)
-        # -fprofile-generate will result in profraw files being written
-        # that may be viewed, showing the top 10 functions with internal block counts
-        # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast
-        ifeq ($(PLATFORM), linux)
-	    # Full link-time optimization does not play nicely on macOS
-	    DFLAGS += -flto=full
-        endif
-    endif
-    OF := -of=
-    DVERSION := -d-version=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-# DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
-# This rules out the use of gdc for compiling the code.
-DFLAGS += -dip1008 -preview=in
-DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
-
-ifeq ($(WITH_FPE),1)
-    DFLAGS += $(DVERSION)enable_fp_exceptions
 endif
 
 default: $(PROGRAMS)
@@ -155,6 +66,7 @@ install: $(PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
 
 clean:
 	- rm *.o
+	- rm .reqs-*.mk
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
 	- rm main_with_rev_string.d
@@ -163,54 +75,48 @@ clean:
 	- cd $(KINETICS_DIR); make clean
 	- cd $(EQC_DIR); make clean
 
-$(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+include ../universal.mk
+include $(wildcard .reqs-*.mk)
 
-$(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) libgasf.a
+d_previews := in dip1008
+d_versions := flavour_$(FLAVOUR) \
+	$(if $(filter 1,$(WITH_FPE)), enable_fp_exceptions) \
 
-$(LIBEQC):
-	cd $(EQC_DIR); make
+# External dependencies
+imports := eqc gzip
+import_paths := \
+	../extern/eqc/source \
+	../extern/gzip
 
-l1d4: main.d $(L1D_FILES) \
-	$(GEOM_FILES) \
-	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+# Internal dependencies
+imports += l1d gas gasdyn geom kinetics nm ntypes util
+import_paths += ..
+
+# Non-d files to include
+extra_deps := $(LIBLUA) $(LIBEQC)
+
+main_with_rev_string.d: main.d
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)l1d4 \
-		main_with_rev_string.d \
-		$(L1D_FILES) \
-		$(GEOM_FILES) \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
+
+l1d4: main_with_rev_string.d $(L1D_FILES) $(extra_deps)
+	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(L1D_FILES) $(extra_deps)
 
 l1d4-prep: l1d4-prep.py
-	cp l1d4-prep.py l1d4-prep
-	chmod +x l1d4-prep
+	install -m 755 l1d4-prep.py l1d4-prep
 
 l1d4-xt-viewer: xt-viewer.py
-	cp xt-viewer.py l1d4-xt-viewer
-	chmod +x l1d4-xt-viewer
+	install -m 755 xt-viewer.py l1d4-xt-viewer
 
-prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
+prep-gas libgas:
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
 
-libgas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-libgas
+prep-chem prep-kinetics chemkin2eilmer:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-$@
 
-prep-chem:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
+$(LIBLUA):
+	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
-prep-kinetics:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-kinetics
-
-chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
+$(LIBEQC):
+	cd $(EQC_DIR); make
