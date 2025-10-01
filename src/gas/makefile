@@ -17,7 +17,11 @@ $(info PLATFORM=$(PLATFORM))
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo
+DEMO_PROGRAMS := ideal_gas_demo luagas_model_demo
+# FIXME: Neither of these demos compile due to changed source code.
+# The files they rely on have changed or been removed.
+# - gas_model_demo
+# - univariate_lut_demo
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
@@ -111,17 +115,18 @@ test-real: gas-calc test_runner_real
 
 # We need to pull the test_runner.d to the front to ensure no linker errors
 test_runner_real: FLAVOUR = debug
-test_runner_real: compiler_flags += -unittest
+test_runner_real: private compiler_flags += -unittest
 test_runner_real: test_gas_calc.d package.d $(extra_deps)
 	@echo "Compiling test runner..."
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< package.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	@$(call clean-deps)
 
-demo: ${DEMO_PROGRAMS}
+demo: $(DEMO_PROGRAMS)
 	echo "Demo programs built."
 
 clean:
 	- rm -f *.o *.so *.a *.obj *.lib
-	- rm -f .reqs-*.mk
+	- rm -f *.deps
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
@@ -153,16 +158,35 @@ clean:
 
 # Include all possible target requirement files
 # The pattern is `.reqs-[...].mk`
--include $(wildcard .reqs-*.mk)
+include $(wildcard *.deps)
+
+# Remove the stdlib from our prereqs, for clarity
+STDLIB_DIR = $(realpath $(dir $(shell which $(DMD))))
+
+# 1. Replace first line such that it has `target: .EXTRA_PREREQS = \`
+#    This allows us to check the dependencies, without including them
+#    in the automatic variables, which clutters our output.
+# 2. Clean up the dependencies for readability (not that these files
+#    should often need inspecting!)
+#    a) Read original dependencies from line 2 onwards
+#    b) Filter out std-lib references
+#    c) Sort
+define clean-deps
+echo '$@: .EXTRA_PREREQS = \' > $@.deps.tmp
+-tail -n +2 $@.deps | grep -v '$(STDLIB_DIR)' | sort >> $@.deps.tmp
+mv $@.deps.tmp $@.deps
+endef
 
 # compiler_flags is lazily defined in universal.mk
 gas-calc: gas_calc.d $(extra_deps)
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	@$(call clean-deps)
 
 # TODO: Fold PIC (position independent code) into universal.mk
 %.o: compiler_flags += -c -op $(PIC)
 %.o: %.d
-	$(DMD) -of=$@ -makedeps=.reqs-$*.mk $(compiler_flags) $<
+	$(DMD) -makedeps=$*.deps $(compiler_flags) $^
+	@$(call clean-deps)
 
 libgas.so: linker_paths += $(INSTALL_DIR)/lib
 libgas.so: compiler_flags += -op -shared $(PIC)
@@ -180,23 +204,14 @@ species-database/species-database.lua :
 
 # Some demo targets. These are left over from the early days of development.
 
-ideal_gas_demo: ideal_gas_demo.d $(extra_deps)
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(extra_deps)
-
-luagas_model_demo: luagas_model_demo.d $(extra_deps)
-	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
-
-# FIXME: Neither of these demos compile due to changed source code.
-# The files they rely on have changed or been removed.
-univariate_lut_demo: univariate_lut_demo.d $(extra_deps)
-	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
-
-gas_model_demo: gas_model_demo.d $(extra_deps)
-	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
+$(DEMO_PROGRAMS): %: %.d $(extra_deps)
+	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
+	@$(call clean-deps)
 
 # Individual test targets
 
 two_temp_air_ci_dump: d_versions += two_temp_air_ci_dump
 two_temp_air_ci_dump: two_temperature_air.d $(extra_deps)
-	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
+	$(DMD) -makedeps=$@.deps -of=$@ $(compiler_flags) $^
+	@$(call clean-deps)
 
