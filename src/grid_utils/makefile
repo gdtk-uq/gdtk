@@ -4,13 +4,6 @@
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= ldc2
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
 
@@ -18,14 +11,16 @@ FLAVOUR ?= fast
 PROGRAMS := ugrid_partition
 
 include ../universal.mk # Generates compiler_flags for us
-include $(wildcard .reqs-*.mk)
+include $(wildcard *.deps)
 
 # Template for all d-programs
 $(PROGRAMS): %: %.d
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $<
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 clean:
-	- rm -f *.o .reqs-*.mk
+	- rm -f *.o
+	- rm -r *.deps
 	- rm -f $(PROGRAMS)
 	- rm -f $(BUILD_DIR)/bin/$(PROGRAMS)
 

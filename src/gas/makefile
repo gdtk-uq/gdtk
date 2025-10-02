@@ -117,7 +117,6 @@ test-real: gas-calc test_runner_real
 test_runner_real: FLAVOUR = debug
 test_runner_real: compiler_flags += -unittest
 test_runner_real: test_gas_calc.d package.d $(extra_deps)
-	@echo "Compiling test runner..."
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
