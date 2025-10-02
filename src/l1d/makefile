@@ -8,13 +8,6 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 WITH_FPE ?= 1
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
@@ -31,7 +24,6 @@ LIBEQC := $(EQC_DIR)/libeqc.a
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/lib
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -76,7 +68,7 @@ clean:
 	- cd $(EQC_DIR); make clean
 
 include ../universal.mk
-include $(wildcard .reqs-*.mk)
+include $(wildcard *.deps)
 
 d_previews := in dip1008
 d_versions := flavour_$(FLAVOUR) \
@@ -101,7 +93,8 @@ main_with_rev_string.d: main.d
 		main.d > main_with_rev_string.d
 
 l1d4: main_with_rev_string.d $(L1D_FILES) $(extra_deps)
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(L1D_FILES) $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 l1d4-prep: l1d4-prep.py
 	install -m 755 l1d4-prep.py l1d4-prep
@@ -116,7 +109,7 @@ prep-chem prep-kinetics chemkin2eilmer:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-$@
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	cd $(LUA_DIR); make guess local
 
 $(LIBEQC):
 	cd $(EQC_DIR); make

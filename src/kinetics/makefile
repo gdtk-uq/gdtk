@@ -46,8 +46,8 @@ test: test_runner
 test_runner: FLAVOUR = debug
 test_runner: compiler_flags += -unittest
 test_runner: ../util/test_runner.d package.d $(extra_deps)
-	@echo "Compiling test runner..."
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< package.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 clean:
 	- rm -f *.o *.mod *.obj
@@ -58,15 +58,8 @@ clean:
 	- cd $(LUA_DIR); make clean
 	- cd $(EQC_DIR); make clean
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	cd $(LUA_DIR); make guess local
 
 $(LIBEQC):
 	cd $(EQC_DIR); make
