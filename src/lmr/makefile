@@ -9,18 +9,6 @@ define nl
 
 endef
 
-DMD_ALLOWED_OPTS := dmd ldc2
-# We can specify the DMD64 compiler as DMD=dmd on the command-line
-# when invoking this makefile.
-DMD ?= ldc2
-ifeq ($(filter $(DMD), $(DMD_ALLOWED_OPTS)),)
-    $(warning DMD=$(DMD) is not available as an option for setting the D compiler.)
-    $(warning Available options are:${nl}    $(DMD_ALLOWED_OPTS))
-    $(error Exiting unsuccessfully.${nl}Please fix DMD selection on command line or as environment variable setting.)
-endif
-# Convenience variable
-USING_DMD := $(filter dmd,$(DMD))
-
 NVCC ?= nvcc
 GPP ?= g++
 # default is NOT to opt out of MPI build
@@ -29,18 +17,6 @@ MPI_IMPLEMENTATION := OpenMPI
 # default is NOT to use MPICH
 WITH_MPICH ?= 0
 
-# FLAVOUR options are debug, fast, profile
-# Flags for each compiler will be determined on this option.
-# As default, we compile with the 'debug' option which produces a code
-# that will have better checks and more detailed error messages.
-# The 'fast' option requests production mode and to include optimisations.
-FLAVOUR_ALLOWED_OPTS := debug fast profile
-FLAVOUR ?= debug
-ifeq ($(filter $(FLAVOUR), $(FLAVOUR_ALLOWED_OPTS)),)
-    $(warning FLAVOUR=$(FLAVOUR) is not available as an option for building.)
-    $(warning Available options are: ${nl}    $(FLAVOUR_ALLOWED_OPTS))
-    $(error Exiting unsuccessfully.${nl}Please fix FLAVOUR selection.)
-endif
 WITH_FPE ?= 1
 
 # PLATFORM options are linux, macosx
@@ -159,6 +135,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.
 clean:
 	- rm *.o
 	- rm *-reqs.mk
+	- rm *.deps
 	- rm -rf $(BUILD_DIR)/*
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
@@ -208,6 +185,7 @@ buildinfo.json:
 	@printf '%b' '$(subst ${nl},\n,${buildinfo})' > $@
 
 include ../universal.mk
+include $(wildcard *.deps)
 
 d_previews := in dip1008
 d_versions := flavour_$(FLAVOUR) \
@@ -240,34 +218,42 @@ imports += lmr gas gasdyn geom grid kinetics nm ntypes util
 import_paths += ..
 
 # Non-d files to include
-extra_deps := $(LIBLUA) $(LIBEQC)
+extra_deps = $(LIBLUA) $(LIBEQC)
 
-# Include all possible target requirement files
--include $(addsuffix -reqs.mk,lmr lmr-run lmr-check-jacobian)
+# ============================================================================
+#                      BUILD RECIPES FOR LMR VARIANTS
+# ============================================================================ 
+
+# List all our targets explicitly
+lmr lmr-debug lmr-run lmrZ-run lmr-mpi-run lmrZ-mpi-run:
+.SECONDEXPANSION:
 
 # compiler_flags is lazily defined in universal.mk
 lmr-debug: FLAVOUR = debug
 lmr-debug lmr: main.d $(extra_deps) | buildinfo.json
-	$(DMD) -of=$@ -makedeps=$@-reqs.mk $(compiler_flags) $< $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 # Use the pattern rule % to match *all* lmrZ[...] targets.
-# Add complex specialisations to all complex versions of programs
+# Add complex specialisations
 lmrZ%run: d_versions += complex_numbers
 
 # Add MPI specialisations
-lmr%mpi-run: d_versions += mpi_parallel
-lmr%mpi-run: imports += mpi
+lmr%mpi-run: d_versions   += mpi_parallel
+lmr%mpi-run: imports      += mpi
 lmr%mpi-run: import_paths += ../extern/OpenMPI/source
-lmr%mpi-run: linker_libs += mpi
+lmr%mpi-run: linker_libs  += mpi
 lmr%mpi-run: linker_paths += $(MPI_LIBRARY_DIRS)
-lmrZ-mpi-run lmr-mpi-run: $(MPI_FILES)
+lmr%mpi-run: extra_deps   += $(MPI_FILES)
 
 lmr%run: d_versions += run_main
-lmr%run: commands/runsim.d $(extra_deps) | buildinfo.json
-	$(DMD) -of=$@ -makedeps=$@-reqs.mk $(compiler_flags) $< $(extra_deps)
+lmr%run: commands/runsim.d $$(extra_deps) | buildinfo.json
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 lmr%check-jacobian: commands/checkjacobian.d $(extra_deps) | buildinfo.json
-	$(DMD) -of=$@ -makedeps=$@-reqs.mk $(compiler_flags) $< $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 #### Python programs
 lmr-verify: $(PY_PROG_DIR)/lmr_verify.py

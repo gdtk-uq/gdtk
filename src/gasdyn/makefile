@@ -12,13 +12,14 @@ demo: $(demo_targets)
 	@echo "Demo codes built."
 
 LUA_DIR := ../../extern/lua-5.4.3
-LIBLUA := $(LUA_DIR)/install/lib/liblua.a
+LIBLUAPATH := $(LUA_DIR)/install/lib
+LIBLUA := $(LIBLUAPATH)/liblua.a
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 
-include $(wildcard .reqs-*.mk)
 include ../universal.mk
+include $(wildcard *.deps)
 
 d_previews := in dip1008
 d_versions :=
@@ -32,36 +33,33 @@ import_paths += ..
 
 extra_deps := $(LIBLUA)
 
+.SECONDEXPANSION:
+
 # Specific requirements for gasflow demos
-gasflow_demo luagasflow_demo: $(LIBEQC)
 gasflow_demo luagasflow_demo: imports += gas kinetics
 gasflow_demo luagasflow_demo: extra_deps += $(LIBEQC)
 
 # Template for all demo targets
-$(demo_targets): %: %.d $(extra_deps)
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(extra_deps)
+# As the demo targetNames are the same as their source-file,
+# these targets are *super* simple
+$(demo_targets): %: %.d $$(extra_deps)
+	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 GAS_DIR := ../gas
 KINETICS_DIR := ../kinetics
 
 clean:
 	- rm *.o *.obj
-	- rm .reqs-*.mk
+	- rm *.deps
 	- rm $(demo_targets)
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(EQC_DIR); make clean
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	cd $(LUA_DIR); make guess local
 
 $(LIBEQC):
 	cd $(EQC_DIR); make

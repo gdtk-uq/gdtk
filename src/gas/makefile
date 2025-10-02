@@ -115,11 +115,11 @@ test-real: gas-calc test_runner_real
 
 # We need to pull the test_runner.d to the front to ensure no linker errors
 test_runner_real: FLAVOUR = debug
-test_runner_real: private compiler_flags += -unittest
+test_runner_real: compiler_flags += -unittest
 test_runner_real: test_gas_calc.d package.d $(extra_deps)
 	@echo "Compiling test runner..."
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
-	@$(call clean-deps)
+	$(call cleanup-deps)
 
 demo: $(DEMO_PROGRAMS)
 	echo "Demo programs built."
@@ -130,7 +130,7 @@ clean:
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
-	- rm -f ${DEMO_PROGRAMS}
+	- rm -f $(DEMO_PROGRAMS)
 	- rm -f gas-calc
 	- rm -f species-database/species-database.lua
 	- rm -f LOGFILE*TEST
@@ -157,44 +157,26 @@ clean:
 # Specific targets for individual artefacts.
 
 # Include all possible target requirement files
-# The pattern is `.reqs-[...].mk`
 include $(wildcard *.deps)
-
-# Remove the stdlib from our prereqs, for clarity
-STDLIB_DIR = $(realpath $(dir $(shell which $(DMD))))
-
-# 1. Replace first line such that it has `target: .EXTRA_PREREQS = \`
-#    This allows us to check the dependencies, without including them
-#    in the automatic variables, which clutters our output.
-# 2. Clean up the dependencies for readability (not that these files
-#    should often need inspecting!)
-#    a) Read original dependencies from line 2 onwards
-#    b) Filter out std-lib references
-#    c) Sort
-define clean-deps
-echo '$@: .EXTRA_PREREQS = \' > $@.deps.tmp
--tail -n +2 $@.deps | grep -v '$(STDLIB_DIR)' | sort >> $@.deps.tmp
-mv $@.deps.tmp $@.deps
-endef
 
 # compiler_flags is lazily defined in universal.mk
 gas-calc: gas_calc.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
-	@$(call clean-deps)
+	$(call cleanup-deps)
 
-# TODO: Fold PIC (position independent code) into universal.mk
-%.o: compiler_flags += -c -op $(PIC)
+%.o: target_type = staticLibrary
 %.o: %.d
-	$(DMD) -makedeps=$*.deps $(compiler_flags) $^
-	@$(call clean-deps)
+	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 libgas.so: linker_paths += $(INSTALL_DIR)/lib
-libgas.so: compiler_flags += -op -shared $(PIC)
+libgas.so: target_type = dynamicLibrary
 libgas.so: gas_cwrap.o $(extra_deps)
-	$(DMD) -of=$@ $(compiler_flags) $< $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	cd $(LUA_DIR); make guess local
 
 $(LIBEQC):
 	cd $(EQC_DIR); make
@@ -203,15 +185,14 @@ species-database/species-database.lua :
 	cd species-database; make species-database.lua
 
 # Some demo targets. These are left over from the early days of development.
-
+# Since the target and filename are the same, these recipes are super simple!
 $(DEMO_PROGRAMS): %: %.d $(extra_deps)
 	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
-	@$(call clean-deps)
+	$(call cleanup-deps)
 
 # Individual test targets
-
 two_temp_air_ci_dump: d_versions += two_temp_air_ci_dump
 two_temp_air_ci_dump: two_temperature_air.d $(extra_deps)
-	$(DMD) -makedeps=$@.deps -of=$@ $(compiler_flags) $^
-	@$(call clean-deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
