@@ -82,7 +82,7 @@ $(LIBEQC):
 	cd $(EQC_DIR); make
 
 include ../universal.mk
-include $(wildcard .reqs-*.mk)
+include $(wildcard *.deps)
 
 d_previews := in dip1008
 d_versions := flavour_$(FLAVOUR) \
@@ -106,33 +106,24 @@ endif
 # Non-d files to include
 extra_deps := $(LIBLUA) $(LIBEQC)
 
-puffin_main_with_rev_string.d: puffin_main.d
+%_with_rev_string.d: %.d
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		puffin_main.d > puffin_main_with_rev_string.d
+		$< > $@
 
 puffin: puffin_main_with_rev_string.d $(PUFFIN_FILES) $(extra_deps)
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(PUFFIN_FILES) $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-puffin-prep: puffin_prep.py
-	install -m 755 puffin_prep.py puffin-prep
-
-puffin-post: puffin_post.py
-	install -m 755 puffin_prep.py puffin-prep
-
-lorikeet_main_with_rev_string.d: lorikeet_main.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		lorikeet_main.d > lorikeet_main_with_rev_string.d
+puffin-prep puffin-post: puffin-%: puffin_%.py
+	install -m 755 $< $@
 
 lrkt-run: lorikeet_main_with_rev_string.d $(LORIKEET_FILES) $(extra_deps)
-	$(DMD) -of=$@ -makedeps=.reqs-$@.mk $(compiler_flags) $< $(LORIKEET_FILES) $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-lrkt-prep: lorikeet_prep.py
-	install -m 755 lorikeet_prep.py lrkt-prep
-
-lrkt-post: lorikeet_post.py
-	install -m 755 lorikeet_post.py lrkt-post
+lrkt-prep lrkt-post: lrkt-%: lorikeet_%.py
+	install -m 755 $< $@
 
 prep-gas libgas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
