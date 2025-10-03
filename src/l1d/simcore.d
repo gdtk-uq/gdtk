@@ -2,7 +2,7 @@
 // PA Jacobs
 // 2020-04-08
 //
-module simcore;
+module l1d.simcore;
 
 import std.conv;
 import std.stdio;
@@ -14,20 +14,21 @@ import std.algorithm;
 import std.range;
 import std.parallelism : parallel, defaultPoolThreads;
 
+import l1d.config;
+import l1d.endcondition;
+import l1d.gasslug;
+import l1d.lcell;
+import l1d.misc;
+import l1d.piston;
+import l1d.tube;
+import l1d.valve;
+
 import nm.schedule;
 import util.json_helper;
 import geom;
 import gas;
 import kinetics;
 import gasdyn.gasflow;
-import config;
-import tube;
-import gasslug;
-import lcell;
-import piston;
-import valve;
-import endcondition;
-import misc;
 
 __gshared static GasModel[] gmodels;
 __gshared static uint overall_species_count;

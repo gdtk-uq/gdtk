@@ -1,10 +1,11 @@
 // config.d
 // A place to keep the configuration details.
 
-module config;
+module l1d.config;
 
 import std.conv;
 import std.format;
+
 import nm.schedule;
 
 

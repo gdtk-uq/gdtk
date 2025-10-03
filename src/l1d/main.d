@@ -16,9 +16,9 @@ import std.conv;
 import std.math;
 import std.parallelism: totalCPUs;
 
-import config;
-import simcore;
-import postprocess;
+import l1d.config;
+import l1d.postprocess;
+import l1d.simcore;
 
 int main(string[] args)
 {
