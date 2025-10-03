@@ -2,15 +2,15 @@
 // @author: NNG
 
 
-module misc;
+module slf.misc;
 
 import std.math;
 
-import io;
+import slf.io;
 
 import nm.bbla;
-import ntypes.complex;
 import nm.number;
+import ntypes.complex;
 
 
 /* This function borrowed from zero_rk:

@@ -14,20 +14,20 @@
 
 module slf;
 
-import std.stdio;
-import std.math;
-import std.mathspecial;
-import std.format;
-import std.string;
+import core.sys.posix.signal;
+import core.thread;
 import std.conv;
 import std.datetime.stopwatch : StopWatch;
-import core.thread;
-import core.sys.posix.signal;
+import std.format;
+import std.math;
+import std.mathspecial;
+import std.stdio;
+import std.string;
 
 // slf specific modules
-import io;
-import linalg;
-import misc;
+import slf.io;
+import slf.linalg;
+import slf.misc;
 
 import gas;
 import gas.physical_constants;
