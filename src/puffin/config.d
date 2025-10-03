@@ -4,15 +4,15 @@
 // PA Jacobs
 // 2022-01-21
 //
-module config;
+module puffin.config;
 
 import std.conv;
-import std.stdio;
 import std.format;
 import std.json;
+import std.stdio;
 
-import util.json_helper;
 import nm.schedule;
+import util.json_helper;
 
 
 // To choose a flux calculator.

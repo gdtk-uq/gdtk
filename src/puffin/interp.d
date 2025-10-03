@@ -3,18 +3,19 @@
 // PA Jacobs
 // 2022-02-02
 //
-module interp;
+module puffin.interp;
 
 import std.format;
 import std.math;
 
-import geom;
+import puffin.cell;
+import puffin.config;
+import puffin.face;
+import puffin.flow;
+
 import gas;
 import gasdyn.gasflow;
-import config;
-import flow;
-import face;
-import cell;
+import geom;
 
 
 @nogc

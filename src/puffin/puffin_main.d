@@ -5,19 +5,19 @@
 // 2022-01-21 Start code.
 //
 
+import std.algorithm;
+import std.conv;
+import std.file;
+import std.getopt;
+import std.math;
+import std.parallelism;
+import std.path;
 import std.stdio;
 import std.string;
-import std.file;
-import std.path;
-import std.getopt;
-import std.conv;
-import std.algorithm;
-import std.parallelism;
-import std.math;
 
-import config;
-import marching_calc;
-import streamtube;
+import puffin.config;
+import puffin.marching_calc;
+import puffin.streamtube;
 
 int main(string[] args)
 {

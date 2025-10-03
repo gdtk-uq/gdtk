@@ -3,17 +3,18 @@
 // PA Jacobs
 // 2022-01-22
 //
-module face;
+module puffin.face;
 
 import std.format;
 import std.math;
 
-import geom;
+import puffin.cell;
+import puffin.config;
+import puffin.flow;
+
 import gas;
 import gasdyn.gasflow;
-import config;
-import flow;
-import cell;
+import geom;
 
 
 class Face2D {

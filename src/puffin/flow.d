@@ -3,12 +3,12 @@
 // PA Jacobs
 // 2022-01-22
 //
-module flow;
+module puffin.flow;
 
 import std.format;
 
-import geom;
 import gas;
+import geom;
 
 
 struct FlowState2D {
