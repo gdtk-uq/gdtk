@@ -13,7 +13,7 @@ import std.conv;
 import std.stdio;
 import std.string;
 
-import slf;
+import slf.core;
 
 Flame flame;
 
