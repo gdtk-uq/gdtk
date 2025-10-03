@@ -12,8 +12,7 @@ demo: $(demo_targets)
 	@echo "Demo codes built."
 
 LUA_DIR := ../../extern/lua-5.4.3
-LIBLUAPATH := $(LUA_DIR)/install/lib
-LIBLUA := $(LIBLUAPATH)/liblua.a
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
@@ -46,20 +45,14 @@ $(demo_targets): %: %.d $$(extra_deps)
 	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
-GAS_DIR := ../gas
-KINETICS_DIR := ../kinetics
-
 clean:
-	- rm *.o *.obj
-	- rm *.deps
+	- rm *.o *.obj *.deps
 	- rm $(demo_targets)
-	- cd $(LUA_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make guess local
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)

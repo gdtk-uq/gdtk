@@ -3,7 +3,7 @@
 
 include geom_files.mk
 
-DMD ?= ldmd2
+DMD ?= ldc2
 
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
@@ -56,10 +56,9 @@ clean:
 	- rm -rf test_openFoam
 	- rm **/*_with_rev_string.d
 	- rm $(BUILD_DIR)/lib/openfoam.lua
-	- cd $(LUA_DIR); make clean
+	- $(MAKE) -C $(LUA_DIR) clean
 
-all-clean:
-	- make clean
+all-clean: clean
 	- rm -rf foamMesh
 	- rm -rf grid2pato
 	- rm -rf $(BUILD_DIR)
@@ -127,4 +126,4 @@ $(demo_targets): %: demos/%.d $(extra_deps)
 	$(call cleanup-deps)
 
 $(LIBLUA):
-	cd $(LUA_DIR); make guess local 
+	$(MAKE) -C $(LUA_DIR) guess local

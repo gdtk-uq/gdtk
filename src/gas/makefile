@@ -7,13 +7,6 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 WITH_FPE ?= 1
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 
@@ -25,29 +18,9 @@ DEMO_PROGRAMS := ideal_gas_demo luagas_model_demo
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/lib
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
-include $(EQC_DIR)/eqc_files.mk
-
-NTYPES_DIR := ../ntypes
-UTIL_DIR := ../util
-NM_DIR := ../nm
-KINETICS_DIR := ../kinetics
-GASDYN_DIR := ../gasdyn
-GEOM_DIR := ../geom
-
-ifeq ($(DMD), dmd)
-    PIC := -fPIC
-else ifeq ($(DMD), ldmd2)
-    PIC := -fPIC
-else ifeq ($(DMD), ldc2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -link-defaultlib-debug
-    endif
-    PIC := --relocation-model=pic
-endif
 
 include ../universal.mk
 
@@ -124,8 +97,7 @@ demo: $(DEMO_PROGRAMS)
 	echo "Demo programs built."
 
 clean:
-	- rm -f *.o *.so *.a *.obj *.lib
-	- rm -f *.deps
+	- rm -f *.o *.so *.a *.obj *.lib *.deps
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
@@ -144,14 +116,8 @@ clean:
 	- rm -f ./two-temperature-argon-plus-ideal-air-gas-model.lua
 	- rm -f ./diffusion/*.o ./diffusion/*.obj
 	- rm -f ./thermo/*.o ./thermo/*.obj
-	- rm -f $(GASDYN_DIR)/*.o $(GASDYN_DIR)/*.obj
-	- cd $(LUA_DIR); make clean
-	- cd $(EQC_DIR); make clean
-	- cd $(UTIL_DIR); make clean
-	- cd $(GEOM_DIR); make clean
-	- cd $(GZIP_DIR); make clean
-	- cd $(NM_DIR); make clean
-	- cd $(KINETICS_DIR); make clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 # Specific targets for individual artefacts.
 
@@ -175,10 +141,10 @@ libgas.so: gas_cwrap.o $(extra_deps)
 	$(call cleanup-deps)
 
 $(LIBLUA):
-	cd $(LUA_DIR); make guess local
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 
 species-database/species-database.lua :
 	cd species-database; make species-database.lua

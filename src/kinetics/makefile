@@ -13,20 +13,20 @@ LIBEQC := $(EQC_DIR)/libeqc.a
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 
-build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
-	install -D -m 644 reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/ 
-	install -D -m 755 prep_chem.lua $(BUILD_DIR)/bin/prep-chem
-
-build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
-	install -D -m 644 reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/
-	install -D -m 755 chemkin2eilmer.lua $(BUILD_DIR)/bin/chemkin2eilmer
-
-build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
-	install -D -m 644 mechanism.lua lex_elems.lua -t $(BUILD_DIR)/lib/
-	install -D -m 755 prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics
-
 include ../universal.mk
 include $(wildcard .reqs-*.mk)
+
+build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
+	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/ 
+	$(INSTALL_EXEC) prep_chem.lua $(BUILD_DIR)/bin/prep-chem
+
+build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
+	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/
+	$(INSTALL_EXEC) chemkin2eilmer.lua $(BUILD_DIR)/bin/chemkin2eilmer
+
+build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
+	$(INSTALL_DATA) mechanism.lua lex_elems.lua -t $(BUILD_DIR)/lib/
+	$(INSTALL_EXEC) prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics
 
 d_previews := in dip1008
 d_versions :=
@@ -50,17 +50,16 @@ test_runner: ../util/test_runner.d package.d $(extra_deps)
 	$(call cleanup-deps)
 
 clean:
-	- rm -f *.o *.mod *.obj
-	- rm -f .reqs-*.mk
+	- rm -f *.o *.mod *.obj *.deps
 	- rm -f test_runner
 	- rm -f two_temperature_argon_kinetics_test_results.data
 	- rm -rf $(BUILD_DIR)/*
-	- cd $(LUA_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make guess local
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 

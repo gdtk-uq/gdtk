@@ -17,6 +17,10 @@ else
 	using_linux = true
 endif
 
+INSTALL= install -D -p
+INSTALL_EXEC= $(INSTALL) -m 0755
+INSTALL_DATA= $(INSTALL) -m 0644
+
 # ----------------------------------------------------------------------------
 #                   Validate external options from env vars
 # ----------------------------------------------------------------------------
