@@ -5,11 +5,12 @@
 //
 // Authors: Nick Gibbons, Peter J., Rowan Gollan
 
-module configuration;
+module nenzf1d.configuration;
 
+import std.conv;
 import std.stdio;
 import std.string;
-import std.conv;
+
 import dyaml;
 
 

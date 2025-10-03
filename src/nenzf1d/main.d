@@ -1,16 +1,16 @@
 // main.d: Top level function for directly called nenzf1d,
 // a quasi-one-dimensional calculator for shock tunnel conditions.
 
-module nenzf1d;
-
+import std.file;
+import std.getopt;
+import std.math;
 import std.stdio;
 import std.string;
-import std.getopt;
-import std.file;
-import std.math;
+
 import dyaml;
-import configuration;
-import shock_tube_nozzle;
+
+import nenzf1d.configuration;
+import nenzf1d.shock_tube_nozzle;
 
 int main(string[] args)
 {

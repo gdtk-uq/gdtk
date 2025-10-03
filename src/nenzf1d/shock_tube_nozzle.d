@@ -2,26 +2,29 @@
 //
 // Authors: Peter J., Nick Gibbons, Rowan Gollan.
 //
-module shock_tube_nozzle;
+module nenzf1d.shock_tube_nozzle;
 
-import std.stdio;
 import std.array;
-import std.string;
 import std.conv;
-import std.getopt;
 import std.file;
+import std.getopt;
 import std.math;
+import std.stdio;
+import std.string;
+
 import dyaml;
-import nm.secant;
-import nm.schedule;
-import gas;
+
+import nenzf1d.configuration;
+
 import gas.cea_gas;
-import gas.therm_perf_gas;
 import gas.equilibrium_gas;
+import gas.therm_perf_gas;
 import gas.therm_perf_gas_equil;
-import kinetics;
+import gas;
 import gasdyn.gasflow;
-import configuration;
+import kinetics;
+import nm.schedule;
+import nm.secant;
 
 // Storage for the calculated gas state at the end of the facility nozzle.
 struct Result{
