@@ -6,15 +6,16 @@
  location: Seoul, South Korea
 */
 
-import std.stdio;
-import std.string;
-import std.file;
 import std.conv;
 import std.exception;
-import config;
-import flowsolve;
-import optimizer;
-import block;
+import std.file;
+import std.stdio;
+import std.string;
+
+import quodas.block;
+import quodas.config;
+import quodas.flow_solver;
+import quodas.optimizer;
 
 void main() {
     Params params;
