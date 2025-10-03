@@ -3,7 +3,7 @@
 // PA Jacobs
 // 2020-08-14
 
-module valve;
+module l1d.valve;
 
 import std.conv;
 import std.stdio;
@@ -12,9 +12,10 @@ import std.string;
 import std.json;
 import std.format;
 
+import l1d.config;
+
 import nm.schedule;
 import util.json_helper;
-import config;
 
 class Valve {
 public:

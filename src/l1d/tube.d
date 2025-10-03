@@ -3,7 +3,7 @@
 // 2020-04-08 Static tube definition.
 // 2021-04-16 Matt McGilvray's heat-transfer-augmentation factor.
 //
-module tube;
+module l1d.tube;
 
 import std.stdio;
 import std.string;
@@ -12,8 +12,9 @@ import std.conv;
 import std.math;
 import std.algorithm;
 
+import l1d.config;
+
 import geom;
-import config;
 
 class Tube {
 public:

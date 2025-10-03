@@ -6,18 +6,19 @@
 // PA Jacobs
 // 2020-04-09
 //
-module lcell;
+module l1d.lcell;
 
 import std.stdio;
 import std.math;
 import std.format;
 import std.algorithm;
 
-import geom;
+import l1d.config;
+
 import gas;
-import kinetics;
 import gasdyn.gasflow;
-import config;
+import geom;
+import kinetics;
 
 
 class LFace {

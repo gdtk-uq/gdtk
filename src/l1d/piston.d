@@ -3,7 +3,7 @@
 // 2020-04-08
 // 2025-03-19 : allow variable piston mass.
 //
-module piston;
+module l1d.piston;
 
 import std.conv;
 import std.stdio;
@@ -14,14 +14,15 @@ import std.format;
 import std.algorithm;
 import std.math;
 
-import util.json_helper;
-import geom;
+import l1d.config;
+import l1d.endcondition;
+import l1d.lcell;
+import l1d.misc;
+
 import gas;
 import gasdyn.gasflow;
-import config;
-import endcondition;
-import lcell;
-import misc;
+import geom;
+import util.json_helper;
 
 
 class Piston {

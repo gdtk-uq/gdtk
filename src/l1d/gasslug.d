@@ -5,7 +5,7 @@
 // PA Jacobs
 // 2020-04-08
 //
-module gasslug;
+module l1d.gasslug;
 
 import std.conv;
 import std.stdio;
@@ -16,18 +16,19 @@ import std.range;
 import std.math;
 import std.algorithm;
 
-import util.json_helper;
-import geom;
+import l1d.config;
+import l1d.endcondition;
+import l1d.lcell;
+import l1d.misc;
+import l1d.piston;
+import l1d.simcore; // has the core data arrays
+import l1d.valve;
+
 import gas;
-import kinetics;
 import gasdyn.gasflow;
-import config;
-import lcell;
-import piston;
-import valve;
-import endcondition;
-import simcore; // has the core data arrays
-import misc;
+import geom;
+import kinetics;
+import util.json_helper;
 
 class GasSlug {
 public:
@@ -514,7 +515,7 @@ public:
         // gas slugs running through a partially-closed valve.
         // Once a valve is fully open, this restriction no longer matters.
         //
-        foreach (valve; simcore.valves) {
+        foreach (valve; l1d.simcore.valves) {
             // Note that we need the current value of time
             // in order to evaluate fopen for the valve.
             double fopen = valve.fopen(t);

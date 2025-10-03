@@ -2,8 +2,7 @@
 // PA Jacobs
 // 2020-04-08
 //
-module endcondition;
-
+module l1d.endcondition;
 
 import std.conv;
 import std.stdio;
@@ -14,19 +13,20 @@ import std.format;
 import std.algorithm;
 import std.math;
 
-import util.json_helper;
-import geom;
+import l1d.config;
+import l1d.gasslug;
+import l1d.lcell;
+import l1d.misc;
+import l1d.piston;
+import l1d.simcore;
+import l1d.tube;
+
 import gas;
 import gasdyn.gasflow;
-import config;
-import tube;
-import gasslug;
-import lcell;
-import piston;
-import simcore;
-import misc;
+import geom;
+import util.json_helper;
 
-enum End { L, R };
+enum End { L, R }
 
 class EndCondition {
 public:

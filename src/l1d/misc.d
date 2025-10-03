@@ -3,7 +3,7 @@
 //
 // PAJ, 2020-04-09
 //
-module misc;
+module l1d.misc;
 
 import std.conv;
 import std.stdio;
@@ -11,7 +11,7 @@ import std.string;
 import std.format;
 import std.algorithm;
 
-import config;
+import l1d.config;
 
 void skip_to_data_at_tindx(File fp, int tindx=0)
 {
