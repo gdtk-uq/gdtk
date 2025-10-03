@@ -1,5 +1,5 @@
 /*
-    slf.d: a steady laminar flamelet calculator by NNG.
+    slf: a steady laminar flamelet calculator by NNG.
 
     References:
       "A Consistent Flamelet Formulation for Non-Premixed Combustion Considering
@@ -12,7 +12,7 @@
        LLNL-JRNL-807545, March 23, 2020
 */
 
-module slf;
+module slf.core;
 
 import core.sys.posix.signal;
 import core.thread;
@@ -526,21 +526,3 @@ double[] get_derivatives_from_adjoint(number[] U, number[] U2nd, number[] R, num
     pm.p.im = 0.0;
     return dUdp;
 }
-
-int main(string[] args)
-{
-    int exitFlag = 0;
-    string name = "slf";
-    if (args.length>1) name = args[1];
-    name = name.chomp(".yaml");
-
-    auto flame = new Flame(name);
-    flame.set_initial_condition();
-
-    exitFlag = flame.run();
-
-    flame.save_solution();
-    flame.save_log();
-
-    return exitFlag;
-} // end main()

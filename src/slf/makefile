@@ -182,14 +182,14 @@ $(LIBGASF):
 $(LIBEQC):
 	cd $(EQC_DIR); make
 
-slf: slf.d $(SLF_FILES) \
+slf: main.d core.d $(SLF_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES) \
 	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS) $(OF)slf \
 		$(DVERSION)complex_numbers \
-		slf.d \
+		main.d core.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
@@ -197,14 +197,14 @@ slf: slf.d $(SLF_FILES) \
 		$(LIBEQC) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-libslf.so: cwrap.d slf.d $(SLF_FILES) \
+libslf.so: cwrap.d core.d $(SLF_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES) \
 	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
 	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op \
 		$(DVERSION)complex_numbers \
-		slf.d \
+		core.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
@@ -212,7 +212,7 @@ libslf.so: cwrap.d slf.d $(SLF_FILES) \
 		$(LIBEQC) $(LIBGASF) $(LIBLUA)
 	$(DMD) $(OF)libslf.so cwrap.o $(PIC) $(DFLAGS) -op -shared \
 		$(DVERSION)complex_numbers \
-		slf.d \
+		core.d \
 		$(SLF_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
