@@ -3,31 +3,31 @@
 // PA Jacobs
 // 2022-01-22
 //
-module streamtube;
+module puffin.streamtube;
 
+import std.algorithm;
 import std.conv;
+import std.format;
+import std.json;
+import std.math;
+import std.range;
 import std.stdio;
 import std.string;
-import std.json;
-import std.format;
-import std.range;
-import std.math;
-import std.algorithm;
 
+import puffin.cell;
+import puffin.config;
+import puffin.face;
+import puffin.flow;
+import puffin.flux;
+
+import gas;
+import geom;
+import kinetics;
 import nm.schedule;
 import util.json_helper;
-import geom;
-import gas;
-import kinetics;
-import config;
-import flow;
-import cell;
-import face;
-import flux;
 
 
-enum BCCode {wall=0, exchange=1}; // To decide what to do at the lower and upper boundary.
-
+enum BCCode {wall=0, exchange=1} // To decide what to do at the lower and upper boundary.
 
 class StreamTube {
 public:

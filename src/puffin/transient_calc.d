@@ -3,28 +3,29 @@
 // PA Jacobs
 // 2022-12-12: Adapt from Puffin and Chicken codes.
 //
-module transient_calc;
+module puffin.transient_calc;
 
+import core.stdc.math: HUGE_VAL;
+import std.algorithm;
 import std.conv;
+import std.datetime;
+import std.file;
+import std.format;
+import std.json;
+import std.math;
+import std.parallelism;
+import std.range;
 import std.stdio;
 import std.string;
-import std.json;
-import std.file;
-import std.datetime;
-import std.format;
-import std.range;
-import std.math;
-import std.algorithm;
-import core.stdc.math: HUGE_VAL;
-import std.parallelism;
 
-import util.json_helper;
-import geom;
+import puffin.config;
+import puffin.flow;
+import puffin.fluidblock;
+
 import gas;
+import geom;
 import kinetics;
-import config;
-import flow;
-import fluidblock;
+import util.json_helper;
 
 // We use __gshared so that several threads may access
 // the following array concurrently.

@@ -3,30 +3,32 @@
 // PA Jacobs
 // 2022-12-12: Adapt from the Puffin and Chicken codes.
 //
-module fluidblock;
+module puffin.fluidblock;
 
+import core.stdc.math: HUGE_VAL;
+import std.algorithm;
 import std.conv;
+import std.file;
+import std.format;
+import std.json;
+import std.math;
+import std.range;
 import std.stdio;
 import std.string;
-import std.file;
-import std.json;
-import std.format;
-import std.range;
-import std.math;
-import std.algorithm;
-import core.stdc.math: HUGE_VAL;
+
 import gzip;
 
+import puffin.cell;
+import puffin.config;
+import puffin.face;
+import puffin.flow;
+import puffin.flux;
+
+import gas;
+import geom;
+import kinetics;
 import nm.schedule;
 import util.json_helper;
-import geom;
-import gas;
-import kinetics;
-import config;
-import flow;
-import cell;
-import face;
-import flux;
 
 enum BCCode {wall_with_slip=0, exchange=1, inflow=2, outflow=3};
 string[] BCCodeNames = ["wall_with_slip", "exchange", "inflow", "outflow"];

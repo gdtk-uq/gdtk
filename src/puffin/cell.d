@@ -3,22 +3,23 @@
 // PA Jacobs
 // 2022-01-22
 //
-module cell;
+module puffin.cell;
 
+import std.algorithm;
+import std.array;
+import std.conv;
 import std.format;
 import std.math;
-import std.algorithm;
-import std.conv;
-import std.array;
 
-import geom;
+import puffin.config;
+import puffin.face;
+import puffin.flow;
+import puffin.flux;
+
 import gas;
-import kinetics;
 import gasdyn.gasflow;
-import config;
-import flow;
-import face;
-import flux;
+import geom;
+import kinetics;
 
 
 class Cell2D {

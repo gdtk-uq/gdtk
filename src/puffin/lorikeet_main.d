@@ -5,19 +5,19 @@
 // 2022-12-12 Adapt the Puffin and Chicken codes into Lorikeet.
 //
 
+import std.algorithm;
+import std.conv;
+import std.file;
+import std.getopt;
+import std.math;
+import std.parallelism;
+import std.path;
 import std.stdio;
 import std.string;
-import std.file;
-import std.path;
-import std.getopt;
-import std.conv;
-import std.algorithm;
-import std.parallelism;
-import std.math;
 
-import config;
-import transient_calc;
-import fluidblock;
+import puffin.config;
+import puffin.fluidblock;
+import puffin.transient_calc;
 
 int main(string[] args)
 {
