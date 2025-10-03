@@ -134,7 +134,6 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.
 
 clean:
 	- rm *.o
-	- rm *-reqs.mk
 	- rm *.deps
 	- rm -rf $(BUILD_DIR)/*
 	- rm $(PROGRAMS)
@@ -145,27 +144,27 @@ clean:
 	- rm -f gdtk-module
 	- rm -f lmr-complete.sh
 	- rm -f lmr-check-jacobian lmrZ-check-jacobian
-	- cd $(OPENMPI_DIR); make clean
-	- cd $(MPICH_DIR); make clean
-	- cd $(LUA_DIR); make clean
-	- cd $(GEOM_DIR); make clean
-	- cd $(GZIP_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm -f libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(GRID_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- $(MAKE) -C $(OPENMPI_DIR) clean
+	- $(MAKE) -C $(MPICH_DIR) clean
+	- $(MAKE) -C $(GEOM_DIR) clean
+	- $(MAKE) -C $(GZIP_DIR) clean
+	- $(MAKE) -C $(GAS_DIR) clean
+	- $(MAKE) -C $(KINETICS_DIR) clean
+	- $(MAKE) -C $(GRID_DIR) clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 
 $(MPI_FILES):
-	cd $(MPI_DIR); make
+	$(MAKE) -C $(MPI_DIR)
 
 # Makefiles don't like multiline strings. Using define and nl is
 # the cleanest way to make a multiline variable.

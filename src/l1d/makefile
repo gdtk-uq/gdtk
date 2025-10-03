@@ -10,9 +10,6 @@ WITH_FPE ?= 1
 
 PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
-L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
-	piston.d valve.d endcondition.d misc.d postprocess.d
-
 NML_DIR := ../lib
 include $(NML_DIR)/nml_files.mk
 
@@ -57,8 +54,7 @@ install: $(PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
-	- rm *.o
-	- rm .reqs-*.mk
+	- rm *.o *.deps
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
 	- rm main_with_rev_string.d
@@ -92,24 +88,24 @@ main_with_rev_string.d: main.d
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
 
-l1d4: main_with_rev_string.d $(L1D_FILES) $(extra_deps)
+l1d4: main_with_rev_string.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
 l1d4-prep: l1d4-prep.py
-	install -m 755 l1d4-prep.py l1d4-prep
+	$(INSTALL_EXEC) l1d4-prep.py l1d4-prep
 
 l1d4-xt-viewer: xt-viewer.py
-	install -m 755 xt-viewer.py l1d4-xt-viewer
+	$(INSTALL_EXEC) xt-viewer.py l1d4-xt-viewer
 
 prep-gas libgas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
+	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
 
 prep-chem prep-kinetics chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-$@
+	$(MAKE) -C $(KINETICS_DIR) BUILD_DIR=$(BUILD_DIR) build-$@
 
 $(LIBLUA):
-	cd $(LUA_DIR); make guess local
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)

@@ -146,10 +146,11 @@ STDLIB_DIR = $(realpath $(dir $(shell which $(DMD))))
 #    should often need inspecting!)
 #    a) Read original dependencies from line 2 onwards
 #    b) Filter out std-lib references
-#    c) Sort
+#    c) Ensure every line ends with `\` (super ugly sed)
+#    d) Sort lines for readability
 define cleanup-deps
 @echo "Cleaning up generated dependency file"
 @echo '$@: .EXTRA_PREREQS = \' > $@.deps.tmp
-@tail -n +2 $@.deps | grep -v '$(STDLIB_DIR)' | sort >> $@.deps.tmp
+@tail -n +2 $@.deps | grep -v '$(STDLIB_DIR)' | sed '/\\$$/!s/$$/ \\/' | sort  >> $@.deps.tmp || true
 @mv $@.deps.tmp $@.deps
 endef

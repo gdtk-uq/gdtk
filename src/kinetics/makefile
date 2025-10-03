@@ -14,7 +14,7 @@ LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 
 include ../universal.mk
-include $(wildcard .reqs-*.mk)
+include $(wildcard *.deps)
 
 build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/ 

@@ -10,8 +10,6 @@ WITH_FPE ?= 1
 
 PROGRAMS := nenzf1d
 
-NENZF1D_FILES := configuration.d shock_tube_nozzle.d
-
 NML_DIR := ../lib
 include $(NML_DIR)/nml_files.mk
 
@@ -40,7 +38,7 @@ else
     REVISION_DATE := unknown
 endif
 
-default: $(PROGRAMS) libnenzf1d.so $(NENZF1D_FILES)
+default: $(PROGRAMS) libnenzf1d.so
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "nenzf1d code built."
 
@@ -60,15 +58,14 @@ install: $(PROGRAMS) libnenzf1d.so prep-gas prep-chem chemkin2eilmer prep-kineti
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
-	- rm *.o *.so
-	- rm *.deps
+	- rm *.o *.so *.deps
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
-	- rm main_with_rev_string.d
-	- cd $(LUA_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- rm *_with_rev_string.d
+	- $(MAKE) -C $(GAS_DIR) clean
+	- $(MAKE) -C $(KINETICS_DIR) clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 include ../universal.mk
 include $(wildcard *.deps)
@@ -99,11 +96,11 @@ extra_deps := $(LIBLUA) $(LIBEQC)
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$< > $@
 
-nenzf1d: main_with_rev_string.d $(NENZF1D_FILES) $(extra_deps)
+nenzf1d: main_with_rev_string.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 
 %.o: target_type = staticLibrary
-%.o: %.d $(NENZF1D_FILES)
+%.o: %.d
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
@@ -116,13 +113,13 @@ libnenzf1d.so: cwrap.o $(extra_deps)
 	$(call cleanup-deps)
 
 prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
+	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
 
 prep-chem prep-kinetics chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-$@
+	$(MAKE) -C $(KINETICS_DIR) BUILD_DIR=$(BUILD_DIR) build-$@
 
 $(LIBLUA):
-	cd $(LUA_DIR); make guess local
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)

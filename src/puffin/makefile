@@ -8,21 +8,10 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 WITH_FPE ?= 1
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
 
-# These can be removed if the module names are prefixed with `puffin`
-PUFFIN_FILES := config.d marching_calc.d streamtube.d \
-	cell.d face.d flow.d flux.d interp.d
-
-LORIKEET_FILES := config.d transient_calc.d fluidblock.d \
-	cell.d face.d flow.d flux.d interp.d
+NML_DIR := ../lib
+include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
 KINETICS_DIR := ../kinetics
@@ -65,21 +54,20 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
-	- rm *.o
-	- rm .reqs-*.mk
+	- rm *.o *.deps
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
-	- rm puffin_main_with_rev_string.d lorikeet_main_with_rev_string.d
-	- cd $(LUA_DIR); make clean;
-	- cd $(GAS_DIR); make clean; rm libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- rm *_main_with_rev_string.d
+	- $(MAKE) -C $(GAS_DIR) clean
+	- $(MAKE) -C $(KINETICS_DIR) clean
+	- $(MAKE) -C $(LUA_DIR) clean;
+	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 
 include ../universal.mk
 include $(wildcard *.deps)
@@ -111,19 +99,19 @@ extra_deps := $(LIBLUA) $(LIBEQC)
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		$< > $@
 
-puffin: puffin_main_with_rev_string.d $(PUFFIN_FILES) $(extra_deps)
+puffin: puffin_main_with_rev_string.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
 puffin-prep puffin-post: puffin-%: puffin_%.py
-	install -m 755 $< $@
+	$(INSTALL_EXEC) $< $@
 
-lrkt-run: lorikeet_main_with_rev_string.d $(LORIKEET_FILES) $(extra_deps)
+lrkt-run: lorikeet_main_with_rev_string.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
 lrkt-prep lrkt-post: lrkt-%: lorikeet_%.py
-	install -m 755 $< $@
+	$(INSTALL_EXEC) $< $@
 
 prep-gas libgas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
