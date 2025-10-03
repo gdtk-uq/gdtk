@@ -1,10 +1,11 @@
 // config.d
-module config;
-import std.json;
-import std.conv;
-import std.stdio;
-import std.file;
+module quodas.config;
+
 import core.stdc.stdlib : exit;
+import std.conv;
+import std.file;
+import std.json;
+import std.stdio;
 
 // define some global values
 immutable size_t nprimitive = 3; // number of primitive flow variables

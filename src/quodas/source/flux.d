@@ -1,8 +1,11 @@
 // flux.d
-module flux;
+module quodas.flux;
+
 import std.conv;
 import std.math;
-import finite_volume;
+
+import quodas.finite_volume;
+
 import nm.number;
 import ntypes.complex;
 

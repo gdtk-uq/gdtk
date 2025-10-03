@@ -1,9 +1,11 @@
 // flow_solver.d
-module flowsolve;
-import ntypes.complex;
+module quodas.flow_solver;
+
+import quodas.block;
+import quodas.config;
+
 import nm.number;
-import config;
-import block;
+import ntypes.complex;
 
 class Solver {
 private:    

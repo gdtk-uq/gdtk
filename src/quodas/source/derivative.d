@@ -1,13 +1,16 @@
 // derivative.d
-module derivative;
-import std.stdio;
+module quodas.derivative;
+
 import std.conv;
 import std.math;
-import config;
+import std.stdio;
+
+import quodas.block;
+import quodas.config;
+import quodas.finite_volume;
+import quodas.linalg;
+
 import nm.number;
-import block;
-import finite_volume;
-import linalg;
 
 class Derivative {
 public:

@@ -1,12 +1,13 @@
 // matrix.d
-module linalg;
+module quodas.linalg;
 
-import std.stdio;
-import std.math;
 import std.conv;
 import std.file;
 import std.format;
+import std.math;
+import std.stdio;
 import std.string;
+
 import nm.number;
 
 void prep_matrix(ref double[][] a, size_t ncols, size_t nrows) {

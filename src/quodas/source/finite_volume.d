@@ -1,8 +1,10 @@
 // finite_volume.d
-module finite_volume;
-import std.stdio;
+module quodas.finite_volume;
+
 import std.conv;
 import std.math;
+import std.stdio;
+
 import nm.number;
 import ntypes.complex;
 

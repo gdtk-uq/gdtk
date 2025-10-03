@@ -1,18 +1,22 @@
 // block.d
-module block;
-import std.stdio;
+module quodas.block;
+
 import std.conv;
-import std.math;
 import std.file;
 import std.format;
+import std.math;
+import std.stdio;
 import std.string;
-import config;
-import finite_volume;
+
+import quodas.config;
+import quodas.derivative;
+import quodas.finite_volume;
+import quodas.flux;
+import quodas.linalg;
+
 import nm.number;
 import ntypes.complex;
-import derivative;
-import flux;
-import linalg;
+
 
 class Block {
 public:

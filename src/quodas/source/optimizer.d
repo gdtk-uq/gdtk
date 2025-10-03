@@ -1,16 +1,19 @@
 // optimizer.d
-module optimizer;
-import std.stdio;
+module quodas.optimizer;
+
 import std.conv;
 import std.math;
-import config;
+import std.stdio;
+
+import quodas.block;
+import quodas.config;
+import quodas.derivative;
+import quodas.finite_volume;
+import quodas.flow_solver;
+import quodas.linalg;
+
 import nm.number;
 import ntypes.complex;
-import flowsolve;
-import finite_volume;
-import block;
-import derivative;
-import linalg;
 
 class Optimizer {
 public:
