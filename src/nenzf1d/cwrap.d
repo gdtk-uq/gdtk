@@ -9,11 +9,12 @@ Notes:
 
 import core.runtime;
 import core.stdc.string;
-import std.string;
-import std.stdio;
 import std.conv;
-import configuration;
-import shock_tube_nozzle;
+import std.stdio;
+import std.string;
+
+import nenzf1d.configuration;
+import nenzf1d.shock_tube_nozzle;
 
 Config config;
 Result result;
@@ -165,7 +166,7 @@ extern (C) PlainResult run(int verbosityLevel, PlainConfig cfg)
 
     PlainResult rst;
     try{
-        result = shock_tube_nozzle.analyse(verbosityLevel, config);
+        result = nenzf1d.shock_tube_nozzle.analyse(verbosityLevel, config);
         rst = d_result_to_c(result);
     }
     catch(Exception e) {
