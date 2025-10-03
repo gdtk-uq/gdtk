@@ -1,18 +1,20 @@
 // io.d: reading and writing and storage for slf
 // @author: NNG
 
-module io;
+module slf.io;
 
-import std.stdio;
-import std.format;
-import std.string;
 import std.conv;
+import std.format;
+import std.stdio;
+import std.string;
 
 import dyaml;
+
+import slf.misc;
+
 import gas;
-import ntypes.complex;
 import nm.number;
-import misc;
+import ntypes.complex;
 
 struct Config {
     string gas_file_name;

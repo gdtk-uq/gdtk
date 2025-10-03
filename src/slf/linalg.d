@@ -1,18 +1,18 @@
 // Linear algebra for solving block sparse tridiagonal systems
 // for slf, @author: NNG
 
-module linalg;
+module slf.linalg;
 
-import std.stdio;
-import std.format;
-import std.string;
 import std.conv;
+import std.format;
+import std.stdio;
+import std.string;
 
-import io;
+import slf.io;
 
 import nm.bbla;
-import ntypes.complex;
 import nm.number;
+import ntypes.complex;
 
 void multiply_tridigonal_block_matrix(ref const Parameters pm, Matrix!(double)[3][] LHS, Matrix!(double)[] U, Matrix!(double)[] R){
     size_t neq = pm.neq;

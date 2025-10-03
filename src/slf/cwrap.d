@@ -9,9 +9,9 @@ Notes:
 
 import core.runtime;
 import core.stdc.string;
-import std.string;
-import std.stdio;
 import std.conv;
+import std.stdio;
+import std.string;
 
 import slf;
 
