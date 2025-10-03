@@ -104,28 +104,24 @@ void writeCtrlPtsAsVtkXml(BezierPatch bPatch, string fileName)
     f.close();
 }
 
-version(bezierpatch_test) {
-    import util.msg_service;
-    int main() {
-        double L = 2.0;
-        double H = 1.0;
-        int n = 3;
-        int m = 4;
-        double dx = L/n;
-        double dy = H/m;
-        Vector3[][] Q;
-        Q.length = n + 1;
-        foreach (i; 0 .. n + 1) {
-            Q[i].length = m + 1;
-            foreach (j; 0 .. m + 1) {
-                Q[i][j] = Vector3(i*dx, j*dy, 0.0);
-            }
+unittest {
+    double L = 2.0;
+    double H = 1.0;
+    int n = 3;
+    int m = 4;
+    double dx = L / n;
+    double dy = H / m;
+    Vector3[][] Q;
+    Q.length = n + 1;
+    foreach (i; 0 .. n + 1) {
+        Q[i].length = m + 1;
+        foreach (j; 0 .. m + 1) {
+            Q[i][j] = Vector3(i * dx, j * dy, 0.0);
         }
-        auto bezPatch = new BezierPatch(Q, n, m);
-        auto p = bezPatch(0.2, 0.25);
-        assert(approxEqualVectors(p, Vector3(0.4, 0.25, 0.0)), failedUnitTest());
-        p = bezPatch(0.9, 0.1);
-        assert(approxEqualVectors(p, Vector3(1.8, 0.1, 0.0)), failedUnitTest());
-        return 0;
     }
+    auto bezPatch = new BezierPatch(Q, n, m);
+    auto p = bezPatch(0.2, 0.25);
+    assert(approxEqualVectors(p, Vector3(0.4, 0.25, 0.0)));
+    p = bezPatch(0.9, 0.1);
+    assert(approxEqualVectors(p, Vector3(1.8, 0.1, 0.0)));
 }

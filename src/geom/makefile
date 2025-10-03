@@ -20,37 +20,6 @@ else
     REVISION_STRING := unknown
 endif
 
-TEST_PROGRAMS := vector3_test vector3_complex_test \
-	projection_test projection_complex_test \
-	properties_test properties_complex_test \
-	line_test line_complex_test \
-	arc_test arc_complex_test \
-	bezier_test bezier_complex_test \
-	helix_test helix_complex_test \
-	nurbs_utils_test nurbs_test \
-	polyline_test polyline_complex_test \
-	xspline_test \
-	xsplinelsq_test \
-	svgpath_test \
-	coonspatch_test coonspatch_complex_test \
-	aopatch_test aopatch_complex_test \
-	gmopatch_test gmopatch_complex_test \
-	bezierpatch_test bezierpatch_complex_test \
-	controlpointpatch_test \
-	nurbssurface_test \
-	tfivolume_test tfivolume_complex_test \
-	sweptsurfacevolume_test sweptsurfacevolume_complex_test \
-	wedgevolume_test wedgevolume_complex_test \
-	slabvolume_test slabvolume_complex_test \
-	nurbsvolume_test \
-	twosurfacevolume_test twosurfacevolume_complex_test \
-	sgrid_test sgrid_complex_test \
-	usgrid_test usgrid_complex_test \
-	univariatefunctions_test svg_test \
-	beziertrianglepatch_test \
-	spherepatch_test spherepatch_complex_test \
-	cubepatch_test cubepatch_complex_test
-
 DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
@@ -68,19 +37,10 @@ GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
 
 UTIL_DIR := ../util
-UTIL_FILES := $(UTIL_DIR)/lua.d \
-	$(UTIL_DIR)/lua_service.d \
-	$(UTIL_DIR)/msg_service.d
+include $(UTIL_DIR)/util_files.mk
 
 NM_DIR := ../nm
-NM_FILES := $(NM_DIR)/ridder.d \
-	$(NM_DIR)/bbla.d \
-	$(NM_DIR)/brent.d \
-	$(NM_DIR)/linesearch.d \
-	$(NM_DIR)/spline.d \
-	$(NM_DIR)/splinelsq.d \
-	$(NM_DIR)/nelmin.d \
-	$(NM_DIR)/number.d
+include $(NM_DIR)/nm_files.mk
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
@@ -107,14 +67,34 @@ endif
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
 #
-# The default target is test, because that is most likely your interest
-# if you are invoking this makefile from within the gas models directory.
+# The default target is test-all, because that is most likely your interest
+# if you are invoking this makefile from within the geom models directory.
 # ----------------------------------------------------------------------
+
+.PHONY: test-all test-real test-complex
+test-all: test-real test-complex
+
+test-real: test_runner_real
+	@echo "Running real tests"
+	- exec ./test_runner_real --module geom
+
+test-complex: test_runner_complex
+	@echo "Running complex tests"
+	- exec ./test_runner_complex --module geom
+
+# We need to pull the test_runner.d to the front to ensure no linker errors
+test_runner_real: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
+	@echo "Compiling test runner..."
+	$(DMD) -of$@ -debug -g -w -dip1008 -unittest $(DLINKFLAGS) \
+		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+
+test_runner_complex: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
+	@echo "Compiling test runner with complex numbers..."
+	$(DMD) -of$@ -debug -g -w -dip1008 -unittest -version=complex_numbers $(DLINKFLAGS) \
+		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+
 play:
 	@echo "Found $(LIBPLOT)"
-
-test: $(TEST_PROGRAMS)
-	tclsh geom-package-test.tcl
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
@@ -138,7 +118,7 @@ clean:
 	- rm -f *.o elements/*.o gpath/*.o grid/*.o luawrap/*.o misc/*.o surface/*.o volume/*.o
 	- rm -f *.obj elements/*.obj gpath/*.obj grid/*.obj luawrap/*.obj misc/*.obj surface/*.obj volume/*.obj
 	- rm -f $(DEMO_PROGRAMS)
-	- rm -f $(TEST_PROGRAMS)
+	- rm -f test_runner_real test_runner_complex
 	- rm -f gpgrid*.vtk test*.vtk test*.stl test*.gz test*.svg test*.su2 test*.bin
 	- rm -rf test_openFoam
 	- rm $(BUILD_DIR)/lib/openfoam.lua
@@ -166,220 +146,6 @@ grid2pato: $(OPENFOAM_DIR)/grid2pato.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES)
 
 	$(DMD) $(DFLAGS_LUA) $(OPENFOAM_DIR)/grid2pato_with_rev_string.d $(OF)grid2pato \
 	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
-
-# The test artefacts.
-
-vector3_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-vector3_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=vector3_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-projection_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-projection_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=projection_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-properties_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-properties_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=properties_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-line_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-line_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=line_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-arc_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-arc_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=arc_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-bezier_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-bezier_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=bezier_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-helix_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-helix_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=helix_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-nurbs_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-polyline_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-polyline_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=polyline_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-xspline_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-xsplinelsq_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-svgpath_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-coonspatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-coonspatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=coonspatch_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-aopatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-aopatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=aopatch_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-gmopatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-gmopatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=gmopatch_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-bezierpatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-bezierpatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=bezierpatch_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-controlpointpatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-nurbssurface_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-tfivolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-tfivolume_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=tfivolume_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-sweptsurfacevolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-sweptsurfacevolume_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=sweptsurfacevolume_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-twosurfacevolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-twosurfacevolume_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=twosurfacevolume_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-wedgevolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-wedgevolume_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=wedgevolume_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-slabvolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-slabvolume_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=slabvolume_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-nurbsvolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-sgrid_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-sgrid_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=sgrid_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-usgrid_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-usgrid_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=usgrid_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-univariatefunctions_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-svg_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-beziertrianglepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-spherepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-spherepatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=spherepatch_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-cubepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-cubepatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=cubepatch_test -version=complex_numbers \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
-
-nurbs_utils_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
-		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 
 # The original demo artefacts.

@@ -394,47 +394,49 @@ private:
 } // end class PseudoSpeciesGas
 
 
-version(pseudo_species_gas_test) {
-    int main()
-    {
-        import util.msg_service;
-        import std.math : FloatingPointControl;
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+unittest {
+    import std.file;
+    import std.math : FloatingPointControl;
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/pseudo-species-49-components.lua");
-        auto gm = new PseudoSpeciesGas(L);
-        // writeln("gm.n_species = ", gm.n_species);
-        assert(gm.n_species == 49, failedUnitTest());
-        // writeln("gm._n_parents = ", gm._n_parents);
-        assert(gm._n_parents == 2, failedUnitTest());
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        auto gd = GasState(gm);
-        // writeln("gd.massf.length = ", gd.massf.length);
-        assert(gd.massf.length == 49, failedUnitTest());
-        gd.massf[] = 0.0;
-        gd.massf[1] = 0.20908519640652;
-        gd.massf[2] = 0.12949211438053;
-        gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
-        gd.p = 101325.0;
-        gd.T = 7000.0;
-        // writeln(gd.massf);
-        // writeln(gm.Cv(gd));
-        assert(isClose(gm.Cv(gd), 840.445, 1.0e-3), failedUnitTest());
-        gm.update_thermo_from_pT(gd);
-        // writeln("gd.u = ", gd.u);
-        assert(isClose(gd.u, -5.36274e+06, 1.0e-3), failedUnitTest());
+    // Look for lua files in /sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        gm.update_trans_coeffs(gd);
-        // writeln("gd.mu = ", gd.mu);
-        // writeln("gd.k = ", gd.k);
-        assert(isClose(gd.mu, 0.000187585, 1.0e-3), failedUnitTest());
-        assert(isClose(gd.k, 0.403616, 1.0e-3), failedUnitTest());
+    auto L = init_lua_State();
+    doLuaFile(L, "pseudo-species-49-components.lua");
+    auto gm = new PseudoSpeciesGas(L);
+    writeln("gm.n_species = ", gm.n_species);
+    assert(gm.n_species == 49);
+    writeln("gm._n_parents = ", gm._n_parents);
+    assert(gm._n_parents == 2);
 
-        return 0;
-    } // end main()
+    auto gd = GasState(gm);
+    writeln("gd.massf.length = ", gd.massf.length);
+    assert(gd.massf.length == 49);
+    gd.massf[] = 0.0;
+    gd.massf[1] = 0.20908519640652;
+    gd.massf[2] = 0.12949211438053;
+    gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
+    gd.p = 101_325.0;
+    gd.T = 7000.0;
+    writeln(gd.massf);
+    writeln(gm.Cv(gd));
+    assert(isClose(gm.Cv(gd), 840.445, 1.0e-3));
+    gm.update_thermo_from_pT(gd);
+    writeln("gd.u = ", gd.u);
+    assert(isClose(gd.u, -5.36274e+06, 1.0e-3));
+
+    gm.update_trans_coeffs(gd);
+    writeln("gd.mu = ", gd.mu);
+    writeln("gd.k = ", gd.k);
+    assert(isClose(gd.mu, 0.000187585, 1.0e-3));
+    assert(isClose(gd.k, 0.403616, 1.0e-3));
+
 }

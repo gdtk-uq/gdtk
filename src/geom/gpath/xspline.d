@@ -80,33 +80,38 @@ public:
 
 } // end class XSpline
 
-version(xspline_test) {
-    import util.msg_service;
-    import std.stdio: writefln;
-    int main() {
-        double runge(double x) { return 1.0/(1.0 + 25* x * x); }
+unittest {
+    import std.stdio : writefln;
+    import util.test_runner : skip;
+
+    version (complex_numbers) {
+        // FIXME: XSpline is incompatible with complex numbers
+        skip();
+    } else {
+        double runge(double x) {
+            return 1.0 / (1.0 + 25 * x * x);
+        }
+
         int N = 20;
         double x0 = -1.0;
         double x1 = 1.0;
-        double dx = (x1-x0)/(N-1);
+        double dx = (x1 - x0) / (N - 1);
         double[] x_sample, y_sample;
         foreach (i; 0 .. N) {
-            double xx = x0 + dx*i;
+            double xx = x0 + dx * i;
             x_sample ~= xx;
             y_sample ~= runge(xx);
         }
         auto s = new XSpline(x_sample, y_sample);
         N = 100;
-        double dt = 1.0/(N-1);
+        double dt = 1.0 / (N - 1);
         foreach (i; 0 .. N) {
             double t = dt * i;
-            double xx = s(0).x * (1.0-t) + s(1).x * t;
+            double xx = s(0).x * (1.0 - t) + s(1).x * t;
             double y_runge = runge(xx);
             Vector3 p = s(t);
             // writefln("%g %g %g", xx, y_runge, p.y);
-            assert(approxEqualVectors(p, Vector3(xx, y_runge), 0.02), failedUnitTest());
+            assert(approxEqualVectors(p, Vector3(xx, y_runge), 0.02));
         }
-        return 0;
     }
-} // end xspline_test
-
+}
