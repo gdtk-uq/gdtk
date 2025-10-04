@@ -9,15 +9,6 @@ define nl
 
 endef
 
-DMD_ALLOWED_OPTS := dmd ldc2
-# We can specify the DMD64 compiler as DMD=dmd on the command-line
-# when invoking this makefile.
-DMD ?= ldc2
-ifeq ($(filter $(DMD), $(DMD_ALLOWED_OPTS)),)
-    $(warning DMD=$(DMD) is not available as an option for setting the D compiler.)
-    $(warning Available options are:${nl}    $(DMD_ALLOWED_OPTS))
-    $(error Exiting unsuccessfully.${nl}Please fix DMD selection on command line or as environment variable setting.)
-endif
 NVCC ?= nvcc
 GPP ?= g++
 # default is NOT to opt out of MPI build
@@ -26,25 +17,15 @@ MPI_IMPLEMENTATION := OpenMPI
 # default is NOT to use MPICH
 WITH_MPICH ?= 0
 
-# FLAVOUR options are debug, fast, profile
-# Flags for each compiler will be determined on this option.
-# As default, we compile with the 'debug' option which produces a code
-# that will have better checks and more detailed error messages.
-# The 'fast' option requests production mode and to include optimisations.
-FLAVOUR_ALLOWED_OPTS := debug fast profile
-FLAVOUR ?= debug
-ifeq ($(filter $(FLAVOUR), $(FLAVOUR_ALLOWED_OPTS)),)
-    $(warning FLAVOUR=$(FLAVOUR) is not available as an option for building.)
-    $(warning Available options are: ${nl}    $(FLAVOUR_ALLOWED_OPTS))
-    $(error Exiting unsuccessfully.${nl}Please fix FLAVOUR selection.)
-endif
 WITH_FPE ?= 1
 
 # PLATFORM options are linux, macosx
 ifeq ($(shell uname -s), Darwin)
     PLATFORM := macosx
+    USING_MAC := 1
 else
     PLATFORM := linux
+    USING_MAC :=
 endif
 $(info PLATFORM=$(PLATFORM))
 
@@ -74,6 +55,13 @@ MPI_FILES = $(OPENMPI_FILES)
 MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
+GAS_DIR = ../gas
+GEOM_DIR = ../geom
+GRID_DIR = ../grid_utils
+KINETICS_DIR = ../kinetics
+NML_DIR := ../lib
+include $(NML_DIR)/nml_files.mk
+
 PROGRAMS := lmr lmr-debug
 SUB_PROGRAMS := lmr-run lmrZ-run
 ifeq ($(OPT_OUT_MPI), 0)
@@ -101,63 +89,13 @@ MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
 
 include lmr-files.mk
 
-UTIL_DIR := ../util
-include $(UTIL_DIR)/util_files.mk
-
-NM_DIR := ../nm
-include $(NM_DIR)/nm_files.mk
-
-NML_DIR := ../lib
-include $(NML_DIR)/nml_files.mk
-
-GAS_DIR := ../gas
-GAS_PACKAGE := gas
-include $(GAS_DIR)/gas_files.mk
-
-GRID_DIR := ../grid_utils
-include $(GRID_DIR)/grid_utils_files.mk
-
-KINETICS_DIR := ../kinetics
-include $(KINETICS_DIR)/kinetics_files.mk
-
-GEOM_DIR := ../geom
-include $(GEOM_DIR)/geom_files.mk
-
-GASDYN_DIR := ../gasdyn
-include $(GASDYN_DIR)/gasdyn_files.mk
-
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 include $(EQC_DIR)/eqc_files.mk
 
-NTYPES_DIR := ../ntypes
-NTYPES_FILES := $(NTYPES_DIR)/complex.d
-
-GZIP_DIR := ../extern/gzip
-GZIP_FILES := $(GZIP_DIR)/gzip.d
-
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/install/lib
-
-DYAML_DIR := ../extern/D-YAML/source/dyaml
-include $(DYAML_DIR)/dyaml_files.mk
-
-TINYENDIAN_DIR := ../extern/tinyendian/source
-include $(TINYENDIAN_DIR)/tinyendian_files.mk
-
-MPL_DIR := ../extern/matplotlib.d/source
-MPL_FILES := $(MPL_DIR)/matplotlibd/pyplot.d \
-	$(MPL_DIR)/matplotlibd/core/pycall.d \
-	$(MPL_DIR)/matplotlibd/core/translate.d
-
-GPERF_DIR := ../extern/gperftools_d/source/gperftools_d
-GPERF_FILES := $(GPERF_DIR)/heap_profiler.d \
-	$(GPERF_DIR)/malloc_extension_c.d \
-	$(GPERF_DIR)/malloc_hook_c.d \
-	$(GPERF_DIR)/profiler.d \
-	$(GPERF_DIR)/stacktrace.d \
-	$(GPERF_DIR)/tcmalloc.d \
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -171,128 +109,6 @@ FULL_REVISION_STRING := $(shell git rev-parse HEAD)
 REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
 REVISION_DATE := $(shell git log -1 --format=%cd)
 REPO_DIR := $(shell cd ../../; pwd)
-
-DFLAGS :=
-DLINKFLAGS :=
-
-ifeq ($(DMD), dmd)
-    DEBUG_DFLAGS := -w -g -debug -version=flavour_debug
-    PROFILE_DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
-    FAST_DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
-    OF := -of
-    DVERSION := -version=
-    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
-        DLINKFLAGS := $(DLINKFLAGS) -L-lplot
-    endif
-	DLINKFLAGS := $(DLINKFLAGS) -L-ldl
-	ifeq ($(PLATFORM), linux)
-		# For note on "-Wl,-E", see: https://web.tecgraf.puc-rio.br/~lhf/ftp/lua/install.html#adding
-		# DLINKFLAGS += -L-Wl,-E
-		# 2025-04-05 Linker does not recognise this flag on Linux Mint 22 when using the dmd compiler.
-	endif
-    ifeq ($(PLATFORM), macosx)
-        DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldc2)
-    # -fprofile-generate will result in profraw files being written
-    # that may be viewed, showing the top 10 functions with internal block counts
-    # llvm-profdata show -text -topn=10 <profraw-file>
-    DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug
-    PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_profile
-    ifeq ($(PLATFORM), macosx)
-        # 2025-01-15: -O2 messes with the piston-in-tube example on MacOS so we back off to -O1
-        FAST_DFLAGS := -w -g -O1 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
-    else
-        # The usual FAST flags for linux.
-        FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_fast
-    endif
-    ifeq ($(PLATFORM), linux)
-	# Full link-time optimization does not play nicely on macOS
-	FAST_DFLAGS += -flto=full
-    endif
-    ifeq ($(WITH_THREAD_SANITIZER), 1)
-        DFLAGS := $(DFLAGS) -fsanitize=thread
-    endif
-    ifeq ($(WITH_ADDRESS_SANITIZER), 1)
-        DFLAGS := $(DFLAGS) -fsanitize=address
-    endif
-    OF := -of=
-    DVERSION := -d-version=
-    DLINKFLAGS :=
-    ifeq ($(WITH_THREAD_SANITIZER), 1)
-        DLINKFLAGS := $(DLINKFLAGS) -fsanitize=thread
-    endif
-    ifeq ($(WITH_ADDRESS_SANITIZER), 1)
-        DLINKFLAGS := $(DLINKFLAGS) -fsanitize=address
-    endif
-    #ifeq ($(FLAVOUR), profile)
-    #    DLINKFLAGS := $(DLINKFLAGS) -Wl,-fprofile-generate
-    #endif
-    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
-        DLINKFLAGS := $(DLINKFLAGS) -L-lplot
-    endif
-	DLINKFLAGS := $(DLINKFLAGS) -L-ldl
-	ifeq ($(PLATFORM), linux)
-		# For note on "-Wl,-E", see: https://web.tecgraf.puc-rio.br/~lhf/ftp/lua/install.html#adding
-		DLINKFLAGS += -L-Wl,-E
-	endif
-    ifeq ($(PLATFORM), macosx)
-		DLINKFLAGS += -L-ld_classic
-    endif
-endif
-
-# Set the flavour to be compiler correct flags
-ifeq ($(FLAVOUR), debug)
-    FLAVOUR_FLAGS := $(DEBUG_DFLAGS)
-endif
-ifeq ($(FLAVOUR), profile)
-    FLAVOUR_FLAGS := $(PROFILE_DFLAGS)
-endif
-ifeq ($(FLAVOUR), fast)
-    FLAVOUR_FLAGS := $(FAST_DFLAGS)
-    WITH_FPE ?= 0
-endif
-
-# Add platform version if necessary
-ifeq ($(PLATFORM), macosx)
-	DFLAGS += $(DVERSION)macosx
-endif
-
-# DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
-# This rules out the use of gdc for compiling the code.
-DFLAGS += -dip1008
-DFLAGS += -I..
-
-ifeq ($(DEBUG_CHEM),1)
-    DFLAGS += $(DVERSION)debug_chem
-endif
-
-ifeq ($(WITH_FPE),1)
-    DFLAGS += $(DVERSION)enable_fp_exceptions
-endif
-
-ifeq ($(MULTI_SPECIES_GAS),1)
-    DFLAGS += $(DVERSION)multi_species_gas
-endif
-
-ifeq ($(MULTI_T_GAS),1)
-    DFLAGS += $(DVERSION)multi_T_gas
-endif
-
-ifeq ($(MHD),1)
-    DFLAGS += $(DVERSION)MHD
-endif
-
-ifeq ($(NK),1)
-    DFLAGS += $(DVERSION)newton_krylov
-endif
-
-ifeq ($(TURBULENCE),1)
-    DFLAGS += $(DVERSION)turbulence
-endif
 
 default: $(PROGRAMS) $(SUB_PROGRAMS)
 
@@ -324,6 +140,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.
 
 clean:
 	- rm *.o
+	- rm *.deps
 	- rm -rf $(BUILD_DIR)/*
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
@@ -332,27 +149,27 @@ clean:
 	- rm runsim_shared.d runsim_mpi.d
 	- rm -f gdtk-module
 	- rm -f lmr-check-jacobian lmrZ-check-jacobian
-	- cd $(OPENMPI_DIR); make clean
-	- cd $(MPICH_DIR); make clean
-	- cd $(LUA_DIR); make clean
-	- cd $(GEOM_DIR); make clean
-	- cd $(GZIP_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm -f libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(GRID_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- $(MAKE) -C $(OPENMPI_DIR) clean
+	- $(MAKE) -C $(MPICH_DIR) clean
+	- $(MAKE) -C $(GEOM_DIR) clean
+	- $(MAKE) -C $(GZIP_DIR) clean
+	- $(MAKE) -C $(GAS_DIR) clean
+	- $(MAKE) -C $(KINETICS_DIR) clean
+	- $(MAKE) -C $(GRID_DIR) clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 
 $(MPI_FILES):
-	cd $(MPI_DIR); make
+	$(MAKE) -C $(MPI_DIR)
 
 # Makefiles don't like multiline strings. Using define and nl is
 # the cleanest way to make a multiline variable.
@@ -371,65 +188,76 @@ buildinfo.json:
 	# Ensure the define becomes a proper multi-line string.
 	@printf '%b' '$(subst ${nl},\n,${buildinfo})' > $@
 
-LMR_SRC_DEPS := \
-	$(DYAML_FILES) \
-	$(EQC_SRC_FILES) \
-	$(GASDYN_FILES) \
-	$(GAS_FILES) \
-	$(GEOM_FILES) \
-	$(GRID_FILES) \
-	$(GZIP_FILES) \
-	$(KINETICS_FILES) \
-	$(LIBEQC) \
-	$(LMR_BC_FILES) \
-	$(LMR_CMD_FILES) \
-	$(LMR_CORE_FILES) \
-	$(LMR_EFIELD_FILES) \
-	$(LMR_SOLID_FILES) \
-	$(NM_FILES) \
-	$(NTYPES_FILES) \
-	$(TINYENDIAN_FILES) \
-	$(UTIL_FILES)
-	
-LMR_LUA_DEPS := \
-	$(GASDYN_LUA_FILES) \
-	$(GAS_LUA_FILES) \
-	$(KINETICS_LUA_FILES) \
-	$(LIBLUA) \
-	$(LMR_LUA_FILES) \
-	$(NM_LUA_FILES)
+include ../common.mk
+include $(wildcard *.deps)
 
-# A user-defined-function to reduce the duplication of the d-lang compiler
-# recipe. The output will be the caller recipe name and source files will
-# be all dependencies of the caller recipe.
-# All variables are inherited from the caller recipe.
-define build_lmr_entry
-$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $^ $(DLINKFLAGS) -J=.
-endef
+d_previews := in dip1008
+d_versions := flavour_$(FLAVOUR) \
+	$(if $(USING_MAC),macosx) \
+	$(if $(filter 1,$(DEBUG_CHEM)),debug_chem) \
+	$(if $(filter 1,$(WITH_FPE)),enable_fp_exceptions) \
+	$(if $(filter 1,$(MULTI_SPECIES_GAS)),multi_species_gas) \
+	$(if $(filter 1,$(MULTI_T_GAS)),multi_T_gas) \
+	$(if $(filter 1,$(MHD)),MHD) \
+	$(if $(filter 1,$(NK)),newton_krylov) \
+	$(if $(filter 1,$(TURBULENCE)),turbulence)
 
-# The pattern of `target ...: variable-assignment` is termed
-# "target specific variable assignment". These variable assignments are
-# local to the context of the invoked target recipe.
-lmr-debug: FLAVOUR_FLAGS = $(DEBUG_DFLAGS)
-lmr-debug lmr: main.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json 
-	$(call build_lmr_entry)
+string_imports := .
+
+# External dependencies
+imports := dyaml eqc gzip tinyendian
+import_paths := \
+	../extern/D-YAML/source \
+	../extern/eqc/source \
+	../extern/gzip \
+	../extern/tinyendian/source
+
+ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
+    d_versions += $(LIBPLOT_VERSION_STR)
+    linker_libs += plot
+endif
+
+# Internal dependencies
+imports += lmr gas gasdyn geom grid kinetics nm ntypes util
+import_paths += ..
+
+# Non-d files to include
+extra_deps = $(LIBLUA) $(LIBEQC)
+
+# ============================================================================
+#                      BUILD RECIPES FOR LMR VARIANTS
+# ============================================================================ 
+
+# List all our targets explicitly
+lmr lmr-debug lmr-run lmrZ-run lmr-mpi-run lmrZ-mpi-run:
+.SECONDEXPANSION:
+
+# compiler_flags is lazily defined in common.mk
+lmr-debug: FLAVOUR = debug
+lmr-debug lmr: main.d $(extra_deps) | buildinfo.json
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 # Use the pattern rule % to match *all* lmrZ[...] targets.
-# Add complex specialisations to all complex versions of programs
-lmrZ%: DFLAGS += $(DVERSION)complex_numbers
+# Add complex specialisations
+lmrZ%run: d_versions += complex_numbers
 
 # Add MPI specialisations
-lmr-mpi-run lmrZ-mpi-run: DFLAGS += $(DVERSION)mpi_parallel
-lmr-mpi-run lmrZ-mpi-run: DLINKFLAGS += -L-lmpi $(MPI_LIB_DIRS_SEARCH)
-lmr-mpi-run lmrZ-mpi-run: $(MPI_FILES)
+lmr%mpi-run: d_versions   += mpi_parallel
+lmr%mpi-run: imports      += mpi
+lmr%mpi-run: import_paths += ../extern/OpenMPI/source
+lmr%mpi-run: linker_libs  += mpi
+lmr%mpi-run: linker_paths += $(MPI_LIBRARY_DIRS)
+lmr%mpi-run: extra_deps   += $(MPI_FILES)
 
-# Enable runsim main() function for lmr-runners
-lmr%run: DFLAGS += $(DVERSION)run_main
-lmr%run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
-	$(call build_lmr_entry)
+lmr%run: d_versions += run_main
+lmr%run: commands/runsim.d $$(extra_deps) | buildinfo.json
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
-	$(call build_lmr_entry)
+lmr%check-jacobian: commands/checkjacobian.d $(extra_deps) | buildinfo.json
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 #### Python programs
 lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
