@@ -8,55 +8,19 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 WITH_FPE ?= 1
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
-
-PUFFIN_FILES := config.d marching_calc.d streamtube.d \
-	cell.d face.d flow.d flux.d interp.d
-
-LORIKEET_FILES := config.d transient_calc.d fluidblock.d \
-	cell.d face.d flow.d flux.d interp.d
-
-UTIL_DIR := ../util
-include $(UTIL_DIR)/util_files.mk
-
-NM_DIR := ../nm
-include $(NM_DIR)/nm_files.mk
 
 NML_DIR := ../lib
 include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
-include $(GAS_DIR)/gas_files.mk
-
 KINETICS_DIR := ../kinetics
-include $(KINETICS_DIR)/kinetics_files.mk
-
-GEOM_DIR := ../geom
-include $(GEOM_DIR)/geom_files.mk
-
-GASDYN_DIR := ../gasdyn
-include $(GASDYN_DIR)/gasdyn_files.mk
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
-include $(EQC_DIR)/eqc_files.mk
-
-NTYPES_DIR := ../ntypes
-NTYPES_FILES := $(NTYPES_DIR)/complex.d
-
-GZIP_DIR := ../extern/gzip
-GZIP_FILES := $(GZIP_DIR)/gzip.d
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/lib
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -70,79 +34,6 @@ ifneq ("$(wildcard $(REPO_DIR)/.git)","")
     REVISION_STRING := $(shell git rev-parse --short HEAD)
 else
     REVISION_STRING := unknown
-endif
-
-ifeq ($(DMD), dmd)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
-    endif
-    OF := -of
-    DVERSION := -version=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldmd2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
-    endif
-    OF := -of
-    DVERSION := -version=
-    DLINKFLAGS :=
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldc2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        # -fprofile-generate will result in profraw files being written
-        # that may be viewed, showing the top 10 functions with internal block counts
-        # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast
-        ifeq ($(PLATFORM), linux)
-	    # Full link-time optimization does not play nicely on macOS
-	    DFLAGS += -flto=full
-        endif
-    endif
-    OF := -of=
-    DVERSION := -d-version=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-# DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
-# This rules out the use of gdc for compiling the code.
-DFLAGS += -dip1008 -preview=in
-DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
-
-ifeq ($(WITH_FPE),1)
-    DFLAGS += $(DVERSION)enable_fp_exceptions
-endif
-
-ifeq ($(WITH_DVODE),1)
-    DFLAGS += $(DVERSION)with_dvode
-    DLINKFLAGS += -L-lgfortran
 endif
 
 default: $(PROGRAMS)
@@ -163,85 +54,67 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
-	- rm *.o
+	- rm *.o *.deps
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
-	- rm puffin_main_with_rev_string.d lorikeet_main_with_rev_string.d
-	- cd $(LUA_DIR); make clean;
-	- cd $(GAS_DIR); make clean; rm libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- rm *_main_with_rev_string.d
+	- $(MAKE) -C $(GAS_DIR) clean
+	- $(MAKE) -C $(KINETICS_DIR) clean
+	- $(MAKE) -C $(LUA_DIR) clean;
+	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 
-puffin: puffin_main.d $(PUFFIN_FILES) \
-	$(GEOM_FILES) \
-	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+include ../common.mk
+include $(wildcard *.deps)
+
+d_previews := in dip1008
+d_versions := flavour_$(FLAVOUR) \
+	$(if $(filter 1,$(WITH_FPE)), enable_fp_exceptions) \
+
+# External dependencies
+imports := eqc gzip
+import_paths := \
+	../extern/eqc/source \
+	../extern/gzip
+
+# Internal dependencies
+imports += puffin gas gasdyn geom grid kinetics nm ntypes util
+import_paths += ..
+
+ifeq ($(WITH_DVODE),1)
+	d_versions += with_dvode
+	linker_libs += gfortran
+endif
+
+# Non-d files to include
+extra_deps := $(LIBLUA) $(LIBEQC)
+
+%_with_rev_string.d: %.d
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		puffin_main.d > puffin_main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)puffin \
-		puffin_main_with_rev_string.d \
-		$(PUFFIN_FILES) \
-		$(GEOM_FILES) \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
+		$< > $@
 
-puffin-prep: puffin_prep.py
-	cp puffin_prep.py puffin-prep
-	chmod +x puffin-prep
+puffin: puffin_main_with_rev_string.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-puffin-post: puffin_post.py
-	cp puffin_post.py puffin-post
-	chmod +x puffin-post
+puffin-prep puffin-post: puffin-%: puffin_%.py
+	$(INSTALL_EXEC) $< $@
 
-lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
-	$(GEOM_FILES) \
-	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		lorikeet_main.d > lorikeet_main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)lrkt-run \
-		lorikeet_main_with_rev_string.d \
-		$(LORIKEET_FILES) \
-		$(GEOM_FILES) \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
+lrkt-run: lorikeet_main_with_rev_string.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-lrkt-prep: lorikeet_prep.py
-	cp lorikeet_prep.py lrkt-prep
-	chmod +x lrkt-prep
+lrkt-prep lrkt-post: lrkt-%: lorikeet_%.py
+	$(INSTALL_EXEC) $< $@
 
-lrkt-post: lorikeet_post.py
-	cp lorikeet_post.py lrkt-post
-	chmod +x lrkt-post
+prep-gas libgas:
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
 
-prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
-
-libgas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-libgas
-
-prep-chem:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
-
-chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
+chemkin2eilmer prep-chem:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-$@
