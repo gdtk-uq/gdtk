@@ -3,25 +3,11 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= ldmd2
-
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
-NTYPES_DIR := ../ntypes
-NTYPES_FILES := $(NTYPES_DIR)/complex.d
-
-UTIL_DIR := ../util
-include $(UTIL_DIR)/util_files.mk
-
-include nm_files.mk
+FLAVOUR ?= debug
 
 DEMO_PROGRAMS := ridder_demo \
 	linesearch_demo \
-	nelmin_demo nelmin_complex_demo \
+	nelmin_demo \
 	rungekutta_demo \
 	newtoncotes_demo \
 	gaussquad_demo \
@@ -29,29 +15,17 @@ DEMO_PROGRAMS := ridder_demo \
 
 LUA := ../../extern/lua-5.4.3
 LIBLUA := $(LUA)/install/lib/liblua.a
-LIBLUAPATH := $(LUA)/lib
 
-ifeq ($(DMD), dmd)
-    # DFLAGS := -w
-    DFLAGS := -w -O -release -inline -boundscheck=off
-    OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldmd2)
-    DFLAGS := -w -O -release -inline -boundscheck=off
-    OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
+include ../common.mk
+include $(wildcard *.deps)
 
-# DIP1008 allows throwing of exceptions in @nogc code.
-# See notes in src/eilmer/makefile.
-DFLAGS += -dip1008 -preview=in
+d_previews := in dip1008
+d_versions :=
+
+imports := nm ntypes util
+import_paths := ..
+
+extra_deps := $(LIBLUA)
 
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
@@ -60,60 +34,51 @@ DFLAGS += -dip1008 -preview=in
 # if you are invoking this makefile from within the gas models directory.
 # ----------------------------------------------------------------------
 
-test: test_runner
-	- exec ./test_runner --module nm
+test-all: test-real test-complex
+
+test-real: test_runner_real
+	- exec ./test_runner_real --module nm
 
 test-complex: test_runner_complex
 	- exec ./test_runner_complex --module nm
 
-test_runner: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
+test_runner_%: FLAVOUR = debug
+test_runner_%: compiler_flags += -unittest
+
+test_runner_real: ../util/test_runner.d package.d $(extra_deps)
 	@echo "Compiling test runner..."
-	$(DMD) -of$@ -debug -g -w -dip1008 --unittest $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-test_runner_complex: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
+test_runner_complex: d_versions += complex_numbers
+test_runner_complex: ../util/test_runner.d package.d $(extra_deps)
 	@echo "Compiling test runner with complex numbers..."
-	$(DMD) -of$@ -debug -g -w -dip1008 --unittest -version=complex_numbers $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-demo: ${DEMO_PROGRAMS}
+demo: $(DEMO_PROGRAMS) nelmin_complex_demo
 	@echo "Demo codes built."
 
+# Template for demo DEMO_PROGRAMS
+$(DEMO_PROGRAMS): %: %.d
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
+
+# Specialise the nelmin complex version slightly 
+nelmin_complex_demo: d_versions += complex_numbers
+nelmin_complex_demo: nelmin_demo.d
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
+
 clean:
-	- rm -f *.o *.obj
-	- rm -f ${DEMO_PROGRAMS}
+	- rm -f *.o *.obj *.deps
+	- rm -f $(DEMO_PROGRAMS) nelmin_complex_demo
 	- rm -f test_runner test_runner_complex
-	- cd $(LUA); make clean
+	- $(MAKE) -C $(LUA) clean
 
 # Specific targets, for individual artefacts.
 
 $(LIBLUA):
-	cd $(LUA); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	$(MAKE) -C $(LUA) guess local
 
-# Some demo targets. These are left over from the early days of development.
-# They should continue to work and provide a minimal example of how to get
-# going with particular modules.
-
-ridder_demo: ridder_demo.d ridder.d bracketing.d $(NTYPES_FILES)
-	$(DMD) -g ridder_demo.d ridder.d bracketing.d $(NTYPES_FILES) $(DLINKFLAGS)
-
-linesearch_demo: linesearch_demo.d linesearch.d $(NTYPES_FILES)
-	$(DMD) -g linesearch_demo.d linesearch.d $(NTYPES_FILES) $(DLINKFLAGS)
-
-nelmin_demo: nelmin_demo.d nelmin.d $(NTYPES_FILES) number.d
-	$(DMD) -g nelmin_demo.d nelmin.d $(NTYPES_FILES) number.d $(DLINKFLAGS)
-
-nelmin_complex_demo: nelmin_demo.d nelmin.d $(NTYPES_FILES) number.d
-	$(DMD) -of$@ -g nelmin_demo.d nelmin.d $(NTYPES_FILES) number.d -version=complex_numbers $(DLINKFLAGS)
-
-rungekutta_demo: rungekutta_demo.d rungekutta.d $(NTYPES_FILES)
-	$(DMD) -g rungekutta_demo.d rungekutta.d $(NTYPES_FILES) $(DLINKFLAGS)
-
-newtoncotes_demo: newtoncotes_demo.d newtoncotes.d $(NTYPES_FILES)
-	$(DMD) -g newtoncotes_demo.d newtoncotes.d $(NTYPES_FILES) $(DLINKFLAGS)
-
-gaussquad_demo: gaussquad_demo.d gaussquad.d $(NTYPES_FILES)
-	$(DMD) -g gaussquad_demo.d gaussquad.d $(NTYPES_FILES) $(DLINKFLAGS)
-
-bbla_demo: bbla_demo.d bbla.d $(NTYPES_FILES)
-	$(DMD) -g -dip1008 bbla_demo.d bbla.d $(NTYPES_FILES) $(DLINKFLAGS)
+.PHONY: test-all test-real test-complex clean
