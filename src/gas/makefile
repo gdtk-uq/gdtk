@@ -7,118 +7,39 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 WITH_FPE ?= 1
 
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-else
-    PLATFORM := linux
-endif
-$(info PLATFORM=$(PLATFORM))
-
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo
+DEMO_PROGRAMS := ideal_gas_demo luagas_model_demo
+# FIXME: Neither of these demos compile due to changed source code.
+# The files they rely on have changed or been removed.
+# - gas_model_demo
+# - univariate_lut_demo
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/lib
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
-include $(EQC_DIR)/eqc_files.mk
 
-NTYPES_DIR := ../ntypes
-NTYPES_FILES := $(NTYPES_DIR)/complex.d
+include ../common.mk
 
-UTIL_DIR := ../util
-include $(UTIL_DIR)/util_files.mk
+d_previews := in dip1008
+d_versions := flavour_$(FLAVOUR) \
+	$(if $(filter 1,$(WITH_FPE)), enable_fp_exceptions)
 
-NM_DIR := ../nm
-include $(NM_DIR)/nm_files.mk
+# External dependencies
+imports := eqc gzip
+import_paths := \
+	../extern/eqc/source \
+	../extern/gzip
 
-KINETICS_DIR := ../kinetics
-include $(KINETICS_DIR)/kinetics_files.mk
+# Internal dependencies (all from gdtk/src)
+imports += gas gasdyn geom grid kinetics nm ntypes util
+import_paths += ..
 
-GASDYN_DIR := ../gasdyn
-include $(GASDYN_DIR)/gasdyn_files.mk
-
-GEOM_DIR := ../geom
-include $(GEOM_DIR)/geom_files.mk
-
-GZIP_DIR := ../extern/gzip
-GZIP_FILES := $(GZIP_DIR)/gzip.d
-
-include gas_files.mk
-
-ifeq ($(DMD), dmd)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
-    endif
-    PIC := -fPIC
-    DVERSION := -version=
-    OF := -of
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldmd2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -inline -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
-    endif
-    PIC := -fPIC
-    DVERSION := -version=
-    OF := -of
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), ldc2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -link-defaultlib-debug -d-debug -d-version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        # -fprofile-generate will result in profraw files being written
-        # that may be viewed, showing the top 10 functions with internal block counts
-        # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math
-        ifeq ($(PLATFORM), linux)
-	    # Full link-time optimization does not play nicely on macOS
-	    DFLAGS += -flto=full
-        endif
-    endif
-    PIC := --relocation-model=pic
-    DVERSION := -d-version=
-    OF := -of=
-    DLINKFLAGS := -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-
-ifeq ($(WITH_FPE),1)
-    DFLAGS += $(DVERSION)enable_fp_exceptions
-endif
-
-# DIP1008 allows throwing of exceptions in @nogc code.
-# See notes in src/eilmer/makefile.
-DFLAGS += -dip1008 -preview=in
+# Non-d files to include
+extra_deps := $(LIBLUA) $(LIBEQC)
 
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
@@ -161,27 +82,25 @@ install: build-prep-gas build-libgas
 .PHONY: test-all test-real
 test-all: test-real
 
-test-real: test_runner_real
+test-real: gas-calc test_runner_real
 	@echo "Running tests"
 	- ./test_runner_real --module gas
 
-# We need to pull the test_runner.d to the front to ensure no linker errors
-test_runner_real: test_gas_calc.d $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
-		$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(LIBEQC) $(LIBLUA) ../util/test_runner.d | gas-calc
-	@echo "Compiling test runner..."
-	$(DMD) $(OF)$@ $(DFLAGS) --unittest $(DLINKFLAGS) \
-		../util/test_runner.d $(filter-out %/test_runner.d,$^)
+test_runner_real: FLAVOUR = debug
+test_runner_real: compiler_flags += -unittest
+test_runner_real: test_gas_calc.d package.d $(extra_deps) | gas-calc
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
-demo: ${DEMO_PROGRAMS}
+demo: $(DEMO_PROGRAMS)
 	echo "Demo programs built."
 
 clean:
-	- rm -f *.o *.so *.a *.obj *.lib
+	- rm -f *.o *.so *.a *.obj *.lib *.deps
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
-	- rm -f ${DEMO_PROGRAMS}
+	- rm -f $(DEMO_PROGRAMS)
 	- rm -f gas-calc
 	- rm -f species-database/species-database.lua
 	- rm -f LOGFILE*TEST
@@ -196,84 +115,48 @@ clean:
 	- rm -f ./two-temperature-argon-plus-ideal-air-gas-model.lua
 	- rm -f ./diffusion/*.o ./diffusion/*.obj
 	- rm -f ./thermo/*.o ./thermo/*.obj
-	- rm -f $(GASDYN_DIR)/*.o $(GASDYN_DIR)/*.obj
-	- cd $(LUA_DIR); make clean
-	- cd $(EQC_DIR); make clean
-	- cd $(UTIL_DIR); make clean
-	- cd $(GEOM_DIR); make clean
-	- cd $(GZIP_DIR); make clean
-	- cd $(NM_DIR); make clean
-	- cd $(KINETICS_DIR); make clean
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 # Specific targets for individual artefacts.
 
-gas-calc: gas_calc.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(GEOM_FILES) $(GZIP_FILES) \
-	$(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA)
-	$(DMD) $(OF)gas-calc $(DFLAGS) gas_calc.d \
-		$(GAS_FILES) $(GAS_LUA_FILES) \
-		$(NM_FILES) $(NTYPES_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
-		$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
+# Include all possible target requirement files
+include $(wildcard *.deps)
 
-libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
-	$(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) $(KINETICS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) -op \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(GASDYN_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
-	$(DMD) $(OF)libgas.so gas_cwrap.o $(PIC) $(DFLAGS) -op -shared \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) \
-		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+# compiler_flags is lazily defined in common.mk
+gas-calc: gas_calc.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
+
+%.o: target_type = staticLibrary
+%.o: %.d
+	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
+
+libgas.so: linker_paths += $(INSTALL_DIR)/lib
+libgas.so: target_type = dynamicLibrary
+libgas.so: gas_cwrap.o $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
+	$(MAKE) -C $(LUA_DIR) guess local
 
 $(LIBEQC):
-	cd $(EQC_DIR); make
+	$(MAKE) -C $(EQC_DIR)
 
 species-database/species-database.lua :
 	cd species-database; make species-database.lua
 
 # Some demo targets. These are left over from the early days of development.
-
-gas_model_demo: gas_model_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-ideal_gas_demo: ideal_gas_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-luagas_model_demo: luagas_model_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) \
-	$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(LIBEQC) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) luagas_model_demo.d $(OF)luagas_model_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) $(LIBEQC) $(LIBLUA) \
-		$(DLINKFLAGS)
-
-univariate_lut_demo: univariate_lut_demo.d $(GAS_FILES) $(EQC_SRC_FILES) $(GAS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) -debug -dip1008 univariate_lut_demo.d $(OF)univariate_lut_demo \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+# Since the target and filename are the same, these recipes are super simple!
+$(DEMO_PROGRAMS): %: %.d $(extra_deps)
+	$(DMD) -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
 # Individual test targets
-
-two_temp_air_ci_dump: $(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
-		$(GAS_FILES) $(EQC_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
+two_temp_air_ci_dump: d_versions += two_temp_air_ci_dump
+two_temp_air_ci_dump: two_temperature_air.d $(extra_deps)
+	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
+	$(call cleanup-deps)
 
