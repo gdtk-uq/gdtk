@@ -417,6 +417,21 @@ public:
             throw new Exception("Oops! This face does not have at least one cell attached.");
         }
 
+        // helper function for augmenting the averaged face gradients
+        pragma(inline, true)
+        @safe @nogc nothrow pure
+        void augment_gradients(scope const ref number[3] avg_grad, in number u_i, in number u_j,
+                               scope const ref number[3] n_tilde, scope const ref number[3] dp_ij_hat,
+                               in number dp_ij_mag, ref number[3] aug_grad) {
+            // compute component of gradient in the direction of dp_ij
+            const number avg_grad_dot_dp_ij_hat = avg_grad[0]*dp_ij_hat[0] + avg_grad[1]*dp_ij_hat[1] + avg_grad[2]*dp_ij_hat[2];
+            // compute finite difference gradient in direction of dp_ij
+            const number dudp = (u_j - u_i)/dp_ij_mag;
+            // augment gradients
+            aug_grad[] = avg_grad[] - (avg_grad_dot_dp_ij_hat - dudp)*n_tilde[];
+        }
+
+        // determine if there is a valid gradient in the ghost cell
         bool one_interior_cell_exists = false;
         if ( (left_cell && !right_cell) ||
              (!left_cell && right_cell) ) {
@@ -428,151 +443,133 @@ public:
             }
         }
 
+        const bool apply_boundary_correction = myConfig.include_boundary_faces_in_spatial_deriv_correction;
         if (one_interior_cell_exists) {
-            // The interface has only one cell interior to the domain and
-            // that doesn't have a mapping to a cell in a neighbouring block.
-            // This means that the interface is along a domain boundary.
-            // We just copy the gradient from the interior-cell to the interface.
-            FluidFVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
-            // vel-x
-            grad.vel[0][0] = c.grad.vel[0][0];
-            grad.vel[0][1] = c.grad.vel[0][1];
-            grad.vel[0][2] = c.grad.vel[0][2];
-            // vel-y
-            grad.vel[1][0] = c.grad.vel[1][0];
-            grad.vel[1][1] = c.grad.vel[1][1];
-            grad.vel[1][2] = c.grad.vel[1][2];
-            // vel-z
-            grad.vel[2][0] = c.grad.vel[2][0];
-            grad.vel[2][1] = c.grad.vel[2][1];
-            grad.vel[2][2] = c.grad.vel[2][2];
+            // The interface has only one cell interior to the domain and that doesn't have a mapping to a cell in a neighbouring block.
+            FluidFVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell; // i --> the boundary interface is j
+
+            if (apply_boundary_correction) {
+                // compute geometric terms
+                number[3] dp_ij, dp_ij_hat, n_tilde;
+                dp_ij[0] = pos.x - c.pos[gtl].x;
+                dp_ij[1] = pos.y - c.pos[gtl].y;
+                dp_ij[2] = pos.z - c.pos[gtl].z;
+                const number dp_ij_mag = sqrt(dp_ij[0]*dp_ij[0] + dp_ij[1]*dp_ij[1] + dp_ij[2]*dp_ij[2]);
+                dp_ij_hat[] = dp_ij[]/dp_ij_mag;
+                const number n_dot_dp_ij_hat = n.x*dp_ij_hat[0] + n.y*dp_ij_hat[1] + n.z*dp_ij_hat[2];
+                n_tilde[0] = n.x/n_dot_dp_ij_hat;
+                n_tilde[1] = n.y/n_dot_dp_ij_hat;
+                n_tilde[2] = n.z/n_dot_dp_ij_hat;
+
+                // x-velocity
+                augment_gradients(c.grad.vel[0], c.fs.vel.x, fs.vel.x, n_tilde, dp_ij_hat, dp_ij_mag, grad.vel[0]);
+                // y-velocity
+                augment_gradients(c.grad.vel[1], c.fs.vel.y, fs.vel.y, n_tilde, dp_ij_hat, dp_ij_mag, grad.vel[1]);
+                // z-velocity
+                augment_gradients(c.grad.vel[2], c.fs.vel.z, fs.vel.z, n_tilde, dp_ij_hat, dp_ij_mag, grad.vel[2]);
+                // massf
+                version(multi_species_gas) {
+                    foreach (isp; 0 .. myConfig.n_species) {
+                        augment_gradients(c.grad.massf[isp], c.fs.gas.massf[isp], fs.gas.massf[isp], n_tilde, dp_ij_hat, dp_ij_mag, grad.massf[isp]);
+                    }
+                }
+                // temperature
+                augment_gradients(c.grad.T, c.fs.gas.T, fs.gas.T, n_tilde, dp_ij_hat, dp_ij_mag, grad.T);
+                // thermal modes
+                version(multi_T_gas) {
+                    uint n_modes = myConfig.n_modes;
+                    foreach (imode; 0 .. n_modes) {
+                        augment_gradients(c.grad.T_modes[imode], c.fs.gas.T_modes[imode], fs.gas.T_modes[imode], n_tilde, dp_ij_hat, dp_ij_mag, grad.T_modes[imode]);
+                    }
+                }
+                // turbulence
+                version(turbulence) {
+                    foreach(i; 0 .. myConfig.turb_model.nturb) {
+                        augment_gradients(c.grad.turb[i], c.fs.turb[i], fs.turb[i], n_tilde, dp_ij_hat, dp_ij_mag, grad.turb[i]);
+                    }
+                }
+            } else { // just copy the cell gradients
+                // velocities
+                grad.vel[0][] = c.grad.vel[0][];
+                grad.vel[1][] = c.grad.vel[1][];
+                grad.vel[2][] = c.grad.vel[2][];
+                // species mass fractions
+                version(multi_species_gas) {
+                    foreach (isp; 0 .. myConfig.n_species) {
+                        grad.massf[isp][] = c.grad.massf[isp][];
+                    }
+                }
+                // temperature
+                grad.T[] = c.grad.T[];
+                // multi-temperature modes
+                version(multi_T_gas) {
+                    uint n_modes = myConfig.n_modes;
+                    foreach (imode; 0 .. n_modes) {
+                        grad.T_modes[imode][] = c.grad.T_modes[imode][];
+                    }
+                }
+                // turbulence variables
+                version(turbulence) {
+                    foreach (i; 0 .. myConfig.turb_model.nturb) {
+                        grad.turb[i][] = c.grad.turb[i][];
+                    }
+                }
+            }
+        } else {
+            // With two attached cells, we are at a face that is internal to the domain and so we can proceed to compute the average of the gradient values.
+            FluidFVCell cL0 = left_cell;  // i
+            FluidFVCell cR0 = right_cell; // j
+
+            // compute geometric terms
+            number[3] dp_ij, dp_ij_hat, n_tilde;
+            dp_ij[0] = cR0.pos[gtl].x - cL0.pos[gtl].x;
+            dp_ij[1] = cR0.pos[gtl].y - cL0.pos[gtl].y;
+            dp_ij[2] = cR0.pos[gtl].z - cL0.pos[gtl].z;
+            const number dp_ij_mag = sqrt(dp_ij[0]*dp_ij[0] + dp_ij[1]*dp_ij[1] + dp_ij[2]*dp_ij[2]);
+            dp_ij_hat[] = dp_ij[]/dp_ij_mag;
+            const number n_dot_dp_ij_hat = n.x*dp_ij_hat[0] + n.y*dp_ij_hat[1] + n.z*dp_ij_hat[2];
+            n_tilde[0] = n.x/n_dot_dp_ij_hat;
+            n_tilde[1] = n.y/n_dot_dp_ij_hat;
+            n_tilde[2] = n.z/n_dot_dp_ij_hat;
+
+            number[3] avg_grad;
+            number HALF = 0.5;
+            // x-velocity
+            avg_grad[] = HALF*(cL0.grad.vel[0][]+cR0.grad.vel[0][]);
+            augment_gradients(avg_grad, cL0.fs.vel.x, cR0.fs.vel.x, n_tilde, dp_ij_hat, dp_ij_mag, grad.vel[0]);
+            // y-velocity
+            avg_grad[] = HALF*(cL0.grad.vel[1][]+cR0.grad.vel[1][]);
+            augment_gradients(avg_grad, cL0.fs.vel.y, cR0.fs.vel.y, n_tilde, dp_ij_hat, dp_ij_mag, grad.vel[1]);
+            // z-velocity
+            avg_grad[] = HALF*(cL0.grad.vel[2][]+cR0.grad.vel[2][]);
+            augment_gradients(avg_grad, cL0.fs.vel.z, cR0.fs.vel.z, n_tilde, dp_ij_hat, dp_ij_mag, grad.vel[2]);
             // massf
             version(multi_species_gas) {
                 foreach (isp; 0 .. myConfig.n_species) {
-                    grad.massf[isp][0] = c.grad.massf[isp][0];
-                    grad.massf[isp][1] = c.grad.massf[isp][1];
-                    grad.massf[isp][2] = c.grad.massf[isp][2];
+                    avg_grad[] = HALF*(cL0.grad.massf[isp][]+cR0.grad.massf[isp][]);
+                    augment_gradients(avg_grad, cL0.fs.gas.massf[isp], cR0.fs.gas.massf[isp], n_tilde, dp_ij_hat, dp_ij_mag, grad.massf[isp]);
                 }
             }
-            // T
-            grad.T[0] = c.grad.T[0];
-            grad.T[1] = c.grad.T[1];
-            grad.T[2] = c.grad.T[2];
+            // temperature
+            avg_grad[] = HALF*(cL0.grad.T[]+cR0.grad.T[]);
+            augment_gradients(avg_grad, cL0.fs.gas.T, cR0.fs.gas.T, n_tilde, dp_ij_hat, dp_ij_mag, grad.T);
             // thermal modes
             version(multi_T_gas) {
                 uint n_modes = myConfig.n_modes;
                 foreach (imode; 0 .. n_modes) {
-                    grad.T_modes[imode][0] = c.grad.T_modes[imode][0];
-                    grad.T_modes[imode][1] = c.grad.T_modes[imode][1];
-                    grad.T_modes[imode][2] = c.grad.T_modes[imode][2];
+                    avg_grad[] = HALF*(cL0.grad.T_modes[imode][]+cR0.grad.T_modes[imode][]);
+                    augment_gradients(avg_grad, cL0.fs.gas.T_modes[imode], cR0.fs.gas.T_modes[imode], n_tilde, dp_ij_hat, dp_ij_mag, grad.T_modes[imode]);
                 }
             }
+            // turbulence
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
-                    grad.turb[i][0] = c.grad.turb[i][0];
-                    grad.turb[i][1] = c.grad.turb[i][1];
-                    grad.turb[i][2] = c.grad.turb[i][2];
-                }
-            }
-        } else {
-            // With two attached cells, we are at a face that is internal to the domain
-            // and so we can proceed to compute the average of the gradient values.
-            number qL; number qR;
-            FluidFVCell cL0 = left_cell; // i
-            FluidFVCell cR0 = right_cell; // j
-            // interface normal
-            number nx = n.x;
-            number ny = n.y;
-            number nz = n.z;
-            // vector from left-cell-centre to face midpoint
-            number rLx = pos.x - cL0.pos[gtl].x;
-            number rLy = pos.y - cL0.pos[gtl].y;
-            number rLz = pos.z - cL0.pos[gtl].z;
-            number rRx = pos.x - cR0.pos[gtl].x;
-            number rRy = pos.y - cR0.pos[gtl].y;
-            number rRz = pos.z - cR0.pos[gtl].z;
-            // vector from left-cell-centre to right-cell-centre
-            number ex = cR0.pos[gtl].x - cL0.pos[gtl].x;
-            number ey = cR0.pos[gtl].y - cL0.pos[gtl].y;
-            number ez = cR0.pos[gtl].z - cL0.pos[gtl].z;
-            // ehat
-            number emag = sqrt(ex*ex + ey*ey + ez*ez);
-            number ehatx = ex/emag;
-            number ehaty = ey/emag;
-            number ehatz = ez/emag;
-            // ndotehat
-            number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
-            number avgdotehat;
-            number jump;
-            // vel-x
-            avgdotehat = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0])*ehatx +
-                0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1])*ehaty +
-                0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2])*ehatz;
-            jump = avgdotehat - (cR0.fs.vel.x - cL0.fs.vel.x)/emag;
-            grad.vel[0][0] = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0]) - jump*(nx/ndotehat);
-            grad.vel[0][1] = 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1]) - jump*(ny/ndotehat);
-            grad.vel[0][2] = 0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2]) - jump*(nz/ndotehat);
-            // vel-y
-            avgdotehat = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0])*ehatx +
-                0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1])*ehaty +
-                0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2])*ehatz;
-            jump = avgdotehat - (cR0.fs.vel.y - cL0.fs.vel.y)/emag;
-            grad.vel[1][0] = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0]) - jump*(nx/ndotehat);
-            grad.vel[1][1] = 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1]) - jump*(ny/ndotehat);
-            grad.vel[1][2] = 0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2]) - jump*(nz/ndotehat);
-            // vel-z
-            avgdotehat = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0])*ehatx +
-                0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1])*ehaty +
-                0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2])*ehatz;
-            jump = avgdotehat - (cR0.fs.vel.z - cL0.fs.vel.z)/emag;
-            grad.vel[2][0] = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0]) - jump*(nx/ndotehat);
-            grad.vel[2][1] = 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1]) - jump*(ny/ndotehat);
-            grad.vel[2][2] = 0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2]) - jump*(nz/ndotehat);
-            // massf
-            version(multi_species_gas) {
-                foreach (isp; 0 .. myConfig.n_species) {
-                    avgdotehat = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0])*ehatx +
-                        0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1])*ehaty +
-                        0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2])*ehatz;
-                    jump = avgdotehat - (cR0.fs.gas.massf[isp] - cL0.fs.gas.massf[isp])/emag;
-                    grad.massf[isp][0] = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0]) - jump*(nx/ndotehat);
-                    grad.massf[isp][1] = 0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1]) - jump*(ny/ndotehat);
-                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]) - jump*(nz/ndotehat);
-                }
-            }
-            // T
-            avgdotehat = 0.5*(cL0.grad.T[0]+cR0.grad.T[0])*ehatx +
-                0.5*(cL0.grad.T[1]+cR0.grad.T[1])*ehaty +
-                0.5*(cL0.grad.T[2]+cR0.grad.T[2])*ehatz;
-            jump = avgdotehat - (cR0.fs.gas.T - cL0.fs.gas.T)/emag;
-            grad.T[0] = 0.5*(cL0.grad.T[0]+cR0.grad.T[0]) - jump*(nx/ndotehat);
-            grad.T[1] = 0.5*(cL0.grad.T[1]+cR0.grad.T[1]) - jump*(ny/ndotehat);
-            grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]) - jump*(nz/ndotehat);
-            version(multi_T_gas) {
-                uint n_modes = myConfig.n_modes;
-                foreach (imode; 0 .. n_modes) {
-                    avgdotehat = 0.5*(cL0.grad.T_modes[imode][0]+cR0.grad.T_modes[imode][0])*ehatx +
-                        0.5*(cL0.grad.T_modes[imode][1]+cR0.grad.T_modes[imode][1])*ehaty +
-                        0.5*(cL0.grad.T_modes[imode][2]+cR0.grad.T_modes[imode][2])*ehatz;
-                    jump = avgdotehat - (cR0.fs.gas.T_modes[imode] - cL0.fs.gas.T_modes[imode])/emag;
-                    grad.T_modes[imode][0] = 0.5*(cL0.grad.T_modes[imode][0]+cR0.grad.T_modes[imode][0]) - jump*(nx/ndotehat);
-                    grad.T_modes[imode][1] = 0.5*(cL0.grad.T_modes[imode][1]+cR0.grad.T_modes[imode][1]) - jump*(ny/ndotehat);
-                    grad.T_modes[imode][2] = 0.5*(cL0.grad.T_modes[imode][2]+cR0.grad.T_modes[imode][2]) - jump*(nz/ndotehat);
-                }
-            }
-            version(turbulence) {
-                foreach(i; 0 .. myConfig.turb_model.nturb) {
-                    avgdotehat = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0])*ehatx +
-                        0.5*(cL0.grad.turb[i][1]+cR0.grad.turb[i][1])*ehaty +
-                        0.5*(cL0.grad.turb[i][2]+cR0.grad.turb[i][2])*ehatz;
-                    jump = avgdotehat - (cR0.fs.turb[i] - cL0.fs.turb[i])/emag;
-                    grad.turb[i][0] = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0]) - jump*(nx/ndotehat);
-                    grad.turb[i][1] = 0.5*(cL0.grad.turb[i][1]+cR0.grad.turb[i][1]) - jump*(ny/ndotehat);
-                    grad.turb[i][2] = 0.5*(cL0.grad.turb[i][2]+cR0.grad.turb[i][2]) - jump*(nz/ndotehat);
+                    avg_grad[] = HALF*(cL0.grad.turb[i][]+cR0.grad.turb[i][]);
+                    augment_gradients(avg_grad, cL0.fs.turb[i], cR0.fs.turb[i], n_tilde, dp_ij_hat, dp_ij_mag, grad.turb[i]);
                 }
             }
         }
-    } // end average_cell_spatial_derivs()
+    } // end average_cell_deriv_values()
 
     @nogc
     void average_turbulent_transprops()

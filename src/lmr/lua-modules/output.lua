@@ -277,6 +277,8 @@ function output.write_config_file(fileName)
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
+   f:write(string.format('"include_boundary_faces_in_spatial_deriv_correction": %s,\n',
+			 tostring(config.include_boundary_faces_in_spatial_deriv_correction)))
    f:write(string.format('"upwind_vertex_gradients": %s,\n',tostring(config.upwind_vertex_gradients)))
    f:write(string.format('"save_convective_gradients": %s,\n',tostring(config.save_convective_gradients)))
    f:write(string.format('"save_viscous_gradients": %s,\n',tostring(config.save_viscous_gradients)))

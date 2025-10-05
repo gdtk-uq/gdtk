@@ -1236,6 +1236,7 @@ final class GlobalConfig {
     // for viscous fluxes. The old, Eilmer3-compatible settings were
     // SpatialDerivCalc.divergence and SpatialDerivLocn.vertices.
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
+    shared static bool include_boundary_faces_in_spatial_deriv_correction = false;
     shared static bool upwind_vertex_gradients = true;
     // We may elect to suppress the calculation of gradients in particular zones.
     static BlockZone[] suppress_viscous_stresses_zones;
@@ -1532,6 +1533,7 @@ public:
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
+    bool include_boundary_faces_in_spatial_deriv_correction;
     bool upwind_vertex_gradients;
     BlockZone[] suppress_viscous_stresses_zones;
     double viscous_factor;
@@ -1712,6 +1714,8 @@ public:
         spatial_deriv_locn = cfg.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
             cfg.include_ghost_cells_in_spatial_deriv_clouds;
+        include_boundary_faces_in_spatial_deriv_correction =
+            cfg.include_boundary_faces_in_spatial_deriv_correction;
         upwind_vertex_gradients = cfg.upwind_vertex_gradients;
         foreach (bz; cfg.suppress_viscous_stresses_zones) {
             suppress_viscous_stresses_zones ~= new BlockZone(bz);
@@ -2163,6 +2167,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(update_bool("include_boundary_faces_in_spatial_deriv_correction", "include_boundary_faces_in_spatial_deriv_correction"));
     mixin(update_bool("upwind_vertex_gradients", "upwind_vertex_gradients"));
     mixin(update_bool("save_convective_gradients", "save_convective_gradients"));
     mixin(update_bool("save_viscous_gradients", "save_viscous_gradients"));
@@ -2195,6 +2200,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(cfg.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(cfg.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", cfg.include_ghost_cells_in_spatial_deriv_clouds);
+        writeln("  include_boundary_faces_in_spatial_deriv_correction: ", cfg.include_boundary_faces_in_spatial_deriv_correction);
         writeln("  upwind_vertex_gradients: ", cfg.upwind_vertex_gradients);
         writeln("  save_convective_gradients: ", cfg.save_convective_gradients);
         writeln("  save_viscous_gradients: ", cfg.save_viscous_gradients);
