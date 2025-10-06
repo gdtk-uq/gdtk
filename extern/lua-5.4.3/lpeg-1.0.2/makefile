@@ -1,5 +1,6 @@
 LIBNAME = lpeg
 LUADIR = ../src/
+UNAME= uname
 
 COPT = -O2 -DNDEBUG
 # COPT = -g
@@ -27,12 +28,16 @@ CC = gcc
 
 FILES = lpvm.o lpcap.o lptree.o lpcode.o lpprint.o
 
+guess:
+	@echo Guessing `$(UNAME)`
+	@$(MAKE) `$(UNAME)`
+
 # For Linux
-linux:
+Linux linux:
 	$(MAKE) lpeg.so "DLLFLAGS = -shared -fPIC"
 
 # For Mac OS
-macosx:
+Darwin macos macosx:
 	$(MAKE) lpeg.so "DLLFLAGS = -bundle -undefined dynamic_lookup"
 
 lpeg.so: $(FILES)
