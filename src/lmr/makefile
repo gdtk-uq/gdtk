@@ -55,6 +55,13 @@ MPI_FILES = $(OPENMPI_FILES)
 MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
+GAS_DIR = ../gas
+GEOM_DIR = ../geom
+GRID_DIR = ../grid_utils
+KINETICS_DIR = ../kinetics
+NML_DIR := ../lib
+include $(NML_DIR)/nml_files.mk
+
 PROGRAMS := lmr lmr-debug
 SUB_PROGRAMS := lmr-run lmrZ-run
 ifeq ($(OPT_OUT_MPI), 0)
