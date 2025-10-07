@@ -168,26 +168,10 @@ public:
             switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.nicell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.nicell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.nicell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.nicell);
-                myBC.celldata.gradients.reserve(this_blk.nicell);
-                myBC.celldata.workspaces.reserve(this_blk.nicell);
+                myBC.celldata.allocate_minimal(this_blk.nicell, 0, other_blk.myConfig);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1);
-                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
                     myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(i));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
@@ -218,26 +202,10 @@ public:
                 break;
             case Face.east:
                 i_dest = this_blk.imax;  // index of the east-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.njcell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.njcell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.njcell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.njcell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.njcell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.njcell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.njcell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.njcell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.njcell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.njcell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.njcell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.njcell);
-                myBC.celldata.gradients.reserve(this_blk.njcell);
-                myBC.celldata.workspaces.reserve(this_blk.njcell);
+                myBC.celldata.allocate_minimal(this_blk.njcell, 0, other_blk.myConfig);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest);
-                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
                     myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(j));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
@@ -268,26 +236,10 @@ public:
                 break;
             case Face.south:
                 j_dest = this_blk.jmin;  // index of the south-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.nicell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.nicell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.nicell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.nicell);
-                myBC.celldata.gradients.reserve(this_blk.nicell);
-                myBC.celldata.workspaces.reserve(this_blk.nicell);
+                myBC.celldata.allocate_minimal(this_blk.nicell, 0, other_blk.myConfig);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest);
-                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
                     myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(i));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
@@ -318,26 +270,10 @@ public:
                 break;
             case Face.west:
                 i_dest = this_blk.imin;  // index of the west-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.njcell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.njcell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.njcell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.njcell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.njcell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.njcell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.njcell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.njcell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.njcell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.njcell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.njcell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.njcell);
-                myBC.celldata.gradients.reserve(this_blk.njcell);
-                myBC.celldata.workspaces.reserve(this_blk.njcell);
+                myBC.celldata.allocate_minimal(this_blk.njcell, 0, other_blk.myConfig);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest);
-                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
                     myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(j));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
@@ -375,28 +311,12 @@ public:
             final switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.nicell*this_blk.nkcell);
-                myBC.celldata.gradients.reserve(this_blk.nicell*this_blk.nkcell);
-                myBC.celldata.workspaces.reserve(this_blk.nicell*this_blk.nkcell);
+                myBC.celldata.allocate_minimal(this_blk.nicell*this_blk.nkcell, 0, other_blk.myConfig);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1, k_dest);
-                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
                         myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(i*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
@@ -465,28 +385,12 @@ public:
                 break;
             case Face.east:
                 i_dest = this_blk.imax;  // index of the east-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nkcell);
-                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nkcell);
-                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nkcell);
+                myBC.celldata.allocate_minimal(this_blk.njcell*this_blk.nkcell, 0, other_blk.myConfig);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest, k_dest);
-                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
                         myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
@@ -555,28 +459,12 @@ public:
                 break;
             case Face.south:
                 j_dest = this_blk.jmin;  // index of the south-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.nicell*this_blk.nkcell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.nicell*this_blk.nkcell);
-                myBC.celldata.gradients.reserve(this_blk.nicell*this_blk.nkcell);
-                myBC.celldata.workspaces.reserve(this_blk.nicell*this_blk.nkcell);
+                myBC.celldata.allocate_minimal(this_blk.nicell*this_blk.nkcell, 0, other_blk.myConfig);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest, k_dest);
-                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
                         myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(i*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
@@ -645,28 +533,12 @@ public:
                 break;
             case Face.west:
                 i_dest = this_blk.imin;  // index of the west-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>2) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>3) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                if (nftl>4) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nkcell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nkcell);
-                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nkcell);
-                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nkcell);
+                myBC.celldata.allocate_minimal(this_blk.njcell*this_blk.nkcell, 0, other_blk.myConfig);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest, k_dest);
-                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
                         myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
@@ -735,28 +607,12 @@ public:
                 break;
             case Face.top:
                 k_dest = this_blk.kmax;  // index of the top-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.njcell*this_blk.nicell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.njcell*this_blk.nicell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nicell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nicell);
-                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nicell);
-                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nicell);
+                myBC.celldata.allocate_minimal(this_blk.njcell*this_blk.nicell, 0, other_blk.myConfig);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest+1);
-                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
                         myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nicell + i));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
@@ -825,28 +681,12 @@ public:
                 break;
             case Face.bottom:
                 k_dest = this_blk.kmin;  // index of the bottom-most plane of active cells
-                myBC.celldata.U0.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.U1.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.U2.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.U3.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.U4.length = (this_blk.njcell*this_blk.nicell)*neq;
-                myBC.celldata.dUdt0.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>1) myBC.celldata.dUdt1.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>2) myBC.celldata.dUdt2.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>3) myBC.celldata.dUdt3.length = (this_blk.njcell*this_blk.nicell)*neq;
-                if (nftl>4) myBC.celldata.dUdt4.length = (this_blk.njcell*this_blk.nicell)*neq;
-                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nicell)*neq;
-                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nicell);
-                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nicell);
-                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nicell);
+                myBC.celldata.allocate_minimal(this_blk.njcell*this_blk.nicell, 0, other_blk.myConfig);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest);
-                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
-                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
                         myBC.gasCells ~= new FluidFVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nicell + i));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {

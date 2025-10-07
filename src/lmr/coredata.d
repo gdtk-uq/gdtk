@@ -15,6 +15,7 @@ import lmr.conservedquantities;
 import lmr.flowgradients;
 import lmr.flowstate;
 import lmr.lsqinterp;
+import lmr.globalconfig : LocalConfig;
 import lmr.onedinterp : L2R2InterpData, L3R3InterpData;
 
 struct FluidCellData{
@@ -49,6 +50,47 @@ struct FluidCellData{
         LSQInterpGradients[] saved_lsqgradients;
         ConservedQuantities saved_source_terms;
         bool[] doNotPerturb;
+    }
+
+    void allocate_minimal(size_t ncells, size_t nghost, LocalConfig myConfig){
+    /*
+        FluidFVCells expect a certain some things in the FVCellData to be built
+        in order for their constructors to work properly. This routine
+        allocates only those things; principly for creating ghost fluid cells
+        in the solid_gas_full_face_copy code.
+
+        TODO: Move the rest of the allocation to this file from fluidblock.d
+        @author: Nick N. Gibbons
+    */
+        auto gmodel = myConfig.gmodel;
+        size_t neq = myConfig.cqi.n;
+        size_t nturb = myConfig.turb_model.nturb;
+        size_t nftl = myConfig.n_flow_time_levels;
+        size_t ngtl = myConfig.n_grid_time_levels;
+
+        areas.length     = ngtl*(ncells + nghost);
+        volumes.length   = ngtl*(ncells + nghost);
+        positions.length = ngtl*(ncells + nghost);
+        lengths.length   = ncells + nghost;
+
+        U0.length = (ncells + nghost)*neq*nftl;
+        if (nftl>1) U1.length = (ncells + nghost)*neq*nftl;
+        if (nftl>2) U2.length = (ncells + nghost)*neq*nftl;
+        if (nftl>3) U3.length = (ncells + nghost)*neq*nftl;
+        if (nftl>4) U4.length = (ncells + nghost)*neq*nftl;
+        dUdt0.length = (ncells + nghost)*neq*nftl;
+        if (nftl>1) dUdt1.length = (ncells + nghost)*neq*nftl;
+        if (nftl>2) dUdt2.length = (ncells + nghost)*neq*nftl;
+        if (nftl>3) dUdt3.length = (ncells + nghost)*neq*nftl;
+        if (nftl>4) dUdt4.length = (ncells + nghost)*neq*nftl;
+        source_terms.length = (ncells + nghost)*neq;
+
+        flowstates.reserve(ncells + nghost);
+        gradients.reserve(ncells + nghost);
+        workspaces.reserve(ncells + nghost);
+        foreach (n; 0 .. ncells+nghost) flowstates ~= FlowState(gmodel, nturb);
+        foreach (n; 0 .. ncells+nghost) gradients ~= FlowGradients(myConfig);
+        foreach (n; 0 .. ncells+nghost) workspaces ~= WLSQGradWorkspace();
     }
 }
 
