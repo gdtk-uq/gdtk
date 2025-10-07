@@ -113,7 +113,7 @@ struct DualTimeStepController {
         dtPrev = dt;
 
         // Reference conserved quantity magnitude from Howard (2010) eqn 2.113
-        double U_inf_mag = maxConservedQuantityVectorMagnitude();;
+        double U_inf_mag = maxConservedQuantityVectorMagnitude();
 
         // L2 norm of conserved quantity update from Howard (2010) eqn 2.113
         double dU_L2 = conservedQuantityUpdateNorm();
