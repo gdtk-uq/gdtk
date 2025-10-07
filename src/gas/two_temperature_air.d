@@ -742,27 +742,24 @@ private:
 
 }
 
-version(two_temperature_air_test) {
-    int main()
-    {
-        /*
-        auto gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
-        auto Q = GasState(5, 1);
+unittest {
+    import util.test_runner : skip;
+    
+    skip("call to TwoTemperatureAir is out of date.");
+    // auto gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
+    // auto Q = GasState(5, 1);
 
-        Q.p = 666.0;
-        Q.T = 293;
-        Q.T_modes[0] = 293;
-        Q.massf = [0.78, 0.22, 0.0, 0.0, 0.0];
-        gm.update_thermo_from_pT(Q);
+    // Q.p = 666.0;
+    // Q.T = 293;
+    // Q.T_modes[0] = 293;
+    // Q.massf = [0.78, 0.22, 0.0, 0.0, 0.0];
+    // gm.update_thermo_from_pT(Q);
 
-        writeln(Q);
+    // writeln(Q);
 
-        gm.update_thermo_from_rhou(Q);
+    // gm.update_thermo_from_rhou(Q);
 
-        writeln(Q);
-        */
-        return 0;
-    }
+    // writeln(Q);
 }
 
 version(two_temp_air_ci_dump)

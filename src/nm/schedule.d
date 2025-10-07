@@ -61,26 +61,22 @@ private:
 } // end class Schedule
 
 
-version(schedule_test) {
-    import util.msg_service;
+unittest {
     import std.conv;
-    int main() {
-        auto mysched = new Schedule!double([0.0, 1.0, 1.5, 2.0], [1.0, 1.0, 0.5, 0.0]);
-        assert(isClose(mysched.get_value(-1.0), 1.0), failedUnitTest());
-        assert(isClose(mysched.interpolate_value(-1.2), 1.0), failedUnitTest());
-        assert(isClose(mysched.get_value(1.2), 1.0), failedUnitTest());
-        assert(isClose(mysched.interpolate_value(1.2), 0.8), failedUnitTest());
-        assert(isClose(mysched.get_value(2.2), 0.0), failedUnitTest());
-        assert(isClose(mysched.interpolate_value(2.2), 0.0), failedUnitTest());
-        //
-        auto isched = new Schedule!int([0.0, 1.0, 1.5, 2.0], [1, 1, 2, 0]);
-        assert(isched.get_value(-1.0) == 1, failedUnitTest());
-        assert(isched.interpolate_value(-1.2) == 1, failedUnitTest());
-        assert(isched.get_value(1.2) == 1, failedUnitTest());
-        assert(isched.interpolate_value(1.2) == 1, failedUnitTest());
-        assert(isched.get_value(2.2) == 0, failedUnitTest());
-        assert(isched.interpolate_value(2.2) == 0, failedUnitTest());
-        //
-        return 0;
-    }
+
+    auto mysched = new Schedule!double([0.0, 1.0, 1.5, 2.0], [1.0, 1.0, 0.5, 0.0]);
+    assert(isClose(mysched.get_value(-1.0), 1.0));
+    assert(isClose(mysched.interpolate_value(-1.2), 1.0));
+    assert(isClose(mysched.get_value(1.2), 1.0));
+    assert(isClose(mysched.interpolate_value(1.2), 0.8));
+    assert(isClose(mysched.get_value(2.2), 0.0));
+    assert(isClose(mysched.interpolate_value(2.2), 0.0));
+
+    auto isched = new Schedule!int([0.0, 1.0, 1.5, 2.0], [1, 1, 2, 0]);
+    assert(isched.get_value(-1.0) == 1);
+    assert(isched.interpolate_value(-1.2) == 1);
+    assert(isched.get_value(1.2) == 1);
+    assert(isched.interpolate_value(1.2) == 1);
+    assert(isched.get_value(2.2) == 0);
+    assert(isched.interpolate_value(2.2) == 0);
 }

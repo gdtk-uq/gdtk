@@ -163,32 +163,25 @@ private:
 
 } // end class Ideal_helium
 
-version(ideal_helium_test) {
-    import std.stdio;
-    import util.msg_service;
+unittest {
+    auto gm = new IdealHelium();
+    auto gd = GasState(1, 0);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.massf[0] = 1.0;
+    assert(approxEqualNumbers(gm.R(gd), to!number(2077), 1.0e-4));
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 1);
+    assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6));
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6));
 
-    int main() {
-        auto gm = new IdealHelium();
-        auto gd = GasState(1, 0);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.massf[0] = 1.0;
-        assert(approxEqualNumbers(gm.R(gd), to!number(2077), 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 1, failedUnitTest());
-        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), failedUnitTest());
-
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        assert(approxEqualNumbers(gd.rho, to!number(0.160488), 1.0e-4), failedUnitTest());
-        assert(approxEqualNumbers(gd.u, to!number(943200), 1.0e-4), failedUnitTest());
-        assert(approxEqualNumbers(gd.a, to!number(1019.06820), 1.0e-4), failedUnitTest());
-        gm.update_trans_coeffs(gd);
-        assert(approxEqualNumbers(gd.mu, to!number(2.012151e-5), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.k, to!number(0.155897), 1.0e-6), failedUnitTest());
-
-        return 0;
-    }
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    assert(approxEqualNumbers(gd.rho, to!number(0.160488), 1.0e-4));
+    assert(approxEqualNumbers(gd.u, to!number(943_200), 1.0e-4));
+    assert(approxEqualNumbers(gd.a, to!number(1019.06820), 1.0e-4));
+    gm.update_trans_coeffs(gd);
+    assert(approxEqualNumbers(gd.mu, to!number(2.012151e-5), 1.0e-6));
+    assert(approxEqualNumbers(gd.k, to!number(0.155897), 1.0e-6));
 }
