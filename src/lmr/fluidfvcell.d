@@ -699,14 +699,8 @@ public:
                     foreach(i; 0 .. myConfig.turb_model.nturb) {
                         if (isNaN(myU[cqi.rhoturb+i]))
                             throw new FlowSolverException("Turbulent quantity is Not A Number.");
-                        // enforce positivity of turbulence model conserved quantities
-                        if (myU[cqi.rhoturb+i] < 0.0) {
-                            foreach (j; 0 .. myConfig.turb_model.nturb) {
-                                // taking the absolute value has been observed to be more
-                                // stable than clipping them to a small value (e.g. 1.0e-10)
-                                myU[cqi.rhoturb+j] = fabs(myU[cqi.rhoturb+j]);
-                            }
-                        }
+                        if (myU[cqi.rhoturb+i] < 0.0)
+                            throw new FlowSolverException("Turbulent quantity is negative.");
                         fs.turb[i] = myU[cqi.rhoturb+i] * dinv;
                     }
                 }

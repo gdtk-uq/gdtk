@@ -516,7 +516,7 @@ private:
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
     immutable number[2] _rhocoeffs = [1.0, 0.0];
-    immutable number small_tke = 0.1;
+    immutable number small_tke = 1.0e-08;
     immutable number small_omega = 1.0;
     immutable bool use_vorticity_based_source_term;
     immutable bool use_log_omega_form;
