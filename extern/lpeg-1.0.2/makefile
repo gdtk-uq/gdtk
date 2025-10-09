@@ -1,5 +1,5 @@
 LIBNAME = lpeg
-LUADIR = ../src/
+LUADIR = ../lua/src/
 UNAME= uname
 
 COPT = -O2 -DNDEBUG
@@ -30,7 +30,7 @@ FILES = lpvm.o lpcap.o lptree.o lpcode.o lpprint.o
 
 guess:
 	@echo Guessing `$(UNAME)`
-	@$(MAKE) `$(UNAME)`
+	@$(MAKE) --no-print-directory `$(UNAME)`
 
 # For Linux
 Linux linux:
