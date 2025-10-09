@@ -56,7 +56,6 @@ $(PLATS) help test:
 
 clean:
 	@cd src && $(MAKE) clean
-	@cd lpeg-1.0.2 && $(MAKE) clean
 	rm -rf install
 
 install: dummy
@@ -74,8 +73,8 @@ uninstall:
 
 local:
 	$(MAKE) install INSTALL_TOP=../install
-	cd lpeg-1.0.2; $(MAKE) $(PLAT)
-	cp lpeg-1.0.2/lpeg.so install/lib/ 
+# cd lpeg-1.0.2; $(MAKE) $(PLAT)
+# cp lpeg-1.0.2/lpeg.so install/lib/ 
 
 # make may get confused with install/ if it does not support .PHONY.
 dummy:

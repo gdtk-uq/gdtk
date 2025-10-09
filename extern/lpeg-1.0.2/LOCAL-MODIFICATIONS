@@ -1,0 +1,9 @@
+Author: Alex M. Muirhead
+Date: 2025-10-08
+
+This note documents changes in the local source so that we can incorporate
+the lua source code as a library in the gdtk tools.
+
+1. Edit top-level Makefile to:
+   + Add `guess` target, to infer build options from `uname`
+   + Expand `linux` and `macosx` targets to cover variations from `uname`
