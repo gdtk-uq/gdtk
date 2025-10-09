@@ -16,15 +16,15 @@ LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 include ../common.mk
 include $(wildcard *.deps)
 
-build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
+prep-chem build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/ 
 	$(INSTALL_EXEC) prep_chem.lua $(BUILD_DIR)/bin/prep-chem
 
-build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
+chemkin2eilmer build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
 	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/
 	$(INSTALL_EXEC) chemkin2eilmer.lua $(BUILD_DIR)/bin/chemkin2eilmer
 
-build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
+prep-kinetics build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
 	$(INSTALL_DATA) mechanism.lua lex_elems.lua -t $(BUILD_DIR)/lib/
 	$(INSTALL_EXEC) prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics
 

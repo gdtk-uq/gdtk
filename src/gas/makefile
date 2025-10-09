@@ -51,7 +51,7 @@ COLLISION_INTEGRAL_FILES := $(CIF_DIR)/gupta_etal_1990_CI_data.lua \
 	$(CIF_DIR)/palmer_etal_CI_data.lua
 
 # prep-gas and its database is required by the Eilmer flow solver.
-build-prep-gas: prep_gas.lua species-database/species-database.lua \
+prep-gas build-prep-gas: prep_gas.lua species-database/species-database.lua \
 		species-database/species-list.txt species_data_converter.lua $(COLLISION_INTEGRAL_FILES)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
@@ -64,7 +64,7 @@ build-prep-gas: prep_gas.lua species-database/species-database.lua \
 
 # The following are not required by the Eilmer flow solver but
 # they are useful for building stand-alone flow-analysis programs.
-build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBEQC)
+libgas build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBEQC)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
 	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
