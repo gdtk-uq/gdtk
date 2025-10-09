@@ -115,7 +115,6 @@ endif
 
 # Default values
 linker_libs = dl $(if $(using_mac),d_classic)
-# linker_paths = $(LIBLUAPATH)
 linker_paths ?=
 
 linker_flags = $(if $(using_linux),-E)
