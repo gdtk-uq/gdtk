@@ -2,12 +2,6 @@
 # Builds main simulation program by default.
 # For example:
 # make install
-#
-# We need some trickery in make to get a newline into a string. We define it as a variable.
-define nl
-
-
-endef
 
 NVCC ?= nvcc
 GPP ?= g++
@@ -122,23 +116,6 @@ $(LIBEQC):
 
 $(MPI_FILES):
 	$(MAKE) -C $(MPI_DIR)
-
-# Makefiles don't like multiline strings. Using define and nl is
-# the cleanest way to make a multiline variable.
-define buildinfo
-{
-    "buildDate": "$(BUILD_DATE)",
-    "revisionDate": "$(REVISION_DATE)",
-    "revisionId": "$(REVISION_STRING)",
-    "fullRevisionId": "$(FULL_REVISION_STRING)",
-    "parallelType": "$(MPI_IMPLEMENTATION)"
-}
-endef
-
-buildinfo.json:
-	@echo "Creating 'buildinfo.json'..."
-	# Ensure the define becomes a proper multi-line string.
-	@printf '%b' '$(subst ${nl},\n,${buildinfo})' > $@
 
 include ../common.mk
 include $(wildcard *.deps)

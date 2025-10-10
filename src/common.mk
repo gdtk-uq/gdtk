@@ -8,6 +8,24 @@ define isoneof
 $(if $(filter $(1),$(2)),true,false)
 endef
 
+# Makefiles don't like multiline strings. Using define and nl is
+# the cleanest way to make a multiline variable.
+define buildinfo
+{
+    "buildDate": "$(BUILD_DATE)",
+    "revisionDate": "$(REVISION_DATE)",
+    "revisionId": "$(REVISION_STRING)",
+    "fullRevisionId": "$(FULL_REVISION_STRING)",
+    "parallelType": "$(MPI_IMPLEMENTATION)"
+}
+endef
+
+.INTERMEDIATE: buildinfo.json
+buildinfo.json:
+	@echo "Creating 'buildinfo.json'..."
+	# Ensure the define becomes a proper multi-line string.
+	@printf '%b' '$(subst ${nl},\n,${buildinfo})' > $@
+
 # Convenience variables to track target
 kernel := $(shell uname -s)
 ifeq ($(kernel), Darwin)

@@ -20,6 +20,8 @@ import l1d.config;
 import l1d.postprocess;
 import l1d.simcore;
 
+import util.buildinfo : buildCfg;
+
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
@@ -137,13 +139,9 @@ Parameters:
     }
     if (verbosityLevel > 0) {
         writeln("L1d 4.0 compressible-flow 1D simulation code.");
-        writeln("Revision: PUT_REVISION_STRING_HERE");
-        writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
-        //
-        write("Build-flavour: ");
-        version(flavour_debug) { writeln("debug"); }
-        version(flavour_profile) { writeln("profile"); }
-        version(flavour_fast) { writeln("fast"); }
+        writeln("Revision: ", buildCfg.revisionId);
+        writeln("Compiler-name: ", buildCfg.compilerName);
+        writeln("Build-flavour: ", buildCfg.buildFlavour);
     }
     if (helpWanted) {
         writeln(usageMsg);

@@ -10,12 +10,6 @@ WITH_FPE ?= 1
 
 PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
-NML_DIR := ../lib
-include $(NML_DIR)/nml_files.mk
-
-GAS_DIR := ../gas
-KINETICS_DIR := ../kinetics
-
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 
@@ -46,7 +40,6 @@ install:
 clean:
 	- rm -f *.o *.deps
 	- rm -f $(PROGRAMS)
-	- rm -f main_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean;
 	- $(MAKE) -C $(EQC_DIR) clean;
 
@@ -67,15 +60,12 @@ import_paths := \
 imports += l1d gas gasdyn geom kinetics nm ntypes util
 import_paths += ..
 
+string_imports := .
+
 # Non-d files to include
 extra_deps := $(LIBLUA) $(LIBEQC)
 
-main_with_rev_string.d: main.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		main.d > main_with_rev_string.d
-
-l1d4: main_with_rev_string.d $(extra_deps)
+l1d4: main.d $(extra_deps) | buildinfo.json
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
@@ -84,12 +74,6 @@ l1d4-prep: l1d4-prep.py
 
 l1d4-xt-viewer: xt-viewer.py
 	$(INSTALL_EXEC) xt-viewer.py l1d4-xt-viewer
-
-prep-gas libgas:
-	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
-
-prep-chem prep-kinetics chemkin2eilmer:
-	$(MAKE) -C $(KINETICS_DIR) BUILD_DIR=$(BUILD_DIR) build-$@
 
 $(LIBLUA):
 	$(MAKE) -C $(LUA_DIR) guess local

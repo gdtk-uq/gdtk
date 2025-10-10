@@ -13,6 +13,7 @@ import std.string;
 import std.path;
 import std.file;
 
+import util.buildinfo : buildCfg;
 import util.lua;
 
 import geom;
@@ -66,7 +67,7 @@ int main(string[] args)
     }
     if (verbosityLevel > 0) {
         writeln("foamMesh grid generator.");
-        writeln("Revision: PUT_REVISION_STRING_HERE");
+        writeln("Revision: ", buildCfg.revisionId);
     }
     if (helpWanted) {
         write(msg);

@@ -26,9 +26,10 @@ import lmr.commands.sliceflow;
 import lmr.commands.slicesolid;
 import lmr.commands.snapshot2vtk;
 import lmr.commands.structured2unstructured;
-import lmr.lmrbuild;
 import lmr.lmrconfig;
 public import lmr.commands.runsim;
+
+import util.buildinfo;
 
 // Eilmer4 imports
 import lmr.globalconfig : GlobalConfig;
