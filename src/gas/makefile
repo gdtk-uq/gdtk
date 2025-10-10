@@ -100,6 +100,7 @@ clean:
 	- rm -rf __pycache__
 	- rm -f $(DEMO_PROGRAMS)
 	- rm -f gas-calc
+	- rm -f test_runner_real
 	- rm -f species-database/species-database.lua
 	- rm -f LOGFILE*TEST
 	- rm -f thermo.inp thermo.lib thermo.out

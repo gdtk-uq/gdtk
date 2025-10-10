@@ -73,7 +73,7 @@ nelmin_complex_demo: nelmin_demo.d
 clean:
 	- rm -f *.o *.obj *.deps
 	- rm -f $(DEMO_PROGRAMS) nelmin_complex_demo
-	- rm -f test_runner test_runner_complex
+	- rm -f test_runner_real test_runner_complex
 	- $(MAKE) -C $(LUA_DIR) clean
 
 # Specific targets, for individual artefacts.
