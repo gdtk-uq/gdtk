@@ -68,8 +68,8 @@ string_imports ?=
 dmd_features ?=
 dmd_flags ?=
 
-llvm_features ?=
-llvm_flags ?=
+ldc_features ?=
+ldc_flags ?=
 
 # ----------------------------------------------------------------------------
 #                     Construction of remaining variables
@@ -78,13 +78,13 @@ llvm_flags ?=
 dmd_features += \
 	$(if $(filter dynamicLibrary,$(target_type)),PIC)
 
-llvm_features += \
+ldc_features += \
 	$(if $(filter 1,$(WITH_THREAD_SANITIZER)),sanitize=thread) \
 	$(if $(filter 1,$(WITH_ADDRESS_SANITIZER)),sanitize=address) \
 	$(if $(filter profile,$(FLAVOUR)),profile-generate) \
 	$(if $(filter fast,$(FLAVOUR)),fast-math)
 
-llvm_flags += \
+ldc_flags += \
 	$(if $(filter dynamicLibrary,$(target_type)),-relocation-model=pic)
 
 # Default values
@@ -101,7 +101,7 @@ ifeq ($(call isoneof,$(FLAVOUR),fast profile), true)
 	compiler_flags += $(if $(using_dmd), -O, $(if $(using_mac), -O1, -O2))
 	compiler_flags += $(if $(using_dmd), -inline, -enable-inlining)
     # Full link-time optimization does not play nicely on macOS
-	llvm_features += $(if $(using_linux), lto=full)
+	ldc_features += $(if $(using_linux), lto=full)
 endif
 
 ifeq ($(FLAVOUR), profile)
@@ -110,6 +110,7 @@ endif
 
 ifeq ($(FLAVOUR), debug)
 	d_versions += enable_fp_exceptions
+	ldc_flags += -link-defaultlib-debug
 	compiler_flags += $(if $(using_dmd),-debug,-d-debug)
 endif
 
@@ -132,7 +133,7 @@ ifeq ($(DMD), dmd)
 	compiler_flags += $(dmd_flags) $(addprefix -f,$(dmd_features))
 else ifeq ($(DMD), ldc2)
 	compiler_flags += $(addprefix -d-version=,$(d_versions))
-	compiler_flags += $(llvm_flags) $(addprefix -f,$(llvm_features))
+	compiler_flags += $(ldc_flags) $(addprefix -f,$(ldc_features))
 endif
 
 # ========================== LINE-BY-LINE EXPLANATION =========================
