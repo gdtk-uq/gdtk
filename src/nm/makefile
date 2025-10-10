@@ -13,8 +13,8 @@ DEMO_PROGRAMS := ridder_demo \
 	gaussquad_demo \
 	bbla_demo
 
-LUA := ../../extern/lua-5.4.3
-LIBLUA := $(LUA)/install/lib/liblua.a
+LUA_DIR := ../../extern/lua-5.4.3
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 
 include ../common.mk
 include $(wildcard *.deps)
@@ -74,11 +74,11 @@ clean:
 	- rm -f *.o *.obj *.deps
 	- rm -f $(DEMO_PROGRAMS) nelmin_complex_demo
 	- rm -f test_runner test_runner_complex
-	- $(MAKE) -C $(LUA) clean
+	- $(MAKE) -C $(LUA_DIR) clean
 
 # Specific targets, for individual artefacts.
 
 $(LIBLUA):
-	$(MAKE) -C $(LUA) guess local
+	$(MAKE) -C $(LUA_DIR) guess local
 
 .PHONY: test-all test-real test-complex clean

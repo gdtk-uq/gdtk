@@ -9,19 +9,12 @@ FLAVOUR ?= debug
 WITH_FPE ?= 0
 
 PROGRAMS := slf libslf.so
-SLF_FILES := io.d linalg.d misc.d
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
-
-GAS_DIR := ../gas
-KINETICS_DIR := ../kinetics
-
-DYAML_DIR := $(DGD_REPO)/src/extern/D-YAML/source/dyaml
-TINYENDIAN_DIR := $(DGD_REPO)/src/extern/tinyendian/source
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -39,34 +32,18 @@ else
     REVISION_DATE := unknown
 endif
 
-default: $(PROGRAMS) $(SLF_FILES)
+default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "slf code built."
 
-install: $(PROGRAMS)
-	- mkdir -p $(BUILD_DIR)/bin
-	- mkdir -p $(BUILD_DIR)/lib
-	- mkdir -p $(BUILD_DIR)/lib/gdtk
-	- cp slf $(BUILD_DIR)/bin
-	- cp libslf.so $(BUILD_DIR)/lib
-	- cp slf.py $(BUILD_DIR)/lib/gdtk
-	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
-	cp -r ../lib/* $(BUILD_DIR)/lib
-	@echo "Installing to $(INSTALL_DIR)"
-	- mkdir -p $(INSTALL_DIR)
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+install: 
+	make -C ../ install-slf
 
 clean:
-	- rm *.o *.so *deps
-	- rm $(PROGRAMS)
-	- rm -r $(BUILD_DIR)/*
+	- rm -f *.o *.so *deps
+	- rm -f $(PROGRAMS)
 	- cd $(LUA_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm libgas.a
-	- cd $(KINETICS_DIR); make clean
 	- cd $(EQC_DIR); make clean
-	- cd $(DYAML_DIR); rm -rf *.o
-	- cd $(TINYENDIAN_DIR); rm -rf *.o
 
 include ../common.mk
 include $(wildcard *.deps)

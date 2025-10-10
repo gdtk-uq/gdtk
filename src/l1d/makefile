@@ -40,28 +40,15 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
-	- mkdir -p $(INSTALL_DIR)
-	- mkdir -p $(BUILD_DIR)/bin
-	- mkdir -p $(BUILD_DIR)/lib
-	- mkdir -p $(BUILD_DIR)/share
-	cp $(PROGRAMS) $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
-	cp -r ../lib/* $(BUILD_DIR)/lib
-	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
-	@echo "Installing to $(INSTALL_DIR)"
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+install:
+	make -C ../ install-l1d
 
 clean:
-	- rm *.o *.deps
-	- rm $(PROGRAMS)
-	- rm -r $(BUILD_DIR)/*
-	- rm main_with_rev_string.d
-	- cd $(LUA_DIR); make clean;
-	- cd $(GAS_DIR); make clean; rm libgas.a
-	- cd $(KINETICS_DIR); make clean
-	- cd $(EQC_DIR); make clean
+	- rm -f *.o *.deps
+	- rm -f $(PROGRAMS)
+	- rm -f main_with_rev_string.d
+	- $(MAKE) -C $(LUA_DIR) clean;
+	- $(MAKE) -C $(EQC_DIR) clean;
 
 include ../common.mk
 include $(wildcard *.deps)

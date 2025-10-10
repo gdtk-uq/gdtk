@@ -53,7 +53,6 @@ clean:
 	- rm -f *.o *.mod *.obj *.deps
 	- rm -f test_runner
 	- rm -f two_temperature_argon_kinetics_test_results.data
-	- rm -rf $(BUILD_DIR)/*
 	- $(MAKE) -C $(LUA_DIR) clean
 	- $(MAKE) -C $(EQC_DIR) clean
 

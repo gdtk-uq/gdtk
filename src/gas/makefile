@@ -74,10 +74,8 @@ libgas build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBEQC)
 	cp $(EQC_DIR)/libeqc.so $(BUILD_DIR)/lib/
 	cp -r ../lib/* $(BUILD_DIR)/lib/
 
-install: build-prep-gas build-libgas
-	- mkdir -p $(INSTALL_DIR)
-	@echo "Installing to $(INSTALL_DIR)"
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+install: 
+	make -C ../ install-gas
 
 .PHONY: test-all test-real
 test-all: test-real
@@ -99,7 +97,6 @@ demo: $(DEMO_PROGRAMS)
 clean:
 	- rm -f *.o *.so *.a *.obj *.lib *.deps
 	- rm -f *.mod
-	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
 	- rm -f $(DEMO_PROGRAMS)
 	- rm -f gas-calc
@@ -147,7 +144,7 @@ $(LIBEQC):
 	$(MAKE) -C $(EQC_DIR)
 
 species-database/species-database.lua :
-	cd species-database; make species-database.lua
+	$(MAKE) -C ./species-database species-database.lua
 
 # Some demo targets. These are left over from the early days of development.
 # Since the target and filename are the same, these recipes are super simple!

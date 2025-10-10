@@ -10,12 +10,6 @@ WITH_FPE ?= 1
 
 PROGRAMS := nenzf1d
 
-NML_DIR := ../lib
-include $(NML_DIR)/nml_files.mk
-
-GAS_DIR := ../gas
-KINETICS_DIR := ../kinetics
-
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 
@@ -42,28 +36,13 @@ default: $(PROGRAMS) libnenzf1d.so
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "nenzf1d code built."
 
-install: $(PROGRAMS) libnenzf1d.so prep-gas prep-chem chemkin2eilmer prep-kinetics
-	- mkdir -p $(INSTALL_DIR)
-	- mkdir -p $(BUILD_DIR)/bin
-	- mkdir -p $(BUILD_DIR)/lib
-	- mkdir -p $(BUILD_DIR)/share
-	cp $(PROGRAMS) $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
-	cp -r ../lib/* $(BUILD_DIR)/lib
-	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
-	cp nenzf1d.py $(BUILD_DIR)/lib
-	cp libnenzf1d.so $(BUILD_DIR)/lib 2>/dev/null || :
-	@echo "Installing to $(INSTALL_DIR)"
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+install: 
+	make -C ../ install-nenzf1d
 
 clean:
-	- rm *.o *.so *.deps
-	- rm $(PROGRAMS)
-	- rm -r $(BUILD_DIR)/*
-	- rm *_with_rev_string.d
-	- $(MAKE) -C $(GAS_DIR) clean
-	- $(MAKE) -C $(KINETICS_DIR) clean
+	- rm -f *.o *.so *.deps
+	- rm -f $(PROGRAMS)
+	- rm -f *_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean
 	- $(MAKE) -C $(EQC_DIR) clean
 
@@ -111,12 +90,6 @@ libnenzf1d.so: linker_paths += $(INSTALL_DIR)/lib
 libnenzf1d.so: cwrap.o $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
-
-prep-gas:
-	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
-
-prep-chem prep-kinetics chemkin2eilmer:
-	$(MAKE) -C $(KINETICS_DIR) BUILD_DIR=$(BUILD_DIR) build-$@
 
 $(LIBLUA):
 	$(MAKE) -C $(LUA_DIR) guess local
