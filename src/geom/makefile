@@ -31,17 +31,17 @@ default: test-all
 play:
 	@echo "Found $(LIBPLOT)"
 
-install: foamMesh grid2pato $(GEOM_LUA_FILES)
+install: foamMesh grid2pato $(OPENFOAM_DIR)/foam-mesh.lua $(OPENFOAM_DIR)/openfoam.lua
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp foamMesh $(BUILD_DIR)/bin/
+	cp grid2pato $(BUILD_DIR)/bin/
 	cp $(OPENFOAM_DIR)/foam-mesh.lua $(BUILD_DIR)/bin/
+	cp $(OPENFOAM_DIR)/grid2pato.lua $(BUILD_DIR)/bin/
 	cp $(OPENFOAM_DIR)/openfoam.lua $(BUILD_DIR)/lib/
 	cp -r $(OPENFOAM_DIR)/foamMesh-templates $(BUILD_DIR)/share/
-	cp $(OPENFOAM_DIR)/grid2pato.lua $(BUILD_DIR)/bin/
-	cp grid2pato $(BUILD_DIR)/bin/
 	cp -r $(OPENFOAM_DIR)/pato-templates $(BUILD_DIR)/share/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
