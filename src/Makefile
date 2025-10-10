@@ -4,6 +4,8 @@ BUILD_DIR := ../build
 LUA_DIR := ../extern/lua-5.4.3
 LPEG_DIR := ../extern/lpeg-1.0.2
 
+export FLAVOUR ?= debug
+
 DIRS := \
 	chicken \
 	gas \
@@ -122,7 +124,7 @@ install-nenzf1d: prep-install prep-build-dir install-gdtklib install-gas install
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 install-slf: PROGRAMS := slf libslf.so
-install-slf: prep-install prep-build-dir install-gdtklib
+install-slf: prep-install prep-build-dir install-gdtklib install-gas install-kinetics
 	make -C ./slf $(PROGRAMS)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib/gdtk
