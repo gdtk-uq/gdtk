@@ -15,6 +15,8 @@ else
     REVISION_STRING := unknown
 endif
 
+PROGRAMS := foamMesh grid2pato
+
 demo_files := $(wildcard demos/*)
 demo_targets := $(basename $(notdir $(demo_files)))
 
@@ -31,37 +33,21 @@ default: test-all
 play:
 	@echo "Found $(LIBPLOT)"
 
-install: foamMesh grid2pato $(OPENFOAM_DIR)/foam-mesh.lua $(OPENFOAM_DIR)/openfoam.lua
-	- mkdir -p $(INSTALL_DIR)
-	- mkdir -p $(BUILD_DIR)/bin
-	- mkdir -p $(BUILD_DIR)/lib
-	- mkdir -p $(BUILD_DIR)/share
-	cp foamMesh $(BUILD_DIR)/bin/
-	cp grid2pato $(BUILD_DIR)/bin/
-	cp $(OPENFOAM_DIR)/foam-mesh.lua $(BUILD_DIR)/bin/
-	cp $(OPENFOAM_DIR)/grid2pato.lua $(BUILD_DIR)/bin/
-	cp $(OPENFOAM_DIR)/openfoam.lua $(BUILD_DIR)/lib/
-	cp -r $(OPENFOAM_DIR)/foamMesh-templates $(BUILD_DIR)/share/
-	cp -r $(OPENFOAM_DIR)/pato-templates $(BUILD_DIR)/share/
-	@echo "Installing to $(INSTALL_DIR)"
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+install: 
+	make -C ../ install-geom
 
 clean:
 	- rm -f *.o **/*.o
 	- rm -f *.obj **/*.obj
 	- rm -f *.deps **/*.deps
+	- rm -rf foamMesh
+	- rm -rf grid2pato
 	- rm -f $(demo_targets)
 	- rm -f test_runner_real test_runner_complex
 	- rm -f gpgrid*.vtk test*.vtk test*.stl test*.gz test*.svg test*.su2 test*.bin
 	- rm -rf test_openFoam
-	- rm **/*_with_rev_string.d
-	- rm $(BUILD_DIR)/lib/openfoam.lua
+	- rm -f **/*_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean
-
-all-clean: clean
-	- rm -rf foamMesh
-	- rm -rf grid2pato
-	- rm -rf $(BUILD_DIR)
 
 include ../common.mk
 

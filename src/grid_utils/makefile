@@ -20,12 +20,9 @@ $(PROGRAMS): %: %.d
 
 clean:
 	- rm -f *.o
-	- rm -r *.deps
+	- rm -f *.deps
 	- rm -f $(PROGRAMS)
-	- rm -f $(BUILD_DIR)/bin/$(PROGRAMS)
 
-install: $(PROGRAMS)
-	- mkdir -p $(BUILD_DIR)/bin
-	cp $(PROGRAMS) $(BUILD_DIR)/bin/
-	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
+install: 
+	make -C ../ install-gridutils
 

@@ -7,6 +7,8 @@ LPEG_DIR := ../extern/lpeg-1.0.2
 export FLAVOUR ?= debug
 
 DIRS := \
+	$(LUA_DIR) \
+	$(LPEG_DIR) \
 	chicken \
 	gas \
 	gasdyn \
@@ -27,8 +29,6 @@ clean:
 		echo "Cleaning directory $$dir/"; \
 		make -s -C $$dir clean; \
 	done
-	# For some reason geom thinks it's special
-	make -s -C geom all-clean
 	rm -rf $(BUILD_DIR)
 
 uninstall:
@@ -112,6 +112,13 @@ install-lmr: prep-install prep-build-dir install-lua install-lpeg install-gdtkli
 	cp ./lmr/gdtk-module $(INSTALL_DIR)/share
 	cp ./lmr/lmr-complete.sh $(INSTALL_DIR)/share
 	cp ./lmr/share/* $(INSTALL_DIR)/share
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+
+install-puffin: PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
+install-puffin: prep-install prep-build-dir install-gdtklib install-gas install-kinetics
+	make -C ./puffin $(PROGRAMS)
+	cp $(addprefix ./puffin/,$(PROGRAMS)) $(BUILD_DIR)/bin
+	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 install-nenzf1d: PROGRAMS := nenzf1d

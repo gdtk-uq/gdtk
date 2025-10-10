@@ -19,16 +19,6 @@ WITH_MPICH ?= 0
 
 WITH_FPE ?= 1
 
-# PLATFORM options are linux, macosx
-ifeq ($(shell uname -s), Darwin)
-    PLATFORM := macosx
-    USING_MAC := 1
-else
-    PLATFORM := linux
-    USING_MAC :=
-endif
-$(info PLATFORM=$(PLATFORM))
-
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
 DEBUG_CHEM ?= 0
@@ -55,13 +45,6 @@ MPI_FILES = $(OPENMPI_FILES)
 MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
-GAS_DIR = ../gas
-GEOM_DIR = ../geom
-GRID_DIR = ../grid_utils
-KINETICS_DIR = ../kinetics
-NML_DIR := ../lib
-include $(NML_DIR)/nml_files.mk
-
 PROGRAMS := lmr lmr-debug
 SUB_PROGRAMS := lmr-run lmrZ-run
 ifeq ($(OPT_OUT_MPI), 0)
@@ -81,8 +64,7 @@ SHARE_FILES :=
 ETC_FILES := lmr.cfg
 PY_PROG_DIR := python-programs
 PY_PROGRAMS := lmr-verify
-AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
-AUX_PROGRAMS += lmr-complete gdtk-module
+AUX_PROGRAMS := lmr-complete gdtk-module
 
 MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
 MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
@@ -91,11 +73,9 @@ include lmr-files.mk
 
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
-include $(EQC_DIR)/eqc_files.mk
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/install/lib
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -120,49 +100,19 @@ default: $(PROGRAMS) $(SUB_PROGRAMS)
 # Including `buildinfo.json` as a order-only prerequisite here ensures that
 # all programs have the same build information (i.e. build-time) when
 # calling `make install`.
-install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.json
-	- mkdir -p $(INSTALL_DIR)/bin
-	- mkdir -p $(INSTALL_DIR)/lib
-	- mkdir -p $(INSTALL_DIR)/etc
-	- mkdir -p $(INSTALL_DIR)/share
-	cp $(PROGRAMS) $(INSTALL_DIR)/bin
-	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
-	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
-	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
-	cp lmr.cfg $(INSTALL_DIR)/etc/
-	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
-	cp -r ../lib/* $(BUILD_DIR)/lib
-	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
-	cp gdtk-module $(INSTALL_DIR)/share
-	cp lmr-complete.sh $(INSTALL_DIR)/share
-	cp share/* $(INSTALL_DIR)/share
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+install: | buildinfo.json
+	make -C ../ install-lmr
 
 clean:
-	- rm *.o
-	- rm *.deps
-	- rm -rf $(BUILD_DIR)/*
-	- rm $(PROGRAMS)
-	- rm $(SUB_PROGRAMS)
-	- rm $(PY_PROGRAMS)
-	- rm lmrconfig_with_str_subst.d
-	- rm runsim_shared.d runsim_mpi.d
-	- rm -f gdtk-module
-	- rm -f lmr-complete.sh
+	- rm -f *.o *.deps
+	- rm -f $(PROGRAMS)
+	- rm -f $(SUB_PROGRAMS)
+	- rm -f $(PY_PROGRAMS)
+	- rm -f $(AUX_PROGRAMS)
 	- rm -f lmr-check-jacobian lmrZ-check-jacobian
-	- $(MAKE) -C $(OPENMPI_DIR) clean
-	- $(MAKE) -C $(MPICH_DIR) clean
-	- $(MAKE) -C $(GEOM_DIR) clean
-	- $(MAKE) -C $(GZIP_DIR) clean
-	- $(MAKE) -C $(GAS_DIR) clean
-	- $(MAKE) -C $(KINETICS_DIR) clean
-	- $(MAKE) -C $(GRID_DIR) clean
+	- $(MAKE) -C $(MPI_DIR) clean
 	- $(MAKE) -C $(LUA_DIR) clean
 	- $(MAKE) -C $(EQC_DIR) clean
-
-$(LIBGASF):
-	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
 
 $(LIBLUA):
 	$(MAKE) -C $(LUA_DIR) guess local
@@ -265,18 +215,6 @@ lmr%check-jacobian: commands/checkjacobian.d $(extra_deps) | buildinfo.json
 lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
 	cp $< $@
 	chmod +x $@
-
-#### Auxiliary programs but part of making an eilmer install useful
-prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
-
-ugrid_partition:
-	- mkdir -p $(BUILD_DIR)/bin
-	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
-	cd $(GRID_DIR); cp ugrid_partition $(BUILD_DIR)/bin
-
-prep-chem chemkin2eilmer prep-kinetics:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-$@
 
 gdtk-module:
 	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \

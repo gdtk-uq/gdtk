@@ -46,8 +46,8 @@ $(demo_targets): %: %.d $$(extra_deps)
 	$(call cleanup-deps)
 
 clean:
-	- rm *.o *.obj *.deps
-	- rm $(demo_targets)
+	- rm -f *.o *.obj *.deps
+	- rm -f $(demo_targets)
 	- $(MAKE) -C $(LUA_DIR) clean
 	- $(MAKE) -C $(EQC_DIR) clean
 
