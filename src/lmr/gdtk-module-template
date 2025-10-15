@@ -18,6 +18,5 @@ append-path LD_LIBRARY_PATH $gdtk/lib
 setenv DGD_LUA_PATH $gdtk/lib/?.lua
 setenv DGD_LUA_CPATH $gdtk/lib/?.so
 append-path PYTHONPATH $gdtk/lib
-source-sh bash $gdtk/share/lmr-complete.sh
 
 conflict dgd gdtk
