@@ -14,3 +14,4 @@ _lmr_completions() {
 
 # If no completions, default to completing files
 complete -F _lmr_completions -o default lmr
+complete -F _lmr_completions -o default lmr-debug

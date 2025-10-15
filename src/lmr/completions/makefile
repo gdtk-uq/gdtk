@@ -10,14 +10,19 @@ bash: lmr.bash
 
 fish: lmr.fish
 	$(install_file) $< ~/.config/fish/completions
+	@echo "Please restart your shell for the changes to take effect"
+	@echo "Or alternatively run 'source lmr.fish'"
 
 # If using oh-my-zsh, this will direct to the relevant directory
 # Else, we install to the default
 ZSH ?= ~/.zsh
 zsh: lmr.zsh
 	$(install_file) $< $(ZSH)/completions/_lmr
+	@echo "Please restart your shell for the changes to take effect"
+	@echo "Or alternatively run 'compinit'"
 
 remove:
+	# Removing all options to be sure
 	- rm -f ~/.local/share/bash-completion/completions/lmr
 	- rm -f ~/.config/fish/completions/lmr.fish
 	- rm -f $(ZSH)/completions/_lmr
@@ -26,8 +31,6 @@ ifeq ($(shell_name),bash)
 	@echo "Or alternatively run 'complete -r lmr'"
 else ifeq ($(shell_name),fish)
 	@echo "Or alternatively run 'complete -c lmr -e'"
-else ifeq ($(shell_name),zsh)
-	@echo "Or alternatively run 'compinit'"
 endif
 
 .PHONY: guess bash fish zsh remove
