@@ -1,4 +1,4 @@
-#compdef lmr
+#compdef lmr lmr-debug
 
 _lmr() {
   local curcontext="$curcontext" state line
