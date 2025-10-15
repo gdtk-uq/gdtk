@@ -94,7 +94,7 @@ ETC_FILES := lmr.cfg
 PY_PROG_DIR := python-programs
 PY_PROGRAMS := lmr-verify
 AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
-AUX_PROGRAMS += lmr-complete gdtk-module
+AUX_PROGRAMS += gdtk-module
 
 MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
 MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
@@ -319,7 +319,6 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	cp gdtk-module $(INSTALL_DIR)/share
-	cp lmr-complete.sh $(INSTALL_DIR)/share
 	cp share/* $(INSTALL_DIR)/share
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
@@ -332,7 +331,6 @@ clean:
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_mpi.d
 	- rm -f gdtk-module
-	- rm -f lmr-complete.sh
 	- rm -f lmr-check-jacobian lmrZ-check-jacobian
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
@@ -459,14 +457,6 @@ gdtk-module:
 		-e 's+PUT_REVISION_AGE_HERE+$(REVISION_AGE)+' \
 		-e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
 		./gdtk-module-template > gdtk-module
-
-lmr-complete:
-	echo '#/usr/bin/env bash\n' \
-		'_lmr_completions()\n'\
-		'{\n'\
-		'COMPREPLY=($$(if [ "$$COMP_CWORD" -eq 1 ]; then\n compgen -W "compute-norms prep-gas slice-flow prep-grids prep-mapped-cells probe-flow prep-reactions limiter2vtk snapshot2vtk prep-sim residual2vtk plot-diagnostics list-species slice-solid custom-script prep-energy-exchange gradient2vtk run revision-id structured2unstructured extract-line lmrZ-check-jacobian lmr-check-jacobian" "$${COMP_WORDS[1]}"\n fi))\n'\
-		'}\n'\
-		'complete -F _lmr_completions lmr\n' > lmr-complete.sh
 
 # Special Targets
 # ===============
