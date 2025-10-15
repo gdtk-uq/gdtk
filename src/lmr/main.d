@@ -35,6 +35,7 @@ import lmr.globalconfig : GlobalConfig;
 
 Command[string] commands;
 Command helpCmd;
+Command listCompletionsCmd;
 
 static this()
 {
@@ -55,8 +56,13 @@ Show help for a given Eilmer command or topic.
    Given a command name or topic, print specific help.
 `;
 
+    listCompletionsCmd.main = &listAllCompletions;
+    listCompletionsCmd.description = "List all commands for generating shell completions";
+    listCompletionsCmd.shortDescription = listCompletionsCmd.description;
+
     // Add commands here.
     commands["help"] = helpCmd;
+    commands["completions"] = listCompletionsCmd;
     // Try to add commands in alphabetical order from here down.
     // 1. Add user commands
     commands["compute-norms"] = compNormsCmd;
@@ -198,6 +204,30 @@ void listHelpForAllCommands()
     writeln("Meta commands");
     writefln("   %-24s Print condensed version information about lmr program.", "version");
     writefln("   %-24s Print full version information about lmr program.", "version-long");
+}
+
+int listAllCompletions(string[] args) {
+    auto cmds = commands.keys;
+    cmds.sort;
+    bool describe = (args.length >= 3) && (args[2] == "-d" || args[2] == "--describe"); 
+    // First print regular user commands
+    foreach (cmd; cmds) {
+        if (commands[cmd].type == LmrCmdType.user) {
+            string line = cmd;
+            if (describe) 
+                line ~= "\t" ~ commands[cmd].shortDescription;
+            writeln(line);
+        }
+    }
+    foreach (cmd; cmds) {
+        if (commands[cmd].type == LmrCmdType.dev) {
+            string line = cmd;
+            if (describe) 
+                line ~= "\t" ~ commands[cmd].shortDescription;
+            writeln(line);
+        }
+    }
+    return 0;
 }
 
 int printHelp(string[] args)
