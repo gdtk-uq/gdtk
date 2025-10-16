@@ -704,33 +704,35 @@ static double[string] A_11, B_11, C_11, D_11;
 static double[string] A_22, B_22, C_22, D_22;
 
 
-version(electronically_specific_gas_test) {
-    int main()
-    {
-        import util.msg_service;
+unittest {
+    import std.file;
 
-        auto L = init_lua_State();
-        doLuaFile(L,"sample-data/electronic-and-macro-species.lua");
+    // Look for lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        auto gm = new ElectronicallySpecificGas(L);
-        auto gd = GasState(gm.n_species,1);
+    auto L = init_lua_State();
+    doLuaFile(L,"electronic-and-macro-species.lua");
 
-        gd.p=666.0;
-        gd.T = 293;
-        gd.T_modes[0] = 293;
-        gd.massf = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.78, 0.22, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        gm.update_thermo_from_pT(gd);
+    auto gm = new ElectronicallySpecificGas(L);
+    auto gd = GasState(gm.n_species,1);
 
-        assert(isClose(-89784.2, gd.u, 1.0e-6), failedUnitTest());
-        assert(isClose(0.00787412, gd.rho, 1.0e-6), failedUnitTest());
+    gd.p=666.0;
+    gd.T = 293;
+    gd.T_modes[0] = 293;
+    gd.massf = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.78, 0.22, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    gm.update_thermo_from_pT(gd);
 
-        gm.update_thermo_from_rhou(gd);
-        assert(isClose(666.0, gd.p, 1.0e-6), failedUnitTest());
-        assert(isClose(293, gd.T, 1.0e-6), failedUnitTest());
+    assert(isClose(-89_784.2, gd.u, 1.0e-6));
+    assert(isClose(0.00787412, gd.rho, 1.0e-6));
 
-        return 0;
-    }
+    gm.update_thermo_from_rhou(gd);
+    assert(isClose(666.0, gd.p, 1.0e-6));
+    assert(isClose(293, gd.T, 1.0e-6));
+
 }
+
 static this()
 {
     _macro_mol_masses[0] = 14.0067e-3;
@@ -1230,46 +1232,40 @@ private:
 }
 
 
-version(electronically_specific_gas_test) {
-    int main()
-    {
-        import util.msg_service;
+unittest {
 
-        string filename = "sample-data/electronic_composition.lua";
+    string filename = "electronic_composition.lua";
 
-        auto L = init_lua_State();
-        doLuaFile(L, relativePath(filename));
-        auto gm = new ElectronicallySpecificGas(L);
-        auto gd = GasState(gm.n_species,1);
+    auto L = init_lua_State();
+    doLuaFile(L, relativePath(filename));
+    auto gm = new ElectronicallySpecificGas(L);
+    auto gd = GasState(gm.n_species,1);
 
-        // gd.massf[] = 0.0;
-        // gd.massf[0] = 0.037041674288877; //initialises massf of NI
-        // gd.massf[9] = 0.010577876366622; //initialises massf of OI
-        // gd.massf[19] = 0.74082290750449; //N2
-        // gd.massf[20] = 0.21155752733244; //O2
-        // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
-        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07,
-        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005,
-        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08,
-        //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
-        gd.massf[] = 0;
-        gd.massf[gm.n_species-3] = 1e-8;
-        gd.massf[gm.n_species-2] = 0.78;
-        gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
+    // gd.massf[] = 0.0;
+    // gd.massf[0] = 0.037041674288877; //initialises massf of NI
+    // gd.massf[9] = 0.010577876366622; //initialises massf of OI
+    // gd.massf[19] = 0.74082290750449; //N2
+    // gd.massf[20] = 0.21155752733244; //O2
+    // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
+    // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07,
+    //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005,
+    //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08,
+    //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
+    gd.massf[] = 0;
+    gd.massf[gm.n_species-3] = 1e-8;
+    gd.massf[gm.n_species-2] = 0.78;
+    gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
 
-        gd.p = 100000.0;
-        gd.T = 300.0;
-        gd.T_modes[0]=4000.0;
-        gm.update_thermo_from_pT(gd);
+    gd.p = 100000.0;
+    gd.T = 300.0;
+    gd.T_modes[0]=4000.0;
+    gm.update_thermo_from_pT(gd);
 
-        double massfsum=0.0;
-        foreach(number eachmassf;gd.massf) {
-            massfsum += eachmassf;
-        }
-        assert(isClose(massfsum, 1.0, 1e-2), failedUnitTest());
-
-        return 0;
+    double massfsum=0.0;
+    foreach(number eachmassf;gd.massf) {
+        massfsum += eachmassf;
     }
+    assert(isClose(massfsum, 1.0, 1e-2));
 
 }
 */

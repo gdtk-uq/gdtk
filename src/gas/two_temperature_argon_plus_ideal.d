@@ -575,114 +575,115 @@ private
     double _e_mass_over_ion_mass; // set once mol masses are set in constructor
 } // end class TwoTemperatureArgonPlusIdealGas
 
-version(two_temperature_argon_plus_ideal_test) {
+unittest {
+    import std.file;
     import std.stdio;
-    import util.msg_service;
 
-    int main() {
-        // [TODO] Make a proper test that doesn't assume just ideal air is in the mix.
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "two-temperature-argon-plus-ideal-air-gas-model.lua");
-        auto gm = new TwoTemperatureArgonPlusIdealGas(L);
-        lua_close(L);
-        auto gd = GasState(4, 1);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        // (1) Try pure ideal air.
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.massf[Species.ideal] = 1.0;
-        gd.massf[Species.Ar] = 0.0;
-        gd.massf[Species.Ar_plus] = 0.0;
-        gd.massf[Species.e_minus] = 0.0;
-        assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 1, failedUnitTest());
-        assert(gm.n_species == 4, failedUnitTest());
-        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[1], to!number(0.0), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[2], to!number(0.0), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(gd.massf[3], to!number(0.0), 1.0e-6), failedUnitTest());
+    // [TODO] Make a proper test that doesn't assume just ideal air is in the mix.
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "two-temperature-argon-plus-ideal-air-gas-model.lua");
+    auto gm = new TwoTemperatureArgonPlusIdealGas(L);
+    lua_close(L);
+    auto gd = GasState(4, 1);
 
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        writeln("rho=", gd.rho);
-        assert(approxEqualNumbers(gd.rho, to!number(1.16102), 1.0e-4), failedUnitTest());
-        writeln("u=", gd.u);
-        assert(approxEqualNumbers(gd.u, to!number(215327.0), 1.0e-4), failedUnitTest());
-        writeln("a=", gd.a);
-        assert(approxEqualNumbers(gd.a, to!number(347.251), 1.0e-4), failedUnitTest());
-        gm.update_trans_coeffs(gd);
-        writeln("mu=", gd.mu);
-        assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), failedUnitTest());
-        writeln("k=", gd.k);
-        assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), failedUnitTest());
+    // (1) Try pure ideal air.
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.massf[Species.ideal] = 1.0;
+    gd.massf[Species.Ar] = 0.0;
+    gd.massf[Species.Ar_plus] = 0.0;
+    gd.massf[Species.e_minus] = 0.0;
+    assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4));
+    assert(gm.n_modes == 1);
+    assert(gm.n_species == 4);
+    assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6));
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[1], to!number(0.0), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[2], to!number(0.0), 1.0e-6));
+    assert(approxEqualNumbers(gd.massf[3], to!number(0.0), 1.0e-6));
 
-        gm.update_thermo_from_rhou(gd);
-        writeln("same condition: p=", gd.p);
-        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
-        writeln("T=", gd.T);
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    writeln("rho=", gd.rho);
+    assert(approxEqualNumbers(gd.rho, to!number(1.16102), 1.0e-4));
+    writeln("u=", gd.u);
+    assert(approxEqualNumbers(gd.u, to!number(215327.0), 1.0e-4));
+    writeln("a=", gd.a);
+    assert(approxEqualNumbers(gd.a, to!number(347.251), 1.0e-4));
+    gm.update_trans_coeffs(gd);
+    writeln("mu=", gd.mu);
+    assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6));
+    writeln("k=", gd.k);
+    assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6));
 
-        gd.u *= 1.2;
-        gm.update_thermo_from_rhou(gd);
-        writeln("increase u: p=", gd.p);
-        assert(approxEqualNumbers(gd.p, to!number(1.2e5), 1.0e-6), failedUnitTest());
-        writeln("T=", gd.T);
-        assert(approxEqualNumbers(gd.T, to!number(360.0), 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_rhou(gd);
+    writeln("same condition: p=", gd.p);
+    assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6));
+    writeln("T=", gd.T);
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
 
-        gd.p /= 1.2;
-        gm.update_thermo_from_rhop(gd);
-        writeln("decrease p: u=", gd.u);
-        assert(approxEqualNumbers(gd.u, to!number(215327.0), 1.0e-4), failedUnitTest());
-        writeln("T=", gd.T);
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
+    gd.u *= 1.2;
+    gm.update_thermo_from_rhou(gd);
+    writeln("increase u: p=", gd.p);
+    assert(approxEqualNumbers(gd.p, to!number(1.2e5), 1.0e-6));
+    writeln("T=", gd.T);
+    assert(approxEqualNumbers(gd.T, to!number(360.0), 1.0e-6));
 
-        version(complex_numbers) {
-            // Check du/dT = Cv
-            number u0 = gd.u; // copy unperturbed value, but we don't really need it
-            double h = 1.0e-20;
-            gd.T += complex(0.0,h);
-            gm.update_thermo_from_rhoT(gd);
-            double myCv = gd.u.im/h;
-            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
-        }
+    gd.p /= 1.2;
+    gm.update_thermo_from_rhop(gd);
+    writeln("decrease p: u=", gd.u);
+    assert(approxEqualNumbers(gd.u, to!number(215327.0), 1.0e-4));
+    writeln("T=", gd.T);
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6));
 
-        // (2) Try pure argon.
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.T_modes[0] = 300.0;
-        gd.massf[Species.ideal] = 0.0;
-        gd.massf[Species.Ar] = 1.0;
-        gd.massf[Species.Ar_plus] = 0.0;
-        gd.massf[Species.e_minus] = 0.0;
-
-        assert(isClose(gm.R(gd), 208.0, 1.0e-4), failedUnitTest());
-        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.ideal], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.Ar], 1.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.Ar_plus], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.e_minus], 0.0, 1.0e-6), failedUnitTest());
-
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        number my_rho = 1.0e5 / (208.0 * 300.0);
-        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
-
-        number my_Cv = gm.dudT_const_v(gd);
-        number my_u = my_Cv*300.0;
-        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
-
-        number my_Cp = gm.dhdT_const_p(gd);
-        number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
-        number my_a = sqrt(5.0/3.0*208.0*(gd.T + alpha*gd.T_modes[0]));
-        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
-
-        gm.update_trans_coeffs(gd);
-        assert(isClose(gd.mu, 22.912e-6, 1.0e-3), failedUnitTest());
-        assert(isClose(gd.k, 0.0178625, 1.0e-3), failedUnitTest());
-
-        return 0;
+    version(complex_numbers) {
+        // Check du/dT = Cv
+        number u0 = gd.u; // copy unperturbed value, but we don't really need it
+        double h = 1.0e-20;
+        gd.T += complex(0.0,h);
+        gm.update_thermo_from_rhoT(gd);
+        double myCv = gd.u.im/h;
+        assert(isClose(myCv, gm.dudT_const_v(gd).re));
     }
+
+    // (2) Try pure argon.
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.T_modes[0] = 300.0;
+    gd.massf[Species.ideal] = 0.0;
+    gd.massf[Species.Ar] = 1.0;
+    gd.massf[Species.Ar_plus] = 0.0;
+    gd.massf[Species.e_minus] = 0.0;
+
+    assert(isClose(gm.R(gd), 208.0, 1.0e-4));
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 300.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.ideal], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.Ar], 1.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.Ar_plus], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.e_minus], 0.0, 1.0e-6));
+
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    number my_rho = 1.0e5 / (208.0 * 300.0);
+    assert(isClose(gd.rho, my_rho, 1.0e-4));
+
+    number my_Cv = gm.dudT_const_v(gd);
+    number my_u = my_Cv*300.0;
+    assert(isClose(gd.u, my_u, 1.0e-3));
+
+    number my_Cp = gm.dhdT_const_p(gd);
+    number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
+    number my_a = sqrt(5.0/3.0*208.0*(gd.T + alpha*gd.T_modes[0]));
+    assert(isClose(gd.a, my_a, 1.0e-3));
+
+    gm.update_trans_coeffs(gd);
+    assert(isClose(gd.mu, 22.912e-6, 1.0e-3));
+    assert(isClose(gd.k, 0.0178625, 1.0e-3));
 }
