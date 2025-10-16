@@ -18,6 +18,9 @@ $(PROGRAMS): %: %.d
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
+build: $(PROGRAMS)
+	cp $(PROGRAMS) -t $(BUILD_DIR)/bin/
+
 clean:
 	- rm -f *.o
 	- rm -f *.deps

@@ -16,17 +16,24 @@ LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 include ../common.mk
 include $(wildcard *.deps)
 
-prep-chem build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
+build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/ 
 	$(INSTALL_EXEC) prep_chem.lua $(BUILD_DIR)/bin/prep-chem
 
-chemkin2eilmer build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
+build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
 	$(INSTALL_DATA) reaction.lua lex_elems.lua -t $(BUILD_DIR)/lib/
 	$(INSTALL_EXEC) chemkin2eilmer.lua $(BUILD_DIR)/bin/chemkin2eilmer
 
-prep-kinetics build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
+build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
 	$(INSTALL_DATA) mechanism.lua lex_elems.lua -t $(BUILD_DIR)/lib/
 	$(INSTALL_EXEC) prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics
+
+clean:
+	- rm -f *.o *.mod *.obj *.deps
+	- rm -f test_runner
+	- rm -f two_temperature_argon_kinetics_test_results.data
+	- $(MAKE) -C $(LUA_DIR) clean
+	- $(MAKE) -C $(EQC_DIR) clean
 
 d_previews := in dip1008
 d_versions :=
@@ -48,13 +55,6 @@ test_runner: compiler_flags += -unittest
 test_runner: ../util/test_runner.d package.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
-
-clean:
-	- rm -f *.o *.mod *.obj *.deps
-	- rm -f test_runner
-	- rm -f two_temperature_argon_kinetics_test_results.data
-	- $(MAKE) -C $(LUA_DIR) clean
-	- $(MAKE) -C $(EQC_DIR) clean
 
 $(LIBLUA):
 	$(MAKE) -C $(LUA_DIR) guess local

@@ -61,39 +61,27 @@ install-gdtklib: prep-install
 	cp -r ./lib/* $(INSTALL_DIR)/lib
 
 install-gas: prep-install install-lua
-	make -C ./gas prep-gas libgas
+	make -C ./gas build-prep-gas build-libgas
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
-install-geom: OPENFOAM_DIR := openfoam
-install-geom: prep-install prep-build-dir install-lua
-	make -C ./geom foamMesh grid2pato
-	cp ./geom/foamMesh ./geom/grid2pato $(BUILD_DIR)/bin/
-	cp ./geom/$(OPENFOAM_DIR)/foam-mesh.lua $(BUILD_DIR)/bin/
-	cp ./geom/$(OPENFOAM_DIR)/grid2pato.lua $(BUILD_DIR)/bin/
-	cp ./geom/$(OPENFOAM_DIR)/openfoam.lua $(BUILD_DIR)/lib/
-	cp -r ./geom/$(OPENFOAM_DIR)/foamMesh-templates $(BUILD_DIR)/share/
-	cp -r ./geom/$(OPENFOAM_DIR)/pato-templates $(BUILD_DIR)/share/
+install-geom: prep-install install-lua
+	make -C ./geom build
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
-install-gridutils: PROGRAMS := ugrid_partition
-install-gridutils: prep-install prep-build-dir
-	make -C ./grid_utils $(PROGRAMS)
-	cp $(addprefix ./grid_utils/,$(PROGRAMS)) $(BUILD_DIR)/bin/
+install-gridutils: prep-install
+	make -C ./grid_utils build
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
-install-kinetics: PROGRAMS := prep-chem prep-kinetics chemkin2eilmer
-install-kinetics: prep-install prep-build-dir install-lua install-lpeg
-	make -C ./kinetics $(PROGRAMS)
+install-kinetics: prep-install install-lua install-lpeg
+	make -C ./kinetics build-prep-chem build-prep-kinetics build-chemkin2eilmer
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 	
-install-l1d: PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
-install-l1d: prep-install prep-build-dir install-lua install-gdtklib install-gas install-kinetics
-	make -C ./l1d $(PROGRAMS)
-	cp $(addprefix ./l1d/,$(PROGRAMS)) $(BUILD_DIR)/bin
+install-l1d: prep-install install-lua install-gdtklib install-gas install-kinetics
+	make -C ./l1d build
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 

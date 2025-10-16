@@ -17,6 +17,10 @@ endif
 
 PROGRAMS := foamMesh grid2pato
 
+TO_BIN := $(PROGRAMS) $(OPENFOAM_DIR)/foam-mesh.lua $(OPENFOAM_DIR)/grid2pato.lua
+TO_LIB := $(OPENFOAM_DIR)/openfoam.lua
+TO_SHR := $(OPENFOAM_DIR)/foamMesh-templates $(OPENFOAM_DIR)/pato-templates
+
 demo_files := $(wildcard demos/*)
 demo_targets := $(basename $(notdir $(demo_files)))
 
@@ -33,6 +37,9 @@ default: test-all
 play:
 	@echo "Found $(LIBPLOT)"
 
+demo: $(demo_targets)
+	@echo "Demo codes built."
+
 install: 
 	make -C ../ install-geom
 
@@ -46,6 +53,12 @@ clean:
 	- rm -f gpgrid*.vtk test*.vtk test*.stl test*.gz test*.svg test*.su2 test*.bin
 	- rm -rf test_openFoam
 	- $(MAKE) -C $(LUA_DIR) clean
+
+build: $(TO_BIN) $(TO_LIB) $(TO_SHR)
+	- mkdir -p $(BUILD_DIR)/bin $(BUILD_DIR)/lib $(BUILD_DIR)/share
+	cp $(TO_BIN) -t $(BUILD_DIR)/bin
+	cp $(TO_LIB) -t $(BUILD_DIR)/lib
+	cp -r $(TO_SHR) -t $(BUILD_DIR)/share
 
 include ../common.mk
 
@@ -99,9 +112,6 @@ foamMesh grid2pato: %: $(OPENFOAM_DIR)/%.d $(extra_deps) | buildinfo.json
 	$(call cleanup-deps)
 
 # The original demo artefacts.
-
-demo: $(demo_targets)
-	@echo "Demo codes built."
 
 $(demo_targets): %: demos/%.d $(extra_deps)
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^

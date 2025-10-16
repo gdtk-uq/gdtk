@@ -30,12 +30,16 @@ else
     REVISION_STRING := unknown
 endif
 
-default: $(PROGRAMS)
-	@echo "Source code revision string $(REVISION_STRING)"
-	@echo "L1d4 simulation code built."
+default: build
 
 install:
 	make -C ../ install-l1d
+
+build: $(PROGRAMS)
+	- mkdir -p $(BUILD_DIR)/bin
+	@echo "Source code revision string $(REVISION_STRING)"
+	@echo "L1d4 simulation code built."
+	$(INSTALL_EXEC) $(PROGRAMS) $(BUILD_DIR)/bin
 
 clean:
 	- rm -f *.o *.deps
