@@ -10,12 +10,6 @@ WITH_FPE ?= 1
 
 PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
-NML_DIR := ../lib
-include $(NML_DIR)/nml_files.mk
-
-GAS_DIR := ../gas
-KINETICS_DIR := ../kinetics
-
 EQC_DIR := ../extern/eqc/source
 LIBEQC := $(EQC_DIR)/libeqc.a
 
@@ -80,12 +74,6 @@ l1d4-prep: l1d4-prep.py
 
 l1d4-xt-viewer: xt-viewer.py
 	$(INSTALL_EXEC) xt-viewer.py l1d4-xt-viewer
-
-prep-gas libgas:
-	$(MAKE) -C $(GAS_DIR) BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-$@
-
-prep-chem prep-kinetics chemkin2eilmer:
-	$(MAKE) -C $(KINETICS_DIR) BUILD_DIR=$(BUILD_DIR) build-$@
 
 $(LIBLUA):
 	$(MAKE) -C $(LUA_DIR) guess local
