@@ -6,6 +6,8 @@
  */
 
 import std.stdio;
+import std.file;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.ideal_gas;
@@ -14,6 +16,12 @@ import util.lua_service;
 
 void main() {
     writeln("Begin demonstration of using the IdealGas and GasState classes...");
+
+    // Load lua files from sample-data dir
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
+
     lua_State* L = init_lua_State();
     doLuaFile(L, "ideal-air-gas-model.lua");
     auto gm = new IdealGas(L);
