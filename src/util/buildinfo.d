@@ -1,4 +1,4 @@
-module lmr.lmrbuild;
+module util.buildinfo;
 
 import std.compiler;
 import std.format;
@@ -31,7 +31,7 @@ struct BuildCfg {
     } else version(flavour_fast) {
         enum buildFlavour = "fast";
     } else {
-        static assert(0);
+        static assert(0, "Build flavour should be defined with FLAVOUR");
     }
 
     // Are we running in parallel?

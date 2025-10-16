@@ -21,7 +21,7 @@ import geom.luawrap;
 import nm.number;
 import util.lua;
 
-import lmr.lmrbuild;
+import util.buildinfo;
 import lmr.flowsolution : FluidBlockLite;
 import lmr.fluidblock : FluidBlock;
 import lmr.fvcell : FVCell;

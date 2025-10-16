@@ -11,7 +11,7 @@ import std.getopt;
 import std.stdio;
 import std.string;
 
-import lmr.lmrbuild;
+import util.buildinfo;
 import lmr.commands.command;
 import lmr.lmrconfig;
 

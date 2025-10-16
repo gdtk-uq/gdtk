@@ -28,7 +28,7 @@ import util.json_helper : readJSONfile;
 
 import lmr.commands.command;
 import lmr.globalconfig;
-import lmr.lmrbuild;
+import util.buildinfo;
 import lmr.lmrconfig;
 import lmr.newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
 import lmr.timemarching : initTimeMarchingSimulation, integrateInTime, finalizeSimulation_timemarching;
