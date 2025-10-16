@@ -19,6 +19,8 @@ import puffin.config;
 import puffin.fluidblock;
 import puffin.transient_calc;
 
+import util.buildinfo;
+
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
@@ -86,13 +88,9 @@ Parameters:
     }
     if (verbosityLevel > 0) {
         writeln("Lorikeet 2D compressible transient-flow simulator.");
-        writeln("Revision: PUT_REVISION_STRING_HERE");
-        writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
-        //
-        write("Build-flavour: ");
-        version(flavour_debug) { writeln("debug"); }
-        version(flavour_profile) { writeln("profile"); }
-        version(flavour_fast) { writeln("fast"); }
+        writeln("Revision: ", buildCfg.revisionId);
+        writeln("Compiler-name: ", buildCfg.compilerName);
+        writeln("Build-flavour: ", buildCfg.buildFlavour);
     }
     if (helpWanted) {
         writeln(usageMsg);

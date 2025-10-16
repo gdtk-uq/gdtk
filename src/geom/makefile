@@ -45,7 +45,6 @@ clean:
 	- rm -f test_runner_real test_runner_complex
 	- rm -f gpgrid*.vtk test*.vtk test*.stl test*.gz test*.svg test*.su2 test*.bin
 	- rm -rf test_openFoam
-	- rm -f **/*_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean
 
 include ../common.mk
@@ -59,6 +58,8 @@ import_paths := ../extern/gzip
 
 imports += geom nm ntypes util
 import_paths += ..
+
+string_imports := .
 
 extra_deps := $(LIBLUA)
 
@@ -93,13 +94,9 @@ test_runner_complex test_runner_real: ../util/test_runner.d package.d
 
 # Specific targets, for individual artefacts.
 
-%_with_rev_string.d: %.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' $< > $@
-
-foamMesh grid2pato: %: $(OPENFOAM_DIR)/%_with_rev_string.d $(extra_deps)
+foamMesh grid2pato: %: $(OPENFOAM_DIR)/%.d $(extra_deps) | buildinfo.json
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
-
 
 # The original demo artefacts.
 

@@ -20,17 +20,7 @@ LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 INSTALL_DIR ?= $(HOME)/gdtkinst
 
 # The build destination sits locally for present
-BUILD_DIR := ../../build
-BUILD_DATE := $(shell date)
-REPO_DIR := $(shell cd ../../; pwd)
-ifneq ("$(wildcard $(REPO_DIR)/.git)","")
-    # Repository exists
-    REVISION_STRING := $(shell git rev-parse --short HEAD)
-    REVISION_DATE := $(shell git log -1 --format=%cd)
-else
-    REVISION_STRING := unknown
-    REVISION_DATE := unknown
-endif
+REVISION_STRING := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 default: $(PROGRAMS) libnenzf1d.so
 	@echo "Source code revision string $(REVISION_STRING)"
@@ -42,7 +32,6 @@ install:
 clean:
 	- rm -f *.o *.so *.deps
 	- rm -f $(PROGRAMS)
-	- rm -f *_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean
 	- $(MAKE) -C $(EQC_DIR) clean
 
@@ -65,17 +54,12 @@ import_paths := \
 imports += nenzf1d gas gasdyn geom kinetics nm ntypes util
 import_paths += ..
 
+string_imports := .
+
 # Non-d files to include
 extra_deps := $(LIBLUA) $(LIBEQC)
 
-%_with_rev_string.d: %.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
-		$< > $@
-
-nenzf1d: main_with_rev_string.d $(extra_deps)
+nenzf1d: main.d $(extra_deps) | buildinfo.json
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 
 %.o: target_type = staticLibrary

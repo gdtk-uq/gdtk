@@ -22,13 +22,8 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 # The build destination sits locally for present
 BUILD_DIR := ../../build
 
-REPO_DIR := $(shell cd ../../; pwd)
-ifneq ("$(wildcard $(REPO_DIR)/.git)","")
-    # Repository exists
-    REVISION_STRING := $(shell git rev-parse --short HEAD)
-else
-    REVISION_STRING := unknown
-endif
+# The build destination sits locally for present
+REVISION_STRING := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
@@ -40,7 +35,6 @@ install:
 clean:
 	- rm -f *.o *.deps
 	- rm -f $(PROGRAMS)
-	- rm -f *_main_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean;
 	- $(MAKE) -C $(EQC_DIR) clean
 
@@ -66,22 +60,19 @@ ifeq ($(WITH_DVODE),1)
 	linker_libs += gfortran
 endif
 
+string_imports := .
+
 # Non-d files to include
 extra_deps := $(LIBLUA) $(LIBEQC)
 
-%_with_rev_string.d: %.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		$< > $@
-
-puffin: puffin_main_with_rev_string.d $(extra_deps)
+puffin: puffin_main.d $(extra_deps) | buildinfo.json
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 
 puffin-prep puffin-post: puffin-%: puffin_%.py
 	$(INSTALL_EXEC) $< $@
 
-lrkt-run: lorikeet_main_with_rev_string.d $(extra_deps)
+lrkt-run: lorikeet_main.d $(extra_deps) | buildinfo.json
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 

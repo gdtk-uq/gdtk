@@ -46,7 +46,6 @@ install:
 clean:
 	- rm -f *.o *.deps
 	- rm -f $(PROGRAMS)
-	- rm -f main_with_rev_string.d
 	- $(MAKE) -C $(LUA_DIR) clean;
 	- $(MAKE) -C $(EQC_DIR) clean;
 
@@ -67,15 +66,12 @@ import_paths := \
 imports += l1d gas gasdyn geom kinetics nm ntypes util
 import_paths += ..
 
+string_imports := .
+
 # Non-d files to include
 extra_deps := $(LIBLUA) $(LIBEQC)
 
-main_with_rev_string.d: main.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		main.d > main_with_rev_string.d
-
-l1d4: main_with_rev_string.d $(extra_deps)
+l1d4: main.d $(extra_deps) | buildinfo.json
 	$(DMD) -of=$@ -makedeps=$@.deps $(compiler_flags) $^
 	$(call cleanup-deps)
 

@@ -12,6 +12,8 @@ import dyaml;
 import nenzf1d.configuration;
 import nenzf1d.shock_tube_nozzle;
 
+import util.buildinfo : buildCfg;
+
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
@@ -57,10 +59,10 @@ Options:
     }
     if (verbosityLevel >= 1) {
         writeln("NENZF1D: 1D analysis of shock-tunnel with nonequilibrium nozzle flow.");
-        writeln("  Revision-id: PUT_REVISION_STRING_HERE");
-        writeln("  Revision-date: PUT_REVISION_DATE_HERE");
-        writeln("  Compiler-name: PUT_COMPILER_NAME_HERE");
-        writeln("  Build-date: PUT_BUILD_DATE_HERE");
+        writeln("  Revision-id: ", buildCfg.revisionId);
+        writeln("  Revision-date: ", buildCfg.revisionDate);
+        writeln("  Compiler-name: ", buildCfg.compilerName);
+        writeln("  Build-date: ", buildCfg.buildDate);
     }
     if (helpWanted) {
         writeln(usageMsg);
