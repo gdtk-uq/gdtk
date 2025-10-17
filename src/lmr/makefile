@@ -311,7 +311,6 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.
 	- mkdir -p $(INSTALL_DIR)/share
 	cp $(PROGRAMS) $(INSTALL_DIR)/bin
 	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
-	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
 	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
 	cp lmr.cfg $(INSTALL_DIR)/etc/
 	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
@@ -327,7 +326,7 @@ clean:
 	- rm -rf $(BUILD_DIR)/*
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
-	- rm $(PY_PROGRAMS)
+	- rm -rf $(PY_PROG_DIR)/__pycache__ $(PY_PROG_DIR)/*.egg-info
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_mpi.d
 	- rm -f gdtk-module
@@ -432,9 +431,21 @@ lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) |
 	$(call build_lmr_entry)
 
 #### Python programs
-lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
-	cp $< $@
-	chmod +x $@
+PY_VENV := $(INSTALL_DIR)/.venv/lmr
+PYTHON ?= python3
+
+.PHONY: .venv
+.venv:
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(PY_VENV)
+	$(info Updating pip)
+	$(PY_VENV)/bin/pip install --upgrade pip -q
+	$(info Installing python tools)
+	$(PY_VENV)/bin/pip install -e $(PY_PROG_DIR) -q
+
+$(PY_PROGRAMS): .venv
+	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 #### Auxiliary programs but part of making an eilmer install useful
 prep-gas:
