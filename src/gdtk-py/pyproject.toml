@@ -1,5 +1,33 @@
 [project]
-name = "gdtk-py"
+name = "gdtk"
 version = "0.1.0"
-requires-python = ">=3.14"
-dependencies = []
+license = "LGPL-3.0-only"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "cffi>=1.0.0",
+]
+
+[project.urls]
+Repository = "https://github.com/gdtk-uq/gdtk.git"
+Documentation = "https://gdtk.uqcloud.net/docs/python/loadable-library/"
+
+[[project.authors]]
+name = "The Gas Dynamic Toolkit developers"
+
+# Essential build system configuration for CFFI
+[build-system]
+requires = ["setuptools", "setuptools_scm", "cffi>=1.0.0"]
+build-backend = "setuptools.build_meta"
+
+# Essential setuptools configuration for CFFI
+[tool.setuptools]
+zip-safe = false  # Required for CFFI extensions
+
+[tool.setuptools.package-data]
+"gdtk" = ["*.so"]
