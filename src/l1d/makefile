@@ -192,12 +192,12 @@ l1d4: main.d $(L1D_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-l1d4-prep: l1d4-prep.py
-	cp l1d4-prep.py l1d4-prep
+l1d4-prep: l1d4_prep.py
+	cp l1d4_prep.py l1d4-prep
 	chmod +x l1d4-prep
 
-l1d4-xt-viewer: xt-viewer.py
-	cp xt-viewer.py l1d4-xt-viewer
+l1d4-xt-viewer: xt_viewer.py
+	cp xt_viewer.py l1d4-xt-viewer
 	chmod +x l1d4-xt-viewer
 
 prep-gas:
