@@ -10,9 +10,9 @@ CEA_DIR := ../../extern/cea2
 
 install : $(INSTALL_DIR)
 	@echo installing gas library
-	cd $(GAS_DIR); make install
+	$(MAKE) -C $(GAS_DIR) install
 	@echo installing cea
-	cd $(CEA_DIR); make install
+	$(MAKE) -C $(CEA_DIR) install
 	@echo Copying pitot3.py to $(INSTALL_DIR)/bin
 	cp -f pitot3.py $(INSTALL_DIR)/bin
 	@echo Copying pitot3_condition_builder.py to $(INSTALL_DIR)/bin
@@ -29,8 +29,8 @@ install : $(INSTALL_DIR)
 	@echo -----------------------------------------
 
 clean : 
-	cd $(GAS_DIR); make clean
-	cd $(CEA_DIR); make clean
+	$(MAKE) -C $(GAS_DIR) clean
+	$(MAKE) -C $(CEA_DIR) clean
 
 $(INSTALL_DIR):
 	- mkdir $(INSTALL_DIR)
