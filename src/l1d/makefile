@@ -2,6 +2,7 @@
 # PJ 2020-04-05
 
 DMD ?= ldc2
+PYTHON ?= python3
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
@@ -157,6 +158,7 @@ clean:
 	- rm *.o
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
+	- rm -rf __pycache__ *.egg-info
 	- rm main_with_rev_string.d
 	- cd $(LUA_DIR); make clean;
 	- cd $(GAS_DIR); make clean; rm libgas.a
@@ -192,13 +194,23 @@ l1d4: main.d $(L1D_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-l1d4-prep: l1d4_prep.py
-	cp l1d4_prep.py l1d4-prep
-	chmod +x l1d4-prep
+EDITABLE ?= 1
+PY_VENV := $(INSTALL_DIR)/.venv/l1d
 
-l1d4-xt-viewer: xt_viewer.py
-	cp xt_viewer.py l1d4-xt-viewer
-	chmod +x l1d4-xt-viewer
+.PHONY: .venv
+.venv:
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(PY_VENV)
+	$(info Updating pip)
+	$(PY_VENV)/bin/pip install --upgrade pip -q
+	$(PY_VENV)/bin/pip config set --site global.find-links $(INSTALL_DIR)/share/python-packages/
+	$(info Installing python tools)
+	$(PY_VENV)/bin/pip install -e .
+
+l1d4-prep l1d4-xt-viewer: .venv
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
