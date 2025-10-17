@@ -11,6 +11,7 @@ PC_P_atm = 101.325e3
 from cffi import FFI
 from dataclasses import dataclass
 import math
+import os
 
 ffi = FFI()
 ffi.cdef("""
@@ -126,7 +127,9 @@ ffi.cdef("""
     int gasflow_beta_cone(int state1_id, double v1, double theta,
                           int gm_id, double dtheta, double* results);
 """)
-so = ffi.dlopen("libgas.so")
+
+lib_path = os.path.join(os.path.dirname(__file__), "libgas.so")
+so = ffi.dlopen(lib_path)
 so.cwrap_gas_init()
 
 # --------------------------------------------------------------------------
