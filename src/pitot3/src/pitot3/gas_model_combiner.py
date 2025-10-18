@@ -7,10 +7,10 @@ Chris James (c.james4@uq.edu.au) - 07/11/23
 
 """
 
-VERSION_STRING = '07-Nov-2023'
-
-from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_reader, eilmer4_CEAGas_input_file_creator
+from pitot3.utils.classes import eilmer4_CEAGas_input_file_reader, eilmer4_CEAGas_input_file_creator
 from datetime import datetime
+
+VERSION_STRING = '07-Nov-2023'
 
 gas_model_1 = 'giant-planet-h2-80-he'
 gas_model_2 = 'air23species'
