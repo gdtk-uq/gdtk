@@ -148,13 +148,12 @@ default: $(PROGRAMS) $(SLF_FILES)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "slf code built."
 
-install: $(PROGRAMS)
+install: $(PROGRAMS) .whl
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/lib/gdtk
 	- cp slf $(BUILD_DIR)/bin
 	- cp libslf.so $(BUILD_DIR)/lib
-	- cp slf.py $(BUILD_DIR)/lib/gdtk
 	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
@@ -166,6 +165,7 @@ clean:
 	- rm *.o *.so
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
+	- rm -rf build/ *.egg-info
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
@@ -219,3 +219,12 @@ libslf.so: cwrap.d core.d $(SLF_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(LIBEQC) $(LIBGASF) $(LIBLUA) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+
+PYTHON ?= python3
+PIP ?= $(PYTHON) -m pip
+PY_VENV := $(INSTALL_DIR)/.venv/slf
+
+.PHONY: .whl
+.whl: libslf.so
+	- mkdir -p $(INSTALL_DIR)/share/python-packages
+	$(PIP) wheel --no-deps -e . -w $(INSTALL_DIR)/share/python-packages
