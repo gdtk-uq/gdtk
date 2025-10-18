@@ -206,9 +206,10 @@ PY_VENV := $(INSTALL_DIR)/.venv/l1d
 	$(PY_VENV)/bin/pip install --upgrade pip -q
 	$(PY_VENV)/bin/pip config set --site global.find-links $(INSTALL_DIR)/share/python-packages/
 	$(info Installing python tools)
-	$(PY_VENV)/bin/pip install -e . -q
+	$(PY_VENV)/bin/pip install -e .
 
 l1d4-prep l1d4-xt-viewer: .venv
+	- mkdir -p $(INSTALL_DIR)/bin
 	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 prep-gas:
