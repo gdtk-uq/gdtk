@@ -8,8 +8,9 @@ Chris James (c.james4@uq.edu.au) 01/01/21
 
 """
 
-import sys, os, math
-import yaml
+import sys
+import os
+import math
 
 from datetime import datetime
 
