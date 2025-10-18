@@ -9,7 +9,7 @@ LIBGAS = $(GAS_DIR)/libgas.so
 install: $(LIBGAS)
 	- mkdir -p $(INSTALL_DIR)/share/python-packages
 	cp $(LIBGAS) ./gdtk/libgas.so
-	$(PIP) wheel -e . -w $(INSTALL_DIR)/share/python-packages
+	$(PIP) wheel --no-deps -e . -w $(INSTALL_DIR)/share/python-packages
 
 clean:
 	rm -rf build *.egg-info
