@@ -11,6 +11,8 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
     "cffi>=1.0.0",
+    "numpy>=1.24.4",
+    "scipy>=1.10.1",
 ]
 
 [project.urls]
@@ -19,6 +21,14 @@ Documentation = "https://gdtk.uqcloud.net/docs/python/loadable-library/"
 
 [[project.authors]]
 name = "The Gas Dynamic Toolkit developers"
+
+[project.optional-dependencies]
+pandas = [
+    "pandas>=2.0.3",
+]
+pyvista = [
+    "pyvista>=0.44.2",
+]
 
 # Essential build system configuration for CFFI
 [build-system]
