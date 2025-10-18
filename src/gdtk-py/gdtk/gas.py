@@ -11,10 +11,12 @@ PC_P_atm = 101.325e3
 from cffi import FFI
 from dataclasses import dataclass
 import math
-import os
 import sys
+from pathlib import Path
 
 if sys.platform == "darwin":
+    import os
+
     os.environ["DYLD_LIBRARY_PATH"] = os.getenv("DGD") + "/lib"
 
 ffi = FFI()
@@ -132,8 +134,7 @@ ffi.cdef("""
                           int gm_id, double dtheta, double* results);
 """)
 
-lib_path = os.path.join(os.path.dirname(__file__), "libgas.so")
-so = ffi.dlopen(lib_path)
+so = ffi.dlopen(str(Path(__file__).with_name("libgas.so")))
 so.cwrap_gas_init()
 
 # --------------------------------------------------------------------------
