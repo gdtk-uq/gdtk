@@ -60,7 +60,7 @@ header = """
 ffi = FFI()
 ffi.cdef(header)
 
-so = ffi.dlopen(Path(__file__).with_name("libslf.so"))
+so = ffi.dlopen(str(Path(__file__).with_name("libslf.so")))
 so.cwrap_init()
 
 

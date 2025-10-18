@@ -153,8 +153,6 @@ install: $(PROGRAMS)
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/lib/gdtk
 	- cp slf $(BUILD_DIR)/bin
-	- cp libslf.so $(BUILD_DIR)/lib
-	- cp slf.py $(BUILD_DIR)/lib/gdtk
 	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
@@ -219,3 +217,4 @@ libslf.so: cwrap.d core.d $(SLF_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(LIBEQC) $(LIBGASF) $(LIBLUA) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+
