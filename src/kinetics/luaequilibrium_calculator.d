@@ -171,7 +171,7 @@ extern(C) int get_entropy(lua_State* L)
     auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
 
-    double s = eqCalc.get_s(Q);
+    number s = eqCalc.get_s(Q);
     // Return entropy
     lua_pushnumber(L, s);
     return 1;

@@ -228,7 +228,7 @@ public:
         // so we use those here rather than tpGasEqModel. For some reason tpGasModel has a different
         // zero point to thermo.c, with regard to entropy.
         set_tpgs_from_external_gasstate(Q);
-        number s = to!number(tpEqCalc.get_s(tpgs));
+        number s = tpEqCalc.get_s(tpgs);
         return s;
     }
 

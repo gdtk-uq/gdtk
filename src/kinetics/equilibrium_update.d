@@ -98,72 +98,45 @@ class EquilibriumCalculator {
         Mptr = M.ptr;
     }
 
-version(complex_numbers){
-
     @nogc void set_massf_from_pT(ref GasState Q)
     {
-        throw new Error("Do not use with complex numbers.");
-    }
-
-    @nogc void set_massf_and_T_from_rhou(ref GasState Q)
-    {
-        throw new Error("Do not use with complex numbers.");
-    }
-
-    @nogc void set_massf_and_T_from_ps(ref GasState Q, double s)
-    {
-        throw new Error("Do not use with complex numbers.");
-    }
-
-    @nogc void set_massf_from_rhoT(ref GasState Q)
-    {
-        throw new Error("Do not use with complex numbers.");
-    }
-
-    @nogc double get_s(ref GasState Q)
-    {
-        throw new Error("Do not use with complex numbers.");
-    }
-
-} else {
-    @nogc void set_massf_from_pT(ref GasState Q)
-    {
-        massf2molef(Q.massf, M, X0);
-        int error = eqc.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        massf_to_molef(Q.massf, M, X0);
+        int error = eqc.pt(Q.p.re,Q.T.re,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
         if (error!=0) throw new GasModelException("eqc.pt convergence failure");
-        molef2massf(X1, M, Q.massf);
+        molef_to_massf(X1, M, Q.massf);
     }
 
     @nogc void set_massf_and_T_from_rhou(ref GasState Q)
     {
-        massf2molef(Q.massf, M, X0);
-        int error = eqc.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        massf_to_molef(Q.massf, M, X0);
+        int error = eqc.rhou(Q.rho.re,Q.u.re,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T.re,0);
         if (error!=0) throw new GasModelException("eqc.rhou convergence failure");
-        molef2massf(X1, M, Q.massf);
+        molef_to_massf(X1, M, Q.massf);
     }
 
     @nogc void set_massf_and_T_from_ps(ref GasState Q, double s)
     {
-        massf2molef(Q.massf, M, X0);
-        int error = eqc.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        massf_to_molef(Q.massf, M, X0);
+        int error = eqc.ps(Q.p.re,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T.re,0);
         if (error!=0) throw new GasModelException("eqc.ps convergence failure");
-        molef2massf(X1, M, Q.massf);
+        molef_to_massf(X1, M, Q.massf);
     }
 
     @nogc void set_massf_from_rhoT(ref GasState Q)
     {
-        massf2molef(Q.massf, M, X0);
-        int error = eqc.rhot(Q.rho,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        massf_to_molef(Q.massf, M, X0);
+        int error = eqc.rhot(Q.rho.re,Q.T.re,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
         if (error!=0) throw new GasModelException("eqc.rhot convergence failure");
-        molef2massf(X1, M, Q.massf);
+        molef_to_massf(X1, M, Q.massf);
     }
 
     @nogc double get_s(ref GasState Q)
     {
-        massf2molef(Q.massf, M, X0);
-        return eqc.get_s(Q.T, Q.p, X0ptr, nsp, lewisptr, Mptr);
+        massf_to_molef(Q.massf, M, X0);
+        double s = eqc.get_s(Q.T.re, Q.p.re, X0ptr, nsp, lewisptr, Mptr);
+        return s;
     }
-}
+
     @nogc int n_species() const { return nsp; }
     @nogc int n_elements() const { return nel; }
 
@@ -173,6 +146,32 @@ private:
     string[] element_set,species_names;
     double[] a,X0,X1,lewis,M;
     double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
+
+    @nogc
+    void massf_to_molef(number[] massf, double[] M, double[] molef){
+    /*
+        We need a special molef calculator of these to handle the possibility
+        of complex numbers in the mass fractions. eqc cannot handle imaginary
+        components and so we just strip out the real part for now.
+    */
+        number mixMolMass = mixture_molecular_mass(massf, M);
+        foreach ( i; 0 .. massf.length ) {
+            molef[i] = massf[i].re * mixMolMass.re / M[i];
+        }
+    }
+
+    @nogc
+    void molef_to_massf(double[] molef, double[] M, number[] massf){
+    /*
+        See above. This time we are going double to number.
+    */
+        double mixMolMass = 0.0;
+        foreach ( i; 0 .. molef.length ) mixMolMass += molef[i]*M[i];
+
+        foreach ( i; 0 .. massf.length ) {
+            massf[i] = to!number(molef[i] * M[i] / mixMolMass);
+        }
+    }
 
     void compile_molar_masses(lua_State* L, string[] _species_names, ref double[] _M){
         /*
