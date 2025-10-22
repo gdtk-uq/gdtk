@@ -194,7 +194,6 @@ l1d4: main.d $(L1D_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-EDITABLE ?= 1
 PY_VENV := $(INSTALL_DIR)/.venv/l1d
 
 .PHONY: .venv
