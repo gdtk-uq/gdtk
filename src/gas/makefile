@@ -1,6 +1,7 @@
 # makefile for the gas module
 
 DMD ?= ldc2
+PYTHON ?= python3
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
@@ -18,6 +19,7 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo
+PY_PROGRAMS := build-uniform-lut
 
 TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_test \
 	cea_thermo_curves_test cea_viscosity_test composite_gas_test \
@@ -161,10 +163,9 @@ build-prep-gas: prep_gas.lua species-database/species-database.lua \
 
 # The following are not required by the Eilmer flow solver but
 # they are useful for building stand-alone flow-analysis programs.
-build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBEQC)
+build-libgas: libgas.so gas-calc build-uniform-lut $(LIBEQC)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
-	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
 	cp ../../examples/estcn/estcn.py $(BUILD_DIR)/bin/estcn; chmod +x $(BUILD_DIR)/bin/estcn
 	- mkdir -p $(BUILD_DIR)/lib
 	cp libgas.so $(BUILD_DIR)/lib/
@@ -186,7 +187,7 @@ clean:
 	- rm -f *.o *.so *.a *.obj *.lib
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
-	- rm -rf __pycache__
+	- rm -rf __pycache__/ *.egg-info/
 	- rm -f ${DEMO_PROGRAMS}
 	- rm -f ${TEST_PROGRAMS}
 	- rm -f gas-calc
@@ -239,6 +240,23 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES)
 		$(UTIL_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) $(KINETICS_LUA_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+
+PY_VENV := $(INSTALL_DIR)/.venv/gas
+
+.PHONY: .venv
+.venv:
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(PY_VENV)
+	$(info Updating pip)
+	$(PY_VENV)/bin/pip install --upgrade pip -q
+	$(PY_VENV)/bin/pip config set --site global.find-links $(INSTALL_DIR)/share/python-packages/
+	$(info Installing python tools)
+	$(PY_VENV)/bin/pip install -e .
+
+$(PY_PROGRAMS): .venv
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
