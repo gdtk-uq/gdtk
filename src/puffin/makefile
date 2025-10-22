@@ -2,6 +2,7 @@
 # PJ 2022-01-21
 
 DMD ?= ldc2
+PYTHON ?= python3
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
@@ -15,7 +16,8 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
+PROGRAMS := puffin lrkt-run
+PY_PROGRAMS := puffin-prep puffin-post lrkt-prep lrkt-post
 
 PUFFIN_FILES := config.d marching_calc.d streamtube.d \
 	cell.d face.d flow.d flux.d interp.d
@@ -149,7 +151,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Puffin code built."
 
-install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
+install: $(PROGRAMS) $(PY_PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -165,6 +167,7 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 clean:
 	- rm *.o
 	- rm $(PROGRAMS)
+	- rm -rf __pycache__/ *.egg-info/
 	- rm -r $(BUILD_DIR)/*
 	- rm puffin_main_with_rev_string.d lorikeet_main_with_rev_string.d
 	- cd $(LUA_DIR); make clean;
@@ -198,14 +201,6 @@ puffin: puffin_main.d $(PUFFIN_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-puffin-prep: puffin_prep.py
-	cp puffin_prep.py puffin-prep
-	chmod +x puffin-prep
-
-puffin-post: puffin_post.py
-	cp puffin_post.py puffin-post
-	chmod +x puffin-post
-
 lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
 	$(GEOM_FILES) \
 	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
@@ -226,13 +221,22 @@ lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-lrkt-prep: lorikeet_prep.py
-	cp lorikeet_prep.py lrkt-prep
-	chmod +x lrkt-prep
+PY_VENV := $(INSTALL_DIR)/.venv/puffin
 
-lrkt-post: lorikeet_post.py
-	cp lorikeet_post.py lrkt-post
-	chmod +x lrkt-post
+.PHONY: .venv
+.venv:
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(PY_VENV)
+	$(info Updating pip)
+	$(PY_VENV)/bin/pip install --upgrade pip -q
+	$(PY_VENV)/bin/pip config set --site global.find-links $(INSTALL_DIR)/share/python-packages/
+	$(info Installing python tools)
+	$(PY_VENV)/bin/pip install -e .
+
+$(PY_PROGRAMS): .venv
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
