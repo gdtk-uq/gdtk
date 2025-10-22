@@ -138,7 +138,8 @@ def build_table(gs, tableName, T_min=200.0, T_max=20000.0,
 
 #-----------------------------------------------------------------------------
 
-if __name__ == '__main__':
+
+def main():
     print("Begin build-uniform-lut.py...")
     from optparse import OptionParser, OptionGroup
     usage = "Usage: %prog [options]"
@@ -182,3 +183,7 @@ if __name__ == '__main__':
     gs = GasState(gmodel)
     build_table(gs, options.tableName, T_min, T_max, log_rho_min, log_rho_max, T_for_offset)
     print("Done.")
+
+
+if __name__ == "__main__":
+    main()
