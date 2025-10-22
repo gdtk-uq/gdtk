@@ -1,0 +1,21 @@
+[project]
+name = "nenzf1d"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "cffi>=1.17.1",
+    "numpy>=1.24.4",
+]
+
+# Essential build system configuration for CFFI
+[build-system]
+requires = ["setuptools>=64", "cffi>=1.0.0"]
+build-backend = "setuptools.build_meta"
+
+# Essential setuptools configuration for CFFI
+[tool.setuptools]
+zip-safe = false  # Required for CFFI extensions
+py-modules = ["nenzf1d"]
+
+[tool.setuptools.data-files]
+"." = ["libnenzf1d.so"]
