@@ -351,7 +351,8 @@ def write_initial_files():
 
 # --------------------------------------------------------------------
 
-if __name__ == '__main__':
+
+def main():
     print("Begin puffin preprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
@@ -379,3 +380,7 @@ if __name__ == '__main__':
         write_initial_files()
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
