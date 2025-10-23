@@ -134,39 +134,38 @@ private:
 } // end class SpherePatch
 
 
-version(spherepatch_test) {
-    import util.msg_service;
-    int main() {
-        number R = 1.0;
-        number zero = 0.0;
-        auto east_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "east");
-        auto mid_e = east_patch(0.5, 0.5);
-        auto p5_east = east_patch(0.0, 1.0);
-        auto p6_east = east_patch(1.0, 1.0);
-        // import std.stdio;
-        // writeln("mid_e=", mid_e);
-        assert(approxEqualVectors(mid_e, Vector3(R, zero, zero)), failedUnitTest());
-        auto top_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "top");
-        auto mid_t = top_patch(0.5, 0.5);
-        auto p5_top = top_patch(1.0, 0.0);
-        auto p6_top = top_patch(1.0, 1.0);
-        // writeln("mid_t=", mid_t);
-        assert(approxEqualVectors(mid_t, Vector3(zero, zero, R)), failedUnitTest());
-        assert(approxEqualVectors(p5_top, p5_east), failedUnitTest());
-        assert(approxEqualVectors(p6_top, p6_east), failedUnitTest());
-        assert(isClose(abs(p6_top), R), failedUnitTest());
-        // half-face patch
-        auto south_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "south", "top");
-        auto mid_s = south_patch(0.5, 0.0);
-        auto p5_south = south_patch(1.0, 1.0);
-        assert(approxEqualVectors(mid_s, Vector3(zero, -R, zero)), failedUnitTest());
-        assert(approxEqualVectors(p5_south, p5_east), failedUnitTest());
-        // quarter-face patch
-        auto north_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "north", "top-east");
-        auto mid_n = north_patch(0.0, 0.0);
-        auto p6_north = north_patch(1.0, 1.0);
-        assert(approxEqualVectors(mid_n, Vector3(zero, R, zero)), failedUnitTest());
-        assert(approxEqualVectors(p6_north, p6_top), failedUnitTest());
-        return 0;
-    }
+unittest {
+    import std.stdio;
+
+    number R = 1.0;
+    number zero = 0.0;
+    auto east_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "east");
+    auto mid_e = east_patch(0.5, 0.5);
+    auto p5_east = east_patch(0.0, 1.0);
+    auto p6_east = east_patch(1.0, 1.0);
+    writeln("mid_e=", mid_e);
+
+    assert(approxEqualVectors(mid_e, Vector3(R, zero, zero)));
+    auto top_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "top");
+    auto mid_t = top_patch(0.5, 0.5);
+    auto p5_top = top_patch(1.0, 0.0);
+    auto p6_top = top_patch(1.0, 1.0);
+    writeln("mid_t=", mid_t);
+
+    assert(approxEqualVectors(mid_t, Vector3(zero, zero, R)));
+    assert(approxEqualVectors(p5_top, p5_east));
+    assert(approxEqualVectors(p6_top, p6_east));
+    assert(isClose(abs(p6_top), R));
+    // half-face patch
+    auto south_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "south", "top");
+    auto mid_s = south_patch(0.5, 0.0);
+    auto p5_south = south_patch(1.0, 1.0);
+    assert(approxEqualVectors(mid_s, Vector3(zero, -R, zero)));
+    assert(approxEqualVectors(p5_south, p5_east));
+    // quarter-face patch
+    auto north_patch = new SpherePatch(R, Vector3(0.0,0.0,0.0), "north", "top-east");
+    auto mid_n = north_patch(0.0, 0.0);
+    auto p6_north = north_patch(1.0, 1.0);
+    assert(approxEqualVectors(mid_n, Vector3(zero, R, zero)));
+    assert(approxEqualVectors(p6_north, p6_top));
 }

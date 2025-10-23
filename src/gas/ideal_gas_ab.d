@@ -183,41 +183,41 @@ private:
 
 // Unit test of the basic gas model...
 
-version(ideal_gas_ab_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
+    import std.file;
 
-    int main() {
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/ideal-gas-ab-model.lua");
-        auto gm = new IdealGasAB(L);
-        lua_close(L);
-        auto gd = GasState(2, 0);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.massf[0] = 0.75; gd.massf[1] = 0.25;
-        assert(isClose(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 2, failedUnitTest());
-        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        number my_rho = 1.0e5 / (287.0 * 300.0);
-        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
-        number my_Cv = gm.dudT_const_v(gd);
-        number my_u = my_Cv*300.0 - 0.25*300000.0;
-        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
-        number my_Cp = gm.dhdT_const_p(gd);
-        number my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
-        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
-        gm.update_trans_coeffs(gd);
-        assert(isClose(gd.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.k, 0.0, 1.0e-6), failedUnitTest());
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "ideal-gas-ab-model.lua");
+    auto gm = new IdealGasAB(L);
+    lua_close(L);
+    auto gd = GasState(2, 0);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.massf[0] = 0.75; gd.massf[1] = 0.25;
+    assert(isClose(gm.R(gd), 287.0, 1.0e-4));
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 2);
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 300.0, 1.0e-6));
+    assert(isClose(gd.massf[0], 0.75, 1.0e-6));
+    assert(isClose(gd.massf[1], 0.25, 1.0e-6));
 
-        return 0;
-    }
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    number my_rho = 1.0e5 / (287.0 * 300.0);
+    assert(isClose(gd.rho, my_rho, 1.0e-4));
+    number my_Cv = gm.dudT_const_v(gd);
+    number my_u = my_Cv*300.0 - 0.25*300000.0;
+    assert(isClose(gd.u, my_u, 1.0e-3));
+    number my_Cp = gm.dhdT_const_p(gd);
+    number my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
+    assert(isClose(gd.a, my_a, 1.0e-3));
+    gm.update_trans_coeffs(gd);
+    assert(isClose(gd.mu, 0.0, 1.0e-6));
+    assert(isClose(gd.k, 0.0, 1.0e-6));
 }
