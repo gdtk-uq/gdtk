@@ -66,15 +66,15 @@ test: test_runner
 test-complex: test_runner_complex
 	- exec ./test_runner_complex --module nm
 
-test_runner: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
+test_runner: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) ../util/test_runner.d
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 --unittest $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
-test_runner_complex: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA)
+test_runner_complex: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) ../util/test_runner.d
 	@echo "Compiling test runner with complex numbers..."
 	$(DMD) -of$@ -debug -g -w -dip1008 --unittest -version=complex_numbers $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 demo: ${DEMO_PROGRAMS}
 	@echo "Demo codes built."
