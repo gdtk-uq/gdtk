@@ -168,7 +168,7 @@ test-real: test_runner_real
 # We need to pull the test_runner.d to the front to ensure no linker errors
 test_runner_real: test_gas_calc.d $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 		$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(UTIL_FILES) $(LIBEQC) $(LIBLUA) | gas-calc
+		$(UTIL_FILES) $(LIBEQC) $(LIBLUA) ../util/test_runner.d | gas-calc
 	@echo "Compiling test runner..."
 	$(DMD) $(OF)$@ $(DFLAGS) --unittest $(DLINKFLAGS) \
 		../util/test_runner.d $(filter-out %/test_runner.d,$^)

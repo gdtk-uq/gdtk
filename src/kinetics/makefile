@@ -65,8 +65,9 @@ test: test_runner
 	- exec ./test_runner --module kinetics
 
 # We need to pull the test_runner.d to the front to ensure no linker errors
-test_runner: $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(NTYPES_FILES) $(EQC_SRC_FILES) \
-		$(LIBEQC) $(LIBLUA) $(GAS_FILES) $(UTIL_FILES)
+test_runner: $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
+		$(NTYPES_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GAS_FILES) \
+		$(UTIL_FILES) ../util/test_runner.d
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 -unittest $(DLINKFLAGS) \
 		../util/test_runner.d $(filter-out %/test_runner.d,$^)
