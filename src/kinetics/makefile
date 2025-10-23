@@ -69,7 +69,7 @@ test_runner: $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(GAS_LUA_FILES) $(NM_FILES
 		$(LIBEQC) $(LIBLUA) $(GAS_FILES) $(UTIL_FILES)
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 -unittest $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 clean:
 	- rm -f *.o *.mod *.obj

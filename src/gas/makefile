@@ -171,7 +171,7 @@ test_runner_real: test_gas_calc.d $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES)
 		$(UTIL_FILES) $(LIBEQC) $(LIBLUA) | gas-calc
 	@echo "Compiling test runner..."
 	$(DMD) $(OF)$@ $(DFLAGS) --unittest $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
