@@ -46,7 +46,7 @@ test: test_runner
 test_runner: $(NUMBER_FILE) $(NTYPES_FILES) $(UTIL_FILES)
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 --unittest -version=complex_numbers $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 clean:
 	- rm test_runner

@@ -86,12 +86,12 @@ test-complex: test_runner_complex
 test_runner_real: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 -unittest $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 test_runner_complex: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES)
 	@echo "Compiling test runner with complex numbers..."
 	$(DMD) -of$@ -debug -g -w -dip1008 -unittest -version=complex_numbers $(DLINKFLAGS) \
-		$(filter %/test_runner.d,$^) $(filter-out %/test_runner.d,$^)
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 play:
 	@echo "Found $(LIBPLOT)"
