@@ -43,7 +43,7 @@ test: test_runner
 	./test_runner --module ntypes
 
 # We need to pull the test_runner.d to the front to ensure no linker errors
-test_runner: $(NUMBER_FILE) $(NTYPES_FILES) $(UTIL_FILES)
+test_runner: $(NUMBER_FILE) $(NTYPES_FILES) $(UTIL_FILES) ../util/test_runner.d
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 --unittest -version=complex_numbers $(DLINKFLAGS) \
 		../util/test_runner.d $(filter-out %/test_runner.d,$^)
