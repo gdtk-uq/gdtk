@@ -12,9 +12,6 @@ ifeq ($(wildcard $(CEA_DIR)),)
 $(warning CEA not found at CEA_DIR=$(CEA_DIR))
 endif
 
-PYTHON ?= python3
-PIP ?= $(PYTHON) -m pip
-
 install:
 	$(info Installing cea)
 	- $(MAKE) -C $(CEA_DIR) install
@@ -31,23 +28,30 @@ clean:
 	$(MAKE) -sC $(GDTKPY_DIR) clean
 	- $(MAKE) -sC $(CEA_DIR) clean
 
+# Priority:
+#   1. VIRTUAL_ENV - Standard set by python virtual-environments
+#   2. CONDA_PREFIX - Set by (ana)conda environments
+#   3. INSTALL_DIR/.venv - Create our own if none already exist
+CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
+VIRTUAL_ENV ?= $(CONDA_PREFIX)
 
-PY_VENV := $(INSTALL_DIR)/.venv/pitot3
+# Override if using uv with `PIP='uv pip'`
+PIP ?= $(VIRTUAL_ENV)/bin/pip
+PYTHON ?= python3
 
-.PHONY: .venv
-.venv: gdtk-py
+# If it doesn't already exist
+$(VIRTUAL_ENV):
 	- mkdir -p $(INSTALL_DIR)
 	$(info Creating virtual environment ...)
-	$(PYTHON) -m venv $(PY_VENV)
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
 	$(info Updating pip)
-	$(PY_VENV)/bin/pip install --upgrade pip -q
-	$(PY_VENV)/bin/pip config set --site global.find-links $(INSTALL_DIR)/share/python-packages/
-	$(info Installing python tools)
-	$(PY_VENV)/bin/pip install -e . -q
+	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
 
-pitot3 pitot3-condition-builder: .venv
+pitot3 pitot3-condition-builder: $(VIRTUAL_ENV) gdtk-py
+	$(info Installing python tools)
+	$(PIP) install -e . --find-links $(INSTALL_DIR)/share/python-packages/
 	- mkdir -p $(INSTALL_DIR)/bin
-	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 gdtk-py:
 	$(MAKE) -C $(GDTKPY_DIR) install
