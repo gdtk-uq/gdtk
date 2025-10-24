@@ -430,22 +430,30 @@ lmr%run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 	$(call build_lmr_entry)
 
-#### Python programs
-PY_VENV := $(INSTALL_DIR)/.venv/lmr
+# Priority:
+#   1. VIRTUAL_ENV - Standard set by python virtual-environments
+#   2. CONDA_PREFIX - Set by (ana)conda environments
+#   3. INSTALL_DIR/.venv - Create our own if none already exist
+CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
+VIRTUAL_ENV ?= $(CONDA_PREFIX)
+
+# Override if using uv with `PIP='uv pip'`
+PIP ?= $(VIRTUAL_ENV)/bin/pip
 PYTHON ?= python3
 
-.PHONY: .venv
-.venv:
+# If it doesn't already exist
+$(VIRTUAL_ENV):
 	- mkdir -p $(INSTALL_DIR)
 	$(info Creating virtual environment ...)
-	$(PYTHON) -m venv $(PY_VENV)
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
 	$(info Updating pip)
-	$(PY_VENV)/bin/pip install --upgrade pip -q
-	$(info Installing python tools)
-	$(PY_VENV)/bin/pip install -e $(PY_PROG_DIR) -q
+	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
 
-$(PY_PROGRAMS): .venv
-	- ln -sf $(PY_VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+$(PY_PROGRAMS): $(VIRTUAL_ENV)
+	$(info Installing python tools)
+	$(PIP) install -e $(PY_PROG_DIR)
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 #### Auxiliary programs but part of making an eilmer install useful
 prep-gas:
