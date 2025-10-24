@@ -147,7 +147,6 @@ NewtonKrylovGlobalConfig{
    -- continuation settings
    inviscid_cfl_only = true,
    use_line_search = false,
-   use_residual_smoothing = false,
    use_physicality_check = true,
    allowable_relative_mass_change = 0.9,
    min_relaxation_factor_for_update = 0.1,

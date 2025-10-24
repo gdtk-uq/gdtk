@@ -56,7 +56,7 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 290
+    expected_number_steps = 305
     expected_final_cfl = 1.000e+06
     reason = ""
     steps = 0

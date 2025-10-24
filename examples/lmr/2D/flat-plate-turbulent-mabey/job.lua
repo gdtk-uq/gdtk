@@ -108,6 +108,7 @@ config.viscous                    = true
 config.spatial_deriv_calc         = "least_squares"
 config.spatial_deriv_locn         = "cells"
 config.viscous_least_squares_type = "weighted_qr"
+config.include_boundary_faces_in_spatial_deriv_correction = true
 
 -- Set temporal integration settings
 NewtonKrylovGlobalConfig{
@@ -141,7 +142,6 @@ NewtonKrylovGlobalConfig{
    allowable_relative_mass_change = 0.9,
    min_relaxation_factor_for_update = 0.1,
    min_relaxation_factor_for_cfl_growth = 0.5,
-   use_residual_smoothing = true,
 
    -- output settings
    number_of_steps_for_setting_reference_residuals = 5,
@@ -163,6 +163,7 @@ NewtonKrylovPhase:new{
    linear_solve_tolerance = 1.0e-02,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 1,
+   use_residual_smoothing = true,
 
    -- cfl settings
    use_auto_cfl = true,
@@ -177,6 +178,7 @@ NewtonKrylovPhase:new{
    -- linear system solver settings
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
+   use_residual_smoothing = false,
    start_cfl = -1.0
 }
 

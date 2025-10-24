@@ -12,6 +12,7 @@ module lmr.newtonkrylovsolver;
 
 import core.memory : GC;
 import core.stdc.stdlib : exit;
+import core.stdc.string : memcpy;
 import std.algorithm : min;
 import std.algorithm.searching : countUntil;
 import std.array : appender;
@@ -171,7 +172,6 @@ struct NKGlobalConfig {
     double minRelaxationFactorForUpdate = 0.01;
     double minRelaxationFactorForCFLGrowth = 0.1;
     double relaxationFactorReductionFactor = 0.7;
-    bool useResidualSmoothing = false;
     // Linear solver and preconditioning
     int maxLinearSolverIterations = 10;
     int maxLinearSolverRestarts = 0;
@@ -230,7 +230,6 @@ struct NKGlobalConfig {
         minRelaxationFactorForUpdate = getJSONdouble(jsonData, "min_relaxation_factor_for_update", minRelaxationFactorForUpdate);
         minRelaxationFactorForCFLGrowth = getJSONdouble(jsonData, "min_relaxation_factor_for_cfl_growth", minRelaxationFactorForCFLGrowth);
         relaxationFactorReductionFactor = getJSONdouble(jsonData, "relaxation_factor_reduction_factor", relaxationFactorReductionFactor);
-        useResidualSmoothing = getJSONbool(jsonData, "use_residual_smoothing", useResidualSmoothing);
         maxLinearSolverIterations = getJSONint(jsonData, "max_linear_solver_iterations", maxLinearSolverIterations);
         maxLinearSolverRestarts = getJSONint(jsonData, "max_linear_solver_restarts", maxLinearSolverRestarts);
         useScaling = getJSONbool(jsonData, "use_scaling", useScaling);
@@ -276,6 +275,7 @@ struct NKGlobalConfig {
 NKGlobalConfig nkCfg;
 
 struct NKPhaseConfig {
+    bool useResidualSmoothing = false;
     bool useLocalTimestep = true;
     int residualInterpolationOrder = 2;
     int jacobianInterpolationOrder = 2;
@@ -305,6 +305,7 @@ struct NKPhaseConfig {
 
     void readValuesFromJSON(JSONValue jsonData)
     {
+        useResidualSmoothing = getJSONbool(jsonData, "use_residual_smoothing", useResidualSmoothing);
         useLocalTimestep = getJSONbool(jsonData, "use_local_timestep", useLocalTimestep);
         residualInterpolationOrder = getJSONint(jsonData, "residual_interpolation_order", residualInterpolationOrder);
         jacobianInterpolationOrder = getJSONint(jsonData, "jacobian_interpolation_order", jacobianInterpolationOrder);
@@ -1822,7 +1823,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         computePreconditioner();
     }
 
-    if (nkCfg.useResidualSmoothing) {
+    if (activePhase.useResidualSmoothing) {
         evalResidualSmoothing();
     	applyResidualSmoothing();
     }
@@ -1990,7 +1991,7 @@ void solveNewtonStepFGMRES()
 
     determineScaleFactors(rowScale, colScale, nkCfg.useScaling);
 
-    if (nkCfg.useResidualSmoothing) {
+    if (activePhase.useResidualSmoothing) {
         evalResidualSmoothing();
     	applyResidualSmoothing();
     }
@@ -2462,6 +2463,7 @@ void computePreconditioner()
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.evaluate_jacobian();
             blk.flowJacobian.augment_with_dt(blk.cells, nConserved);
+            if (activePhase.useResidualSmoothing) { formInvertedResidualSmoothingMatrix(blk); }
             nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
         }
         break;
@@ -2469,6 +2471,7 @@ void computePreconditioner()
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.evaluate_jacobian();
             blk.flowJacobian.augment_with_dt(blk.cells, nConserved);
+            if (activePhase.useResidualSmoothing) { formInvertedResidualSmoothingMatrix(blk); }
             nm.smla.decompILU0(blk.flowJacobian.local);
         }
         break;
@@ -2509,32 +2512,62 @@ void scaleVector(ScaleFactors scale, ref double[] vec, size_t nConserved,
  * Authors: KAD and RJG
  * Date: 2023-03-13
  */
+void formInvertedResidualSmoothingMatrix(FluidBlock blk)
+{
+    // The residual smoothing matrix (D) is constructed using the block-diagonal
+    // components of the preconditioner matrix, which represent element-local Jacobians
+    const size_t nConserved = GlobalConfig.cqi.n;
+    auto aa = blk.flowJacobian.local.aa;
+    auto ja = blk.flowJacobian.local.ja;
+    auto ia = blk.flowJacobian.local.ia;
+
+    // extract each cell’s diagonal block D and store its inverse
+    foreach (k, ref cell; blk.cells) {
+        const size_t cellOffset = k * nConserved; // first row/col of block k
+        auto D = blk.flowJacobian.D;
+
+        // fill D by reading the diagonal block rows from the sparse matrix data
+        foreach (row; 0 .. nConserved) {
+            const size_t r = cellOffset + row; // global row index
+            size_t p = ia[r];
+            const size_t pEnd = ia[r + 1];
+
+            // find first column belonging to this block by increasing p until column == base
+            while (p < pEnd && ja[p] < cellOffset) ++p;
+
+            // copy the next n contiguous entries as the i-th row of D
+            auto Drow = D._data[row*nConserved .. (row+1)*nConserved];
+            memcpy(Drow.ptr, aa.ptr + p, nConserved * double.sizeof);
+        }
+
+        // compute and store the inverse D^{-1}
+        nm.bbla.inverse(D, cell.invBlockDiag);
+    }
+}
+
 void evalResidualSmoothing()
 {
-    // Compute an approximate solution: dU = D^{-1} * R(U),
-    // where D is some approximation of the Jacobian, here we use the
-    // same approximation as the precondition matrix out of convenience
-    size_t nConserved = GlobalConfig.cqi.n;
-    final switch (nkCfg.preconditioner) {
-    case PreconditionerType.diagonal:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
-        mixin(diagonal_solve("DinvR", "R"));
-        break;
-    case PreconditionerType.jacobi:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
-        mixin(jacobi_solve("DinvR", "R"));
-        break;
-    case PreconditionerType.sgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
-        mixin(sgs_solve("DinvR", "R"));
-        break;
-    case PreconditionerType.ilu:
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.DinvR[] = blk.R[];
-            nm.smla.solve(blk.flowJacobian.local, blk.DinvR);
+    // Compute an approximate solution: dU = D^{-1} * R(U)
+    const size_t nConserved = GlobalConfig.cqi.n;
+
+    foreach (blk; parallel(localFluidBlocks, 1)) {
+        foreach (k, cell; blk.cells) {
+            const size_t cellOffset = k * nConserved; // start of this cell's vector slice
+            auto Dinv = cell.invBlockDiag._data;
+
+            // perform dense matrix-vector multiplication
+            foreach (row; 0 .. nConserved) {
+                const size_t dRow = row * nConserved;
+                double acc = 0.0;
+
+                foreach (col; 0 .. nConserved) {
+                    acc += Dinv[dRow + col] * blk.R[cellOffset + col];
+                }
+
+                blk.DinvR[cellOffset + row] = acc;
+            }
         }
-        break;
-    } // end switch
+    }
 }
 
 void applyResidualSmoothing()
@@ -2542,11 +2575,11 @@ void applyResidualSmoothing()
     // Add the smoothing source term to the Residual vector
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
-	size_t startIdx = 0;
-	foreach (cell; blk.cells) {
-	    blk.R[startIdx .. startIdx+nConserved] += (1.0/cell.dt_local) * blk.DinvR[startIdx .. startIdx+nConserved];
-	    startIdx += nConserved;
-	}
+	    size_t startIdx = 0;
+	    foreach (cell; blk.cells) {
+	        blk.R[startIdx .. startIdx+nConserved] += (1.0/cell.dt_local) * blk.DinvR[startIdx .. startIdx+nConserved];
+	        startIdx += nConserved;
+        }
     }
 }
 
@@ -3774,7 +3807,7 @@ double applyLineSearch(double omega)
 	//----
 	// 3. Add smoothing source term
 	//----
-	if (nkCfg.useResidualSmoothing) {
+	if (activePhase.useResidualSmoothing) {
             applyResidualSmoothing();
 	}
 

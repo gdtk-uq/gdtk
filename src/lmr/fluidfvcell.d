@@ -163,7 +163,7 @@ public:
         ConservedQuantities Q_save;
         FlowGradients* grad_save;
         LSQInterpGradients* gradients_save;
-        Matrix!number dConservative;
+        Matrix!double invBlockDiag;
         bool doNotPerturb = false;
     }
 
@@ -248,6 +248,7 @@ public:
                     size_t idx = id*ncq*ncq + i*ncq;
                     dRdU[i] = fvcd.cell_jacobians[idx .. idx+ncq];
                 }
+                invBlockDiag = new Matrix!double(ncq,ncq);
             }
         }
 

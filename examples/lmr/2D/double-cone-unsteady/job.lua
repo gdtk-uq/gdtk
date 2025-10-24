@@ -124,7 +124,6 @@ NewtonKrylovGlobalConfig {
    
    -- continuation settings
    inviscid_cfl_only = true,
-   use_residual_smoothing = false,
    use_line_search = false,
    line_search_order = 3,
    use_physicality_check = true,

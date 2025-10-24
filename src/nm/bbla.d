@@ -855,6 +855,17 @@ Matrix!T inverse(T)(in Matrix!T a)
     return x;
 }
 
+void inverse(T)(Matrix!T a, ref Matrix!T x)
+{
+    auto n = a.nrows;
+    if (n != a.ncols && n == 0) {
+        throw new Exception("matrix should be square and not empty");
+    }
+    auto perm = decomp!T(a);
+    x.eye();
+    solve!T(a, x, perm);
+}
+
 void upperSolve(T)(in Matrix!T U, T[] b)
 {
     int n = to!int(U.nrows);

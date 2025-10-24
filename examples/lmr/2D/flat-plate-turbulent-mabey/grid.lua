@@ -14,7 +14,7 @@
 
 -- define some grid refinement paramters
 ni0 = 200; nj0 = 100 -- We'll scale discretization off these values
-factor = 1.0
+factor = 2.0
 ni0 = ni0*factor; nj0 = nj0*factor
 
 -- define some geometric parameters

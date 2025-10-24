@@ -125,7 +125,7 @@ NewtonKrylovGlobalConfig{
    use_scaling = true,
    max_linear_solver_iterations = 100,
    max_linear_solver_restarts = 0,
-   
+
    -- continuation settings
    inviscid_cfl_only = true,
    use_line_search = true,
@@ -134,7 +134,6 @@ NewtonKrylovGlobalConfig{
    allowable_relative_mass_change = 0.5,
    min_relaxation_factor_for_update = 0.1,
    min_relaxation_factor_for_cfl_growth = 0.5,
-   use_residual_smoothing = true,
 
    -- output settings
    number_of_steps_for_setting_reference_residuals = 0,
@@ -155,6 +154,7 @@ NewtonKrylovPhase:new{
    linear_solve_tolerance = 0.01,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 1,
+   use_residual_smoothing = true,
 
    -- cfl settings
    use_auto_cfl = true,
@@ -170,6 +170,7 @@ NewtonKrylovPhase:new{
    -- linear system solver settings
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
+   use_residual_smoothing = false,
    start_cfl = -1.0
 }
 

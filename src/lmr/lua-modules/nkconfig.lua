@@ -38,7 +38,6 @@ NewtonKrylovGlobalConfigHidden = {
    min_relaxation_factor_for_update = 0.01,
    min_relaxation_factor_for_cfl_growth = 0.1,
    relaxation_factor_reduction_factor = 0.7,
-   use_residual_smoothing = false,
 
    -- linear solver and preconditioner
    use_fgmres = false,
@@ -142,7 +141,6 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"min_relaxation_factor_for_update": %.18e,\n', nkConfig.min_relaxation_factor_for_update))
    f:write(string.format('"min_relaxation_factor_for_cfl_growth": %.18e,\n', nkConfig.min_relaxation_factor_for_cfl_growth))
    f:write(string.format('"relaxation_factor_reduction_factor": %.18e,\n', nkConfig.relaxation_factor_reduction_factor))
-   f:write(string.format('"use_residual_smoothing": %s,\n', tostring(nkConfig.use_residual_smoothing)))
    -- linear solver and preconditioner
    f:write(string.format('"max_linear_solver_iterations": %d,\n', nkConfig.max_linear_solver_iterations))
    f:write(string.format('"use_fgmres": %s,\n', tostring(nkConfig.use_fgmres)))
@@ -184,6 +182,7 @@ end
 NewtonKrylovPhaseDefaults = {
    use_local_timestep = true,
 
+   use_residual_smoothing = false,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2, -- documentation explanation.
    frozen_preconditioner = true,
@@ -258,6 +257,7 @@ end -- end NewtonKrylovPhase:new(o)
 
 function NewtonKrylovPhase:tojson()
    local str = string.format('"NewtonKrylovPhase_%d": {\n', self.id)
+   str = str .. string.format('    "use_residual_smoothing": %s,\n', tostring(self.use_residual_smoothing))
    str = str .. string.format('    "use_local_timestep": %s,\n', tostring(self.use_local_timestep))
    str = str .. string.format('    "residual_interpolation_order": %d,\n', self.residual_interpolation_order)
    str = str .. string.format('    "jacobian_interpolation_order": %d,\n', self.jacobian_interpolation_order)
