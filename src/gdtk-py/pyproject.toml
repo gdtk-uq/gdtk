@@ -10,9 +10,9 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "cffi>=1.0.0",
-    "numpy>=1.24.4",
-    "scipy>=1.10.1",
+    "cffi",
+    "numpy",
+    "scipy",
 ]
 
 [project.urls]
@@ -24,10 +24,10 @@ name = "The Gas Dynamic Toolkit developers"
 
 [project.optional-dependencies]
 pandas = [
-    "pandas>=2.0.3",
+    "pandas",
 ]
 pyvista = [
-    "pyvista>=0.44.2",
+    "pyvista",
 ]
 
 # Essential build system configuration for CFFI
