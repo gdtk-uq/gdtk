@@ -167,6 +167,7 @@ struct NKGlobalConfig {
     bool inviscidCFLOnly = true;
     bool useLineSearch = true;
     int lineSearchOrder = 1;
+    bool useScalingInLineSearch = false;
     bool usePhysicalityCheck = true;
     double allowableRelativeMassChange = 0.2;
     double minRelaxationFactorForUpdate = 0.01;
@@ -225,6 +226,7 @@ struct NKGlobalConfig {
         inviscidCFLOnly = getJSONbool(jsonData, "inviscid_cfl_only", inviscidCFLOnly);
         useLineSearch = getJSONbool(jsonData, "use_line_search", useLineSearch);
         lineSearchOrder = getJSONint(jsonData, "line_search_order", lineSearchOrder);
+        useScalingInLineSearch = getJSONbool(jsonData, "use_scaling_in_line_search", useScalingInLineSearch);
         usePhysicalityCheck = getJSONbool(jsonData, "use_physicality_check", usePhysicalityCheck);
         allowableRelativeMassChange = getJSONdouble(jsonData, "allowable_relative_mass_change", allowableRelativeMassChange);
         minRelaxationFactorForUpdate = getJSONdouble(jsonData, "min_relaxation_factor_for_update", minRelaxationFactorForUpdate);
@@ -818,7 +820,14 @@ void readNewtonKrylovConfig()
             string errMsg;
             errMsg ~= "\n";
             errMsg ~= format("ERROR: residual smoothing can only be used when preconditioning is enabled.\n");
-                             throw new Error(errMsg);
+            throw new Error(errMsg);
+        }
+        // Check for nonsensical line search scaling settings
+        if (cfg.is_master_task && nkCfg.useScalingInLineSearch && !nkCfg.useScaling) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: scaling in the line search can only be used when scaling is applied to the linear system (i.e. also set use_scaling=true).\n");
+            throw new Error(errMsg);
         }
     }
 }
@@ -3715,7 +3724,9 @@ double determineRelaxationFactor()
  * minimizes the objective function f defined as f(x) = 1/2 F(x)^T F(x)
  * where in our fluid solver context F = R (the residual function) and
  * x = U (the conserved quantities vector). See Section 6.5 from Dennis and
- * Schnabel for more details.
+ * Schnabel for more details. The optional residual scaling implemented in
+ * the line search follows the principles discussed in Nocedal & Wright (2.2)
+ * and Dennis & Schnabel (7.1).
  *
  * Note that this particular algorithm is based on satisfying the Armijo
  * condition of sufficient decrease and does not consider the sufficient
@@ -3753,6 +3764,11 @@ double applyLineSearch(double omega)
 
 
     // evaluate objective function at starting point
+    if (nkCfg.useScalingInLineSearch) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(rowScale, blk.R, nConserved, nConserved*blk.cells.length);
+        }
+    }
     mixin(dotOverBlocks("f", "R", "R"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &f, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -3771,6 +3787,11 @@ double applyLineSearch(double omega)
     evalAugmentedJacobianVectorProduct();
     //
     // 2. evaluate slope := - F(x)^T w(x,p)
+    if (nkCfg.useScalingInLineSearch) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(rowScale, blk.w, nConserved, nConserved*blk.cells.length);
+        }
+    }
     mixin(dotOverBlocks("initSlope", "w", "R"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &initSlope, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -3826,6 +3847,11 @@ double applyLineSearch(double omega)
 	//----
 	// 4. Compute objective function at new point
 	//----
+    if (nkCfg.useScalingInLineSearch) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(rowScale, blk.R, nConserved, nConserved*blk.cells.length);
+        }
+    }
 	mixin(dotOverBlocks("fPlus", "R", "R"));
 	version(mpi_parallel) {
 	    MPI_Allreduce(MPI_IN_PLACE, &fPlus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
