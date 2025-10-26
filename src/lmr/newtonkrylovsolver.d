@@ -813,6 +813,13 @@ void readNewtonKrylovConfig()
             errMsg ~= "\n";
             errMsg ~= format("ERROR: grid motion enabled in phase %d, but no globally selected grid motion", i+1);
         }
+        // Check for nonsensical residual smoothing settings
+        if (cfg.is_master_task && phase.useResidualSmoothing && !nkCfg.usePreconditioner) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: residual smoothing can only be used when preconditioning is enabled.\n");
+                             throw new Error(errMsg);
+        }
     }
 }
 
