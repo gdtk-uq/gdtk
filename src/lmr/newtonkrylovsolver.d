@@ -2470,8 +2470,8 @@ void computePreconditioner()
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.evaluate_jacobian();
             blk.flowJacobian.augment_with_dt(blk.cells, nConserved);
-            if (activePhase.useResidualSmoothing) { formInvertedResidualSmoothingMatrix(blk); }
             nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
+            if (activePhase.useResidualSmoothing) { formInvertedResidualSmoothingMatrix(blk, false); }
         }
         break;
     case PreconditionerType.ilu:
@@ -2519,7 +2519,7 @@ void scaleVector(ScaleFactors scale, ref double[] vec, size_t nConserved,
  * Authors: KAD and RJG
  * Date: 2023-03-13
  */
-void formInvertedResidualSmoothingMatrix(FluidBlock blk)
+void formInvertedResidualSmoothingMatrix(FluidBlock blk, bool invertBlockDiag=true)
 {
     // The residual smoothing matrix (D) is constructed using the block-diagonal
     // components of the preconditioner matrix, which represent element-local Jacobians
@@ -2547,8 +2547,13 @@ void formInvertedResidualSmoothingMatrix(FluidBlock blk)
             memcpy(Drow.ptr, aa.ptr + p, nConserved * double.sizeof);
         }
 
-        // compute and store the inverse D^{-1}
-        nm.bbla.inverse(D, cell.invBlockDiag);
+        if (invertBlockDiag) {
+            // compute and store the inverse D^{-1}
+            nm.bbla.inverse(D, cell.invBlockDiag);
+        } else {
+            // diagonal block is already inverted
+            cell.invBlockDiag = D;
+        }
     }
 }
 

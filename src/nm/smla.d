@@ -457,7 +457,7 @@ void invert_block_diagonal(T)(SMatrix!T A, Matrix!T D, Matrix!T Dinv, size_t nbl
             }
         }
         // invert the block matrix
-        Dinv = inverse(D);
+        inverse(D, Dinv);
         // replace the diagonal block in the sparse matrix with its inverse
         foreach (i; 0..blk_size) {
             size_t idx = k*blk_size + i;
