@@ -135,9 +135,7 @@ private:
     }
 }
 
-version(nurbssurface_test) {
-    import util.msg_service;
-    int main () {
+unittest {
     // This is example Ex4.3 from Piegl and Tiller (1997) - 'The NURBS Book'
     // Example only included 'activated' control points, so just set all others to 0 since they have no contribution
     double[4][][] Pw = [[[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
@@ -154,7 +152,5 @@ version(nurbssurface_test) {
     double[] V = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0];
 
     auto nsurf = new NURBSSurface(Pw, U, p, V, q);
-    assert(approxEqualVectors(Vector3(2.0, 98.0/27.0, 68.0/27.0), nsurf.opCall(5.0/2.0, 1.0)), failedUnitTest());
-    return 0;
-    }
+    assert(approxEqualVectors(Vector3(2.0, 98.0/27.0, 68.0/27.0), nsurf.opCall(5.0/2.0, 1.0)));
 }

@@ -270,32 +270,28 @@ private:
 
 // Unit test of the basic gas model...
 
-version(equilibrium_gas_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
     import std.process;
 
-    int main() {
-        // Before running this test, we need the gas model files in place.
-        auto cmd = executeShell("cp sample-data/air-5sp-eq.lua .");
-        assert(cmd.status == 0, failedUnitTest());
-        cmd = executeShell("cp ../../examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .");
-        assert(cmd.status == 0, failedUnitTest());
-        cmd = executeShell("prep-gas air-5sp-1T.inp air-5sp-1T.lua");
-        assert(cmd.status == 0, failedUnitTest());
+    // Before running this test, we need the gas model files in place.
+    auto cmd = executeShell("cp air-5sp-eq.lua .");
+    assert(cmd.status == 0);
+    cmd = executeShell("cp ../../examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .");
+    assert(cmd.status == 0);
+    cmd = executeShell("prep-gas air-5sp-1T.inp air-5sp-1T.lua");
+    assert(cmd.status == 0);
 
-        auto gm = new EquilibriumGas("air-5sp-eq.lua");
-        // writeln("gm=", gm); // Can see that the reactants_massf and _molef set.
+    auto gm = new EquilibriumGas("air-5sp-eq.lua");
+    // writeln("gm=", gm); // Can see that the reactants_massf and _molef set.
 
-        auto gd = GasState(1, 0);
-        gd.rho = 0.0139284858607; // Fixed example to use reactants = {N2=0.79, O2=0.21} in moles
-        gd.u = 2122510.049202302; //
+    auto gd = GasState(1, 0);
+    gd.rho = 0.0139284858607; // Fixed example to use reactants = {N2=0.79, O2=0.21} in moles
+    gd.u = 2122510.049202302; //
 
-        gd.T = 3352.068185; // Same guess as normal eqc
-        gm.update_thermo_from_rhou(gd);
-        // writeln("gd.p=", gd.p, " gd.T=", gd.T);
-        assert(isClose(2500.0, gd.T, 1.0), failedUnitTest());
-        assert(isClose(10135.0, gd.p, 1.0), failedUnitTest());
-        return 0;
-    }
+    gd.T = 3352.068185; // Same guess as normal eqc
+    gm.update_thermo_from_rhou(gd);
+    // writeln("gd.p=", gd.p, " gd.T=", gd.T);
+    assert(isClose(2500.0, gd.T, 1.0));
+    assert(isClose(10135.0, gd.p, 1.0));
 }

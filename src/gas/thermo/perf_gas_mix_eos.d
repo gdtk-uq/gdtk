@@ -94,29 +94,24 @@ private:
     }
 }
 
-version(perf_gas_mix_eos_test) {
+unittest {
     import std.math;
-    import std.stdio;
-    import util.msg_service;
-    int main() {
-        double[] R = [297.0, 260.0]; // N2, O2
-        auto pg = new PerfectGasMixEOS(R, false, -1, -1);
-        auto gd = GasState(2, 1);
-        gd.T = 300.0;
-        gd.rho = 1.2;
-        gd.massf[0] = 0.78;
-        gd.massf[1] = 0.22;
-        pg.update_pressure(gd);
-        assert(isClose(gd.p, 103989.6, 1.0e-6), failedUnitTest());
-        gd.p = 103989.6;
-        gd.rho = 0.0;
-        pg.update_density(gd);
-        assert(isClose(gd.rho, 1.2, 1.0e-6), failedUnitTest());
-        gd.rho = 1.2;
-        gd.T = 0.0;
-        pg.update_temperature(gd);
-        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
 
-        return 0;
-    }
+    double[] R = [297.0, 260.0]; // N2, O2
+    auto pg = new PerfectGasMixEOS(R, false, -1, -1);
+    auto gd = GasState(2, 1);
+    gd.T = 300.0;
+    gd.rho = 1.2;
+    gd.massf[0] = 0.78;
+    gd.massf[1] = 0.22;
+    pg.update_pressure(gd);
+    assert(isClose(gd.p, 103_989.6, 1.0e-6));
+    gd.p = 103_989.6;
+    gd.rho = 0.0;
+    pg.update_density(gd);
+    assert(isClose(gd.rho, 1.2, 1.0e-6));
+    gd.rho = 1.2;
+    gd.T = 0.0;
+    pg.update_temperature(gd);
+    assert(isClose(gd.T, 300.0, 1.0e-6));
 }

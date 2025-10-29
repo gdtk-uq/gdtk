@@ -93,27 +93,29 @@ SutherlandViscosity createSutherlandViscosity(lua_State* L)
     return new SutherlandViscosity(T_ref, mu_ref, S);
 }
 
-version(sutherland_viscosity_test) {
+unittest {
     import std.conv;
-    int main() {
-        number T = 300.0;
-        double T_ref = 273.0;
-        double mu_ref = 1.716e-5;
-        double S = 111.0;
-        assert(isClose(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-3), failedUnitTest());
+    import std.file;
 
-        auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
-        double mu = vm.eval(300.0);
-        assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-5), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/O2-viscosity.lua");
-        lua_getglobal(L, "Sutherland");
-        vm = createSutherlandViscosity(L);
-        lua_close(L);
-        mu = vm.eval(300.0);
-        assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-3), failedUnitTest());
+    number T = 300.0;
+    double T_ref = 273.0;
+    double mu_ref = 1.716e-5;
+    double S = 111.0;
+    assert(isClose(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-3));
 
-        return 0;
-    }
+    auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
+    double mu = vm.eval(300.0);
+    assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-5));
+
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "O2-viscosity.lua");
+    lua_getglobal(L, "Sutherland");
+    vm = createSutherlandViscosity(L);
+    lua_close(L);
+    mu = vm.eval(300.0);
+    assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-3));
 }

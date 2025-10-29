@@ -261,27 +261,23 @@ ReactionMechanism createReactionMechanism(string fname, GasModel gmodel, double 
     return createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
 }
 
-version(reaction_mechanism_test) {
+unittest {
     import std.math;
     import gas.therm_perf_gas;
 
-    int main() {
-        auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
-        // Test the rate of concentration change at the initial
-        // condition for the H2 + I2 reaction system.
-        double[] conc = [4.54, 4.54, 0.0];
-        auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0, -1);
-        auto gd = GasState(3, 1);
-        gd.T = 700.0;
-        auto reaction = new ElementaryReaction(rc, rc, gmodel, [0, 1], [1, 1],
-                                               [2], [2], 3, -1, -1);
-        auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10000.0);
-        double[] rates;
-        rates.length = 3;
-        reacMech.eval_rate_constants(gmodel, gd);
-        reacMech.eval_rates(conc, rates);
-        assert(isClose([-643.9303, -643.9303, 1287.8606], rates, 1.0e-6), failedUnitTest());
-
-        return 0;
-    }
+    auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
+    // Test the rate of concentration change at the initial
+    // condition for the H2 + I2 reaction system.
+    double[] conc = [4.54, 4.54, 0.0];
+    auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20_620.0, -1);
+    auto gd = GasState(3, 1);
+    gd.T = 700.0;
+    auto reaction = new ElementaryReaction(
+            rc, rc, gmodel, [0, 1], [1, 1], [2], [2], 3, -1, -1);
+    auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10_000.0);
+    double[] rates;
+    rates.length = 3;
+    reacMech.eval_rate_constants(gmodel, gd);
+    reacMech.eval_rates(conc, rates);
+    assert(isClose([-643.9303, -643.9303, 1287.8606], rates, 1.0e-6));
 }
