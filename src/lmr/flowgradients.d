@@ -83,10 +83,6 @@ public:
         foreach (i; 0 .. 3) {
             foreach (j; 0 .. 3) { vel[i][j] = to!number(0.0); }
             T[i] = to!number(0.0);
-
-            if (myConfig.gmodel.is_plasma){
-                p_e[i] = to!number(0.0);
-            }
         }
         version(multi_species_gas) {
             massf.length = myConfig.n_species;
@@ -98,6 +94,9 @@ public:
             T_modes.length = myConfig.n_modes;
             foreach (i; 0 .. myConfig.n_modes) {
                 foreach (j; 0 .. 3) { T_modes[i][j] = to!number(0.0); }
+                if (myConfig.gmodel.is_plasma && myConfig.gmodel.n_modes > 0 && myConfig.electric_field_work){
+                    p_e[i] = to!number(0.0);
+                }
             }
         }
         version(turbulence) {
@@ -700,8 +699,7 @@ public:
             vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0;
         }
         mixin(codeForGradients("gas.T", "T"));
-
-        if (myConfig.gmodel.is_plasma) {
+        if (myConfig.gmodel.is_plasma && myConfig.gmodel.n_modes > 0 && myConfig.electric_field_work) {
             mixin(codeForGradients("gas.p_e", "p_e"));
         }
         version(multi_T_gas) {
@@ -734,7 +732,7 @@ public:
 
     @nogc
     void gradients_at_cells_leastsq(in FlowState fs, FlowState[] fss, size_t[] cloud_idxs, in WLSQGradWorkspace ws,
-                                    size_t n, bool is3d, size_t nsp, size_t nmodes, size_t nturb, bool doSpecies)
+                                    size_t n, bool is3d, size_t nsp, size_t nmodes, size_t nturb, bool doSpecies, bool do_electron_pressure)
     /*
         Faster variant of the least-squares gradient code, for working with the dense data structures.
         @author: NNG (Feb 25)
@@ -768,6 +766,9 @@ public:
             // T_modes
             foreach (imode; 0 .. nmodes) {
                 mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]"));
+            }
+            if (do_electron_pressure) {
+                mixin(codeForGradients("gas.p_e", "p_e"));
             }
         }
         version(multi_species_gas) {

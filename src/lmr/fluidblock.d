@@ -852,6 +852,10 @@ public:
             case SpatialDerivCalc.least_squares:
                 compute_gradients_at_cells_leastsq();
                 break;
+                // foreach(cell; cells) {
+                //     cell.grad.gradients_leastsq(myConfig, cell.cloud_fs, *(cell.ws_grad));
+                // }
+                // break;
             case SpatialDerivCalc.divergence:
                 foreach(iface; faces) {
                     assert(0, "divergence thereom not implemented when computing gradients at cell centres.");
@@ -871,13 +875,14 @@ public:
         immutable size_t nmodes = myConfig.n_modes;
         immutable size_t nturb = myConfig.turb_model.nturb;
         immutable bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
+        immutable bool do_electron_pressure = myConfig.gmodel.is_plasma && nmodes > 0 && myConfig.electric_field_work;
 
         if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
         foreach(idx; cell_idxs){
             celldata.gradients[idx].gradients_at_cells_leastsq(
                 celldata.flowstates[idx], facedata.flowstates, celldata.c2f[idx],
                 celldata.workspaces[idx], celldata.nfaces[idx],
-                is3D, nsp, nmodes, nturb, doSpecies);
+                is3D, nsp, nmodes, nturb, doSpecies, do_electron_pressure);
         }
     }
 
