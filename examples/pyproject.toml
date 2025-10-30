@@ -1,0 +1,19 @@
+[project]
+name = "examples"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "gdtk",
+    "matplotlib",
+    "nenzf1d",
+    "pyyaml",
+]
+
+[dependency-groups]
+dev = [
+    "pytest"
+]
+
+[tool.uv.sources]
+gdtk = { path = "../src/gdtk-py", editable = true }
+nenzf1d = { path = "../src/nenzf1d", editable = true }
