@@ -380,7 +380,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
     referenceResiduals = new ConservedQuantities(nConserved);
     currentResiduals = new ConservedQuantities(nConserved);
     rowScale = new ScaleFactors(nConserved, cfg.dimensions);
-    colScale = new ScaleFactors(nConserved, cfg.dimensions);
+    invColScale = new ScaleFactors(nConserved, cfg.dimensions);
     if (nkCfg.writeLimiterValues) {
         limCIO = new FluidFVCellLimiterIO(buildLimiterVariables(localFluidBlocks[0].grid_type));
         if (cfg.field_format == "rawbinary")
