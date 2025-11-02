@@ -127,51 +127,46 @@ void convNURBSVolDataToVTK(string nurbsDataFile, string volVTKFile="nurbs.vts", 
     return;
 }
 
-version(nurbs_utils_test) {
-    import util.msg_service;
-    int main() {
-        // example 2.3 from Piegl and Tiller (1997) - 'The NURBS Book'
-        // findSpan test
-        double u = 2.5;
-        double[] U = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 5.0, 5.0, 5.0];
-        int m = 11;
-        int p = 2;
-        int n = m - p - 1;
-        int i = findSpan(u, n, p, U);
-        int iExact = 4;
-        assert(isClose(i, iExact), failedUnitTest());
-        
-        // basisFuns test
-        auto nws = NURBSWorkspace(p);
-        double[] N;
-        N.length = p + 1;
-        basisFuns(i, u, p, U, N, nws);
-        double[3] Nexact = [1.0/8.0, 3.0/4.0, 1.0/8.0];
-        assert((N.length == Nexact.length), failedUnitTest());
-        foreach (idx; 0 .. N.length) {
-            assert(isClose(N[idx], Nexact[idx]), failedUnitTest());
-        }
+unittest {
+    // example 2.3 from Piegl and Tiller (1997) - 'The NURBS Book'
+    // findSpan test
+    double u = 2.5;
+    double[] U = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 5.0, 5.0, 5.0];
+    int m = 11;
+    int p = 2;
+    int n = m - p - 1;
+    int i = findSpan(u, n, p, U);
+    int iExact = 4;
+    assert(isClose(i, iExact));
+    
+    // basisFuns test
+    auto nws = NURBSWorkspace(p);
+    double[] N;
+    N.length = p + 1;
+    basisFuns(i, u, p, U, N, nws);
+    double[3] Nexact = [1.0/8.0, 3.0/4.0, 1.0/8.0];
+    assert((N.length == Nexact.length));
+    foreach (idx; 0 .. N.length) {
+        assert(isClose(N[idx], Nexact[idx]));
+    }
 
-        // single-span autoKnotVector test
-        int p_ss = 3;
-        int N_ss = 4;
-        auto U_ss = autoKnotVector(N_ss, p_ss);
-        double[8] UExact_ss = [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
-        assert((U_ss.length == UExact_ss.length), failedUnitTest());
-        foreach(idx; 0 .. U_ss.length) {
-            assert((isClose(U_ss[idx], UExact_ss[idx])), failedUnitTest());
-        }
-        
-        // multi-span autoKnotVector test
-        int p_ms = 2;
-        int N_ms = 5;
-        auto U_ms = autoKnotVector(N_ms, p_ms);
-        double[8] UExact_ms = [0.0, 0.0, 0.0, 1.0/3.0, 2.0/3.0, 1.0, 1.0, 1.0];
-        assert((U_ms.length == UExact_ms.length), failedUnitTest());
-        foreach(idx; 0 .. U_ms.length) {
-            assert((isClose(U_ms[idx], UExact_ms[idx])), failedUnitTest());
-        }
-        
-        return 0;
+    // single-span autoKnotVector test
+    int p_ss = 3;
+    int N_ss = 4;
+    auto U_ss = autoKnotVector(N_ss, p_ss);
+    double[8] UExact_ss = [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
+    assert((U_ss.length == UExact_ss.length));
+    foreach(idx; 0 .. U_ss.length) {
+        assert((isClose(U_ss[idx], UExact_ss[idx])));
+    }
+    
+    // multi-span autoKnotVector test
+    int p_ms = 2;
+    int N_ms = 5;
+    auto U_ms = autoKnotVector(N_ms, p_ms);
+    double[8] UExact_ms = [0.0, 0.0, 0.0, 1.0/3.0, 2.0/3.0, 1.0, 1.0, 1.0];
+    assert((U_ms.length == UExact_ms.length));
+    foreach(idx; 0 .. U_ms.length) {
+        assert((isClose(U_ms[idx], UExact_ms[idx])));
     }
 }

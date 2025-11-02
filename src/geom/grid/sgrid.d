@@ -1830,41 +1830,36 @@ StructuredGrid grid_faceswap(StructuredGrid grid,
 
 //-----------------------------------------------------------------
 
-version(sgrid_test) {
-    import util.msg_service;
-    int main() {
-        auto p00 = Vector3(0.0, 0.1);
-        auto p10 = Vector3(1.0, 0.1);
-        auto p11 = Vector3(1.0, 1.1);
-        auto p01 = Vector3(0.0, 1.1);
-        auto my_patch = new CoonsPatch(p00, p10, p11, p01);
-        auto cf = [new LinearFunction(), new LinearFunction(),
-                   new LinearFunction(), new LinearFunction()];
-        auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
-        my_grid.set_tag(Face.north, "north-face");
-        my_grid.set_tags(["south":"south-face-here-sir", "west":"west-face-here-sir!"]);
-        string repr = to!string(my_grid);
-        // writeln("my_grid=", repr);
-        assert(repr.canFind("north-face"), failedUnitTest());
-        assert(repr.canFind("south-face-here-sir"), failedUnitTest());
-        assert(repr.canFind("west-face-here-sir!"), failedUnitTest());
-        assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35, 0.0)),
-               failedUnitTest());
-        auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);
-        assert(approxEqualVectors(*my_subgrid[1,1], Vector3(0.5, 0.35, 0.0)),
-               failedUnitTest());
+unittest {
+    auto p00 = Vector3(0.0, 0.1);
+    auto p10 = Vector3(1.0, 0.1);
+    auto p11 = Vector3(1.0, 1.1);
+    auto p01 = Vector3(0.0, 1.1);
+    auto my_patch = new CoonsPatch(p00, p10, p11, p01);
+    auto cf = [new LinearFunction(), new LinearFunction(),
+        new LinearFunction(), new LinearFunction()];
+    auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
+    my_grid.set_tag(Face.north, "north-face");
+    my_grid.set_tags(["south": "south-face-here-sir", "west": "west-face-here-sir!"]);
+    string repr = to!string(my_grid);
+    writeln("my_grid=", repr);
 
-        assert(uflowz(1.0)==1.0, failedUnitTest());
-        assert(uflowz(1.0e-32)==0.0, failedUnitTest());
-        assert(uflowz(1.0e-29)==1.0e-29, failedUnitTest());
-        assert(uflowz(1.0e+29)==1.0e+29, failedUnitTest());
-        assert(uflowz(1.0e+32)==1.0e+30, failedUnitTest());
+    assert(repr.canFind("north-face"));
+    assert(repr.canFind("south-face-here-sir"));
+    assert(repr.canFind("west-face-here-sir!"));
+    assert(approxEqualVectors(*my_grid[5, 5], Vector3(0.5, 0.35, 0.0)));
+    auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);
+    assert(approxEqualVectors(*my_subgrid[1, 1], Vector3(0.5, 0.35, 0.0)));
 
-        assert(uflowz(-1.0)==-1.0, failedUnitTest());
-        assert(uflowz(-1.0e-32)==0.0, failedUnitTest());
-        assert(uflowz(-1.0e-29)==-1.0e-29, failedUnitTest());
-        assert(uflowz(-1.0e+29)==-1.0e+29, failedUnitTest());
-        assert(uflowz(-1.0e+32)==-1.0e+30, failedUnitTest());
-        return 0;
-    }
-} // end sgrid_test
+    assert(uflowz(1.0) == 1.0);
+    assert(uflowz(1.0e-32) == 0.0);
+    assert(uflowz(1.0e-29) == 1.0e-29);
+    assert(uflowz(1.0e+29) == 1.0e+29);
+    assert(uflowz(1.0e+32) == 1.0e+30);
+
+    assert(uflowz(-1.0) == -1.0);
+    assert(uflowz(-1.0e-32) == 0.0);
+    assert(uflowz(-1.0e-29) == -1.0e-29);
+    assert(uflowz(-1.0e+29) == -1.0e+29);
+    assert(uflowz(-1.0e+32) == -1.0e+30);
+}

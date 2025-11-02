@@ -133,5 +133,3 @@ public:
     }
 
 } // end class NozzleExpansionPatch
-
-// [TODO] version(nozzleexpansionpatch_test)

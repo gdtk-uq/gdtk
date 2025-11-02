@@ -228,32 +228,28 @@ public:
     }
 } // end class IdealAirProxy
 
-version(ideal_air_proxy_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
 
-    int main() {
-        auto gm = new IdealAirProxy();
-        auto gd = GasState(1, 0);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.massf[0] = 1.0;
-        assert(isClose(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 1, failedUnitTest());
-        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+    auto gm = new IdealAirProxy();
+    auto gd = GasState(1, 0);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.massf[0] = 1.0;
+    assert(isClose(gm.R(gd), 287.086, 1.0e-4));
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 1);
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 300.0, 1.0e-6));
+    assert(isClose(gd.massf[0], 1.0, 1.0e-6));
 
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        assert(isClose(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
-        assert(isClose(gd.u, 215314.0, 1.0e-4), failedUnitTest());
-        assert(isClose(gd.a, 347.241, 1.0e-4), failedUnitTest());
-        gm.update_trans_coeffs(gd);
-        assert(isClose(gd.mu, 1.84691e-05, 1.0e-3), failedUnitTest());
-        assert(isClose(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    assert(isClose(gd.rho, 1.16109, 1.0e-4));
+    assert(isClose(gd.u, 215_314.0, 1.0e-4));
+    assert(isClose(gd.a, 347.241, 1.0e-4));
+    gm.update_trans_coeffs(gd);
+    assert(isClose(gd.mu, 1.84691e-05, 1.0e-3));
+    assert(isClose(gd.k, 0.0262449, 1.0e-6));
 
-        return 0;
-    }
 }
