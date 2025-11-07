@@ -1,0 +1,14 @@
+[project]
+name = "gas"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+  "gdtk",
+  "numpy"
+]
+
+[project.scripts]
+build-uniform-lut = "build_uniform_lut:main"
+
+[tool.setuptools]
+py-modules = ["build_uniform_lut"]
