@@ -2584,7 +2584,7 @@ void formInvertedResidualSmoothingMatrix(FluidBlock blk, bool invertBlockDiag=tr
             nm.bbla.inverse(D, cell.invBlockDiag);
         } else {
             // diagonal block is already inverted
-            cell.invBlockDiag = D;
+            nm.bbla.copy(D, cell.invBlockDiag);
         }
     }
 }
