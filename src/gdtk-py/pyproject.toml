@@ -12,6 +12,7 @@ requires-python = ">=3.8"
 dependencies = [
     "cffi",
     "numpy",
+    "pyyaml",
     "scipy",
 ]
 
@@ -28,6 +29,13 @@ pandas = [
 ]
 pyvista = [
     "pyvista",
+]
+
+[dependency-groups]
+dev = [
+    "gdtk[pandas]",
+    "gdtk[pyvista]",
+    "ipython>=8.12.3",
 ]
 
 # Essential build system configuration for CFFI
