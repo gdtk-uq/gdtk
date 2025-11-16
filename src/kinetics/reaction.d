@@ -535,38 +535,35 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
 }
 
 
-version(reaction_test) {
-    int main() {
-        GasModel gm = init_gas_model("sample-input/H2-I2-HI.lua");
-        // Find rate of forward production for H2 + I2 reaction at 700 K.
-        double[] conc = [4.54, 4.54, 0.0];
-        double[] gibbs_energies = [0.0, 0.0, 0.0];
-        auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0, -1);
-        auto gd = GasState(3, 1);
-        gd.T = 700.0;
-        gm.gibbs_free_energies(gd, gibbs_energies);
-        auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1, 1],
-                                               [2], [2], 3, -1, -1);
-        reaction.eval_rate_constants(gd, gibbs_energies);
-        reaction.eval_rates(conc);
-        assert(isClose(0.0, reaction.production(0)), failedUnitTest());
-        assert(isClose(0.0, reaction.production(1)), failedUnitTest());
-        assert(isClose(1287.8606, reaction.production(2), 1.0e-6), failedUnitTest());
-        assert(isClose(643.9303, reaction.loss(0), 1.0e-6), failedUnitTest());
-        assert(isClose(643.9303, reaction.loss(1), 1.0e-6), failedUnitTest());
-        assert(isClose(0.0, reaction.loss(2)), failedUnitTest());
+unittest {
+    GasModel gm = init_gas_model("sample-input/H2-I2-HI.lua");
+    // Find rate of forward production for H2 + I2 reaction at 700 K.
+    double[] conc = [4.54, 4.54, 0.0];
+    double[] gibbs_energies = [0.0, 0.0, 0.0];
+    auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20_620.0, -1);
+    auto gd = GasState(3, 1);
+    gd.T = 700.0;
+    gm.gibbs_free_energies(gd, gibbs_energies);
+    auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1, 1],
+                                           [2], [2], 3, -1, -1);
+    reaction.eval_rate_constants(gd, gibbs_energies);
+    reaction.eval_rates(conc);
+    assert(isClose(0.0, reaction.production(0)));
+    assert(isClose(0.0, reaction.production(1)));
+    assert(isClose(1287.8606, reaction.production(2), 1.0e-6));
+    assert(isClose(643.9303, reaction.loss(0), 1.0e-6));
+    assert(isClose(643.9303, reaction.loss(1), 1.0e-6));
+    assert(isClose(0.0, reaction.loss(2)));
 
-        auto reaction2 = new AnonymousColliderReaction(rc, rc, gm, [0, 1], [1, 1],
-                                                       [2], [2], [tuple(1, 1.0)], 3);
-        reaction2.eval_rate_constants(gd, gibbs_energies);
-        reaction2.eval_rates(conc);
+    auto reaction2 = new AnonymousColliderReaction(rc, rc, gm, [0, 1], [1, 1],
+                                                   [2], [2], [tuple(1, 1.0)], 3);
+    reaction2.eval_rate_constants(gd, gibbs_energies);
+    reaction2.eval_rates(conc);
 
-        // Try a reaction with backwards rate computed from equilibrium constant.
-        auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1, 1],
-                                                [2], [2], 3, -1, -1);
-        reaction3.eval_rate_constants(gd, gibbs_energies);
-        reaction3.eval_rates(conc);
+    // Try a reaction with backwards rate computed from equilibrium constant.
+    auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1, 1],
+                                            [2], [2], 3, -1, -1);
+    reaction3.eval_rate_constants(gd, gibbs_energies);
+    reaction3.eval_rates(conc);
 
-        return 0;
-    }
 }
