@@ -12,6 +12,7 @@ requires-python = ">=3.8"
 dependencies = [
     "cffi",
     "numpy",
+    "parse>=1.20.2",
     "pyyaml",
     "scipy",
 ]

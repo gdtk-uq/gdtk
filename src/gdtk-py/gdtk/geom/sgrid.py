@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 import numpy as np
+from parse import parse
 
 from gdtk.geom.cluster import ClusterFunction, LinearFunction
 from gdtk.geom.surface import CoonsPatch, ParametricSurface
@@ -191,41 +192,29 @@ class StructuredGrid(metaclass=_SGridConstructor):
         """
         Native format for Eilmer, Chicken and Lorikeet.
         """
-        f = gzip.open(file_name, "rt")
-        line = f.readline()
-        items = line.split()
-        assert items[0] == "structured_grid"
-        format_version = items[1]
-        assert format_version in ["1.0", "1.1"], "incorrect structured_grid version"
-        line = f.readline()
-        items = line.split()
-        label = str(items[1]) if len(items) > 1 else ""
-        line = f.readline()
-        items = line.split()
-        dimensions = int(items[1])
-        line = f.readline()
-        items = line.split()
-        niv = int(items[1])
-        line = f.readline()
-        items = line.split()
-        njv = int(items[1])
-        line = f.readline()
-        items = line.split()
-        nkv = int(items[1])
-        # We now want to load the text associated with the vertex coordinates,
-        # followed by the boundary tags, if they are present.
+        with gzip.open(file_name, "rt") as file:
+            lines = (line.strip() for line in file)
 
-        data = np.loadtxt(f, max_rows=nkv * njv * niv)
-        file_tags = []
-        if format_version == "1.1":
-            line = f.readline()
-            items = re.split(":", line)
-            ntags = int(items[1].strip())
-            for i in range(ntags):
-                line = f.readline()
-                items = re.split(":", line)
-                file_tags.append(items[1].strip())
-        f.close()
+            (format_version,) = parse("structured_grid {}", next(lines))
+            assert format_version in ("1.1", "1.0")
+            (label,) = parse("label: {}", next(lines)) or ("",)
+            (dimensions,) = parse("dimensions: {:d}", next(lines))
+            (niv,) = parse("niv: {:d}", next(lines))
+            (njv,) = parse("njv: {:d}", next(lines))
+            (nkv,) = parse("nkv: {:d}", next(lines))
+
+            # We now want to load the text associated with the vertex coordinates,
+            # followed by the boundary tags, if they are present.
+
+            data = np.loadtxt(file, max_rows=nkv * njv * niv)
+
+            file_tags = []
+            if format_version == "1.1":
+                (ntags,) = parse("ntags: {:d}", next(lines))
+                for i in range(ntags):
+                    _, tag = parse("tag[{:d}]: {}", next(lines))
+                    file_tags.append(tag)
+
         # The serialized data in the file has loops in the VTK index order,
         # with k as the outer loop, then j and then i as the innermost loop
         x = data[:, 0]
