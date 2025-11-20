@@ -24,7 +24,7 @@ def get_values(dict, propertyList):
             valueList.append(dict[s])
         else:
             valueList.append(0.0)
-            print "WARNING: "+s+"was not found in the current case dictionary."
+            print("WARNING: "+s+"was not found in the current case dictionary.")
     return valueList
 
 
@@ -97,9 +97,9 @@ def write_sensitivity_summary(sensitivity, perturbedVariables, \
     fout.close()
     
     if type in ['relative']:
-       print 'File "sensitivities_rel.dat" written'
+       print('File "sensitivities_rel.dat" written')
     elif type in ['absolute']:
-       print 'File "sensitivities_abs.dat" written'
+       print('File "sensitivities_abs.dat" written')
 
     return    
     
@@ -168,7 +168,7 @@ def write_uncertainty_summary(uncertainty, perturbedVariables, \
 
     fout.close()
 
-    print 'File "uncertainties.dat" written'
+    print('File "uncertainties.dat" written')
     return
 
 

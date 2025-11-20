@@ -27,7 +27,7 @@ def run_command(cmdText):
         args = cmdText
     else:
         args = shlex.split(cmdText)
-    print "About to run cmd:", string.join(args)
+    print("About to run cmd:", string.join(args))
     # p = subprocess.Popen(args)
     # wait until the subprocess is finished
     # stdoutData, stderrData = p.communicate()
@@ -39,9 +39,9 @@ def set_case_running(caseString, caseDict, textString, var):
     A short function to set a given case running in an appropriately
     named sub-directory.
     """
-    print 60*"-"
-    print caseString
-    print textString
+    print(60*"-")
+    print(caseString)
+    print(textString)
     #
     if var not in ['coreRfraction','CoreRadiusFraction']:
         # Create sub-directory for the current case
@@ -69,9 +69,9 @@ def set_case_running(caseString, caseDict, textString, var):
         run_command('chmod u+x '+scriptFileName)
         if 'inputFileTemplate' in caseDict:
             run_command('chmod u+x '+inputFileName)
-        print ""
-        print caseDict['runCMD']+scriptFileName
-        print ""
+        print("")
+        print(caseDict['runCMD']+scriptFileName)
+        print("")
         # I am not sure how to replace the following line with the 
         # run_command function
         os.system(caseDict['runCMD']+scriptFileName)
@@ -90,10 +90,10 @@ def set_case_running(caseString, caseDict, textString, var):
                 'nenzfr.py --just-stats --CoreRadiusFraction='+\
                 str(caseDict[var])
                 #str(DictOfCases[caseString][perturbedVariables.index(var)])
-            print ""
-            print command_text
+            print("")
+            print(command_text)
             run_command(command_text)
-            print ""
+            print("")
             os.chdir('../')
     #
     return

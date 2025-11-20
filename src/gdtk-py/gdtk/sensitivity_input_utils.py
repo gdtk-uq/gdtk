@@ -28,34 +28,34 @@ def sensitivity_input_checker(cfg):
     
     """
 
-    print "Checking sensitivity inputs."
+    print("Checking sensitivity inputs.")
 
     # Make empty input uncertainties dictionary that we will populate
     #cfg['inputUncertainties'] = {}
 
     if 'levels' not in cfg:
         cfg['levels'] = 3
-        print "The number of perturbation levels to use is not specified."
-        print "    Setting it to default value of {0}".format(cfg['levels'])
+        print("The number of perturbation levels to use is not specified.")
+        print("    Setting it to default value of {0}".format(cfg['levels']))
 
     if 'outputVariables' not in cfg:
-        print "You have not specified a list of which variables are to be analysed."
-        print "    Bailing out."
+        print("You have not specified a list of which variables are to be analysed.")
+        print("    Bailing out.")
         cfg['bad_input'] = True
 
     if 'inputVariables' not in cfg:
-        print "You have not specified a list of the input variables (that have been perturbed."
-        print "    Bailing out."
+        print("You have not specified a list of the input variables (that have been perturbed.")
+        print("    Bailing out.")
         cfg['bad_input'] = True
 
     if 'inputVariablesUncertainty' not in cfg:
-        print "You have not specified a dictionary of the input variables uncertainties."
-        print "    Bailing out."
+        print("You have not specified a dictionary of the input variables uncertainties.")
+        print("    Bailing out.")
         cfg['bad_input'] = True
 
     if 'typeOfUncertainty' not in cfg:
-        print "You have not specified the type of uncertainty (absolute or relative)."
-        print "    Bailing out."
+        print("You have not specified the type of uncertainty (absolute or relative).")
+        print("    Bailing out.")
         cfg['bad_input'] = True
     
     # Check that we have uncertainties for each input variable
@@ -64,8 +64,8 @@ def sensitivity_input_checker(cfg):
         #print cfg['inputVariablesUncertainty'].keys()
         
         if variable not in cfg['inputVariablesUncertainty'].keys():
-            print "You have not specified an uncertainty for {0}".format(variable)
-            print "    Bailing out."
+            print("You have not specified an uncertainty for {0}".format(variable))
+            print("    Bailing out.")
             cfg['bad_input'] = True
     
     # Read the sensitivity_case_summary file to get the perturbed
@@ -80,12 +80,12 @@ def sensitivity_input_checker(cfg):
     # inputVariables list
     for var in perturbedVariables:
         if var not in cfg['inputVariables']:
-            print "'{0}' was perturbed but does not appear in the 'inputVariables' list.".format(var)
+            print("'{0}' was perturbed but does not appear in the 'inputVariables' list.".format(var))
             # Bailing out could be made unnecessary but it would require 
             # signifiant changes to how the main sensitivity function 
             # works since the case number is specific to the variable 
             # position in the inputVariables list. 
-            print "    Bailing out."
+            print("    Bailing out.")
             cfg['bad_input'] = True
     
     # Clean up the input uncertainty. Not sure if this is better here
@@ -108,7 +108,7 @@ def sensitivity_input_checker(cfg):
     cfg.pop('typeOfUncertainty')
     
     
-    print "Done checking sensitivity inputs."
+    print("Done checking sensitivity inputs.")
 
     return cfg
 

@@ -151,12 +151,13 @@ def main():
     #   
     if not cfg: #if the configuration dictionary has not been filled up already, load it from a file
         try: #from Rowan's onedval program
-            execfile(config_file, globals(), cfg)
+            with open(config_file, 'r') as f:
+                exec(f.read(), globals(), cfg)
         except IOError as e:
-            print "Error {0}".format(str(e))
-            print "There was a problem reading the config file: '{0}'".format(config_file)
-            print "Check that it conforms to Python syntax."
-            print "Bailing out!"
+            print("Error {0}".format(str(e)))
+            print("There was a problem reading the config file: '{0}'".format(config_file))
+            print("Check that it conforms to Python syntax.")
+            print("Bailing out!")
             sys.exit(1)
     #
     run_perturb(cfg)
@@ -167,9 +168,9 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
-        print "perturb:\n run simulations that are perturbations about a nominal"
-        print "   Version:", VERSION_STRING
-        print "   To get some useful hints, invoke the program with option --help."
+        print("perturb:\n run simulations that are perturbations about a nominal")
+        print("   Version:", VERSION_STRING)
+        print("   To get some useful hints, invoke the program with option --help.")
         sys.exit(0)
     return_flag = main()
     sys.exit(return_flag)

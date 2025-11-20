@@ -111,7 +111,7 @@ def run_sensitivity(cfg):
 
     for k in range(len(perturbedVariables)):
         var = perturbedVariables[k]
-        print var
+        print(var)
         #if var == 'CoreRadiusFraction':
         #    perturb_CoreRadiusFraction(var, perturbedVariables,\
         #                               dictOfCases, cfg['levels'])
@@ -140,7 +140,7 @@ def run_sensitivity(cfg):
         #lowData['supply_h'] = lowSupply['h']
         #lowData, dontNeed = add_extra_variables(lowData, [])
 
-        print low, nominal, high
+        print(low, nominal, high)
         
         # Values of the freestream properties at the perturbed conditions
         #highValues = get_values(highData,exitVar)
@@ -360,12 +360,13 @@ def main():
     #
     if not cfg: #if the configuration dictionary has not been filled up already, load it from a file
         try: #from Rowan's onedval program
-            execfile(config_file, globals(), cfg)
+            with open(config_file, 'r') as f:
+                exec(f.read(), globals(), cfg)
         except IOError as e:
-	    print "Error {0}".format(str(e)) 
-            print "There was a problem reading the config file: '{0}'".format(config_file)
-            print "Check that it conforms to Python syntax."
-            print "Bailing out!"
+            print("Error {0}".format(str(e)))
+            print("There was a problem reading the config file: '{0}'".format(config_file))
+            print("Check that it conforms to Python syntax.")
+            print("Bailing out!")
             sys.exit(1)
     #
     run_sensitivity(cfg)
@@ -376,9 +377,9 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
-        print "sensitivity:\n Calculate Sensitivity of Shock Tunnel Test Flow Conditions for a varying inputs"
-        print "   Version:", VERSION_STRING
-        print "   To get some useful hints, invoke the program with option --help."
+        print("sensitivity:\n Calculate Sensitivity of Shock Tunnel Test Flow Conditions for a varying inputs")
+        print("   Version:", VERSION_STRING)
+        print("   To get some useful hints, invoke the program with option --help.")
         sys.exit(0)
     return_flag = main()
     sys.exit(return_flag)
