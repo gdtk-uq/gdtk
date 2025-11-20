@@ -5,7 +5,7 @@ requires-python = ">=3.8"
 dependencies = [
     "matplotlib",
     "numpy",
-    "gdtk"
+    "gdtk @ file:../gdtk-py"
 ]
 
 [project.scripts]

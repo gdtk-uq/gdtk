@@ -61,6 +61,8 @@ include $(KINETICS_DIR)/kinetics_files.mk
 GASDYN_DIR := ../gasdyn
 include $(GASDYN_DIR)/gasdyn_files.mk
 
+GDTK_PY_DIR := ../gdtk-py
+
 GEOM_DIR := ../geom
 include $(GEOM_DIR)/geom_files.mk
 
@@ -167,9 +169,9 @@ build-libgas: libgas.so gas-calc build-uniform-lut $(LIBEQC)
 	cp gas-calc $(BUILD_DIR)/bin/
 	cp ../../examples/estcn/estcn.py $(BUILD_DIR)/bin/estcn; chmod +x $(BUILD_DIR)/bin/estcn
 	- mkdir -p $(BUILD_DIR)/lib
-	cp libgas.so $(BUILD_DIR)/lib/
-	cp $(EQC_DIR)/libeqc.so $(BUILD_DIR)/lib/
 	cp -r ../lib/* $(BUILD_DIR)/lib/
+	make -C $(GDTK_PY_DIR) build
+	cp -r $(GDTK_PY_DIR)/gdtk $(BUILD_DIR)/lib/
 
 install: build-prep-gas build-libgas
 	- mkdir -p $(INSTALL_DIR)
@@ -260,8 +262,9 @@ $(VIRTUAL_ENV):
 	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
 
 $(PY_PROGRAMS): $(VIRTUAL_ENV)
+	make -C $(GDTK_PY_DIR) build
 	$(info Installing python tools)
-	$(PIP) install -e . --find-links $(INSTALL_DIR)/share/python-packages/
+	$(PIP) install .
 	- mkdir -p $(INSTALL_DIR)/bin
 	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
