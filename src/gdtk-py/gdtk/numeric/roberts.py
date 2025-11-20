@@ -14,6 +14,7 @@ These functions should behave the same as the C code functions.
 
 import numpy as np
 
+
 def roberts(eta, alpha, beta):
     """
     Computes the stretched coordinate in the range [0.0..1.0]
@@ -29,10 +30,11 @@ def roberts(eta, alpha, beta):
     Works for both scalars and arrays.
     """
     lmbda = (beta + 1.0) / (beta - 1.0)
-    lmbda = np.power(lmbda, ((eta - alpha)/(1.0 - alpha)))
+    lmbda = np.power(lmbda, ((eta - alpha) / (1.0 - alpha)))
     etabar = (beta + 2.0 * alpha) * lmbda - beta + 2.0 * alpha
     etabar = etabar / ((2.0 * alpha + 1.0) * (1.0 + lmbda))
     return etabar
+
 
 def roberts_1(eta, end1, end2, beta):
     """
@@ -67,12 +69,15 @@ def roberts_1(eta, end1, end2, beta):
         reverse = False
         alpha = 0.0
     if cluster:
-        if reverse: eta = 1.0 - eta
+        if reverse:
+            eta = 1.0 - eta
         etabar = roberts(eta, alpha, beta)
-        if reverse: etabar = 1.0 - etabar
+        if reverse:
+            etabar = 1.0 - etabar
     else:
         etabar = eta
     return etabar
+
 
 def distribute_points_1(t1, t2, n, end1, end2, beta):
     """
@@ -95,12 +100,13 @@ def distribute_points_1(t1, t2, n, end1, end2, beta):
     Returns the array of n+1 distributed values.
     """
     # Compute the grid points as an array.
-    etabar = roberts_1(np.linspace(0.0, 1.0, n+1), end1, end2, beta)
+    etabar = roberts_1(np.linspace(0.0, 1.0, n + 1), end1, end2, beta)
     # Compute the parameter value within the given end-points.
     x = (1.0 - etabar) * t1 + etabar * t2
     return x
 
-#------------------------------------------------------------------
+
+# ------------------------------------------------------------------
 
 if __name__ == "__main__":
     print("Begin roberts demo...")

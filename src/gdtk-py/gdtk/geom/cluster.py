@@ -47,6 +47,7 @@ class LinearFunction(ClusterFunction):
         """
         return np.linspace(0.0, 1.0, nv)
 
+
 class RobertsFunction(ClusterFunction):
     """
     Roberts' boundary-layer-like clustering function.
@@ -54,7 +55,8 @@ class RobertsFunction(ClusterFunction):
     Note that, compared with the old definition that we delegate the actual work to,
     the ends are renamed 0, 1 to align with the Eilmer4 notation.
     """
-    _slots_ = ['end0', 'end1', 'beta']
+
+    _slots_ = ["end0", "end1", "beta"]
 
     def __init__(self, end0, end1, beta):
         """
@@ -78,4 +80,4 @@ class RobertsFunction(ClusterFunction):
         """
         Returns an array of clustered sample points in range [0.0 ... 1.0].
         """
-        return distribute_points_1(0.0, 1.0, nv-1, self.end0, self.end1, self.beta)
+        return distribute_points_1(0.0, 1.0, nv - 1, self.end0, self.end1, self.beta)

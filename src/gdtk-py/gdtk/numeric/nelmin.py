@@ -85,8 +85,9 @@ from collections import namedtuple
 import concurrent.futures
 import json
 
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 # The public face of the simple minimizer...
+
 
 def minimize(f, x, dx=None, options={}):
     """
@@ -130,69 +131,88 @@ def minimize(f, x, dx=None, options={}):
     # Check input parameters.
     assert callable(f), "A function was expected for f."
     N = len(x)
-    if dx is None: dx = numpy.array([0.1]*N)
+    if dx is None:
+        dx = numpy.array([0.1] * N)
     # Default values for options.
-    opts = {'tol':1.0e-6, 'maxfe':300, 'n_check':20, 'delta':0.001,
-            'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5,
-            'P':1, 'n_workers':1,
-            'initial_simplex_fname':None,
-            'print_messages':False}
+    opts = {
+        "tol": 1.0e-6,
+        "maxfe": 300,
+        "n_check": 20,
+        "delta": 0.001,
+        "Kreflect": 1.0,
+        "Kextend": 2.0,
+        "Kcontract": 0.5,
+        "P": 1,
+        "n_workers": 1,
+        "initial_simplex_fname": None,
+        "print_messages": False,
+    }
     # Overwrite default values.
     for k in options.keys():
         if k in opts.keys():
             opts[k] = options[k]
         else:
-            raise RuntimeError(f'option {k} is not available')
+            raise RuntimeError(f"option {k} is not available")
     # Check that we have a consistent value for the number of steps between checks.
-    opts['n_check'] = min(int(opts['maxfe']/opts['P']), opts['n_check'])
+    opts["n_check"] = min(int(opts["maxfe"] / opts["P"]), opts["n_check"])
     # Start working.
     global workers
-    if opts['n_workers'] > 1:
-        workers = concurrent.futures.ThreadPoolExecutor(max_workers=opts['n_workers'])
+    if opts["n_workers"] > 1:
+        workers = concurrent.futures.ThreadPoolExecutor(max_workers=opts["n_workers"])
     else:
         workers = None
     # Get to work.
     converged = False
-    smplx = NelderMeadMinimizer(f, N, dx, opts['P'], opts['Kreflect'], opts['Kextend'], opts['Kcontract'])
-    if opts['initial_simplex_fname'] is None:
-        if opts['print_messages']: print('Build the initial simplex.')
+    smplx = NelderMeadMinimizer(
+        f, N, dx, opts["P"], opts["Kreflect"], opts["Kextend"], opts["Kcontract"]
+    )
+    if opts["initial_simplex_fname"] is None:
+        if opts["print_messages"]:
+            print("Build the initial simplex.")
         smplx.build_initial_simplex(x)
         # Save the initial version of the simplex in case something happens.
-        smplx.dump_simplex('initial_simplex.json')
+        smplx.dump_simplex("initial_simplex.json")
     else:
-        if opts['print_messages']: print('Load the initial simplex from file.')
-        smplx.load_simplex(opts['initial_simplex_fname'])
-    while (not converged) and (smplx.nfe < opts['maxfe']):
-        if opts['print_messages']: print('Take some steps with the simplex.')
-        smplx.take_steps(opts['n_check'])
+        if opts["print_messages"]:
+            print("Load the initial simplex from file.")
+        smplx.load_simplex(opts["initial_simplex_fname"])
+    while (not converged) and (smplx.nfe < opts["maxfe"]):
+        if opts["print_messages"]:
+            print("Take some steps with the simplex.")
+        smplx.take_steps(opts["n_check"])
         # Save the latest version of the simplex in case something happens.
-        smplx.dump_simplex('latest_simplex.json')
+        smplx.dump_simplex("latest_simplex.json")
         x_best = list(smplx.vertices[0].x.copy())
         f_best = smplx.vertices[0].f
         # Check the scatter of vertex values to see if we are
         # close enough to call it quits.
         mean, stddev = smplx.f_statistics()
-        if stddev < opts['tol']:
+        if stddev < opts["tol"]:
             # All of the points are close together but we need to test more carefully.
-            converged = smplx.test_for_minimum(opts['delta'])
-            if not converged: smplx.rescale(opts['delta'])
+            converged = smplx.test_for_minimum(opts["delta"])
+            if not converged:
+                smplx.rescale(opts["delta"])
         # print("smplx.nfe=", smplx.nfe) # for debug
     #
     if workers:
         workers.shutdown()
         workers = None
-    Result = namedtuple('Result', ['x', 'fun', 'success', 'nfe', 'nrestarts', 'vertices'])
+    Result = namedtuple(
+        "Result", ["x", "fun", "success", "nfe", "nrestarts", "vertices"]
+    )
     return Result(x_best, f_best, converged, smplx.nfe, smplx.nrestarts, smplx.vertices)
 
 
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 # Use classes to keep the data tidy and conveniently accessible...
+
 
 class Vertex:
     """
     Stores the coordinates as an array together with the associated function value.
     """
-    __slots__ = 'x', 'f'
+
+    __slots__ = "x", "f"
 
     def __init__(self, x, f):
         self.x = x.copy()
@@ -209,8 +229,19 @@ class NelderMeadMinimizer:
     In an N-dimensional problem, each vertex is a list of N coordinates
     and the simplex consists of N+1 vertices.
     """
-    __slots__ = 'dx', 'f', 'N', 'P', 'vertices', 'nfe', 'nrestarts', \
-                'Kreflect', 'Kextend', 'Kcontract'
+
+    __slots__ = (
+        "dx",
+        "f",
+        "N",
+        "P",
+        "vertices",
+        "nfe",
+        "nrestarts",
+        "Kreflect",
+        "Kextend",
+        "Kcontract",
+    )
 
     def __init__(self, f, N, dx=None, P=1, Kreflect=1.0, Kextend=2.0, Kcontract=0.5):
         """
@@ -224,7 +255,7 @@ class NelderMeadMinimizer:
         self.Kreflect = Kreflect
         self.Kextend = Kextend
         self.Kcontract = Kcontract
-        self.dx = numpy.array(dx) if dx is not None else numpy.array([0.1]*N)
+        self.dx = numpy.array(dx) if dx is not None else numpy.array([0.1] * N)
         assert callable(f), "A function was expected for f."
         self.f = f
         self.nfe = 0
@@ -236,12 +267,13 @@ class NelderMeadMinimizer:
         Set up the vertices about the user-specified vertex, x, using step-sizes dx.
         """
         if self.N != len(x):
-            raise RuntimeError(f'N={self.N} does not match length of data {len(x)}')
-        x = numpy.array(x) # since it may be a list or array
+            raise RuntimeError(f"N={self.N} does not match length of data {len(x)}")
+        x = numpy.array(x)  # since it may be a list or array
         xs = []
         for i in range(self.N + 1):
             x_new = x.copy()
-            if i >= 1: x_new[i-1] += self.dx[i-1]
+            if i >= 1:
+                x_new[i - 1] += self.dx[i - 1]
             xs.append(x_new)
         fs = self.evaluate_candidate_points(xs)
         self.vertices = [Vertex(item[0], item[1]) for item in zip(xs, fs)]
@@ -259,18 +291,18 @@ class NelderMeadMinimizer:
         """
         Load full simplex from a JSON file.
         """
-        lines = open(filename,'r').readlines()
+        lines = open(filename, "r").readlines()
         dicts = [json.loads(line.strip()) for line in lines]
-        self.vertices = [Vertex(d['x'], d['f']) for d in dicts]
+        self.vertices = [Vertex(d["x"], d["f"]) for d in dicts]
         return
 
     def dump_simplex(self, filename):
         """
         Dump full simplex to a JSON file.
         """
-        with open(filename,'w') as fp:
+        with open(filename, "w") as fp:
             for v in self.vertices:
-                fp.write(json.dumps({'x':list(v.x), 'f':v.f})+'\n')
+                fp.write(json.dumps({"x": list(v.x), "f": v.f}) + "\n")
         return
 
     def take_steps(self, nsteps):
@@ -283,11 +315,14 @@ class NelderMeadMinimizer:
             self.vertices.sort(key=lambda v: v.f)
             if workers:
                 # Concurrent replacements
-                my_futures = [workers.submit(self.replace_vertex, self.N-i) for i in range(self.P)]
+                my_futures = [
+                    workers.submit(self.replace_vertex, self.N - i)
+                    for i in range(self.P)
+                ]
                 success = [fut.result() for fut in my_futures]
             else:
                 # Serial replacements
-                success = [self.replace_vertex(self.N-i) for i in range(self.P)]
+                success = [self.replace_vertex(self.N - i) for i in range(self.P)]
             if not any(success):
                 # Contract the simplex about the current lowest point.
                 self.contract_about_zero_point()
@@ -320,7 +355,9 @@ class NelderMeadMinimizer:
             x_new[i] += self.dx[i]
             xs.append(x_new)
         fs = self.evaluate_candidate_points(xs)
-        self.vertices = [vtx,] + [Vertex(item[0], item[1]) for item in zip(xs, fs)]
+        self.vertices = [
+            vtx,
+        ] + [Vertex(item[0], item[1]) for item in zip(xs, fs)]
         self.nrestarts += 1
         self.vertices.sort(key=lambda v: v.f)
         return
@@ -330,19 +367,20 @@ class NelderMeadMinimizer:
         Returns mean and standard deviation of the vertex fn values.
         """
         f_list = [v.f for v in self.vertices]
-        mean = sum(f_list)/(len(f_list))
-        ss = sum([(v-mean)**2 for v in f_list])
-        std_dev = math.sqrt(ss/(len(f_list)-1))
+        mean = sum(f_list) / (len(f_list))
+        ss = sum([(v - mean) ** 2 for v in f_list])
+        std_dev = math.sqrt(ss / (len(f_list) - 1))
         return mean, std_dev
 
     def centroid(self, imax):
         """
         Returns the centroid of the subset of vertices up to and including imax.
         """
-        xmid = numpy.array([0.0]*self.N)
+        xmid = numpy.array([0.0] * self.N)
         imax = min(imax, self.N)
-        for i in range(imax+1): xmid += self.vertices[i].x
-        xmid /= (imax+1)
+        for i in range(imax + 1):
+            xmid += self.vertices[i].x
+        xmid /= imax + 1
         return xmid
 
     def contract_about_zero_point(self):
@@ -350,9 +388,11 @@ class NelderMeadMinimizer:
         Contract the simplex about the vertex[0].
         """
         x_con = self.vertices[0].x
-        xs = [0.5*self.vertices[i].x + 0.5*x_con for i in range(1, self.N+1)]
+        xs = [0.5 * self.vertices[i].x + 0.5 * x_con for i in range(1, self.N + 1)]
         fs = self.evaluate_candidate_points(xs)
-        self.vertices = [self.vertices[0],] + [Vertex(item[0], item[1]) for item in zip(xs, fs)]
+        self.vertices = [
+            self.vertices[0],
+        ] + [Vertex(item[0], item[1]) for item in zip(xs, fs)]
         self.vertices.sort(key=lambda v: v.f)
         return
 
@@ -383,21 +423,23 @@ class NelderMeadMinimizer:
         Returns True is there was a successful replacement.
         """
         f_min = self.vertices[0].f
-        assert i > (self.N-self.P), ("i=%d, seems not to be in the high points" % i)
+        assert i > (self.N - self.P), "i=%d, seems not to be in the high points" % i
         x_high = numpy.array(self.vertices[i].x.copy())
         f_high = self.vertices[i].f
         # Centroid of simplex excluding point(s) that we are replacing.
-        x_mid = self.centroid(self.N-self.P)
+        x_mid = self.centroid(self.N - self.P)
         #
         # First, try moving away from worst point by
         # reflection through centroid.
-        x_refl = x_mid + self.Kreflect*(x_mid - x_high)
-        f_refl = self.f(x_refl); self.nfe += 1
+        x_refl = x_mid + self.Kreflect * (x_mid - x_high)
+        f_refl = self.f(x_refl)
+        self.nfe += 1
         if f_refl < f_min:
             # The reflection through the centroid is good,
             # try to extend in the same direction.
-            x_ext = x_mid + self.Kextend*(x_refl - x_mid)
-            f_ext = self.f(x_ext); self.nfe += 1
+            x_ext = x_mid + self.Kextend * (x_refl - x_mid)
+            f_ext = self.f(x_ext)
+            self.nfe += 1
             if f_ext < f_refl:
                 # Keep the extension because it's best.
                 self.vertices[i] = Vertex(x_ext, f_ext)
@@ -410,13 +452,15 @@ class NelderMeadMinimizer:
             # The reflection is not going in the right direction, it seems.
             # See how many vertices are worse than the reflected point.
             count = 0
-            for j in range(self.N+1):
-                if self.vertices[j].f > f_refl: count += 1
+            for j in range(self.N + 1):
+                if self.vertices[j].f > f_refl:
+                    count += 1
             if count <= 1:
                 # Not too many points are higher than the original reflection.
                 # Try a contraction on the reflection-side of the centroid.
-                x_con = (1.0-self.Kcontract)*x_mid + self.Kcontract*x_high
-                f_con = self.f(x_con); self.nfe += 1
+                x_con = (1.0 - self.Kcontract) * x_mid + self.Kcontract * x_high
+                f_con = self.f(x_con)
+                self.nfe += 1
                 if f_con < f_high:
                     # At least we haven't gone uphill; accept.
                     self.vertices[i] = Vertex(x_con, f_con)
@@ -430,10 +474,12 @@ class NelderMeadMinimizer:
         # If we arrive here, we have not replaced the highest point.
         return False
 
-#--------------------------------------------------------------------
+
+# --------------------------------------------------------------------
 # Self test follows.
 
 import time
+
 
 def test_fun_1(x):
     """
@@ -448,23 +494,38 @@ def test_fun_1(x):
         sum += (x[i] - 1.0) * (x[i] - 1.0)
     return sum
 
+
 def test_fun_2(x):
     """
     Test objective function 2.
 
     Example 3.3 from Olsson and Nelson.
     """
-    x1, x2 = x   # rename to match the paper
+    x1, x2 = x  # rename to match the paper
     if (x1 * x1 + x2 * x2) > 1.0:
         return 1.0e38
     else:
-        yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1 \
-             + 6.43 * x2 * x2 + 11.36 * x1 * x2
-        ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1 \
-             - 8.76 * x2 * x2 - 7.20 * x1 * x2
+        yp = (
+            53.69
+            + 7.26 * x1
+            - 10.33 * x2
+            + 7.22 * x1 * x1
+            + 6.43 * x2 * x2
+            + 11.36 * x1 * x2
+        )
+        ys = (
+            82.17
+            - 1.01 * x1
+            - 8.61 * x2
+            + 1.40 * x1 * x1
+            - 8.76 * x2 * x2
+            - 7.20 * x1 * x2
+        )
         return -yp + abs(ys - 87.8)
 
+
 from math import exp
+
 
 def test_fun_3(z):
     """
@@ -481,43 +542,57 @@ def test_fun_3(z):
         eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t)
         r = y[i] - eta
         sum_residuals += r * r
-    time.sleep(0.1) # To make this calculation seem expensive.
+    time.sleep(0.1)  # To make this calculation seem expensive.
     return sum_residuals
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Begin nelmin self-test...")
+
     def pretty_print(r):
         print("  x=", r.x)
         print("  fx=", r.fun)
         print("  convergence-flag=", r.success)
         print("  number-of-fn-evaluations=", r.nfe)
         print("  number-of-restarts=", r.nrestarts)
-        print(60*"-")
+        print(60 * "-")
         return
+
     #
     print("test 1: simple quadratic with zero at (1,1,...)")
     result = minimize(test_fun_1, [0.0, 0.0, 0.0])
     pretty_print(result)
     #
     print("test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1")
-    result = minimize(test_fun_2, [0.0, 0.0], [0.5, 0.5], options={'tol':1.0e-4})
+    result = minimize(test_fun_2, [0.0, 0.0], [0.5, 0.5], options={"tol": 1.0e-4})
     pretty_print(result)
     #
-    print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1, n_workers=1")
+    print(
+        "test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1, n_workers=1"
+    )
     print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
     start_time = time.time()
-    result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
-                      options={'tol':1.0e-9, 'maxfe':800, 'print_messages':True})
-    print("  calculation time (with 0.1 sec sleeps)=", time.time()-start_time)
+    result = minimize(
+        test_fun_3,
+        [1.0, 1.0, -0.5, -2.5],
+        [0.1, 0.1, 0.1, 0.1],
+        options={"tol": 1.0e-9, "maxfe": 800, "print_messages": True},
+    )
+    print("  calculation time (with 0.1 sec sleeps)=", time.time() - start_time)
     pretty_print(result)
     #
-    print("test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2, n_workers=2")
+    print(
+        "test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2, n_workers=2"
+    )
     print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
     start_time = time.time()
-    result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
-                      options={'tol':1.0e-9, 'P':2, 'maxfe':800, 'n_workers':2})
-    print("  calculation time (with 0.1 sec sleeps)=", time.time()-start_time)
+    result = minimize(
+        test_fun_3,
+        [1.0, 1.0, -0.5, -2.5],
+        [0.1, 0.1, 0.1, 0.1],
+        options={"tol": 1.0e-9, "P": 2, "maxfe": 800, "n_workers": 2},
+    )
+    print("  calculation time (with 0.1 sec sleeps)=", time.time() - start_time)
     pretty_print(result)
     #
     print("Done.")

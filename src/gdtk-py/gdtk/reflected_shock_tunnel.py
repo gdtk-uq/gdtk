@@ -29,13 +29,13 @@ Versions
 06-Jun-2020 PJ: Updated to use the loadable library from Eilmer4
 """
 
-
 from gdtk.gas import GasModel, GasState, GasFlow
 from gdtk.numeric.zero_solvers import secant
 
 
-def calculate_states(gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio,
-                     task, print_status=True):
+def calculate_states(
+    gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio, task, print_status=True
+):
     """
     Runs the reflected-shock-tube calculation from initial fill conditions
     observed shock speed and equilibrium pressure.
@@ -60,47 +60,58 @@ def calculate_states(gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio
     """
     MY_DEBUG = False  # some detailed data is output to help debugging
     #
-    if print_status: print('Write pre-shock condition.')
+    if print_status:
+        print("Write pre-shock condition.")
     state1 = GasState(gasModel)
-    state1.p = p1; state1.T = T1; state1.massf = massf
+    state1.p = p1
+    state1.T = T1
+    state1.massf = massf
     state1.update_thermo_from_pT()
-    H1 = state1.internal_energy + state1.p/state1.rho
-    result = {'state1':state1, 'H1':H1}
+    H1 = state1.internal_energy + state1.p / state1.rho
+    result = {"state1": state1, "H1": H1}
     #
-    if print_status: print('Start incident-shock calculation.')
+    if print_status:
+        print("Start incident-shock calculation.")
     state2 = GasState(gasModel)
-    (V2,Vg) = flow.normal_shock_1(state1, Vs, state2)
-    result['state2'] = state2
-    result['V2'] = V2
-    result['Vg'] = Vg
+    (V2, Vg) = flow.normal_shock_1(state1, Vs, state2)
+    result["state2"] = state2
+    result["V2"] = V2
+    result["Vg"] = Vg
     #
-    if task == 'ishock':
+    if task == "ishock":
         # We want post-incident-shock conditions only.
         return result
     #
-    if print_status: print('Start reflected-shock calculation.')
+    if print_status:
+        print("Start reflected-shock calculation.")
     state5 = GasState(gasModel)
     Vr = flow.reflected_shock(state2, Vg, state5)
-    result['state5'] = state5
-    result['Vr'] = Vr
+    result["state5"] = state5
+    result["Vr"] = Vr
     #
-    if print_status: print('Start calculation of isentropic relaxation.')
-    state5s = GasState(gasModel); state5s.copy_values(state5)
+    if print_status:
+        print("Start calculation of isentropic relaxation.")
+    state5s = GasState(gasModel)
+    state5s.copy_values(state5)
     # entropy is set, then pressure is relaxed via an isentropic process
     state5s.p = state5.p if pe == None else pe
-    if MY_DEBUG: print("state5.entropy=", state5.entropy)
+    if MY_DEBUG:
+        print("state5.entropy=", state5.entropy)
     state5s.update_thermo_from_ps(state5.entropy)
-    result['state5s'] = state5s
-    H5s = state5s.internal_energy + state5s.p/state5s.rho # stagnation enthalpy
-    result['H5s'] = H5s
+    result["state5s"] = state5s
+    H5s = state5s.internal_energy + state5s.p / state5s.rho  # stagnation enthalpy
+    result["H5s"] = H5s
     #
-    if task in ['stn','stnp']:
-        if print_status: print('Start isentropic relaxation to throat (Mach 1)')
+    if task in ["stn", "stnp"]:
+        if print_status:
+            print("Start isentropic relaxation to throat (Mach 1)")
+
         def error_at_throat(x, s5s=state5s):
             "Returns Mach number error as pressure is changed."
             state = GasState(gasModel)
             V = flow.expand_from_stagnation(s5s, x, state)
-            return (V/state.a) - 1.0
+            return (V / state.a) - 1.0
+
         try:
             x6 = secant(error_at_throat, 0.95, 0.90, tol=1.0e-4)
         except RuntimeError:
@@ -109,44 +120,67 @@ def calculate_states(gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio
         state6 = GasState(gasModel)
         V6 = flow.expand_from_stagnation(state5s, x6, state6)
         mflux6 = state6.rho * V6  # mass flux per unit area, at throat
-        result['state6'] = state6
-        result['V6'] = V6
-        result['mflux6'] = mflux6
+        result["state6"] = state6
+        result["V6"] = V6
+        result["mflux6"] = mflux6
         #
-        if task == 'stn':
-            if print_status: print('Start isentropic relaxation to nozzle exit of given area.')
+        if task == "stn":
+            if print_status:
+                print("Start isentropic relaxation to nozzle exit of given area.")
+
             # The mass flux going through the nozzle exit has to be the same
             # as that going through the nozzle throat.
-            def error_at_exit(x, s5s=state5s, s6=state6, mflux_throat=mflux6,
-                              area_ratio=area_ratio):
+            def error_at_exit(
+                x, s5s=state5s, s6=state6, mflux_throat=mflux6, area_ratio=area_ratio
+            ):
                 "Returns mass_flux error as pressure is changed."
                 state = GasState(gasModel)
                 V = flow.expand_from_stagnation(s5s, x, state)
                 mflux = state.rho * V * area_ratio
                 if MY_DEBUG:
-                    print("x=", x, "p=", state.p, "T=", state.T, "V=", V, \
-                          "mflux=", mflux, "mflux_throat=", mflux_throat)
-                return (mflux-mflux_throat)/mflux_throat
+                    print(
+                        "x=",
+                        x,
+                        "p=",
+                        state.p,
+                        "T=",
+                        state.T,
+                        "V=",
+                        V,
+                        "mflux=",
+                        mflux,
+                        "mflux_throat=",
+                        mflux_throat,
+                    )
+                return (mflux - mflux_throat) / mflux_throat
+
             # It appears that we need a pretty good starting guess for the pressure ratio.
             # Maybe a low value is OK.
             try:
-                x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=1.0e-4,
-                            limits=[1.0/state5s.p,1.0])
+                x7 = secant(
+                    error_at_exit,
+                    0.001 * x6,
+                    0.00005 * x6,
+                    tol=1.0e-4,
+                    limits=[1.0 / state5s.p, 1.0],
+                )
             except RuntimeError:
                 print("Failed to find exit conditions iteratively.")
                 x7 = x6
             state7 = GasState(gasModel)
             V7 = flow.expand_from_stagnation(state5s, x7, state7)
             mflux7 = state7.rho * V7 * area_ratio
-            result['area_ratio'] = area_ratio
+            result["area_ratio"] = area_ratio
             state7_pitot = GasState(gasModel)
             flow.pitot_condition(state7, V7, state7_pitot)
-            result['state7'] = state7
-            result['V7'] = V7
-            result['mflux7'] = mflux7
-            result['pitot7'] = state7_pitot.p
-        elif task == 'stnp':
-            if print_status: print('Start isentropic relaxation to nozzle exit pitot pressure.')
+            result["state7"] = state7
+            result["V7"] = V7
+            result["mflux7"] = mflux7
+            result["pitot7"] = state7_pitot.p
+        elif task == "stnp":
+            if print_status:
+                print("Start isentropic relaxation to nozzle exit pitot pressure.")
+
             # The exit pitot pressure has to be the same as that measured
             def error_at_exit(x, s5s=state5s, s6=state6, pp_pe=pp_on_pe):
                 "Returns pitot pressure error as static pressure is changed."
@@ -155,28 +189,42 @@ def calculate_states(gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio
                 state2 = GasState(gasModel)
                 flow.pitot_condition(state1, V, state2)
                 if MY_DEBUG:
-                    print("x=", x, "pitot_to_supply=", state2.p/s5s.p, \
-                          "relative error=", (state2.p/s5s.p - pp_pe)/pp_pe)
-                return (state2.p/s5s.p - pp_pe)/pp_pe
+                    print(
+                        "x=",
+                        x,
+                        "pitot_to_supply=",
+                        state2.p / s5s.p,
+                        "relative error=",
+                        (state2.p / s5s.p - pp_pe) / pp_pe,
+                    )
+                return (state2.p / s5s.p - pp_pe) / pp_pe
+
             # We need a low starting guess for the pressure ratio.
-            #x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=1.0e-4)
+            # x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=1.0e-4)
             # Changed the tolerance on 25/07/2011 in order to get the M8 nozzle to work (shot 10803)
             try:
-                x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=2.0e-4,
-                            limits=[1.0/state5s.p,1.0])
+                x7 = secant(
+                    error_at_exit,
+                    0.001 * x6,
+                    0.00005 * x6,
+                    tol=2.0e-4,
+                    limits=[1.0 / state5s.p, 1.0],
+                )
             except RuntimeError:
                 print("Failed to find exit conditions iteratively.")
                 x7 = x6
             state7 = GasState(gasModel)
             V7 = flow.expand_from_stagnation(state5s, x7, state7)
-            result['area_ratio'] = mflux6/(state7.rho * V7)
+            result["area_ratio"] = mflux6 / (state7.rho * V7)
             state7_pitot = GasState(gasModel)
             flow.pitot_condition(state7, V7, state7_pitot)
-            result['state7'] = state7
-            result['V7'] = V7
-            result['mflux7'] = mflux6
-            result['pitot7'] = state7_pitot.p
-            if MY_DEBUG: print("area_ratio=", area_ratio, "pitot7=", state7_pitot.p)
+            result["state7"] = state7
+            result["V7"] = V7
+            result["mflux7"] = mflux6
+            result["pitot7"] = state7_pitot.p
+            if MY_DEBUG:
+                print("area_ratio=", area_ratio, "pitot7=", state7_pitot.p)
     #
-    if print_status: print('Done with reflected shock tube calculation.')
+    if print_status:
+        print("Done with reflected shock tube calculation.")
     return result

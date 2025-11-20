@@ -19,8 +19,8 @@ from scipy import spatial
 debugLevel = 0
 
 g = 1.4  # Ratio of specific heats for gas
-p0 = 1.0 # Nondimensional total pressure for flow
-T0 = 1.0 # Nondimensional total temperature for flow
+p0 = 1.0  # Nondimensional total pressure for flow
+T0 = 1.0  # Nondimensional total temperature for flow
 axisymmetric = False
 
 # Storage for all the Node objects.
@@ -37,18 +37,38 @@ streamlines = []
 # Storage for the user-defined functions that specify the walls.
 walls = []
 
-class Node(object):
-    __slots__ = ['indx', 'x', 'y',
-                 'theta', 'nu', 'mach',
-                 'cplus_up', 'cplus_down',
-                 'cminus_up', 'cminus_down',
-                 'czero_up', 'czero_down']
 
-    def __init__(self, indx=None, x=0.0, y=0.0,
-                 theta=0.0, nu=0.0, mach=0.0,
-                 cplus_up=None, cplus_down=None,
-                 cminus_up=None, cminus_down=None,
-                 czero_up=None, czero_down=None):
+class Node(object):
+    __slots__ = [
+        "indx",
+        "x",
+        "y",
+        "theta",
+        "nu",
+        "mach",
+        "cplus_up",
+        "cplus_down",
+        "cminus_up",
+        "cminus_down",
+        "czero_up",
+        "czero_down",
+    ]
+
+    def __init__(
+        self,
+        indx=None,
+        x=0.0,
+        y=0.0,
+        theta=0.0,
+        nu=0.0,
+        mach=0.0,
+        cplus_up=None,
+        cplus_down=None,
+        cminus_up=None,
+        cminus_down=None,
+        czero_up=None,
+        czero_down=None,
+    ):
         """
         Initialize a Node.
         The default state will be empty and unconnected.
@@ -59,15 +79,22 @@ class Node(object):
         Note that we depend upon the index within the nodes storage list
         being the same as the value of the indx attribute.
         """
-        if indx is None: indx = len(nodes)
+        if indx is None:
+            indx = len(nodes)
         self.indx = indx
-        self.x = x; self.y = y
-        self.theta = theta; self.nu = nu; self.mach = mach
+        self.x = x
+        self.y = y
+        self.theta = theta
+        self.nu = nu
+        self.mach = mach
         # Indices for linking nodes.
         # A value of None indicates no link.
-        self.cplus_up = cplus_up; self.cplus_down = cplus_down
-        self.cminus_up = cminus_up; self.cminus_down = cminus_down
-        self.czero_up = czero_up; self.czero_down = czero_down
+        self.cplus_up = cplus_up
+        self.cplus_down = cplus_down
+        self.cminus_up = cminus_up
+        self.cminus_down = cminus_down
+        self.czero_up = czero_up
+        self.czero_down = czero_down
         if indx < len(nodes):
             nodes[indx] = self
         else:
@@ -90,6 +117,7 @@ def create_kd_tree():
     kdtree = spatial.KDTree(np.array([(node.x, node.y) for node in nodes]))
     return kdtree
 
+
 def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
     """
     An attempt to replicate PJs C code to find the nodes near a given
@@ -109,10 +137,10 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
         # Just do a slow search.
         if tol <= 0.0:
             # Find the nearest node.
-            idx_near.append(-1) # This single value should be overwritten.
+            idx_near.append(-1)  # This single value should be overwritten.
             dist_near = sys.float_info.max
             for idx, node in enumerate(nodes):
-                dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
+                dist = np.sqrt((x - node.x) ** 2 + (y - node.y) ** 2)
                 if dist < dist_near:
                     dist_near = dist
                     idx_near[0] = idx
@@ -122,11 +150,13 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             # Collect an array of the closest nodes as tuples of distance and index.
             close_nodes = []
             for idx, node in enumerate(nodes):
-                dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
-                if dist < tol: close_nodes.append((dist,idx))
-            close_nodes.sort(key=lambda t: t[0]) # Sort on distance.
-            idx_near = [t[1] for t in close_nodes] # Keep just the indices.
-            if len(idx_near) > max_count: idx_near = idx_near[0:max_count]
+                dist = np.sqrt((x - node.x) ** 2 + (y - node.y) ** 2)
+                if dist < tol:
+                    close_nodes.append((dist, idx))
+            close_nodes.sort(key=lambda t: t[0])  # Sort on distance.
+            idx_near = [t[1] for t in close_nodes]  # Keep just the indices.
+            if len(idx_near) > max_count:
+                idx_near = idx_near[0:max_count]
     else:
         # Use the kdtree to do a fast search.
         _, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
@@ -142,6 +172,7 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             idx_near = np.unique(idx_near)
     return idx_near
 
+
 def register_node_in_mesh(i):
     """
     Add nodes[i] to the characteristic mesh.
@@ -153,6 +184,7 @@ def register_node_in_mesh(i):
     else:
         raise RuntimeError("Not an index nor a Node")
     return len(char_mesh)
+
 
 def register_streamline_start(i):
     """
@@ -166,12 +198,15 @@ def register_streamline_start(i):
         raise RuntimeError("Not an index nor a Node")
     return len(streamlines)
 
+
 def get_streamline_nodes(i):
     """
     Returns the indices of the streamline nodes,
     for the streamline going through nodes[i].
     """
-    indices = [i,]
+    indices = [
+        i,
+    ]
     j = nodes[i].czero_down
     while j is not None:
         indices.append(j)
@@ -184,7 +219,7 @@ def get_streamline_nodes(i):
 
 
 class Wall(object):
-    __slots__ = ['f', 'dfdx', 'x_min', 'x_max']
+    __slots__ = ["f", "dfdx", "x_min", "x_max"]
 
     def __init__(self, f, x_min, x_max, dfdx=None, dx=1.0e-6):
         """
@@ -201,7 +236,7 @@ class Wall(object):
             self.f = f
         if not dfdx:
             # Construct a finite-difference approximation.
-            self.dfdx = lambda x, f=f, dx=dx: (f(x+dx)-f(x))/dx
+            self.dfdx = lambda x, f=f, dx=dx: (f(x + dx) - f(x)) / dx
         elif callable(dfdx):
             self.dfdx = dfdx
         else:

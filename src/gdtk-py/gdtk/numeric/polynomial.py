@@ -9,6 +9,7 @@ PeterJ, MECH3750, October 2011
 2022-11-26 Ported to the GDTK project.
 """
 
+
 def eval_polynomial(x, phi, a):
     """
     Simple evaluation of polynomial p(x).
@@ -20,7 +21,9 @@ def eval_polynomial(x, phi, a):
         p += a[j] * phi[j](x)
     return p
 
+
 from numpy import array, zeros, linalg
+
 
 def fit_interpolating_polynomial(phi, xi, yi):
     """
@@ -32,16 +35,18 @@ def fit_interpolating_polynomial(phi, xi, yi):
 
     Returns the single-dimensioned array of coefficients.
     """
-    n = len(xi); assert n == len(yi)
-    vdm = zeros((n,n), float)
+    n = len(xi)
+    assert n == len(yi)
+    vdm = zeros((n, n), float)
     for i in range(n):
         for j in range(n):
-            vdm[i,j] = phi[j](xi[i])
-    return linalg.solve(vdm,yi), linalg.cond(vdm)
+            vdm[i, j] = phi[j](xi[i])
+    return linalg.solve(vdm, yi), linalg.cond(vdm)
 
-#----------------------------------------------------
 
-if __name__ == '__main__':
+# ----------------------------------------------------
+
+if __name__ == "__main__":
     print("Start monomial demo...")
     print("Fit the coefficients.")
     xi = [3.2, 2.7, 1.0, 4.8, 5.6]
@@ -49,16 +54,18 @@ if __name__ == '__main__':
     n = len(xi)
     monomial_basis = [lambda x, k=j: x**k for j in range(n)]
     alpha, cond = fit_interpolating_polynomial(monomial_basis, xi, yi)
-    print('alpha=', alpha, '\ncondition number=', cond)
+    print("alpha=", alpha, "\ncondition number=", cond)
     x = 3.0
-    print('p(',x,')=', eval_polynomial(x, monomial_basis, alpha))
+    print("p(", x, ")=", eval_polynomial(x, monomial_basis, alpha))
     #
     from pylab import linspace, plot, title, xlabel, ylabel, show
+
     x_plot = linspace(min(xi), max(xi), 100)
     y_plot = [eval_polynomial(x, monomial_basis, alpha) for x in x_plot]
-    plot(x_plot, y_plot, '-')
-    plot(xi, yi, 'o')
-    title("Interpolatory polynomial with order n-1=%d" % (n-1,))
-    xlabel('x'); ylabel('y')
+    plot(x_plot, y_plot, "-")
+    plot(xi, yi, "o")
+    title("Interpolatory polynomial with order n-1=%d" % (n - 1,))
+    xlabel("x")
+    ylabel("y")
     show()
     print("Done.")

@@ -25,6 +25,7 @@ Done.
 import math
 import numpy as np
 
+
 def ode_integrate(t0, tlast, nstep, f, n, y0):
     """
     Steps the set of ODEs until independent variable, t, reaches tlast.
@@ -53,15 +54,15 @@ def ode_integrate(t0, tlast, nstep, f, n, y0):
     assert n <= len(y0)
     assert t0 <= tlast
     assert nstep >= 1
-    ts = np.linspace(t0, tlast, nstep+1)
+    ts = np.linspace(t0, tlast, nstep + 1)
     ys = []
     ys.append(y0.copy())  # Set up a new list so we don't mangle y0 itself.
     err_sums = []
-    err_sums.append(np.array([0.0]*n))
+    err_sums.append(np.array([0.0] * n))
     for i in range(nstep):
-        t, y, err = rkf45_step(ts[i], ts[i+1]-ts[i], f, n, ys[-1])
+        t, y, err = rkf45_step(ts[i], ts[i + 1] - ts[i], f, n, ys[-1])
         ys.append(y)
-        err_sums.append(err_sums[-1]+err)
+        err_sums.append(err_sums[-1] + err)
     # Return the accumulated data: times, the set of y-values and an error estimate.
     return ts, ys, err_sums
 
@@ -84,20 +85,59 @@ def rkf45_step(t0, h, f, n, y0):
     """
     # Build up the sample point information.
     k1 = f(t0, y0.copy(), n)
-    k2 = f(t0+h/4.0, y0+0.25*h*k1, n)
-    k3 = f(t0+3.0*h/8.0, y0+3.0*h*k1/32.0+9.0*h*k2/32.0, n)
-    k4 = f(t0+12.0*h/13.0, y0+1932.0*h*k1/2197.0-7200.0*h*k2/2197.0+7296.0*h*k3/2197.0, n)
-    k5 = f(t0+h, y0+439.0*h*k1/216.0-8.0*h*k2+3680.0*h*k3/513.0-845.0*h*k4/4104.0, n)
-    k6 = f(t0+h/2.0, y0-8.0*h*k1/27.0+2.0*h*k2-3544.0*h*k3/2565.0+1859.0*h*k4/4104.0-11.0*h*k5/40.0, n)
+    k2 = f(t0 + h / 4.0, y0 + 0.25 * h * k1, n)
+    k3 = f(t0 + 3.0 * h / 8.0, y0 + 3.0 * h * k1 / 32.0 + 9.0 * h * k2 / 32.0, n)
+    k4 = f(
+        t0 + 12.0 * h / 13.0,
+        y0
+        + 1932.0 * h * k1 / 2197.0
+        - 7200.0 * h * k2 / 2197.0
+        + 7296.0 * h * k3 / 2197.0,
+        n,
+    )
+    k5 = f(
+        t0 + h,
+        y0
+        + 439.0 * h * k1 / 216.0
+        - 8.0 * h * k2
+        + 3680.0 * h * k3 / 513.0
+        - 845.0 * h * k4 / 4104.0,
+        n,
+    )
+    k6 = f(
+        t0 + h / 2.0,
+        y0
+        - 8.0 * h * k1 / 27.0
+        + 2.0 * h * k2
+        - 3544.0 * h * k3 / 2565.0
+        + 1859.0 * h * k4 / 4104.0
+        - 11.0 * h * k5 / 40.0,
+        n,
+    )
     # Now, do the integration as a weighting of the sampled data.
-    t1 = t0+h
-    y1 = y0+16.0*h*k1/135.0+6656.0*h*k3/12825.0+28561.0*h*k4/56430.0-9.0*h*k5/50.0+2.0*h*k6/55.0
-    err = abs(h*k1/360.0-128.0*h*k3/4275.0-2197.0*h*k4/75240.0+h*k5/50.0+2.0*h*k6/55.0)
+    t1 = t0 + h
+    y1 = (
+        y0
+        + 16.0 * h * k1 / 135.0
+        + 6656.0 * h * k3 / 12825.0
+        + 28561.0 * h * k4 / 56430.0
+        - 9.0 * h * k5 / 50.0
+        + 2.0 * h * k6 / 55.0
+    )
+    err = abs(
+        h * k1 / 360.0
+        - 128.0 * h * k3 / 4275.0
+        - 2197.0 * h * k4 / 75240.0
+        + h * k5 / 50.0
+        + 2.0 * h * k6 / 55.0
+    )
     return t1, y1, err
 
-#----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
 
 if __name__ == "__main__":
+
     def f_sample_1(t, y, n):
         "Constant derivatives"
         assert n == 3
@@ -110,17 +150,20 @@ if __name__ == "__main__":
 
     print("Start sample integrations...")
     print("(1) Constant derivatives:")
-    ts, ys, errs = ode_integrate(0.0, 10.0, 8, f_sample_1, 3, np.array([0.0]*3))
+    ts, ys, errs = ode_integrate(0.0, 10.0, 8, f_sample_1, 3, np.array([0.0] * 3))
     print("t1=", ts[-1])
     print("y1=", ys[-1])
     print("err1=", errs[-1])
-    assert all(np.isclose(ys[-1], np.array([10.0, -20.0, 30.0]))), "Constant derivative test"
+    assert all(np.isclose(ys[-1], np.array([10.0, -20.0, 30.0]))), (
+        "Constant derivative test"
+    )
 
     print("(2) Second-order linear ODE:")
-    ts, ys, errs = ode_integrate(0.0, 2.0*math.pi, 600, f_sample_2, 2, np.array([0.0, 1.0]))
+    ts, ys, errs = ode_integrate(
+        0.0, 2.0 * math.pi, 600, f_sample_2, 2, np.array([0.0, 1.0])
+    )
     print("t1=", ts[-1])
     print("y1=", ys[-1])
     print("err1=", errs[-1])
     assert all(np.isclose(ys[-1], np.array([0.0, 1.0]))), "Linear second-order ODE test"
     print("Done.")
-

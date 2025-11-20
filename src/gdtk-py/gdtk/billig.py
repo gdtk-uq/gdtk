@@ -13,16 +13,17 @@ from J.D. Anderson's text Hypersonic and High Temperature Gas Dynamics
 from math import exp, sqrt, pow, tan, asin
 from gdtk.ideal_gas_flow import beta_obl, beta_cone2
 
+
 def delta_over_R(M, axi):
     """
     Calculates the normalised stand-off distance.
     """
     if axi:
         # Spherical nose
-        d_R = 0.143 * exp(3.24/(M*M))
+        d_R = 0.143 * exp(3.24 / (M * M))
     else:
         # Cylindrical nose
-        d_R = 0.386 * exp(4.67/(M*M))
+        d_R = 0.386 * exp(4.67 / (M * M))
     return d_R
 
 
@@ -32,10 +33,10 @@ def Rc_over_R(M, axi):
     """
     if axi:
         # Spherical nose
-        Rc_R = 1.143 * exp(0.54/pow(M-1, 1.2))
+        Rc_R = 1.143 * exp(0.54 / pow(M - 1, 1.2))
     else:
         # Cylindrical nose
-        Rc_R = 1.386 * exp(1.8/pow(M-1, 0.75))
+        Rc_R = 1.386 * exp(1.8 / pow(M - 1, 0.75))
     return Rc_R
 
 
@@ -61,13 +62,14 @@ def x_from_y(y, M, theta=0.0, axi=False, R_nose=1.0):
     Rc = R_nose * Rc_over_R(M, axi)
     d = R_nose * delta_over_R(M, axi)
     if theta == 0.0:
-        beta = asin(1.0/M)
+        beta = asin(1.0 / M)
     else:
         beta = beta_cone2(M, theta) if axi else beta_obl(M, theta)
     tan_beta = tan(beta)
-    cot_beta = 1.0/tan_beta
-    x = R_nose + d - Rc * cot_beta**2 * (sqrt(1 + (y*tan_beta/Rc)**2) - 1)
+    cot_beta = 1.0 / tan_beta
+    x = R_nose + d - Rc * cot_beta**2 * (sqrt(1 + (y * tan_beta / Rc) ** 2) - 1)
     return x
+
 
 def y_from_x(x, M, theta=0.0, axi=False, R_nose=1.0):
     """
@@ -97,14 +99,15 @@ def y_from_x(x, M, theta=0.0, axi=False, R_nose=1.0):
         # Use shock angle on a wedge
         beta = beta_obl(M, theta)
     tan_beta = tan(beta)
-    cot_beta = 1.0/tan_beta
-    tmpA = (x - R_nose - d)/(-Rc * cot_beta**2) + 1
-    y = sqrt( ((tmpA**2 - 1) * Rc**2) / (tan_beta**2) )
+    cot_beta = 1.0 / tan_beta
+    tmpA = (x - R_nose - d) / (-Rc * cot_beta**2) + 1
+    y = sqrt(((tmpA**2 - 1) * Rc**2) / (tan_beta**2))
     return y
 
-#------------------------------------------------------------------------
 
-if __name__ == '__main__':
+# ------------------------------------------------------------------------
+
+if __name__ == "__main__":
     print("Begin demo of Billig's correlations.")
     print("Compare with Fig 5.31 in Anderson's text.")
     M_inf = 4.0
