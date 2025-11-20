@@ -451,7 +451,7 @@ $(VIRTUAL_ENV):
 
 $(PY_PROGRAMS): $(VIRTUAL_ENV)
 	$(info Installing python tools)
-	$(PIP) install -e $(PY_PROG_DIR)
+	$(PIP) install $(PY_PROG_DIR)
 	- mkdir -p $(INSTALL_DIR)/bin
 	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
