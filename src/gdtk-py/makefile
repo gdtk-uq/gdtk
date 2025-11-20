@@ -9,11 +9,13 @@ LIBGAS = $(GAS_DIR)/libgas.so
 SLF_DIR = ../slf
 LIBSLF = $(SLF_DIR)/libslf.so
 
-install: $(LIBGAS) $(LIBSLF)
+wheel: build
 	- mkdir -p $(INSTALL_DIR)/share/python-packages
+	$(PIP) wheel --no-deps . -w $(INSTALL_DIR)/share/python-packages
+
+build: $(LIBGAS) $(LIBSLF)
 	cp $(LIBGAS) ./gdtk/libgas.so
 	cp $(LIBSLF) ./gdtk/libslf.so
-	$(PIP) wheel --no-deps -e . -w $(INSTALL_DIR)/share/python-packages
 
 clean:
 	rm -rf build *.egg-info

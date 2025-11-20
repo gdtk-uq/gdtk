@@ -21,6 +21,8 @@ PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
 
+GDTK_PY_DIR := ../gdtk-py
+
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
 
@@ -214,8 +216,9 @@ $(VIRTUAL_ENV):
 	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
 
 l1d4-prep l1d4-xt-viewer: $(VIRTUAL_ENV)
+	make -C $(GDTK_PY_DIR) build
 	$(info Installing python tools)
-	$(PIP) install -e . --find-links $(INSTALL_DIR)/share/python-packages/
+	$(PIP) install  .
 	- mkdir -p $(INSTALL_DIR)/bin
 	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
