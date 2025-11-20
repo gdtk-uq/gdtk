@@ -24,6 +24,8 @@ PUFFIN_FILES := config.d marching_calc.d streamtube.d \
 LORIKEET_FILES := config.d transient_calc.d fluidblock.d \
 	cell.d face.d flow.d flux.d interp.d
 
+GDTK_PY_DIR := ../gdtk-py
+
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
 
@@ -240,8 +242,9 @@ $(VIRTUAL_ENV):
 	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
 
 $(PY_PROGRAMS): $(VIRTUAL_ENV)
+	make -C $(GDTK_PY_DIR) build
 	$(info Installing python tools)
-	$(PIP) install -e . --find-links $(INSTALL_DIR)/share/python-packages/
+	$(PIP) install .
 	- mkdir -p $(INSTALL_DIR)/bin
 	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
