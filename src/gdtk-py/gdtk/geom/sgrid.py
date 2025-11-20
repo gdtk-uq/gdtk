@@ -11,7 +11,6 @@ PJ  2022-11-03 Binary files
 """
 
 import gzip
-import re
 import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
@@ -35,7 +34,9 @@ class _SGridConstructor(type):
         # This is a limit of Python code... We should deprecate the old constructor style ASAP
 
         deprecation_message = (
-            "Variable '__init__' construction will be removed in the future. '" + cls.__name__ + ".{}' should be used instead."
+            "Variable '__init__' construction will be removed in the future. '"
+            + cls.__name__
+            + ".{}' should be used instead."
         )
 
         if "psurf" in kwargs.keys():
@@ -116,7 +117,9 @@ class StructuredGrid(metaclass=_SGridConstructor):
         sdash = (1.0 - r) * sWest + r * sEast
         rdash = (1.0 - s) * rSouth + s * rNorth
         # Compute the xyz spatial coordinates of the surface.
-        return StructuredGrid(dimensions=2, niv=niv, njv=njv, nkv=1, vertices=psurf(rdash, sdash), tags=tags)
+        return StructuredGrid(
+            dimensions=2, niv=niv, njv=njv, nkv=1, vertices=psurf(rdash, sdash), tags=tags
+        )
 
     @staticmethod
     def from_pvolume(
@@ -150,7 +153,9 @@ class StructuredGrid(metaclass=_SGridConstructor):
         rdash = cf_list[0](rs)
         sdash = cf_list[1](ss)
         tdash = cf_list[2](ts)
-        return StructuredGrid(dimensions=3, niv=niv, njv=njv, nkv=nkv, vertices=pvolume(rdash, sdash, tdash), tags=tags)
+        return StructuredGrid(
+            dimensions=3, niv=niv, njv=njv, nkv=nkv, vertices=pvolume(rdash, sdash, tdash), tags=tags
+        )
 
     def subgrid(self, i0: int = 0, j0: int = 0, k0: int = 0, niv: int = 1, njv: int = 1, nkv: int = 1):
         """
@@ -188,7 +193,7 @@ class StructuredGrid(metaclass=_SGridConstructor):
         return StructuredGrid(dimensions=dimensions, niv=niv, njv=njv, nkv=nkv, vertices=subgrid_vertices)
 
     @staticmethod
-    def read_from_gzip_file(file_name, tags: Optional[tuple[str, ...]] = None):
+    def from_gzip_file(file_name, tags: Optional[tuple[str, ...]] = None):
         """
         Native format for Eilmer, Chicken and Lorikeet.
         """
@@ -206,7 +211,7 @@ class StructuredGrid(metaclass=_SGridConstructor):
             # We now want to load the text associated with the vertex coordinates,
             # followed by the boundary tags, if they are present.
 
-            data = np.loadtxt(file, max_rows=nkv * njv * niv)
+            x, y, z = np.loadtxt(file, max_rows=nkv * njv * niv, unpack=True)
 
             file_tags = []
             if format_version == "1.1":
@@ -217,25 +222,13 @@ class StructuredGrid(metaclass=_SGridConstructor):
 
         # The serialized data in the file has loops in the VTK index order,
         # with k as the outer loop, then j and then i as the innermost loop
-        x = data[:, 0]
-        y = data[:, 1]
-        z = data[:, 2]
-        if dimensions == 1:
-            pass
-        elif dimensions == 2:
-            x = x.reshape((njv, niv)).transpose()
-            y = y.reshape((njv, niv)).transpose()
-            z = z.reshape((njv, niv)).transpose()
-        elif dimensions == 3:
-            x = x.reshape((nkv, njv, niv)).transpose()
-            y = y.reshape((nkv, njv, niv)).transpose()
-            z = z.reshape((nkv, njv, niv)).transpose()
-        else:
-            raise RuntimeError("Invalid dimensions.")
+        x = x.reshape((nkv, njv, niv)).transpose().squeeze()
+        y = y.reshape((nkv, njv, niv)).transpose().squeeze()
+        z = z.reshape((nkv, njv, niv)).transpose().squeeze()
 
         return StructuredGrid(
             dimensions=dimensions,
-            vertices=Vector3(x=x.copy(), y=y.copy(), z=z.copy()),
+            vertices=Vector3(x=x, y=y, z=z),
             niv=niv,
             njv=njv,
             nkv=nkv,
@@ -541,7 +534,7 @@ if __name__ == "__main__":
     grid.write_to_gzip_file("test.gz")
     grid2.write_to_gzip_file("test2.gz")
 
-    gridb = StructuredGrid.read_from_gzip_file(file_name="test.gz")
+    gridb = StructuredGrid.from_gzip_file(file_name="test.gz")
     assert grid.vertices.x.shape == gridb.vertices.x.shape
     assert np.all(np.isclose(grid.vertices.x, gridb.vertices.x))
     assert np.all(np.isclose(grid.vertices.y, gridb.vertices.y))
@@ -556,12 +549,12 @@ if __name__ == "__main__":
     p6 = Vector3(x=1.0, y=1.0, z=1.0)
     p7 = Vector3(x=0.0, y=1.0, z=1.0)
     volume = TFIVolume(p000=p0, p100=p1, p110=p2, p010=p3, p001=p4, p101=p5, p111=p6, p011=p7)
-    grid3 = StructuredGrid(pvolume=volume, niv=11, njv=11, nkv=11)
+    grid3 = StructuredGrid.from_pvolume(volume, niv=11, njv=11, nkv=11)
     grid4 = StructuredGrid_old(pvolume=volume, niv=11, njv=11, nkv=11)
     grid3.write_to_gzip_file("test3.gz")
     grid4.write_to_gzip_file("test4.gz")
 
-    grid3b = StructuredGrid.from_gzfile("test3.gz")
+    grid3b = StructuredGrid.from_gzip_file("test3.gz")
     assert grid3.vertices.x.shape == grid3b.vertices.x.shape
     assert np.all(np.isclose(grid3.vertices.x, grid3b.vertices.x))
     assert np.all(np.isclose(grid3.vertices.y, grid3b.vertices.y))
