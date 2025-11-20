@@ -79,11 +79,14 @@ test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2, n_worker
 Done.
 """
 
-import math
-import numpy
-from collections import namedtuple
 import concurrent.futures
 import json
+import math
+import time
+from collections import namedtuple
+from math import exp
+
+import numpy
 
 # -----------------------------------------------------------------------
 # The public face of the simple minimizer...
@@ -478,8 +481,6 @@ class NelderMeadMinimizer:
 # --------------------------------------------------------------------
 # Self test follows.
 
-import time
-
 
 def test_fun_1(x):
     """
@@ -522,9 +523,6 @@ def test_fun_2(x):
             - 7.20 * x1 * x2
         )
         return -yp + abs(ys - 87.8)
-
-
-from math import exp
 
 
 def test_fun_3(z):

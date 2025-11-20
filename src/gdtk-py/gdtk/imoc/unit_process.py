@@ -426,7 +426,7 @@ def cplus_wall(wall, node2, node4=None):
         # Lengths of the characteristic segment.
         dx = x4 - x2
         dy = y4 - y2
-        lengthCminus = sqrt(dx * dx + dy * dy)
+        sqrt(dx * dx + dy * dy)
         dot_product = dx * xStream + dy * yStream
         if dot_product < 0.0:
             directionCplus = -1
@@ -545,7 +545,7 @@ def cplus_free(node0, node2, node4=None):
         # Lengths of the characteristic segments.
         dx = x4 - x0
         dy = y4 - y0
-        lengthCzero = sqrt(dx * dx + dy * dy)
+        sqrt(dx * dx + dy * dy)
         #
         dx = x4 - x2
         dy = y4 - y2
@@ -688,7 +688,7 @@ def cminus_free(node0, node1, node4=None):
         #
         dx = x4 - x0
         dy = y4 - y0
-        lengthCzero = sqrt(dx * dx + dy * dy)
+        sqrt(dx * dx + dy * dy)
         #
         # Update flow properties at solution point
         # First, assume 2D planar geometry then add

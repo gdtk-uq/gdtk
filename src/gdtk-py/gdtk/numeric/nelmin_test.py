@@ -1,8 +1,10 @@
 # nelmin_test.py
 # Derived from the self-test code in nelmin.py
 
-from gdtk.numeric.nelmin import minimize, NelderMeadMinimizer
 import time
+from math import exp
+
+from gdtk.numeric.nelmin import NelderMeadMinimizer, minimize
 
 
 def test_fun_1(x):
@@ -46,9 +48,6 @@ def test_fun_2(x):
             - 7.20 * x1 * x2
         )
         return -yp + abs(ys - 87.8)
-
-
-from math import exp
 
 
 def test_fun_3(z):

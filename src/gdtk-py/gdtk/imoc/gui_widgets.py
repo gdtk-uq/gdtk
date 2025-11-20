@@ -16,8 +16,6 @@ Version:
 versionString = """Isentropic Method of Characteristics
 Version: 0.2, 2020-Apr-19."""
 
-import sys
-import math
 import collections
 from tkinter import *
 from tkinter import ttk
@@ -25,7 +23,6 @@ from tkinter import filedialog
 from tkinter import messagebox
 
 import gdtk.imoc.kernel as kernel
-import gdtk.imoc.unit_process as unit
 
 cfg = {}
 cfg["node_file"] = ""
@@ -340,9 +337,7 @@ def quitProgram():
 
 
 def aboutProgram():
-    result = messagebox.showinfo(
-        message=versionString, icon="info", title="IMOC", type="ok"
-    )
+    messagebox.showinfo(message=versionString, icon="info", title="IMOC", type="ok")
     return
 
 
@@ -467,8 +462,8 @@ def plotAxes():
     xmax = cfg["x_max"]
     ymin = cfg["y_min"]
     ymax = cfg["y_max"]
-    dx = cfg["dx"]
-    dy = cfg["dy"]
+    cfg["dx"]
+    cfg["dy"]
     #
     c.delete("axes")
     x1 = canvas_x(xmin)

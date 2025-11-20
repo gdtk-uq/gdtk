@@ -512,11 +512,11 @@ class Snapshot:
         #
         # Make sure that we have a list of block ids.
         typ = type(blocks)
-        if typ == type([1]):
+        if typ is type([1]):
             pass
-        elif typ == type(1) or typ == type(range(1)):
+        elif typ is type(1) or typ is type(range(1)):
             blocks = list(blocks)
-        elif typ == type(None):
+        elif typ is None:
             blocks = list(range(len(self.fields)))
         else:
             raise RuntimeError("Don't know how to handle blocks=" + str(blocks))
@@ -529,21 +529,21 @@ class Snapshot:
                 continue
             # The following works for a structured grid only.
             if dims == 3:
-                if i != None and j != None:
+                if i is not None and j is not None:
                     x = np.concat((x, self.fields[ib]["pos.x"][i, j, :]), axis=None)
                     y = np.concat((y, self.fields[ib]["pos.y"][i, j, :]), axis=None)
                     z = np.concat((z, self.fields[ib]["pos.z"][i, j, :]), axis=None)
                     values = np.concat(
                         (values, self.fields[ib][var][i, j, :]), axis=None
                     )
-                elif j != None and k != None:
+                elif j is not None and k is not None:
                     x = np.concat((x, self.fields[ib]["pos.x"][:, j, k]), axis=None)
                     y = np.concat((y, self.fields[ib]["pos.y"][:, j, k]), axis=None)
                     z = np.concat((z, self.fields[ib]["pos.z"][:, j, k]), axis=None)
                     values = np.concat(
                         (values, self.fields[ib][var][:, j, k]), axis=None
                     )
-                elif i != None and k != None:
+                elif i is not None and k is not None:
                     x = np.concat((x, self.fields[ib]["pos.x"][i, :, k]), axis=None)
                     y = np.concat((y, self.fields[ib]["pos.y"][i, :, k]), axis=None)
                     z = np.concat((z, self.fields[ib]["pos.z"][i, :, k]), axis=None)
@@ -554,11 +554,11 @@ class Snapshot:
                     raise RuntimeError("Did not correctly select i, j or k index.")
             else:
                 # Presumably 2D
-                if i != None:
+                if i is not None:
                     x = np.concat((x, self.fields[ib]["pos.x"][i, :]), axis=None)
                     y = np.concat((y, self.fields[ib]["pos.y"][i, :]), axis=None)
                     values = np.concat((values, self.fields[ib][var][i, :]), axis=None)
-                elif j != None:
+                elif j is not None:
                     x = np.concat((x, self.fields[ib]["pos.x"][:, j]), axis=None)
                     y = np.concat((y, self.fields[ib]["pos.y"][:, j]), axis=None)
                     values = np.concat((values, self.fields[ib][var][:, j]), axis=None)

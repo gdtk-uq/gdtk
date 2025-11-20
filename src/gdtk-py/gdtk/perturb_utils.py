@@ -9,8 +9,11 @@ perturb_utils.py -- Small untility functions needed by the
   Version: 04-May-2020
 """
 
-import sys, os
-import shlex, subprocess, string
+import sys
+import os
+import shlex
+import subprocess
+import string
 
 E3BIN = os.path.expandvars("$HOME/e3bin")
 sys.path.append(E3BIN)

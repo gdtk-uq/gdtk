@@ -9,23 +9,18 @@ that are perturbations around a nominal condition.
            The University of Oxford
 """
 
-VERSION_STRING = "04-May-2020"
-
-import shlex, subprocess, string
-from subprocess import PIPE
-import sys, os, gzip
+import sys
+import os
 import optparse
-from numpy import array, mean, logical_and, zeros
 from perturb_input_utils import perturb_input_checker
 from perturb_utils import (
-    run_command,
     set_case_running,
-    set_perturbed_values,
     write_case_config,
     write_case_summary,
 )
 import copy
 
+VERSION_STRING = "04-May-2020"
 E3BIN = os.path.expandvars("$HOME/e3bin")
 sys.path.append(E3BIN)
 
@@ -126,7 +121,9 @@ def run_perturb(cfg):
             #                    (2,4),      (1,4)      ]
         #
         # Run the nominal case first
-        caseString = "case" + "{0:01}{0:01}".format(0, 0)
+        caseString = "case" + "{0:01}{0:01}".format(
+            0,
+        )
         caseDict = copy.copy(paramDict)
         caseDict["caseName"] = caseString
         textString = (

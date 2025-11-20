@@ -10,13 +10,16 @@ sensitivity_input_utils.py -- Function to check the sensitivity input
   Version: 04-May-2020
 """
 
-import sys, os, copy
+import sys
+import os
+import copy
+
+from read_outfile import read_outfile
+from perturb_utils import read_case_summary
 
 E3BIN = os.path.expandvars("$HOME/e3bin")
 sys.path.append(E3BIN)  # installation directory
 sys.path.append("")  # so that we can find user's scripts in current directory
-from read_outfile import read_outfile
-from perturb_utils import read_case_summary
 
 
 # --------------------------------------------------------------------------

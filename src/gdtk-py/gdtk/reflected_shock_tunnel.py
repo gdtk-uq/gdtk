@@ -29,7 +29,7 @@ Versions
 06-Jun-2020 PJ: Updated to use the loadable library from Eilmer4
 """
 
-from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasState
 from gdtk.numeric.zero_solvers import secant
 
 
@@ -94,7 +94,7 @@ def calculate_states(
     state5s = GasState(gasModel)
     state5s.copy_values(state5)
     # entropy is set, then pressure is relaxed via an isentropic process
-    state5s.p = state5.p if pe == None else pe
+    state5s.p = state5.p if pe is None else pe
     if MY_DEBUG:
         print("state5.entropy=", state5.entropy)
     state5s.update_thermo_from_ps(state5.entropy)

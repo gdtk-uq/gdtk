@@ -23,30 +23,28 @@ results and list of output variables (to be analysed).
            The University of Oxford
 """
 
-VERSION_STRING = "05-May-2020"
-
-import shlex, string
-import sys, os, copy
-
-E3BIN = os.path.expandvars("$HOME/e3bin")
-sys.path.append(E3BIN)  # installation directory
-sys.path.append("")  # so that we can find user's scripts in current directory
+import copy
 import optparse
-import numpy as np  # import array
+import os
+import sys
 
-np.seterr(divide="ignore", invalid="ignore")
+import numpy as np  # import array
 from perturb_utils import read_case_summary
+from read_outfile import read_outfile
 from sensitivity_input_utils import sensitivity_input_checker
 from sensitivity_utils import (
-    get_values,
     write_sensitivity_summary,
     write_uncertainty_summary,
 )
-from read_outfile import read_outfile
 
-# from nenzfr_utils import run_command, quote, read_case_summary, \
-#     read_nenzfr_outfile, read_estcj_outfile
-# from nenzfr_input_utils import input_checker, nenzfr_perturbed_input_checker, nenzfr_sensitivity_input_checker
+VERSION_STRING = "05-May-2020"
+E3BIN = os.path.expandvars("$HOME/e3bin")
+
+sys.path.append(E3BIN)  # installation directory
+sys.path.append("")  # so that we can find user's scripts in current directory
+
+
+np.seterr(divide="ignore", invalid="ignore")
 
 
 # ---------------------------------------------------------------

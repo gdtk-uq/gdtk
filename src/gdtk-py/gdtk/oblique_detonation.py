@@ -31,11 +31,10 @@
 # and Nick's arrayified geometry bits.
 # Peter J. (2022-11-15)
 #
-from math import cos, sin, sqrt, pow, log, fabs
+from math import cos, sin, sqrt, pow, log
 import numpy as np
 from gdtk.numeric.zero_solvers import secant
 from gdtk.geom.vector3 import Vector3
-from gdtk.geom.path import Spline
 
 
 class ObliqueDetonation:

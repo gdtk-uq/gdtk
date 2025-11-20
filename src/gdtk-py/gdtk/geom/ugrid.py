@@ -8,14 +8,9 @@ NNG 2025
 """
 
 import numpy as np
-from abc import ABC, abstractmethod
 from copy import copy
-import gzip
-import re
 from gdtk.geom.vector3 import Vector3
-from gdtk.geom.path import Path
-from gdtk.geom.surface import ParametricSurface, CoonsPatch
-from gdtk.geom.volume import ParametricVolume, TFIVolume
+from gdtk.geom.surface import CoonsPatch
 from gdtk.geom.sgrid import StructuredGrid
 from gdtk.geom.cluster import *
 
@@ -148,7 +143,8 @@ class UnstructuredGrid(object):
 
         f.write("\n")
 
-        col = lambda arr: arr.reshape((arr.size, 1))
+        def col(arr):
+            return arr.reshape((arr.size, 1))
 
         idx = np.arange(self.vertices.x.size)
         points = [col(self.vertices.x), col(self.vertices.y)]

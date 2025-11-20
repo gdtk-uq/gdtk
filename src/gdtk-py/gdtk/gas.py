@@ -6,12 +6,13 @@
 #    2019-07-25: added Python wrapper
 #    2023-06-01: added PyGasState with shadow attributes
 #
-PC_P_atm = 101.325e3
+import math
+from dataclasses import dataclass
+from pathlib import Path
 
 from cffi import FFI
-from dataclasses import dataclass
-import math
-from pathlib import Path
+
+PC_P_atm = 101.325e3
 
 ffi = FFI()
 ffi.cdef("""
@@ -361,11 +362,10 @@ class GasModel(object):
         return self._valuep[0]
 
     def massf2molef(self, massf_given):
-        nsp = self.n_species
-        if type(massf_given) == type([]):
+        if type(massf_given) is type([]):
             massf_list = massf_given.copy()
             assert len(massf_list) == self.n_species, "incorrect massf list length"
-        elif type(massf_given) == type({}):
+        elif type(massf_given) is type({}):
             massf_list = []
             for name in self.species_names:
                 if name in massf_given.keys():
@@ -380,11 +380,10 @@ class GasModel(object):
         return [self._molef[i] for i in range(self.n_species)]
 
     def molef2massf(self, molef_given):
-        nsp = self.n_species
-        if type(molef_given) == type([]):
+        if type(molef_given) is type([]):
             molef_list = molef_given.copy()
             assert len(molef_list) == self.n_species, "incorrect molef list length"
-        elif type(molef_given) == type({}):
+        elif type(molef_given) is type({}):
             molef_list = []
             for name in self.species_names:
                 if name in molef_given.keys():
@@ -562,13 +561,13 @@ class GasState(object):
         Mass fractions may be provided as a list or dictionary.
         """
         nsp = self.gmodel.n_species
-        if type(mf_given) == type([]):
+        if type(mf_given) is type([]):
             if len(mf_given) != nsp:
                 raise Exception(
                     f"mass fraction list is not correct length. nsp={nsp}; len(massf)={len(mf_given)}"
                 )
             mf_list = mf_given.copy()
-        elif type(mf_given) == type({}):
+        elif type(mf_given) is type({}):
             mf_list = []
             for name in self.gmodel.species_names:
                 if name in mf_given.keys():
@@ -659,7 +658,7 @@ class GasState(object):
         n = self.gmodel.n_modes
         if n == 0:
             return []
-        if type(um_given) != type([]):
+        if type(um_given) is not type([]):
             raise Exception("u_modes needs to be supplied as a list.")
         if len(um_given) != n:
             raise Exception(
@@ -687,7 +686,7 @@ class GasState(object):
         n = self.gmodel.n_modes
         if n == 0:
             return []
-        if type(Tm_given) != type([]):
+        if type(Tm_given) is not type([]):
             raise Exception("T_modes needs to be supplied as a list.")
         if len(Tm_given) != n:
             raise Exception(
@@ -1045,7 +1044,7 @@ class PyGasState(object):
         if self.n_species > 1:
             self.copy_mass_fractions_into_dgs()
         if self.n_modes > 0:
-            if type(self.T_modes) != type([]):
+            if type(self.T_modes) is not type([]):
                 raise Exception("T_modes needs to be supplied as a list.")
             if len(self.T_modes) != self.n_modes:
                 raise Exception(
@@ -1073,7 +1072,7 @@ class PyGasState(object):
         if self.n_species > 1:
             self.copy_mass_fractions_into_dgs()
         if self.n_modes > 0:
-            if type(self.u_modes) != type([]):
+            if type(self.u_modes) is not type([]):
                 raise Exception("u_modes needs to be supplied as a list.")
             if len(self.u_modes) != self.n_modes:
                 raise Exception(
@@ -1101,7 +1100,7 @@ class PyGasState(object):
         if self.n_species > 1:
             self.copy_mass_fractions_into_dgs()
         if self.n_modes > 0:
-            if type(self.T_modes) != type([]):
+            if type(self.T_modes) is not type([]):
                 raise Exception("T_modes needs to be supplied as a list.")
             if len(self.T_modes) != self.n_modes:
                 raise Exception(

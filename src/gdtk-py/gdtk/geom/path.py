@@ -220,7 +220,7 @@ class Bezier(Path):
     def __init__(self, B):
         try:
             self.B = [Vector3(p) for p in B]
-        except Exception as err:
+        except Exception:
             raise ValueError(
                 f"Was expecting to get a list of points for B, but got {B}"
             )

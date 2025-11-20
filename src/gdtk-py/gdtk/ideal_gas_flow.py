@@ -32,10 +32,12 @@ Two-dimensional flows:
    * Taylor-Maccoll conical flow
 """
 
-from math import *
+from math import asin, atan, cos, log, sin, sqrt, tan, pi
+
 import numpy
-from gdtk.numeric.zero_solvers import secant as solve
+
 from gdtk.numeric.zero_solvers import newton as solve_newton
+from gdtk.numeric.zero_solvers import secant as solve
 
 # ---------------------------------------------------------------
 # Isentropic flow
@@ -436,7 +438,7 @@ def theta_obl(M1, beta, g=1.4):
     Returns: theta, flow deflection angle (radians)
     """
     m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    M1 * abs(cos(beta))
     if m1sb < 1.0:
         raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
@@ -454,7 +456,7 @@ def M2_obl(M1, beta, theta, g=1.4):
     Returns: M2, Mach number in flow after the shock
     """
     m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    M1 * abs(cos(beta))
     if m1sb < 1.0:
         raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = 1.0 + (g - 1.0) * 0.5 * m1sb**2
@@ -472,7 +474,7 @@ def r2_r1_obl(M1, beta, g=1.4):
     Returns: r2/r1
     """
     m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    M1 * abs(cos(beta))
     if m1sb < 1.0:
         raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = (g + 1.0) * m1sb**2
@@ -511,7 +513,7 @@ def p2_p1_obl(M1, beta, g=1.4):
     Returns: p2/p1
     """
     m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    M1 * abs(cos(beta))
     if m1sb < 1.0:
         raise Exception("Subsonic normal Mach number: %g" % m1sb)
     return 1.0 + 2.0 * g / (g + 1.0) * (m1sb**2 - 1.0)
@@ -537,7 +539,7 @@ def p02_p01_obl(M1, beta, g=1.4):
     Returns: p02/p01
     """
     m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    M1 * abs(cos(beta))
     if m1sb < 1.0:
         raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0))
@@ -614,7 +616,7 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4, dtheta=-1.0e-5):
     a1 = sqrt(g * R * T1)
     M1 = V1 / a1
     C_p = R * g / (g - 1)
-    h1 = C_p * T1
+    C_p * T1
     rho1 = p1 / (R * T1)
     # Test beta in relation to the Mach angle, mu
     mu = asin(1.0 / M1)
@@ -699,8 +701,8 @@ def beta_cone(V1, p1, T1, theta, R=287.1, g=1.4, tol=1.0e-8, dtheta=-1.0e-5):
     a1 = sqrt(g * R * T1)
     M1 = V1 / a1
     C_p = R * g / (g - 1)
-    h1 = C_p * T1
-    rho1 = p1 / (R * T1)
+    C_p * T1
+    p1 / (R * T1)
     # Initial guess
     M1 = V1 / a1
     b1 = asin(1.0 / M1) * 1.01  # to be stronger than a Mach wave
@@ -752,7 +754,7 @@ def theta_cone_flowfield(
     a1 = sqrt(g * R * T1)
     M1 = V1 / a1
     C_p = R * g / (g - 1)
-    h1 = C_p * T1
+    C_p * T1
     rho1 = p1 / (R * T1)
     #
     # Start at the point just downstream the oblique shock.

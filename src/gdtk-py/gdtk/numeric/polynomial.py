@@ -22,7 +22,7 @@ def eval_polynomial(x, phi, a):
     return p
 
 
-from numpy import array, zeros, linalg
+from numpy import zeros, linalg
 
 
 def fit_interpolating_polynomial(phi, xi, yi):

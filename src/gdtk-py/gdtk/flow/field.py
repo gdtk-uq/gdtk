@@ -66,7 +66,7 @@ class Field:
             for var in self.variables:
                 metaData = header["variables"][var]
                 dataFile = metaData["data"]
-                n_cells = metaData["dimension"][0]
+                metaData["dimension"][0]
                 length = metaData["dimension"][1]
                 with za.open(dataFile, "r") as fp:
                     dataBlob = numpy.loadtxt(fp)

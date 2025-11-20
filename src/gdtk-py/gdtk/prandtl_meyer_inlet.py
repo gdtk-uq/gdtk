@@ -53,7 +53,7 @@ class PrandtlMeyerInlet:
         Ai = 1  # [m^2], inlet capture area (assumes width into the page, W = 1m).
         Si = self.M1 * Ai
         alphai = np.arcsin(Ai / Si)
-        Xi = Si * np.cos(alphai)
+        Si * np.cos(alphai)
 
         self.Si = Si
         self.Ai = Ai

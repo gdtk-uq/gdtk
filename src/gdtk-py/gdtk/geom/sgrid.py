@@ -11,15 +11,12 @@ PJ  2022-11-03 Binary files
 """
 
 import numpy as np
-from abc import ABC, abstractmethod
-from copy import copy
 import gzip
 import re
 from gdtk.geom.vector3 import Vector3
-from gdtk.geom.path import Path
 from gdtk.geom.surface import ParametricSurface, CoonsPatch
 from gdtk.geom.volume import ParametricVolume, TFIVolume
-from gdtk.geom.cluster import *
+from gdtk.geom.cluster import ClusterFunction, LinearFunction
 
 
 class StructuredGrid:

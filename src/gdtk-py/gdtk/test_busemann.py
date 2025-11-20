@@ -21,7 +21,7 @@ bd = BusemannDiffuser(M2, theta_23)
 
 def test_init():
     props = bd.properties()
-    assert props.M1 == None
+    assert props.M1 is None
     assert props.M2 == pytest.approx(3.0)
     assert props.M3 == pytest.approx(2.48155)
     assert props.Pi == pytest.approx(0.958194)
