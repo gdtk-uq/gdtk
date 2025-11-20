@@ -5,7 +5,7 @@ requires-python = ">=3.8"
 dependencies = [
     "pyyaml",
     "numpy",
-    "gdtk",
+    "gdtk @ file:../gdtk-py",
     "scipy",
 ]
 
