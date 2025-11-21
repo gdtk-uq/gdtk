@@ -2614,7 +2614,7 @@ public:
 
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
                                             facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq], omegaz);
         }
     }
 
@@ -2665,7 +2665,7 @@ public:
 
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
                                             facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq], omegaz);
         }
         return;
     }
@@ -2722,7 +2722,7 @@ public:
 
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
                                             facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq], omegaz);
         }
         return;
     }

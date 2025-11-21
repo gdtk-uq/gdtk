@@ -1285,7 +1285,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             // Return flow states to their original state for next attempt.
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (cell; blk.cells) {
-                    cell.decode_conserved(0, 0, 0.0);
+                    cell.decode_conserved(0, 0, blk.omegaz);
                 }
             }
         }
@@ -3425,7 +3425,7 @@ void evalResidual(int ftl)
             limit_factor = min(1.0, S);
         }
         foreach (i, cell; blk.cells) {
-            cell.add_inviscid_source_vector(gtl, 0.0);
+            cell.add_inviscid_source_vector(gtl, blk.omegaz);
             if (blk.myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
@@ -3506,7 +3506,7 @@ void evalComplexMatVecProd(double sigma, bool for_preconditioning)
                 foreach (ivar; 0 .. nConserved) {
                     cell.U[1][ivar] += complex(0.0, sigma * blk.zed[startIdx+ivar].re);
                 }
-                cell.decode_conserved(gtl, 1, 0.0);
+                cell.decode_conserved(gtl, 1, blk.omegaz);
                 startIdx += nConserved;
             }
 
@@ -3601,7 +3601,7 @@ void evalRealMatVecProd(double sigma, bool for_preconditioning)
             foreach (ivar; 0 .. nConserved) {
                 cell.U[1][ivar] += sigma*blk.zed[startIdx+ivar];
             }
-            cell.decode_conserved(0, 1, 0.0);
+            cell.decode_conserved(0, 1, blk.omegaz);
             startIdx += nConserved;
         }
 
@@ -3626,7 +3626,7 @@ void evalRealMatVecProd(double sigma, bool for_preconditioning)
             foreach (ivar; 0 .. nConserved) {
                 blk.zed[startIdx+ivar] = (cell.dUdt[1][ivar].re - blk.R0[startIdx+ivar])/(sigma);
             }
-            cell.decode_conserved(0, 0, 0.0);
+            cell.decode_conserved(0, 0, blk.omegaz);
             startIdx += nConserved;
         }
         if (blk.myConfig.grid_motion) {
@@ -3725,7 +3725,7 @@ double determineRelaxationFactor()
                     cell.U[1][i] = cell.U[0][i] + blk.omegaLocal * blk.dU[startIdx+i];
                 }
                 try {
-                    cell.decode_conserved(0, 1, 0.0);
+                    cell.decode_conserved(0, 1, blk.omegaz);
                 }
                 catch (FlowSolverException e) {
                     failedDecode = true;
@@ -3855,7 +3855,7 @@ double applyLineSearch(double omega)
 		foreach (ivar; 0 .. nConserved) {
 		    cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
 		}
-		cell.decode_conserved(0, 1, 0.0);
+		cell.decode_conserved(0, 1, blk.omegaz);
 		startIdx += nConserved;
 	    }
 	}
@@ -3866,7 +3866,7 @@ double applyLineSearch(double omega)
 	    size_t startIdx = 0;
 	    foreach (cell; blk.cells) {
             // return cell to original state
-            cell.decode_conserved(0, 0, 0.0);
+            cell.decode_conserved(0, 0, blk.omegaz);
 	    }
 	}
 
@@ -3975,7 +3975,7 @@ void applyNewtonUpdate(double relaxationFactor)
                 cell.U[0][ivar] += omega * blk.dU[startIdx + ivar];
             }
             try {
-                cell.decode_conserved(0, 0, 0.0);
+                cell.decode_conserved(0, 0, blk.omegaz);
             }
             catch (FlowSolverException e) {
                 // If the physicality check + relaxation factor is in play,

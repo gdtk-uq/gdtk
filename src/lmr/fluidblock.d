@@ -1563,7 +1563,7 @@ public:
             version(complex_numbers) { eps = complex(0.0, eps0.re); }
             else { eps = eps0*fabs(pcell.U[ftl][j]) + eps0; }
             pcell.U[ftl][j] += eps;
-            pcell.decode_conserved(gtl, ftl, 0.0);
+            pcell.decode_conserved(gtl, ftl, omegaz);
 
             // evaluate perturbed residuals in local stencil
             evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
@@ -1593,7 +1593,7 @@ public:
                 // This is currently under investigation, in the interim we will apply the more costly
                 // method of re-evaluating evalRHS with the unperturbed conserved state. KAD 2023-08-31
                 pcell.U[ftl].copy_values_from(pcell.U[0]);
-                pcell.decode_conserved(gtl, 0, 0.0);
+                pcell.decode_conserved(gtl, 0, omegaz);
                 evalRHS(gtl, 0, pcell.cell_list, pcell.face_list, pcell);
             }
         }
@@ -1653,7 +1653,7 @@ public:
                         version(complex_numbers) { eps = complex(0.0, eps0.re); }
                         else { eps = eps0*fabs(pcell.U[ftl][j]) + eps0; }
                         pcell.U[ftl][j] += eps;
-                        pcell.decode_conserved(gtl, ftl, 0.0);
+                        pcell.decode_conserved(gtl, ftl, omegaz);
 
                         // update ghost cell via boundary condition call
                         if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
