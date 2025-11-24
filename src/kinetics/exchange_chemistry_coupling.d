@@ -169,7 +169,8 @@ class MarroneTreanorDissociation : ExchangeChemistryCoupling {
     number Gappear(in GasState gs) {
         // compute the energy per dissociation, but with T_v = T_tr
         number T_F_inv = -1./_U;
-        return R_universal * (_theta_v / (exp(_theta_v * T_F_inv) - 1.) - _D / (exp(_D / R_universal * T_F_inv) - 1.));
+        // Corrected version: R_universal applies only to the first term
+        return R_universal * _theta_v / (exp(_theta_v * T_F_inv) - 1.) - _D / (exp(_D / R_universal * T_F_inv) - 1.);
     }
 
 private:
