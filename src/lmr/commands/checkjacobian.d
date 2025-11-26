@@ -81,6 +81,10 @@ options ([+] can be repeated):
      read limiter values associated with snapshot
      default: false, do NOT read limiter values
 
+ -rfs, --read-frozen-shock-detector-values
+     use the shock detector values read in with the associated snapshot
+     default: false, do NOT use the snapshot shock detector values
+
  -v, --verbose [+]
      Increase verbosity.
 `, cmdName);
@@ -93,6 +97,7 @@ int main(string[] args)
     int snapshot = -1;
     string outFilename;
     bool readFrozenLimiterValues = false;
+    bool readFrozenShockDetectorValues = false;
     try {
         getopt(args,
                config.bundling,
@@ -100,7 +105,8 @@ int main(string[] args)
                "v|verbose+", &verbosity,
                "s|snapshot", &snapshot,
                "o|output", &outFilename,
-               "rfl|read-frozen-limiter-values", &readFrozenLimiterValues);
+               "rfl|read-frozen-limiter-values", &readFrozenLimiterValues,
+               "rfs|read-frozen-shock-detector-values", &readFrozenShockDetectorValues);
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
         writeln("There is something wrong with the command-line arguments/options.");
@@ -148,6 +154,7 @@ int main(string[] args)
         phase.readValuesFromJSON(jsonData[key]);
     }
     activePhase = nkPhases[$-1]; // set to the last phase from the simulation
+    if (readFrozenShockDetectorValues) readShockDetectorValues(); // we have to set the frozen shock detector flags before the residual evaluation below
     evalResidual(0); // we perform a residual evaluation here to populate the ghost-cells
     alias cfg = GlobalConfig;
     size_t nConserved = cfg.cqi.n;
@@ -296,4 +303,15 @@ void readLimiterValues(int snapshot)
     cfg.frozen_limiter = true;
     activePhase.frozenLimiterForJacobian = true;
     activePhase.frozenLimiterForResidual = true;
+}
+
+void readShockDetectorValues()
+{
+    /*
+    Note that the frozen shock detector values have already been read in as part of the snapshot flow solution.
+    We just need to set the frozen shock detector flags.
+    */
+    alias cfg = GlobalConfig;
+    cfg.frozen_shock_detector = true;
+    activePhase.frozenShockDetector = true;
 }
