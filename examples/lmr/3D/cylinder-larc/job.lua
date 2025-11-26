@@ -90,18 +90,19 @@ config.diffusion_coefficient_type = "binary_diffusion"
 config.flux_calculator             = "adaptive_hanel_ausmdv"
 config.shock_detector              = "KAD"
 config.compression_tolerance       = -1.0
+config.strict_shock_detector       = false
 config.interpolation_order         = 2
 config.extrema_clipping            = false
 config.thermo_interpolator         = "rhop"
 config.unstructured_limiter        = "hvenkat"
 config.smooth_limiter_coeff        = 1.0
 config.apply_unstructured_limiter_stagnation_point_filter = true
-config.apply_unstructured_limiter_min_pressure_filter     = true
 
 -- viscous flux settings
 config.viscous                    = true
 config.spatial_deriv_calc         = "least_squares"
 config.spatial_deriv_locn         = "cells"
+config.include_boundary_faces_in_spatial_deriv_correction = true
 
 -- Set temporal integration settings
 NewtonKrylovGlobalConfig{
@@ -161,7 +162,7 @@ NewtonKrylovPhase:new{
    use_auto_cfl = true,
    use_local_timestep = true,
    threshold_relative_residual_for_cfl_growth = 0.99,
-   start_cfl = 1.0,
+   start_cfl = 0.1,
    max_cfl = 1.0e6,
    auto_cfl_exponent = 1.0,
    limit_on_cfl_decrease_ratio = 1.0

@@ -56,7 +56,7 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 305
+    expected_number_steps = 340
     expected_final_cfl = 1.000e+06
     reason = ""
     steps = 0
@@ -75,7 +75,7 @@ def test_run():
         "Failed to arrive at expected CFL value on final step."
 
 def test_check_jacobian():
-    cmd = "lmrZ-check-jacobian --read-frozen-limiter-values=true --output=norms.dat"
+    cmd = "lmrZ-check-jacobian --read-frozen-limiter-values=true --read-frozen-shock-detector-values=true --output=norms.dat"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_norm_check = 1.0e-14

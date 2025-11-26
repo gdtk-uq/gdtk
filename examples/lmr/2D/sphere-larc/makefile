@@ -20,7 +20,7 @@ run:
 	/usr/bin/time -f "RSS=%M elapsed=%E" mpirun -np 1 lmrZ-mpi-run | tee log.dat
 
 check:
-	lmrZ-check-jacobian --read-frozen-limiter-values=true --output=norms.dat
+	lmrZ-check-jacobian --read-frozen-limiter-values=true --read-frozen-shock-detector-values=true --output=norms.dat
 
 
 post: vtk
