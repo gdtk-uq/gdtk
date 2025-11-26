@@ -238,6 +238,7 @@ public:
         }
         mu_t = w0*fs0.mu_t + w1*fs1.mu_t;
         k_t = w0*fs0.k_t + w1*fs1.k_t;
+        S = w0*fs0.S + w1*fs1.S;
     } // end copy_average_values_from()
 
     void copy_average_values_from(in FlowState*[] others, GasModel gm)
