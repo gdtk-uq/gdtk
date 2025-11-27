@@ -5,32 +5,53 @@
 
 INSTALL_DIR ?= $(HOME)/gdtkinst
 
-GAS_DIR := ../gas
+GDTKPY_DIR := ../gdtk-py
 CEA_DIR := ../../extern/cea2
 
-install : $(INSTALL_DIR)
-	@echo installing gas library
-	$(MAKE) -C $(GAS_DIR) install
-	@echo installing cea
-	$(MAKE) -C $(CEA_DIR) install
-	@echo Copying pitot3.py to $(INSTALL_DIR)/bin
-	cp -f pitot3.py $(INSTALL_DIR)/bin
-	@echo Copying pitot3_condition_builder.py to $(INSTALL_DIR)/bin
-	cp -f pitot3_condition_builder.py $(INSTALL_DIR)/bin
-	@echo Copying pitot3_utils folder to $(INSTALL_DIR)/lib
-	cp -r pitot3_utils $(INSTALL_DIR)/lib
-	@echo Copying pitot3_data folder to $(INSTALL_DIR)/share
-	cp -r pitot3_data $(INSTALL_DIR)/share
-	@echo Making pitot3.py program executable
-	chmod +x $(INSTALL_DIR)/bin/pitot3.py
-	chmod +x $(INSTALL_DIR)/bin/pitot3_condition_builder.py
+ifeq ($(wildcard $(CEA_DIR)),)
+$(warning CEA not found at CEA_DIR=$(CEA_DIR))
+endif
+
+install:
+	$(info Installing cea)
+	- $(MAKE) -C $(CEA_DIR) install
+	$(info Installing Pitot3 Python library)
+	$(MAKE) pitot3 
+	$(MAKE) pitot3-condition-builder 
 	@echo -----------------------------------------
 	@echo pitot3 should now be installed.
 	@echo -----------------------------------------
 
-clean : 
-	$(MAKE) -C $(GAS_DIR) clean
-	$(MAKE) -C $(CEA_DIR) clean
+clean: 
+	find . -type d -name '__pycache__' -exec rm -r {} +
+	find . -type d -name '*.egg-info' -exec rm -r {} +
+	$(MAKE) -sC $(GDTKPY_DIR) clean
+	- $(MAKE) -sC $(CEA_DIR) clean
 
-$(INSTALL_DIR):
-	- mkdir $(INSTALL_DIR)
+# Priority:
+#   1. VIRTUAL_ENV - Standard set by python virtual-environments
+#   2. CONDA_PREFIX - Set by (ana)conda environments
+#   3. INSTALL_DIR/.venv - Create our own if none already exist
+CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
+VIRTUAL_ENV ?= $(CONDA_PREFIX)
+
+# Override if using uv with `PIP='uv pip'`
+PIP ?= $(VIRTUAL_ENV)/bin/pip
+PYTHON ?= python3
+
+# If it doesn't already exist
+$(VIRTUAL_ENV):
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
+	$(info Updating pip)
+	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
+
+pitot3 pitot3-condition-builder: $(VIRTUAL_ENV) gdtk-py
+	$(info Installing python tools)
+	$(PIP) install -e . --find-links $(INSTALL_DIR)/share/python-packages/
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+
+gdtk-py:
+	$(MAKE) -C $(GDTKPY_DIR) install
