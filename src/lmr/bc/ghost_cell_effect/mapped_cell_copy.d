@@ -94,6 +94,10 @@ public:
         MPI_Request[] incoming_viscous_gradient_request_list;
         MPI_Status[] incoming_viscous_gradient_status_list;
         double[][] outgoing_viscous_gradient_buf_list, incoming_viscous_gradient_buf_list;
+        int[] outgoing_shockdetector_tag_list, incoming_shockdetector_tag_list;
+        MPI_Request[] incoming_shockdetector_request_list;
+        MPI_Status[] incoming_shockdetector_status_list;
+        double[][] outgoing_shockdetector_buf_list, incoming_shockdetector_buf_list;
     }
     //
     // Parameters for the calculation of the mapped-cell location.
@@ -367,6 +371,7 @@ public:
                 incoming_flowstate_tag_list.length = 0;
                 incoming_convective_gradient_tag_list.length = 0;
                 incoming_viscous_gradient_tag_list.length = 0;
+                incoming_shockdetector_tag_list.length = 0;
                 foreach (src_blk_id; neighbour_block_id_list) {
                     if (src_blk_id == blk.id) {continue;}
                     size_t nc = src_cell_ids[src_blk_id][blk.id].length;
@@ -378,6 +383,7 @@ public:
                         incoming_flowstate_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 2);
                         incoming_convective_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 3);
                         incoming_viscous_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 4);
+                        incoming_shockdetector_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 5);
                     }
                 }
                 n_incoming = incoming_block_list.length;
@@ -393,6 +399,9 @@ public:
                 incoming_viscous_gradient_request_list.length = n_incoming;
                 incoming_viscous_gradient_status_list.length = n_incoming;
                 incoming_viscous_gradient_buf_list.length = n_incoming;
+                incoming_shockdetector_request_list.length = n_incoming;
+                incoming_shockdetector_status_list.length = n_incoming;
+                incoming_shockdetector_buf_list.length = n_incoming;
                 //
                 // Outgoing messages will carry data from source cells in the current block,
                 // to be copied into ghost cells in another block.
@@ -403,6 +412,7 @@ public:
                 outgoing_flowstate_tag_list.length = 0;
                 outgoing_convective_gradient_tag_list.length = 0;
                 outgoing_viscous_gradient_tag_list.length = 0;
+                outgoing_shockdetector_tag_list.length = 0;
                 foreach (dest_blk_id; neighbour_block_id_list) {
                     if (dest_blk_id == blk.id) {continue;}
                     size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
@@ -414,6 +424,7 @@ public:
                         outgoing_flowstate_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 2);
                         outgoing_convective_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 3);
                         outgoing_viscous_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 4);
+                        outgoing_shockdetector_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 5);
                     }
                 }
                 n_outgoing = outgoing_block_list.length;
@@ -421,6 +432,7 @@ public:
                 outgoing_flowstate_buf_list.length = n_outgoing;
                 outgoing_convective_gradient_buf_list.length = n_outgoing;
                 outgoing_viscous_gradient_buf_list.length = n_outgoing;
+                outgoing_shockdetector_buf_list.length = n_outgoing;
                 //
             } else { // not mpi_parallel
                 // For the shared-memory code, get references to the mapped (source) cells
@@ -1543,6 +1555,97 @@ public:
             }
         }
     } // end exchange_viscous_gradient_phase2()
+
+    // not @nogc
+    void exchange_shock_phase0(double t, int gtl, int ftl)
+    // look in exchange_flowstate_phase0 for description of activities
+    {
+        version(mpi_parallel) {
+            foreach (i; 0 .. n_incoming) {
+                // we exchange only a single value - the shock detector
+                size_t fs_size = 1;
+                size_t ne = incoming_ncells_list[i] * fs_size;
+                version(complex_numbers) { ne *= 2; }
+                if (incoming_shockdetector_buf_list[i].length < ne) { incoming_shockdetector_buf_list[i].length = ne; }
+                // Post non-blocking receive for shock detector data that we expect to receive later
+                // from the src_blk MPI process.
+                MPI_Irecv(incoming_shockdetector_buf_list[i].ptr, to!int(ne), MPI_DOUBLE, incoming_rank_list[i],
+                          incoming_shockdetector_tag_list[i], MPI_COMM_WORLD, &incoming_shockdetector_request_list[i]);
+            }
+        } else { // not mpi_parallel
+            // For a single process, nothing to be done because
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end exchange_shock_phase0()
+
+    // not @nogc
+    void exchange_shock_phase1(double t, int gtl, int ftl)
+    // look in exchange_flowstate_phase1 for description of activities
+    {
+        version(mpi_parallel) {
+            foreach (i; 0 .. n_outgoing) {
+                // Blocking send of this block's shock detector data
+                // to the corresponding non-blocking receive that was posted
+                // at in src_blk MPI process.
+                size_t fs_size = 1;
+                size_t ne = outgoing_ncells_list[i] * fs_size;
+                version(complex_numbers) { ne *= 2; }
+                if (outgoing_shockdetector_buf_list[i].length < ne) { outgoing_shockdetector_buf_list[i].length = ne; }
+                auto buf = outgoing_shockdetector_buf_list[i];
+                size_t ii = 0;
+                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                    auto c = blk.cells[cid];
+                    FlowState* fs = c.fs;
+                    buf[ii++] = fs.S.re; version(complex_numbers) { buf[ii++] = fs.S.im; }
+                }
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                              outgoing_shockdetector_tag_list[i], MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                             outgoing_shockdetector_tag_list[i], MPI_COMM_WORLD);
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process, nothing to be done because
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end exchange_shock_phase1()
+
+    // not @nogc
+    void exchange_shock_phase2(double t, int gtl, int ftl)
+    // look in exchange_flowstate_phase2 for description of activities
+    {
+        version(mpi_parallel) {
+            foreach (i; 0 .. n_incoming) {
+                // Wait for non-blocking receive to complete.
+                // Once complete, copy the data back into the local context.
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_shockdetector_request_list[i], &incoming_shockdetector_status_list[i]);
+                } else {
+                    MPI_Wait(&incoming_shockdetector_request_list[i], &incoming_shockdetector_status_list[i]);
+                }
+                auto buf = incoming_shockdetector_buf_list[i];
+                size_t ii = 0;
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                    auto c = ghost_cells[gi];
+                    FlowState* fs = c.fs;
+                    fs.S.re = buf[ii++]; version(complex_numbers) { fs.S.im = buf[ii++]; }
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process, just access the data directly.
+            foreach (i, ref mygc; ghost_cells) {
+                mygc.fs.S = mapped_cells[i].fs.S;
+            }
+        }
+        // Done with copying from source cells.
+    } // end exchange_shock_phase2()
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {

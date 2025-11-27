@@ -234,24 +234,30 @@ void exchange_ghost_cell_shock_data(double t, int gtl, int ftl)
     foreach (blk; localFluidBlocks) {
         foreach(bc; blk.bc) {
             foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy) gce;
-                if (mygce) { mygce.exchange_shock_phase0(t, gtl, ftl); }
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_shock_phase0(t, gtl, ftl); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_shock_phase0(t, gtl, ftl); }
             }
         }
     }
     foreach (blk; localFluidBlocks) {
         foreach(bc; blk.bc) {
             foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy) gce;
-                if (mygce) { mygce.exchange_shock_phase1(t, gtl, ftl); }
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_shock_phase1(t, gtl, ftl); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_shock_phase1(t, gtl, ftl); }
             }
         }
     }
     foreach (blk; localFluidBlocks) {
         foreach(bc; blk.bc) {
             foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy) gce;
-                if (mygce) { mygce.exchange_shock_phase2(t, gtl, ftl); }
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_shock_phase2(t, gtl, ftl); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_shock_phase2(t, gtl, ftl); }
             }
         }
     }

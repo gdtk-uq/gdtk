@@ -3029,6 +3029,7 @@ void detect_shocks(int gtl, int ftl)
             blk.shock_faces_to_cells();
         }
     }
+
     // perform an iterative diffusion process to spread the influence of the shock detector
     if (GlobalConfig.shock_detector_smoothing) {
         foreach(i; 0 .. GlobalConfig.shock_detector_smoothing) {
@@ -3041,7 +3042,11 @@ void detect_shocks(int gtl, int ftl)
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.shock_cells_to_faces(); }
         }
+    } else {
+        // we later average the cell shock detector values at an interface - so we should do at least one exchange
+        exchange_ghost_cell_shock_data(SimState.time, gtl, ftl);
     }
+
     if (GlobalConfig.strict_shock_detector) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.enforce_strict_shock_detector(); }
