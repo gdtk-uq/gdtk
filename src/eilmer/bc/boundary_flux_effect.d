@@ -82,10 +82,10 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         newBFE = new BFE_ThermionicElectronFlux(blk_id, boundary, Ar, phi, GlobalConfig.gmodel_master);
         break;
     case "ablating_species_flux":
-        double mass_flow_rate = getJSONdouble(jsonData, "mass_flow_rate", 0.0);
-        double pyrolysis_gas_density = getJSONdouble(jsonData, "pyrolysis_gas_density", 0.0);
+        double pyrolysis_gas_mass_flux = getJSONdouble(jsonData, "pyrolysis_gas_mass_flux", 0.0);
+        double pyrolysis_gas_temperature = getJSONdouble(jsonData, "pyrolysis_gas_temperature", 0.0);
         double[] pyrolysis_gas_mass_fractions = getJSONdoublearray(jsonData, "pyrolysis_gas_mass_fractions", []);
-        newBFE = new BFE_AblatingSpeciesFlux(blk_id, boundary, mass_flow_rate, pyrolysis_gas_density, pyrolysis_gas_mass_fractions);
+        newBFE = new BFE_AblatingSpeciesFlux(blk_id, boundary, pyrolysis_gas_mass_flux, pyrolysis_gas_temperature, pyrolysis_gas_mass_fractions);
         break;
     default:
         string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
@@ -812,19 +812,25 @@ protected:
 } // end class BFE_ThermionicElectronFlux
 
 class BFE_AblatingSpeciesFlux : BoundaryFluxEffect {
-    this(int id, int boundary, double mass_flow_rate, double pyrolysis_gas_density, double[] pyrolysis_gas_mass_fractions)
+    this(int id, int boundary, double pyrolysis_gas_mass_flux, double pyrolysis_gas_temperature, double[] pyrolysis_gas_mass_fractions)
     {
         super(id, boundary, "AblatingSpeciesFlux");
-        this.mass_flow_rate = mass_flow_rate;
-        this.pyrolysis_gas_density = pyrolysis_gas_density;
+        this.pyrolysis_gas_mass_flux = pyrolysis_gas_mass_flux;
+        this.pyrolysis_gas_temperature = pyrolysis_gas_temperature;
         this.pyrolysis_gas_mass_fractions = pyrolysis_gas_mass_fractions;
+        this.gs = GasState(GlobalConfig.gmodel_master.n_species, GlobalConfig.gmodel_master.n_modes);
+
+        gs.T = pyrolysis_gas_temperature;
+        gs.p = 1e5; // atm we only use gs for the enthalpy, which is not affected by p
+        foreach(isp, massf; pyrolysis_gas_mass_fractions) gs.massf[isp] = massf;
+        this.hpg = GlobalConfig.gmodel_master.enthalpy(gs);
     }
 
     override string toString() const
     {
         return "BFE_AblatingSpeciesFlux(" ~
-            "mass_flow_rate =" ~ to!string(mass_flow_rate) ~
-            "pyrolysis_gas_density =" ~ to!string(pyrolysis_gas_density) ~
+            "pyrolysis_gas_mass_flux =" ~ to!string(pyrolysis_gas_mass_flux) ~
+            "pyrolysis_gas_temperature =" ~ to!string(pyrolysis_gas_temperature) ~
             ", pyrolysis_gas_mass_fractions=" ~ to!string(pyrolysis_gas_mass_fractions) ~
             ")";
     }
@@ -869,9 +875,10 @@ class BFE_AblatingSpeciesFlux : BoundaryFluxEffect {
     }
 
 protected:
-    double mass_flow_rate;
-    double pyrolysis_gas_density;
+    double pyrolysis_gas_mass_flux, pyrolysis_gas_temperature;
     double[] pyrolysis_gas_mass_fractions;
+    GasState gs;
+    number hpg;
 
     @nogc
     void apply_to_face(FVInterface f, int sign, ref ConservedQuantitiesIndices cqi){
@@ -879,13 +886,12 @@ protected:
         // Hum so should we account for the influence of the pyrolysis gas on
         // the momentum and energy? 
         if (cqi.mass==0) {
-            f.F[cqi.mass] += -1.0*sign*mass_flow_rate;
-            debug{
-                writefln("f.pos %s F %e s*mdot %e", f.pos, f.F[cqi.mass], sign*mass_flow_rate);
-            }
+            f.F[cqi.mass] += -1.0*sign*pyrolysis_gas_mass_flux;
         }
         foreach(isp; 0 .. blk.myConfig.n_species){
-            f.F[cqi.species+isp] += -1.0*sign*mass_flow_rate*pyrolysis_gas_mass_fractions[isp];
+            f.F[cqi.species+isp] += -1.0*sign*pyrolysis_gas_mass_flux*pyrolysis_gas_mass_fractions[isp];
         }
+
+        f.F[cqi.totEnergy] += -1.0*sign*hpg*pyrolysis_gas_mass_flux;
     }
 } // end class BFE_AblatingSpeciesFlux

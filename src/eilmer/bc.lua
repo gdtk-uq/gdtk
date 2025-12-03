@@ -604,22 +604,18 @@ function ThermionicElectronFlux:tojson()
    return str
 end
 
-AblatingSpeciesFlux = BoundaryFluxEffect:new{mass_flow_rate=nil, pyrolysis_gas_density=nil,
+AblatingSpeciesFlux = BoundaryFluxEffect:new{pyrolysis_gas_mass_flux=nil, pyrolysis_gas_temperature=nil,
                                              pyrolysis_gas_mass_fractions={1.0}}
 AblatingSpeciesFlux.type = "ablating_species_flux"
 function AblatingSpeciesFlux:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "mass_flow_rate": %.18e,', self.mass_flow_rate)
-   str = str .. string.format(' "pyrolysis_gas_density": %.18e, ', self.pyrolysis_gas_density)
+   str = str .. string.format(' "pyrolysis_gas_mass_flux": %.18e,', self.pyrolysis_gas_mass_flux)
+   str = str .. string.format(' "pyrolysis_gas_temperature": %.18e, ', self.pyrolysis_gas_temperature)
    str = str .. string.format(' "pyrolysis_gas_mass_fractions": [')
    local gm = getGasModel()
    local nsp = gm:nSpecies()
-   for k,v in pairs(self.pyrolysis_gas_mass_fractions) do
-       print(k, v)
-   end
    for isp=0,nsp-1 do
       local spName = gm:speciesName(isp);
-      print("isp: ", isp, "spName: ", spName)
       if self.pyrolysis_gas_mass_fractions[spName] ~= nil then
           str = str .. string.format("%.18e", self.pyrolysis_gas_mass_fractions[spName])
       else
