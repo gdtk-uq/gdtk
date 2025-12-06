@@ -1688,10 +1688,10 @@ public:
                             // perturbuation. Note that this does not occur for unstructured grids.
                             // This is currently under investigation, in the interim we will apply the more costly
                             // method of re-evaluating evalRHS with the unperturbed conserved state. KAD 2023-08-31
-                            evalRHS(gtl, 0, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
 
-                            // return ghost cell to original state via boundary condition call
+                            // we first return the ghost cell to the original state via a boundary condition call
                             if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
+                            evalRHS(gtl, 0, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
                         }
                     }
 
