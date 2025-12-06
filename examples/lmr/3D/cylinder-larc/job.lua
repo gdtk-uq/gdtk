@@ -132,6 +132,7 @@ NewtonKrylovGlobalConfig{
    inviscid_cfl_only = true,
    use_line_search = true,
    line_search_order = 3,
+   use_scaling_in_line_search = true,
    use_physicality_check = true,
    allowable_relative_mass_change = 0.5,
    min_relaxation_factor_for_update = 0.1,

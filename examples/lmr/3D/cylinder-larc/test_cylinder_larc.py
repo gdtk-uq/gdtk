@@ -61,10 +61,10 @@ def test_run():
     # Compiler: LLVM D compiler v 1.41.0 with LLVM 20.1.6
     # CPU: Apple M1 Pro
     if (sys.platform == 'linux'):
-        expected_number_steps = 332
+        expected_number_steps = 323
         expected_final_cfl = 1.000e+06
     else:
-        expected_number_steps = 333
+        expected_number_steps = 326
         expected_final_cfl = 1.000e+06
     reason = ""
     steps = 0
