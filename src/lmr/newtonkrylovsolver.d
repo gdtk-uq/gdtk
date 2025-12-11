@@ -185,6 +185,7 @@ struct NKGlobalConfig {
     int maxFgmresPreconditioningIterations = 10;
     double preconditionerPerturbation = 1.0e-30;
     PreconditionerType preconditioner = PreconditionerType.ilu;
+    FluxCalculator fluxCalculatorForPreconditioner = FluxCalculator.adaptive_hanel_ausmdv; // same default as selected in GlobalConfig.
     // ILU setting
     int iluFill = 0;
     // sub iterations for preconditioners
@@ -258,6 +259,13 @@ struct NKGlobalConfig {
         preconditionerPerturbation = getJSONdouble(jsonData, "preconditioner_perturbation", preconditionerPerturbation);
         auto pString = getJSONstring(jsonData, "preconditioner", "NO_SELECTION_SUPPLIED");
         preconditioner = preconditionerTypeFromName(pString);
+        auto fString = getJSONstring(jsonData, "preconditioner_flux_calculator", "NO_SELECTION_SUPPLIED");
+        if (fString == "NO_SELECTION_SUPPLIED") {
+            fluxCalculatorForPreconditioner = GlobalConfig.flux_calculator;
+        }
+        else {
+            fluxCalculatorForPreconditioner = flux_calculator_from_name(fString);
+        }
         iluFill = getJSONint(jsonData, "ilu_fill", iluFill);
         preconditionerSubIterations = getJSONint(jsonData, "preconditioner_sub_iterations", preconditionerSubIterations);
         stepsBetweenStatus = getJSONint(jsonData, "steps_between_status", stepsBetweenStatus);
@@ -2514,7 +2522,7 @@ void computePreconditioner()
         goto case PreconditionerType.sgs;
     case PreconditionerType.sgs:
         foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.evaluate_jacobian();
+            blk.evaluate_jacobian(nkCfg.fluxCalculatorForPreconditioner);
             blk.flowJacobian.augment_with_dt(blk.cells, nConserved);
             nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
             if (activePhase.useResidualSmoothing) { formInvertedResidualSmoothingMatrix(blk, false); }
@@ -2522,7 +2530,7 @@ void computePreconditioner()
         break;
     case PreconditionerType.ilu:
         foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.evaluate_jacobian();
+            blk.evaluate_jacobian(nkCfg.fluxCalculatorForPreconditioner);
             blk.flowJacobian.augment_with_dt(blk.cells, nConserved);
             if (activePhase.useResidualSmoothing) { formInvertedResidualSmoothingMatrix(blk); }
             nm.smla.decompILU0(blk.flowJacobian.local);
