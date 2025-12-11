@@ -171,7 +171,7 @@ int main(string[] args)
      */
     // 1a. Populate Jacobian
     blk.initialize_jacobian(cfg.interpolation_order, nkCfg.preconditionerPerturbation, 0);
-    blk.evaluate_jacobian();
+    blk.evaluate_jacobian(nkCfg.fluxCalculatorForPreconditioner);
     // 1b. Prepare a test vector
     double[] testVec;
     testVec.length = blk.flowJacobian.local.ia.length-1;
