@@ -1478,7 +1478,7 @@ public:
         */
     } // end jacobian_nonzero_pattern()
 
-    void evaluate_jacobian()
+    void evaluate_jacobian(FluxCalculator fluxCalculatorForPreconditioner)
     {
         /*
           Higher level method used to evaluate the flow Jacobian attached to the FluidBlock object.
@@ -1489,7 +1489,7 @@ public:
 
         // temporarily change flux calculator
         auto flux_calculator_save = myConfig.flux_calculator;
-        myConfig.flux_calculator = myConfig.flux_calculator; // TODO: add preconditionMatrixFluxCalculator back
+        myConfig.flux_calculator = fluxCalculatorForPreconditioner;
 
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;

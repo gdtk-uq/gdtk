@@ -51,6 +51,7 @@ NewtonKrylovGlobalConfigHidden = {
    use_preconditioner = true,
    preconditioner_perturbation = 1.0e-30,
    preconditioner = "ilu",
+   preconditioner_flux_calculator = "NO_SELECTION_SUPPLIED",
    --
    -- ILU preconditioner settings
    --
@@ -154,6 +155,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"use_preconditioner": %s,\n', tostring(nkConfig.use_preconditioner)))
    f:write(string.format('"preconditioner_perturbation": %.18e,\n', nkConfig.preconditioner_perturbation))
    f:write(string.format('"preconditioner": "%s",\n', nkConfig.preconditioner))
+   f:write(string.format('"preconditioner_flux_calculator": "%s",\n', nkConfig.preconditioner_flux_calculator))
    f:write(string.format('"ilu_fill": %d,\n', nkConfig.ilu_fill))
    f:write(string.format('"preconditioner_sub_iterations": %d,\n', nkConfig.preconditioner_sub_iterations))
    -- output and diagnostics
