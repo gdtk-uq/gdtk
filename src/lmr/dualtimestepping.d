@@ -521,7 +521,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
         if (currentPhase == nkCfg.numberOfPhases-1) terminalPhase = true; // we are beginning in the terminal phase
 
         // evaluate a reference residual for the nonlinear solve
-        evalResidual(0);
+        evalResidualWorker(0);
         setResiduals();
         addUnsteadyTermToResiduals();
         computeGlobalResidual();
@@ -615,9 +615,9 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
             //----
             prevGlobalResidual = globalResidual;
             if (nkCfg.useFGMRES) {
-                solveNewtonStepFGMRES();
+                solveNewtonStepFGMRES(currentPhase, stepsIntoCurrentPhase);
             } else {
-                solveNewtonStep(updatePreconditionerThisStep);
+                solveNewtonStep(updatePreconditionerThisStep, currentPhase, stepsIntoCurrentPhase);
             }
 
             // 1a. perform a physicality check if required
@@ -628,7 +628,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
             // 1b. do a line search if required
             auto lineSearchWallTimeStart = Clock.currTime();
             if ( (omega > nkCfg.minRelaxationFactorForUpdate) && nkCfg.useLineSearch ) {
-                omega = applyLineSearch(omega);
+                omega = applyLineSearch(omega, currentPhase, stepsIntoCurrentPhase);
             }
             lineSearchWallTime = to!double((Clock.currTime() - lineSearchWallTimeStart).total!"msecs"())/1000.0;
 

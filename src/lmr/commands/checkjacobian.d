@@ -155,7 +155,7 @@ int main(string[] args)
     }
     activePhase = nkPhases[$-1]; // set to the last phase from the simulation
     if (readFrozenShockDetectorValues) readShockDetectorValues(); // we have to set the frozen shock detector flags before the residual evaluation below
-    evalResidual(0); // we perform a residual evaluation here to populate the ghost-cells
+    evalResidualWorker(0); // we perform a residual evaluation here to populate the ghost-cells
     alias cfg = GlobalConfig;
     size_t nConserved = cfg.cqi.n;
 
@@ -206,7 +206,7 @@ int main(string[] args)
         }
     }
     blk.zed[] = testVec[];
-    evalJacobianVectorProduct(nkCfg.frechetDerivativePerturbation);
+    evalJacobianVectorProduct(nkCfg.frechetDerivativePerturbation, 0, 0);
 
     /*
      * 3. Compare vectors and write result to file.

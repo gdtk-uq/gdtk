@@ -21,10 +21,11 @@ import std.math : FloatingPointControl;
 import std.parallelism : totalCPUs;
 import std.stdio : File, write, writeln, writefln;
 import std.string;
+import std.json : JSONValue;
 
 import dyaml;
 
-import util.json_helper : readJSONfile;
+import util.json_helper : readJSONfile, getJSONbool;
 
 import lmr.commands.command;
 import lmr.globalconfig;
@@ -342,7 +343,13 @@ int main(string[] args)
     final switch (solverMode) {
     case SolverMode.steady:
         if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise Newton-Krylov simulation.");
-        initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+        // This is clunky but I need the information about tapered-blending here because
+        // it influences memory allocation.
+        JSONValue jsonData = readJSONfile(lmrCfg.nkCfgFile);
+        bool useTaperedBlending = false;
+        useTaperedBlending = getJSONbool(jsonData, "use_tapered_blending", useTaperedBlending);
+
+        initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock, useTaperedBlending);
 
         if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform Newton steps.");
         performNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);

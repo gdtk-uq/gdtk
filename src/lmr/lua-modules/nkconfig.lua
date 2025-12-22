@@ -61,6 +61,9 @@ NewtonKrylovGlobalConfigHidden = {
    --
    preconditioner_sub_iterations = 4,
 
+   -- solver control of tapered blending
+   use_tapered_blending = false,
+   blending_flux_calculator = "NO_SELECTION_SUPPLIED",
    -- Output and diagnostics
    steps_between_status = 10,
    total_snapshots = 5,
@@ -158,6 +161,8 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"preconditioner_flux_calculator": "%s",\n', nkConfig.preconditioner_flux_calculator))
    f:write(string.format('"ilu_fill": %d,\n', nkConfig.ilu_fill))
    f:write(string.format('"preconditioner_sub_iterations": %d,\n', nkConfig.preconditioner_sub_iterations))
+   f:write(string.format('"use_tapered_blending": %s,\n', tostring(nkConfig.use_tapered_blending)))
+   f:write(string.format('"blending_flux_calculator": "%s",\n', nkConfig.blending_flux_calculator))
    -- output and diagnostics
    f:write(string.format('"steps_between_status": %d,\n', nkConfig.steps_between_status))
    f:write(string.format('"total_snapshots": %d,\n', nkConfig.total_snapshots))
@@ -194,6 +199,8 @@ NewtonKrylovPhaseDefaults = {
    enforce_linear_solver_tolerance = false,
    use_adaptive_preconditioner = false,
    ignore_stopping_criteria = true,
+   tapered_blending = false,
+   use_blending_flux_calculator = false,
    frozen_shock_detector = false,
    frozen_limiter_for_residual = false,
    frozen_limiter_for_jacobian = false,
@@ -269,6 +276,8 @@ function NewtonKrylovPhase:tojson()
    str = str .. string.format('    "steps_between_preconditioner_update": %d,\n', self.steps_between_preconditioner_update)
    str = str .. string.format('    "enforce_linear_solver_tolerance": %s,\n', tostring(self.enforce_linear_solver_tolerance))
    str = str .. string.format('    "use_adaptive_preconditioner": %s,\n', tostring(self.use_adaptive_preconditioner))
+   str = str .. string.format('    "tapered_blending": %s,\n', tostring(self.tapered_blending))
+   str = str .. string.format('    "use_blending_flux_calculator": %s,\n', tostring(self.use_blending_flux_calculator))
    str = str .. string.format('    "ignore_stopping_criteria": %s,\n', tostring(self.ignore_stopping_criteria))
    str = str .. string.format('    "frozen_shock_detector": %s,\n', tostring(self.frozen_shock_detector))
    str = str .. string.format('    "frozen_limiter_for_residual": %s,\n', tostring(self.frozen_limiter_for_residual))
