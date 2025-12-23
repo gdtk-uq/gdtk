@@ -133,25 +133,21 @@ public:
     } // end toString
 } // end TwoSurfaceVolume
 
-version(twosurfacevolume_test) {
-    import util.msg_service;
-    int main() {
-        Vector3[8] p;
-        p[0] = Vector3(0.0, 0.1, 0.0);
-        p[1] = Vector3(1.0, 0.1, 0.0);
-        p[2] = Vector3(1.0, 1.1, 0.0);
-        p[3] = Vector3(0.0, 1.1, 0.0);
+unittest {
+    Vector3[8] p;
+    p[0] = Vector3(0.0, 0.1, 0.0);
+    p[1] = Vector3(1.0, 0.1, 0.0);
+    p[2] = Vector3(1.0, 1.1, 0.0);
+    p[3] = Vector3(0.0, 1.1, 0.0);
 
-        p[4] = Vector3(0.0, 0.1, 3.0);
-        p[5] = Vector3(1.0, 0.1, 3.0);
-        p[6] = Vector3(1.0, 1.1, 3.0);
-        p[7] = Vector3(0.0, 1.1, 3.0);
+    p[4] = Vector3(0.0, 0.1, 3.0);
+    p[5] = Vector3(1.0, 0.1, 3.0);
+    p[6] = Vector3(1.0, 1.1, 3.0);
+    p[7] = Vector3(0.0, 1.1, 3.0);
 
-        ParametricSurface my_face_bottom = new CoonsPatch(p[0], p[1], p[2], p[3]);
-        ParametricSurface my_face_top = new CoonsPatch(p[4], p[5], p[6], p[7]);
-        auto my_box = new TwoSurfaceVolume(my_face_bottom, my_face_top, "t");
-        auto d = my_box(0.1, 0.1, 0.5);
-        assert(approxEqualVectors(d, Vector3(0.1, 0.2, 1.5)), failedUnitTest());
-        return 0;
-    }
-} // twosurfacevolume_test
+    ParametricSurface my_face_bottom = new CoonsPatch(p[0], p[1], p[2], p[3]);
+    ParametricSurface my_face_top = new CoonsPatch(p[4], p[5], p[6], p[7]);
+    auto my_box = new TwoSurfaceVolume(my_face_bottom, my_face_top, "t");
+    auto d = my_box(0.1, 0.1, 0.5);
+    assert(approxEqualVectors(d, Vector3(0.1, 0.2, 1.5)));
+}

@@ -578,47 +578,46 @@ private:
     } // end callCEA()
 } // end class CEAGgas
 
-version(cea_gas_test) {
-    import std.stdio;
-    import util.msg_service;
+unittest {
+    import std.file;
 
-    int main() {
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/cea-air5species-gas-model.lua");
-        auto gm = new CEAGas(L);
-        lua_close(L);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        auto gd = GasState(1, 0, true);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.massf[0] = 1.0;
-        gm.update_thermo_from_pT(gd);
-        assert(isClose(gm.R(gd), 288.198, 0.01), failedUnitTest());
-        assert(gm.n_modes == 0, failedUnitTest());
-        assert(gm.n_species == 1, failedUnitTest());
-        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.rho, 1.1566, 1.0e-4), failedUnitTest());
-        assert(isClose(gd.u, -84587.0, 0.1), failedUnitTest());
-        assert(isClose(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5), failedUnitTest());
-        assert(isClose(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5), failedUnitTest());
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "cea-air5species-gas-model.lua");
+    auto gm = new CEAGas(L);
+    lua_close(L);
 
-        gm.update_sound_speed(gd);
-        assert(isClose(gd.a, 347.7, 0.1), failedUnitTest());
+    auto gd = GasState(1, 0, true);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.massf[0] = 1.0;
+    gm.update_thermo_from_pT(gd);
+    assert(isClose(gm.R(gd), 288.198, 0.01));
+    assert(gm.n_modes == 0);
+    assert(gm.n_species == 1);
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 300.0, 1.0e-6));
+    assert(isClose(gd.massf[0], 1.0, 1.0e-6));
+    assert(isClose(gd.rho, 1.1566, 1.0e-4));
+    assert(isClose(gd.u, -84_587.0, 0.1));
+    assert(isClose(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5));
+    assert(isClose(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5));
 
-        gm.update_trans_coeffs(gd);
-        assert(isClose(gd.mu, 1.87e-05, 0.01), failedUnitTest());
-        assert(isClose(gd.k, 0.02647, 1.0e-5), failedUnitTest());
+    gm.update_sound_speed(gd);
+    assert(isClose(gd.a, 347.7, 0.1));
 
-        gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
-        assert(isClose(gd.p, 1.0e5, 1.0), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 0.1), failedUnitTest());
+    gm.update_trans_coeffs(gd);
+    assert(isClose(gd.mu, 1.87e-05, 0.01));
+    assert(isClose(gd.k, 0.02647, 1.0e-5));
 
-        gm.update_thermo_from_rhou(gd);
-        assert(isClose(gd.p, 1.0e5, 1.0), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 0.1), failedUnitTest());
+    gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
+    assert(isClose(gd.p, 1.0e5, 1.0));
+    assert(isClose(gd.T, 300.0, 0.1));
 
-        return 0;
-    }
+    gm.update_thermo_from_rhou(gd);
+    assert(isClose(gd.p, 1.0e5, 1.0));
+    assert(isClose(gd.T, 300.0, 0.1));
 }
