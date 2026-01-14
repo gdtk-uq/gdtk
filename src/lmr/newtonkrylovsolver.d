@@ -3360,6 +3360,9 @@ void evalResidual(int ftl, size_t currentPhase, int stepsIntoCurrentPhase)
             }
             evalResidualWorker(ftl);
             GlobalConfig.flux_calculator = fcSave;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.myConfig.flux_calculator = GlobalConfig.flux_calculator;
+            }
             if (GlobalConfig.flux_calculator == FluxCalculator.asf) GlobalConfig.high_order_flux_calculator = true;
         }
     }
