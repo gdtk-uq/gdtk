@@ -14,17 +14,6 @@ $(info PLATFORM=$(PLATFORM))
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
 
-TEST_PROGRAMS := chemistry_update_test \
-		equilibrium_update_test \
-		rate_constant_test \
-		reaction_test \
-		reaction_mechanism_test \
-		two_temperature_argon_kinetics_test \
-		vib_specific_co_kinetics_test \
-		vib_specific_co_mixture_kinetics_test \
-		two_temperature_argon_with_ideal_gas_test \
-		two_temperature_gasgiant_kinetics_test
-
 NTYPES_DIR := ../ntypes
 NTYPES_FILES := $(NTYPES_DIR)/complex.d
 
@@ -71,12 +60,21 @@ build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
 	cp mechanism.lua lex_elems.lua $(BUILD_DIR)/lib/
 	cp prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics; chmod +x $(BUILD_DIR)/bin/prep-kinetics
 
-test: $(TEST_PROGRAMS)
-	tclsh kinetics-package-test.tcl
+test: test_runner
+	@echo "Running real tests"
+	- exec ./test_runner --module kinetics
+
+# We need to pull the test_runner.d to the front to ensure no linker errors
+test_runner: $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
+		$(NTYPES_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GAS_FILES) \
+		$(UTIL_FILES) ../util/test_runner.d
+	@echo "Compiling test runner..."
+	$(DMD) -of$@ -debug -g -w -dip1008 -unittest $(DLINKFLAGS) \
+		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 clean:
 	- rm -f *.o *.mod *.obj
-	- rm -f $(TEST_PROGRAMS)
+	- rm -f test_runner
 	- rm -f two_temperature_argon_kinetics_test_results.data
 	- rm -rf $(BUILD_DIR)/*
 	- cd $(LUA_DIR); make clean
@@ -88,82 +86,3 @@ $(LIBLUA):
 $(LIBEQC):
 	cd $(EQC_DIR); make
 
-chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-equilibrium_update_test: $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-vib_specific_co_kinetics_test: $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-vib_specific_co_mixture_kinetics_test: $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-two_temperature_argon_with_ideal_gas_test:  $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
-
-two_temperature_gasgiant_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-	$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-	$(LIBEQC) $(LIBLUA)
-	ldmd2 -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(EQC_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_LUA_FILES) $(GAS_LUA_FILES) \
-		$(LIBEQC) $(LIBLUA) $(DLINKFLAGS)
