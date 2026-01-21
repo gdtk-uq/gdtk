@@ -7,8 +7,28 @@ db.C2.theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Capitelli et al (2005), Table 15. omega_e in ground state converted to K'
 }
+db.C2.theta_D = {
+   value = 72063.94,
+   units = 'K',
+   description = 'characteristic dissociation temperature',
+   reference = 'Capitelli et al (2005), Table 4. E_diss converted to K'
+}
 db.C2.atomicConstituents = {C=2,}
 db.C2.charge = 0
+db.C2.electronic_levels = {
+   g = {
+      value = {1, 6, 3, 2, 3, 6},
+      units = "NA",
+      description = "degeneracy of electronic levels",
+      reference = "Table 4 Capitelli et al (2005)"
+   },
+   Te = {
+      value = {0.0, 716.24, 6434.27, 8391.0, 13312.0, 20022.5},
+      units = "cm^(-1)",
+      description = "electronic excitation energy",
+      reference = 'Table 4 Capitelli et al (2005)'
+   }
+}
 db.C2.M = { 
    value = 24.0214000e-3,
    units = 'kg/mol',
