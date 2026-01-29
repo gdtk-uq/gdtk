@@ -1586,6 +1586,7 @@ public:
                 if (flowJacobian.spatial_order >= 2) {
                     foreach(cell; pcell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
                 }
+                estimate_turbulence_viscosity(pcell.cell_list);
             } else {
                 // TODO: for structured grids employing a real-valued low-order numerical Jacobian as
                 // the precondition matrix the above code doesn't completely clean up the effect of the
@@ -1682,6 +1683,7 @@ public:
                                 foreach(cell; ghost_cell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
                             }
                             ghost_cell.fs.clear_imaginary_components();
+                            estimate_turbulence_viscosity(pcell.cell_list);
                         } else {
                             // TODO: for structured grids employing a real-valued low-order numerical Jacobian as
                             // the precondition matrix the above code doesn't completely clean up the effect of the
