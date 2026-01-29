@@ -12,7 +12,7 @@ db.CO.theta_D = {
    value = 128717.117,
    units = 'K',
    desciption = 'characteristic dissociation temperature',
-   reference = 'Capitellai et al (2005), Table 11. E_diss converted to K'
+   reference = 'Capitelli et al (2005), Table 11. E_diss converted to K'
 }
 db.CO.electronic_levels = {
    g = {
@@ -52,6 +52,18 @@ db.CO.epsilon = {
    units = 'K',
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CO.SSH_mass_factor = {
+   value = 0.96025,
+   units = "unitless",
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'computation in description'
+}
+db.CO.r_eq = {
+   value = 1.1283e-10,
+   units = 'm',
+   description = 'Equilibrium intermolecular distance',
+   reference = 'Capitelli 2005, Table 11, ground state r_e'
 }
 db.CO.Lewis = {
    value = 1.171

@@ -53,6 +53,18 @@ db.CN.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.CN.SSH_mass_factor = {
+   value = 0.9883,
+   units = 'unitless',
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'computation in description'
+}
+db.CN.r_eq = {
+   value = 1.1718e-10,
+   units = 'm',
+   description = 'Equilibrium intermolecular distance',
+   reference = 'Capitelli 2005, Table 8. r_e in ground state'
+}
 db.CN.ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {200.0, 1000.0, 6000.0, 20000.0},

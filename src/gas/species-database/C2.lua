@@ -53,6 +53,18 @@ db.C2.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'Svehla (1962) NASA Technical Report R-132'
 }
+db.C2.SSH_mass_factor = {
+   value = 1.0,
+   units = 'unitless',
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'computation in description'
+}
+db.C2.r_eq = {
+   value = 1.2425e-10,
+   units = 'm',
+   description = 'Equilibrium intermolecular distance',
+   reference = 'Capitelli 2005, Table 4. r_e in ground state'
+}
 db.C2.ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {200.0, 1000.0, 6000.0,20000.0},
