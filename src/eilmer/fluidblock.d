@@ -1696,6 +1696,7 @@ public:
                 foreach (cid; celldata.halo_cell_ids[pid]) {
                     celldata.gradients[cid].copy_values_from(celldata.saved_gradients[cid]);
                 }
+                estimate_turbulence_viscosity(celldata.halo_cell_ids[pid]);
             }
         }
     } // end evaluate_cell_contribution_to_jacobian()
@@ -1818,6 +1819,7 @@ public:
                         foreach (cid; celldata.halo_cell_ids[ghost_cell_id]) {
                             celldata.gradients[cid].copy_values_from(celldata.saved_gradients[cid]);
                         }
+                        estimate_turbulence_viscosity(celldata.halo_cell_ids[ghost_cell_id]);
                     }
                 }
             } // foreach ( bi, bface; bndary.faces)
