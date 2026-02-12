@@ -3326,9 +3326,15 @@ void evalResidual(int ftl, size_t currentPhase, int stepsIntoCurrentPhase)
         // Evaluate residual with blending flux calculator
         if (GlobalConfig.flux_calculator == FluxCalculator.asf) GlobalConfig.high_order_flux_calculator = false;
         GlobalConfig.flux_calculator = nkCfg.blendingFluxCalculator;
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.myConfig.flux_calculator = GlobalConfig.flux_calculator;
+        }
         evalResidualWorker(ftl);
         // Next, evaluate residual with main flux calculator
         GlobalConfig.flux_calculator = fcSave;
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.myConfig.flux_calculator = GlobalConfig.flux_calculator;
+        }
         if (GlobalConfig.flux_calculator == FluxCalculator.asf) GlobalConfig.high_order_flux_calculator = true;
         evalResidualWorker(to!int(lastPos));
         // And blend...
@@ -3349,8 +3355,14 @@ void evalResidual(int ftl, size_t currentPhase, int stepsIntoCurrentPhase)
             auto fcSave = GlobalConfig.flux_calculator;
             if (GlobalConfig.flux_calculator == FluxCalculator.asf) GlobalConfig.high_order_flux_calculator = false;
             GlobalConfig.flux_calculator = nkCfg.blendingFluxCalculator;
+			foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.myConfig.flux_calculator = GlobalConfig.flux_calculator;
+            }
             evalResidualWorker(ftl);
             GlobalConfig.flux_calculator = fcSave;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.myConfig.flux_calculator = GlobalConfig.flux_calculator;
+            }
             if (GlobalConfig.flux_calculator == FluxCalculator.asf) GlobalConfig.high_order_flux_calculator = true;
         }
     }
