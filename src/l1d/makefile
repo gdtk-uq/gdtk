@@ -2,6 +2,7 @@
 # PJ 2020-04-05
 
 DMD ?= ldc2
+PYTHON ?= python3
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
@@ -19,6 +20,8 @@ PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
+
+GDTK_PY_DIR := ../gdtk-py
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -157,6 +160,7 @@ clean:
 	- rm *.o
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
+	- rm -rf __pycache__ *.egg-info
 	- rm main_with_rev_string.d
 	- cd $(LUA_DIR); make clean;
 	- cd $(GAS_DIR); make clean; rm libgas.a
@@ -192,13 +196,31 @@ l1d4: main.d $(L1D_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-l1d4-prep: l1d4-prep.py
-	cp l1d4-prep.py l1d4-prep
-	chmod +x l1d4-prep
+# Priority:
+#   1. VIRTUAL_ENV - Standard set by python virtual-environments
+#   2. CONDA_PREFIX - Set by (ana)conda environments
+#   3. INSTALL_DIR/.venv - Create our own if none already exist
+CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
+VIRTUAL_ENV ?= $(CONDA_PREFIX)
 
-l1d4-xt-viewer: xt-viewer.py
-	cp xt-viewer.py l1d4-xt-viewer
-	chmod +x l1d4-xt-viewer
+# Override if using uv with `PIP='uv pip'`
+PIP ?= $(VIRTUAL_ENV)/bin/pip
+PYTHON ?= python3
+
+# If it doesn't already exist
+$(VIRTUAL_ENV):
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
+	$(info Updating pip)
+	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
+
+l1d4-prep l1d4-xt-viewer: $(VIRTUAL_ENV)
+	make -C $(GDTK_PY_DIR) build
+	$(info Installing python tools)
+	$(PIP) install  .
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas

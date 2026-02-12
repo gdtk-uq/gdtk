@@ -18,6 +18,7 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo
+PY_PROGRAMS := build-uniform-lut
 
 TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_test \
 	cea_thermo_curves_test cea_viscosity_test composite_gas_test \
@@ -59,6 +60,8 @@ include $(KINETICS_DIR)/kinetics_files.mk
 
 GASDYN_DIR := ../gasdyn
 include $(GASDYN_DIR)/gasdyn_files.mk
+
+GDTK_PY_DIR := ../gdtk-py
 
 GEOM_DIR := ../geom
 include $(GEOM_DIR)/geom_files.mk
@@ -161,15 +164,14 @@ build-prep-gas: prep_gas.lua species-database/species-database.lua \
 
 # The following are not required by the Eilmer flow solver but
 # they are useful for building stand-alone flow-analysis programs.
-build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBEQC)
+build-libgas: libgas.so gas-calc build-uniform-lut $(LIBEQC)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
-	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
 	cp ../../examples/estcn/estcn.py $(BUILD_DIR)/bin/estcn; chmod +x $(BUILD_DIR)/bin/estcn
 	- mkdir -p $(BUILD_DIR)/lib
-	cp libgas.so $(BUILD_DIR)/lib/
-	cp $(EQC_DIR)/libeqc.so $(BUILD_DIR)/lib/
 	cp -r ../lib/* $(BUILD_DIR)/lib/
+	make -C $(GDTK_PY_DIR) build
+	cp -r $(GDTK_PY_DIR)/gdtk $(BUILD_DIR)/lib/
 
 install: build-prep-gas build-libgas
 	- mkdir -p $(INSTALL_DIR)
@@ -186,7 +188,7 @@ clean:
 	- rm -f *.o *.so *.a *.obj *.lib
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
-	- rm -rf __pycache__
+	- rm -rf __pycache__/ *.egg-info/
 	- rm -f ${DEMO_PROGRAMS}
 	- rm -f ${TEST_PROGRAMS}
 	- rm -f gas-calc
@@ -239,6 +241,32 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES)
 		$(UTIL_FILES) $(EQC_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) $(KINETICS_LUA_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+
+# Priority:
+#   1. VIRTUAL_ENV - Standard set by python virtual-environments
+#   2. CONDA_PREFIX - Set by (ana)conda environments
+#   3. INSTALL_DIR/.venv - Create our own if none already exist
+CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
+VIRTUAL_ENV ?= $(CONDA_PREFIX)
+
+# Override if using uv with `PIP='uv pip'`
+PIP ?= $(VIRTUAL_ENV)/bin/pip
+PYTHON ?= python3
+
+# If it doesn't already exist
+$(VIRTUAL_ENV):
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
+	$(info Updating pip)
+	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
+
+$(PY_PROGRAMS): $(VIRTUAL_ENV)
+	make -C $(GDTK_PY_DIR) build
+	$(info Installing python tools)
+	$(PIP) install .
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)

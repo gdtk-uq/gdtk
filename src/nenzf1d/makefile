@@ -169,6 +169,8 @@ clean:
 	- rm *.o *.so
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
+	- rm -rf __pycache__/
+	- rm -rf build/ *.egg-info/
 	- rm main_with_rev_string.d
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
@@ -185,6 +187,14 @@ $(LIBGASF):
 
 $(LIBEQC):
 	cd $(EQC_DIR); make
+
+PYTHON ?= python3
+PIP ?= $(PYTHON) -m pip
+
+python-module: libnenzf1d.so
+	- mkdir -p $(INSTALL_DIR)/share/python-packages
+	$(PIP) wheel --no-deps -e . -w $(INSTALL_DIR)/share/python-packages
+	$(info Created python module in $(INSTALL_DIR)/share/python-packages)
 
 nenzf1d: main.d $(NENZF1D_FILES) \
 	$(GEOM_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
