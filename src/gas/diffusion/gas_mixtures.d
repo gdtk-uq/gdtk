@@ -76,31 +76,33 @@ private:
 }
 
 
-version(gas_mixtures_test) {
-    int main() {
-        import util.msg_service;
+unittest {
+    import std.file;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
-        string[] speciesNames;
-        getArrayOfStrings(L, "species", speciesNames);
-        auto tp = new GasMixtureTransProps(L, speciesNames);
-        lua_close(L);
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        auto gs = GasState(5, 0);
-        gs.p = 1.0e6;
-        gs.T = 4000.0;
-        gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-        tp.updateTransProps(gs);
-        assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6), failedUnitTest());
+    auto L = init_lua_State();
+    GasModel gm = new CompositeGas("therm-perf-5-species-air.lua");
+    doLuaFile(L, "therm-perf-5-species-air.lua");
+    string[] speciesNames;
+    getArrayOfStrings(L, "species", speciesNames);
+    auto tp = new GasMixtureTransProps(L, speciesNames);
+    lua_close(L);
 
-        return 0;
-    }
+    auto gs = GasState(5, 0);
+    gs.p = 1.0e6;
+    gs.T = 4000.0;
+    gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
+    tp.updateTransProps(gs, gm);
+    assert(approxEqualNumbers(to!number(0.00012591), gs.mu, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.2448263), gs.k, 1.0e-6));
+
 }

@@ -766,27 +766,7 @@ private:
 } // end class VinokurGeomHybridFunction
 // end Vinokur function playground
 
-version(univariatefunctions_test) {
-    import util.msg_service;
-    int main() {
-        auto cf = new RobertsFunction(false, true, 1.1);
-        assert(isClose(cf(0.1), 0.166167, 1.0e-4), failedUnitTest());
-        assert(isClose(cf(0.9), 0.96657, 1.0e-4), failedUnitTest());
-        auto cf2 = new LinearFunction(1.0, 0.0);
-        assert(isClose(cf2(0.1), 0.9, 1.0e-4), failedUnitTest());
-        assert(isClose(cf2(0.9), 0.1, 1.0e-4), failedUnitTest());
-        auto cf3 = new GeometricFunction(0.005, 1.1, 40, false);
-        assert(isClose(cf3(0.1), 0.0225106, 1.0e-4), failedUnitTest());
-        assert(isClose(cf3(0.9), 0.85256413, 1.0e-4), failedUnitTest());
-        test_gaussian_function_curvature();
-        auto cf4 = new GaussianFunction(0.5, 0.1, 0.2);
-        assert(isClose(cf4(0.1), 0.1250750, 1.0e-4), failedUnitTest());
-        assert(isClose(cf4(0.9), 0.8749249, 1.0e-4), failedUnitTest());
-        auto cf5 = new GaussGeomHybridFunction(0.01, 1.2, 40, 0.8, 0.1, 0.2, false);
-        assert(isClose(cf5(0.1), 0.0518068, 1.0e-4), failedUnitTest());
-        assert(isClose(cf5(0.9), 0.8984721, 1.0e-4), failedUnitTest());
-        return 0;
-    }
+unittest {
 
     double bisect_iterate(alias f)(double p0, double p1) {
         int count = 0;
@@ -826,8 +806,28 @@ version(univariatefunctions_test) {
             }
             slope = (cf(test_point+h) - cf(test_point-h)) / (2*h);
             curvature = (cf(test_point+h) - 2*cf(test_point) + cf(test_point-h)) / (h*h);
-            assert(slope >= 0.0, failedUnitTest());
-            assert(fabs(curvature) <= 1.0e-3, failedUnitTest());
+            assert(slope >= 0.0);
+            assert(fabs(curvature) <= 1.0e-3);
         }
     }
-} // end univariatefunctions_test
+
+    auto cf = new RobertsFunction(false, true, 1.1);
+    assert(isClose(cf(0.1), 0.166167, 1.0e-4));
+    assert(isClose(cf(0.9), 0.96657, 1.0e-4));
+
+    auto cf2 = new LinearFunction(1.0, 0.0);
+    assert(isClose(cf2(0.1), 0.9, 1.0e-4));
+    assert(isClose(cf2(0.9), 0.1, 1.0e-4));
+
+    auto cf3 = new GeometricFunction(0.005, 1.1, 40, false);
+    assert(isClose(cf3(0.1), 0.0225106, 1.0e-4));
+    assert(isClose(cf3(0.9), 0.85256413, 1.0e-4));
+
+    test_gaussian_function_curvature();
+    auto cf4 = new GaussianFunction(0.5, 0.1, 0.2);
+    assert(isClose(cf4(0.1), 0.1250750, 1.0e-4));
+    assert(isClose(cf4(0.9), 0.8749249, 1.0e-4));
+    auto cf5 = new GaussGeomHybridFunction(0.01, 1.2, 40, 0.8, 0.1, 0.2, false);
+    assert(isClose(cf5(0.1), 0.0518068, 1.0e-4));
+    assert(isClose(cf5(0.9), 0.8984721, 1.0e-4));
+}

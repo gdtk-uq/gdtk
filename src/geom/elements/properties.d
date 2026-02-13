@@ -906,258 +906,263 @@ bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
     return true;
 } // end inside_hexahedron()
 
+unittest {
+    Vector3 bb0 = Vector3(1.0, 1.0, 1.0);
+    Vector3 bb1 = Vector3(2.0, 2.0, 2.0);
+    Vector3 p = to!number(0.5) * (bb0 + bb1);
+    assert(inside_bounding_box(p, bb0, bb1, 3));
+    p += Vector3(0.0, 0.0, 1.0);
+    assert(!inside_bounding_box(p, bb0, bb1, 3));
+    assert(inside_bounding_box(p, bb0, bb1, 2));
 
-version(properties_test) {
-    import util.msg_service;
-    int main() {
-        Vector3 bb0 = Vector3(1.0, 1.0, 1.0);
-        Vector3 bb1 = Vector3(2.0, 2.0, 2.0);
-        Vector3 p = to!number(0.5)*(bb0 + bb1);
-        assert(inside_bounding_box(p, bb0, bb1, 3), failedUnitTest());
-        p += Vector3(0.0, 0.0, 1.0);
-        assert(!inside_bounding_box(p, bb0, bb1, 3), failedUnitTest());
-        assert(inside_bounding_box(p, bb0, bb1, 2), failedUnitTest());
+    Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
+    Vector3 b = Vector3(1.0, 1.0, 0.0);
+    Vector3 c = Vector3(0.5, 0.0, 0.0);
+    Vector3 d = Vector3(0.65, 0.0, 0.0);
+    assert(inside_triangle(d, a, b, c) > 0);
+    Vector3 e = Vector3(0.65, -0.1, 0.0);
+    assert(!inside_triangle(e, a, b, c));
 
-        Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
-        Vector3 b = Vector3(1.0, 1.0, 0.0);
-        Vector3 c = Vector3(0.5, 0.0, 0.0);
-        Vector3 d = Vector3(0.65, 0.0, 0.0);
-        assert(inside_triangle(d, a, b, c) > 0, failedUnitTest());
-        Vector3 e = Vector3(0.65, -0.1, 0.0);
-        assert(!inside_triangle(e, a, b, c), failedUnitTest());
+    auto p0 = Vector3(0.0, 0.0);
+    auto p1 = Vector3(1.0, -0.1);
+    auto p2 = Vector3(1.0, 1.0);
+    auto p3 = Vector3(0.0, 1.0);
+    Vector3[] poly = [p0, p1, p2, p3];
+    assert(inside_xy_polygon(poly, d));
+    assert(!inside_xy_polygon(poly, e));
+    assert(inside_xy_triangle(p0, p1, p2, d));
+    assert(!inside_xy_triangle(p0, p1, p2, e));
+    assert(inside_xy_quad(p0, p1, p2, p3, d));
+    assert(winding_number(poly, d) != 0);
+    assert(!inside_xy_quad(p0, p1, p2, p3, e));
+    assert(winding_number(poly, e) == 0);
 
-        auto p0 = Vector3(0.0, 0.0);
-        auto p1 = Vector3(1.0, -0.1);
-        auto p2 = Vector3(1.0, 1.0);
-        auto p3 = Vector3(0.0, 1.0);
-        Vector3[] poly = [p0, p1, p2, p3];
-        assert(inside_xy_polygon(poly, d), failedUnitTest());
-        assert(!inside_xy_polygon(poly, e), failedUnitTest());
-        assert(inside_xy_triangle(p0, p1, p2, d), failedUnitTest());
-        assert(!inside_xy_triangle(p0, p1, p2, e), failedUnitTest());
-        assert(inside_xy_quad(p0, p1, p2, p3, d), failedUnitTest());
-        assert(winding_number(poly, d) != 0, failedUnitTest());
-        assert(!inside_xy_quad(p0, p1, p2, p3, e), failedUnitTest());
-        assert(winding_number(poly, e) == 0, failedUnitTest());
+    // Set up a simple triangle for which we can easily compute
+    // the properties by hand.
+    //      p2
+    //    / |
+    //   /  |
+    // p0---p1
+    double alpha = 1.0;
+    p0 = Vector3(0.0, 0.0, 1.0);
+    p1 = Vector3(alpha, 0.0, 1.0);
+    p2 = Vector3(alpha, alpha, 1.0);
+    Vector3 centroid, n, t1, t2;
+    number area;
+    triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
+    assert(approxEqualNumbers(area, to!number(0.5)));
+    assert(approxEqualNumbers(xyplane_area(p0, p1, p2), to!number(0.5)));
+    assert(approxEqualVectors(centroid, Vector3(2.0 / 3, 1.0 / 3, 1.0)));
+    assert(approxEqualVectors(n, Vector3(0.0, 0.0, 1.0)));
+    assert(approxEqualVectors(t1, Vector3(1.0, 0.0, 0.0)));
+    assert(approxEqualVectors(t2, Vector3(0.0, 1.0, 0.0)));
 
-        // Set up a simple triangle for which we can easily compute
-        // the properties by hand.
-        //      p2
-        //    / |
-        //   /  |
-        // p0---p1
-        double alpha = 1.0;
-        p0 = Vector3(0.0, 0.0, 1.0);
-        p1 = Vector3(alpha, 0.0, 1.0);
-        p2 = Vector3(alpha, alpha, 1.0);
-        Vector3 centroid, n, t1, t2;
-        number area;
-        triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
-        assert(approxEqualNumbers(area, to!number(0.5)), failedUnitTest());
-        assert(approxEqualNumbers(xyplane_area(p0, p1, p2), to!number(0.5)), failedUnitTest());
-        assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), failedUnitTest());
-        assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
-        assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
-        assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
-
-        version(complex_numbers) {
-            // triangle properties - complex derivative test
-            double h = 1.0e-20;
-            number ih = complex(0,h);
-            number zero = 0.0;
-            number one = 1.0;
-            auto p0_dash = Vector3(zero, zero, one);
-            auto p1_dash = Vector3(alpha+ih, zero, one);
-            auto p2_dash = Vector3(alpha+ih, alpha+ih, one);
-            Vector3 centroid_dash, n_dash, t1_dash, t2_dash;
-            number area_dash;
-            triangle_properties(p0_dash, p1_dash, p2_dash, centroid_dash,
-                                n_dash, t1_dash, t2_dash, area_dash);
-            double darea_da = area_dash.im / h;
-            Vector3 dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            Vector3 dn_da = Vector3(n_dash.x.im/h, n_dash.y.im/h, n_dash.z.im/h);
-            Vector3 dt1_da = Vector3(t1_dash.x.im/h, t1_dash.y.im/h, t1_dash.z.im/h);
-            Vector3 dt2_da = Vector3(t2_dash.x.im/h, t2_dash.y.im/h, t2_dash.z.im/h);
-            assert(approxEqualVectors(dcentroid_da, Vector3(2.0/3.0*alpha, 1.0/3.0*alpha, 0.0)),
-                   failedUnitTest());
-            // Because a change in alpha does not change the orientation of the triangle,
-            // we expect the unit vectors to have zero sensitivity.
-            // [TODO] It would probably be good to set up another case in which alpha
-            // does change the orientation of the triangle.
-            assert(approxEqualVectors(dn_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
-            assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
-            assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
-            // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
-            assert(isClose(darea_da, alpha), failedUnitTest());
-        }
-
-        // Set up a simple quadrilateral for which we can easily compute
-        // the properties by hand.
-        // p3---p2
-        // |    |
-        // |    |
-        // p0---p1
-        // For the quadrilateral, we reuse the triangle points but need a fourth point.
-        p3 = Vector3(0.0, alpha, 1.0);
-        quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
-        assert(approxEqualNumbers(area, to!number(1.0)), failedUnitTest());
-        assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0)), failedUnitTest());
-        assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
-        assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
-        assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
-
-        version(complex_numbers) {
-            // quad properties - complex derivative test
-            auto p3_dash = Vector3(zero, alpha+ih, one);
-            quad_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash,
-                            n_dash, t1_dash, t2_dash, area_dash);
-            darea_da = area_dash.im / h;
-            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            dn_da = Vector3(n_dash.x.im/h, n_dash.y.im/h, n_dash.z.im/h);
-            dt1_da = Vector3(t1_dash.x.im/h, t1_dash.y.im/h, t1_dash.z.im/h);
-            dt2_da = Vector3(t2_dash.x.im/h, t2_dash.y.im/h, t2_dash.z.im/h);
-            assert(approxEqualVectors(dcentroid_da, Vector3(0.5*alpha, 0.5*alpha, 0.0)),
-                   failedUnitTest());
-            // Because a change in alpha does not change the orientation of the triangle,
-            // we expect the unit vectors to have zero sensitivity.
-            // [TODO] It would probably be good to set up another case in which alpha
-            // does change the orientation of the triangle.
-            assert(approxEqualVectors(dn_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
-            assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
-            assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
-            // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
-            assert(isClose(darea_da, 2.0*alpha), failedUnitTest());
-        }
-
-        // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
-        p0 = Vector3(0, 0, 0);
-        p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
-        p2 = Vector3(0.0, 1.0, 0.0);
-        double dx = 0.5 * tan(radians(30));
-        double dL = cos(radians(30));
-        double dz = sqrt(dL*dL - dx*dx);
-        p3 = Vector3(dx, 0.5, dz);
-        number volume;
-        tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
-        assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), failedUnitTest());
-        assert(approxEqualNumbers(volume, to!number(cos(radians(30))*0.5*dz/3)), failedUnitTest());
-
-        // tetrahedron properties - complex derivative test
-        version(complex_numbers) {
-            number volume_dash;
-            // Build regular tetrahedron with equal edge lengths (edge length equal to alpha).
-            p0_dash = Vector3(zero, zero, zero);
-            p1_dash = Vector3(alpha+ih, zero, zero);
-            p2_dash = Vector3((alpha+ih)*cos(radians(60)), (alpha+ih)*sin(radians(60)), zero);
-            p3_dash = Vector3(0.5*(alpha+ih), 0.5*(alpha+ih)*tan(to!number(radians(30))), (alpha+ih)*(sqrt(6.0)/3.0));
-            tetrahedron_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash, volume_dash);
-            double dvol_da = volume_dash.im/h;
-            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(isClose(dvol_da, alpha^^2/(2.0*sqrt(2.0))), failedUnitTest());
-            assert(approxEqualVectors(dcentroid_da, Vector3(3.0/8.0+0.25*cos(radians(60)),
-                                                            1.0/4.0*sin(radians(60))+1.0/8.0*tan(radians(30)),
-                                                            sqrt(6.0)/12.0)),
-                   failedUnitTest());
-        }
-
-        // Build a wedge with the same equilateral-triangle base.
-        p0 = Vector3(0, 0, 0);
-        p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
-        p2 = Vector3(0.0, 1.0, 0.0);
-        Vector3 incz = Vector3(0, 0, -1.0);
-        p3 = p0 + incz;
-        Vector3 p4 = p1 + incz;
-        Vector3 p5 = p2 + incz;
-        wedge_properties(p0, p1, p2, p3, p4, p5, true, centroid, volume);
-        assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), failedUnitTest());
-        assert(approxEqualNumbers(volume, to!number(cos(radians(30))*0.5*1.0)), failedUnitTest());
-
-        // wedge properties - complex derivative test
-        version(complex_numbers) {
-            // Build a wedge with an equilateral-triangle base (edge length equal to alpha).
-            p0_dash = Vector3(zero, zero, zero);
-            p1_dash = Vector3(alpha+ih, zero, zero);
-            p2_dash = Vector3((alpha+ih)*cos(radians(60)), (alpha+ih)*sin(radians(60)), zero);
-            p3_dash = p0_dash + incz;
-            auto p4_dash = p1_dash + incz;
-            auto p5_dash = p2_dash + incz;
-            wedge_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, true, centroid_dash, volume_dash);
-            dvol_da = volume_dash.im/h;
-            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(isClose(dvol_da, alpha*sin(radians(60))), failedUnitTest());
-            assert(approxEqualVectors(dcentroid_da, Vector3((1.0/3.0)*(1.0+cos(radians(60))), (1.0/3.0)*sin(radians(60)), 0.0)), failedUnitTest());
-        }
-
-        // Pyramid
-        p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
-        p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
-        p4 = Vector3(0.5,0.5,1); // peak
-        pyramid_properties(p0, p1, p2, p3, p4, true, centroid, volume);
-        assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0/4)), failedUnitTest());
-        assert(approxEqualNumbers(volume, to!number(1.0/3)), failedUnitTest());
-
-        // pyramid properties - complex derivative test
-        version(complex_numbers) {
-            p0_dash = Vector3(zero,zero,zero); p1_dash = Vector3(alpha+ih,zero,zero);
-            p2_dash = Vector3(alpha+ih,alpha+ih,zero); p3_dash = Vector3(zero,alpha+ih,zero);
-            p4_dash = Vector3(0.5,0.5,1); // peak
-            pyramid_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, true, centroid_dash, volume_dash);
-            dvol_da = volume_dash.im/h;
-            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(isClose(dvol_da, 2.0*alpha/3.0), failedUnitTest());
-            // [TODO] centroid sensitivity
-        }
-
-        // Simple cube for the hex cell.
-        p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
-        p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
-        p4 = Vector3(0,0,1); p5 = Vector3(1,0,1);
-        Vector3 p6 = Vector3(1,1,1); Vector3 p7 = Vector3(0,1,1);
-        number iLen, jLen, kLen;
-        hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, true, centroid, volume,
-                            iLen, jLen, kLen);
-        assert(approxEqualVectors(centroid, Vector3(0.5,0.5,0.5)), failedUnitTest());
-        assert(approxEqualNumbers(volume, to!number(1.0)), failedUnitTest());
-
-        // Simple cube for the hex cell properties - complex derivative test
-        version(complex_numbers) {
-            p0_dash = Vector3(0,0,0); p1_dash = Vector3(alpha+ih,zero,zero);
-            p2_dash = Vector3(alpha+ih,alpha+ih,zero); p3_dash = Vector3(zero,alpha+ih,zero);
-            p4_dash = Vector3(zero,zero,alpha+ih); p5_dash = Vector3(alpha+ih,zero,alpha+ih);
-            auto p6_dash = Vector3(alpha+ih,alpha+ih,alpha+ih); auto p7_dash = Vector3(zero,alpha+ih,alpha+ih);
-            hex_cell_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, p6_dash, p7_dash,
-                                true, centroid_dash, volume_dash, iLen, jLen, kLen);
-            dvol_da = volume_dash.im/h;
-            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(isClose(dvol_da, 3.0*alpha^^2), failedUnitTest());
-            assert(approxEqualVectors(dcentroid_da, Vector3(0.5, 0.5, 0.5)), failedUnitTest());
-        }
-
-        d = Vector3(0.65, 0.0, 0.0);
-        e = Vector3(0.65, -0.1, 0.0);
-
-        p0 = Vector3(0.0, 0.0, 0.0);
-        p1 = Vector3(1.0, -0.1, 0.0);
-        p2 = Vector3(1.0, 1.0, 0.0);
-        p3 = Vector3(0.0, 1.0, 0.0);
-        p4 = Vector3(0.0, 0.0, 1.0);
-        p5 = Vector3(1.0, -0.1, 1.0);
-        p6 = Vector3(1.0, 1.0, 1.0);
-        p7 = Vector3(0.0, 1.0, 1.0);
-        assert(inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, d), failedUnitTest());
-        assert(!inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, e), failedUnitTest());
-
-        auto f = Vector3(0.1, 0.0, 0.5);
-        assert(inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
-        f = Vector3(0.0, 0.2, 0.5);
-        assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
-        f = Vector3(0.0, -0.2, 0.5);
-        assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
-        f = Vector3(1.0, 0.0, 1.0);
-        assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
-        f = Vector3(0.0, 0.0, -0.5);
-        assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
-
-        return 0;
+    version (complex_numbers) {
+        // triangle properties - complex derivative test
+        double h = 1.0e-20;
+        number ih = complex(0, h);
+        number zero = 0.0;
+        number one = 1.0;
+        auto p0_dash = Vector3(zero, zero, one);
+        auto p1_dash = Vector3(alpha + ih, zero, one);
+        auto p2_dash = Vector3(alpha + ih, alpha + ih, one);
+        Vector3 centroid_dash, n_dash, t1_dash, t2_dash;
+        number area_dash;
+        triangle_properties(p0_dash, p1_dash, p2_dash, centroid_dash,
+                n_dash, t1_dash, t2_dash, area_dash);
+        double darea_da = area_dash.im / h;
+        Vector3 dcentroid_da = Vector3(centroid_dash.x.im / h, centroid_dash.y.im / h, centroid_dash.z.im / h);
+        Vector3 dn_da = Vector3(n_dash.x.im / h, n_dash.y.im / h, n_dash.z.im / h);
+        Vector3 dt1_da = Vector3(t1_dash.x.im / h, t1_dash.y.im / h, t1_dash.z.im / h);
+        Vector3 dt2_da = Vector3(t2_dash.x.im / h, t2_dash.y.im / h, t2_dash.z.im / h);
+        assert(approxEqualVectors(dcentroid_da, Vector3(2.0 / 3.0 * alpha, 1.0 / 3.0 * alpha, 0.0)));
+        // Because a change in alpha does not change the orientation of the triangle,
+        // we expect the unit vectors to have zero sensitivity.
+        // [TODO] It would probably be good to set up another case in which alpha
+        // does change the orientation of the triangle.
+        assert(approxEqualVectors(dn_da, Vector3(0.0, 0.0, 0.0)));
+        assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)));
+        assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)));
+        // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
+        assert(isClose(darea_da, alpha));
     }
-} // end properties_test
+
+    // Set up a simple quadrilateral for which we can easily compute
+    // the properties by hand.
+    // p3---p2
+    // |    |
+    // |    |
+    // p0---p1
+    // For the quadrilateral, we reuse the triangle points but need a fourth point.
+    p3 = Vector3(0.0, alpha, 1.0);
+    quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
+    assert(approxEqualNumbers(area, to!number(1.0)));
+    assert(approxEqualVectors(centroid, Vector3(0.5, 0.5, 1.0)));
+    assert(approxEqualVectors(n, Vector3(0.0, 0.0, 1.0)));
+    assert(approxEqualVectors(t1, Vector3(1.0, 0.0, 0.0)));
+    assert(approxEqualVectors(t2, Vector3(0.0, 1.0, 0.0)));
+
+    version (complex_numbers) {
+        // quad properties - complex derivative test
+        auto p3_dash = Vector3(zero, alpha + ih, one);
+        quad_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash,
+                n_dash, t1_dash, t2_dash, area_dash);
+        darea_da = area_dash.im / h;
+        dcentroid_da = Vector3(centroid_dash.x.im / h, centroid_dash.y.im / h, centroid_dash.z.im / h);
+        dn_da = Vector3(n_dash.x.im / h, n_dash.y.im / h, n_dash.z.im / h);
+        dt1_da = Vector3(t1_dash.x.im / h, t1_dash.y.im / h, t1_dash.z.im / h);
+        dt2_da = Vector3(t2_dash.x.im / h, t2_dash.y.im / h, t2_dash.z.im / h);
+        assert(approxEqualVectors(dcentroid_da, Vector3(0.5 * alpha, 0.5 * alpha, 0.0)));
+        // Because a change in alpha does not change the orientation of the triangle,
+        // we expect the unit vectors to have zero sensitivity.
+        // [TODO] It would probably be good to set up another case in which alpha
+        // does change the orientation of the triangle.
+        assert(approxEqualVectors(dn_da, Vector3(0.0, 0.0, 0.0)));
+        assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)));
+        assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)));
+        // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
+        assert(isClose(darea_da, 2.0 * alpha));
+    }
+
+    // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
+    p0 = Vector3(0, 0, 0);
+    p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
+    p2 = Vector3(0.0, 1.0, 0.0);
+    double dx = 0.5 * tan(radians(30));
+    double dL = cos(radians(30));
+    double dz = sqrt(dL * dL - dx * dx);
+    p3 = Vector3(dx, 0.5, dz);
+    number volume;
+    tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
+    assert(approxEqualVectors(centroid, Vector3(dx, 0.5, 0.25 * dz)));
+    assert(approxEqualNumbers(volume, to!number(cos(radians(30)) * 0.5 * dz / 3)));
+
+    // tetrahedron properties - complex derivative test
+    version (complex_numbers) {
+        number volume_dash;
+        // Build regular tetrahedron with equal edge lengths (edge length equal to alpha).
+        p0_dash = Vector3(zero, zero, zero);
+        p1_dash = Vector3(alpha + ih, zero, zero);
+        p2_dash = Vector3((alpha + ih) * cos(radians(60)), (alpha + ih) * sin(radians(60)), zero);
+        p3_dash = Vector3(0.5 * (alpha + ih), 0.5 * (alpha + ih) * tan(to!number(radians(30))), (alpha + ih) * (
+                sqrt(6.0) / 3.0));
+        tetrahedron_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash, volume_dash);
+        double dvol_da = volume_dash.im / h;
+        dcentroid_da = Vector3(centroid_dash.x.im / h, centroid_dash.y.im / h, centroid_dash.z.im / h);
+        assert(isClose(dvol_da, alpha ^^ 2 / (2.0 * sqrt(2.0))));
+        assert(approxEqualVectors(dcentroid_da, Vector3(3.0 / 8.0 + 0.25 * cos(radians(60)),
+                1.0 / 4.0 * sin(radians(60)) + 1.0 / 8.0 * tan(radians(30)),
+                sqrt(6.0) / 12.0)));
+    }
+
+    // Build a wedge with the same equilateral-triangle base.
+    p0 = Vector3(0, 0, 0);
+    p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
+    p2 = Vector3(0.0, 1.0, 0.0);
+    Vector3 incz = Vector3(0, 0, -1.0);
+    p3 = p0 + incz;
+    Vector3 p4 = p1 + incz;
+    Vector3 p5 = p2 + incz;
+    wedge_properties(p0, p1, p2, p3, p4, p5, true, centroid, volume);
+    assert(approxEqualVectors(centroid, Vector3(dx, 0.5, -0.5)));
+    assert(approxEqualNumbers(volume, to!number(cos(radians(30)) * 0.5 * 1.0)));
+
+    // wedge properties - complex derivative test
+    version (complex_numbers) {
+        // Build a wedge with an equilateral-triangle base (edge length equal to alpha).
+        p0_dash = Vector3(zero, zero, zero);
+        p1_dash = Vector3(alpha + ih, zero, zero);
+        p2_dash = Vector3((alpha + ih) * cos(radians(60)), (alpha + ih) * sin(radians(60)), zero);
+        p3_dash = p0_dash + incz;
+        auto p4_dash = p1_dash + incz;
+        auto p5_dash = p2_dash + incz;
+        wedge_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, true, centroid_dash, volume_dash);
+        dvol_da = volume_dash.im / h;
+        dcentroid_da = Vector3(centroid_dash.x.im / h, centroid_dash.y.im / h, centroid_dash.z.im / h);
+        assert(isClose(dvol_da, alpha * sin(radians(60))));
+        assert(approxEqualVectors(dcentroid_da, Vector3((1.0 / 3.0) * (1.0 + cos(radians(60))), (1.0 / 3.0) * sin(
+                radians(60)), 0.0)));
+    }
+
+    // Pyramid
+    p0 = Vector3(0, 0, 0);
+    p1 = Vector3(1, 0, 0);
+    p2 = Vector3(1, 1, 0);
+    p3 = Vector3(0, 1, 0);
+    p4 = Vector3(0.5, 0.5, 1); // peak
+    pyramid_properties(p0, p1, p2, p3, p4, true, centroid, volume);
+    assert(approxEqualVectors(centroid, Vector3(0.5, 0.5, 1.0 / 4)));
+    assert(approxEqualNumbers(volume, to!number(1.0 / 3)));
+
+    // pyramid properties - complex derivative test
+    version (complex_numbers) {
+        p0_dash = Vector3(zero, zero, zero);
+        p1_dash = Vector3(alpha + ih, zero, zero);
+        p2_dash = Vector3(alpha + ih, alpha + ih, zero);
+        p3_dash = Vector3(zero, alpha + ih, zero);
+        p4_dash = Vector3(0.5, 0.5, 1); // peak
+        pyramid_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, true, centroid_dash, volume_dash);
+        dvol_da = volume_dash.im / h;
+        dcentroid_da = Vector3(centroid_dash.x.im / h, centroid_dash.y.im / h, centroid_dash.z.im / h);
+        assert(isClose(dvol_da, 2.0 * alpha / 3.0));
+        // [TODO] centroid sensitivity
+    }
+
+    // Simple cube for the hex cell.
+    p0 = Vector3(0, 0, 0);
+    p1 = Vector3(1, 0, 0);
+    p2 = Vector3(1, 1, 0);
+    p3 = Vector3(0, 1, 0);
+    p4 = Vector3(0, 0, 1);
+    p5 = Vector3(1, 0, 1);
+    Vector3 p6 = Vector3(1, 1, 1);
+    Vector3 p7 = Vector3(0, 1, 1);
+    number iLen, jLen, kLen;
+    hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, true, centroid, volume,
+            iLen, jLen, kLen);
+    assert(approxEqualVectors(centroid, Vector3(0.5, 0.5, 0.5)));
+    assert(approxEqualNumbers(volume, to!number(1.0)));
+
+    // Simple cube for the hex cell properties - complex derivative test
+    version (complex_numbers) {
+        p0_dash = Vector3(0, 0, 0);
+        p1_dash = Vector3(alpha + ih, zero, zero);
+        p2_dash = Vector3(alpha + ih, alpha + ih, zero);
+        p3_dash = Vector3(zero, alpha + ih, zero);
+        p4_dash = Vector3(zero, zero, alpha + ih);
+        p5_dash = Vector3(alpha + ih, zero, alpha + ih);
+        auto p6_dash = Vector3(alpha + ih, alpha + ih, alpha + ih);
+        auto p7_dash = Vector3(zero, alpha + ih, alpha + ih);
+        hex_cell_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, p6_dash, p7_dash,
+                true, centroid_dash, volume_dash, iLen, jLen, kLen);
+        dvol_da = volume_dash.im / h;
+        dcentroid_da = Vector3(centroid_dash.x.im / h, centroid_dash.y.im / h, centroid_dash.z.im / h);
+        assert(isClose(dvol_da, 3.0 * alpha ^^ 2));
+        assert(approxEqualVectors(dcentroid_da, Vector3(0.5, 0.5, 0.5)));
+    }
+
+    d = Vector3(0.65, 0.0, 0.0);
+    e = Vector3(0.65, -0.1, 0.0);
+
+    p0 = Vector3(0.0, 0.0, 0.0);
+    p1 = Vector3(1.0, -0.1, 0.0);
+    p2 = Vector3(1.0, 1.0, 0.0);
+    p3 = Vector3(0.0, 1.0, 0.0);
+    p4 = Vector3(0.0, 0.0, 1.0);
+    p5 = Vector3(1.0, -0.1, 1.0);
+    p6 = Vector3(1.0, 1.0, 1.0);
+    p7 = Vector3(0.0, 1.0, 1.0);
+    assert(inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, d));
+    assert(!inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, e));
+
+    auto f = Vector3(0.1, 0.0, 0.5);
+    assert(inside_tetrahedron(p0, p1, p2, p4, f));
+    f = Vector3(0.0, 0.2, 0.5);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f));
+    f = Vector3(0.0, -0.2, 0.5);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f));
+    f = Vector3(1.0, 0.0, 1.0);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f));
+    f = Vector3(0.0, 0.0, -0.5);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f));
+}

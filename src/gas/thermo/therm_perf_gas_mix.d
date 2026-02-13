@@ -468,75 +468,75 @@ private:
     }
 }
 
-version(therm_perf_gas_mix_test) {
-    int main() {
-        import util.msg_service;
+unittest {
+    import std.file;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
-        string[] speciesNames;
-        getArrayOfStrings(L, "species", speciesNames);
-        auto tm = new ThermPerfGasMixture(L, speciesNames);
-        lua_close(L);
-        auto gs = GasState(5, 0);
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        gs.p = 1.0e6;
-        gs.T = 2000.0;
-        gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
-        tm.updateFromPT(gs);
-        assert(approxEqualNumbers(to!number(11801825.6), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6), failedUnitTest());
+    auto L = init_lua_State();
+    doLuaFile(L, "therm-perf-5-species-air.lua");
+    string[] speciesNames;
+    getArrayOfStrings(L, "species", speciesNames);
+    auto tm = new ThermPerfGasMixture(L, speciesNames);
+    lua_close(L);
+    auto gs = GasState(5, 0);
 
-        gs.rho = 2.0;
-        gs.u = 14.0e6;
-        tm.updateFromRhoU(gs);
-        assert(approxEqualNumbers(to!number(3373757.4), gs.p, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(4331.944), gs.T, 1.0e-6), failedUnitTest());
+    gs.p = 1.0e6;
+    gs.T = 2000.0;
+    gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
+    tm.updateFromPT(gs);
+    assert(approxEqualNumbers(to!number(11801825.6), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.2840117), gs.rho, 1.0e-6));
 
-        gs.T = 10000.0;
-        gs.rho = 1.5;
+    gs.rho = 2.0;
+    gs.u = 14.0e6;
+    tm.updateFromRhoU(gs);
+    assert(approxEqualNumbers(to!number(3373757.4), gs.p, 1.0e-6));
+    assert(approxEqualNumbers(to!number(4331.944), gs.T, 1.0e-6));
+
+    gs.T = 10000.0;
+    gs.rho = 1.5;
+    tm.updateFromRhoT(gs);
+    assert(approxEqualNumbers(to!number(5841068.3), gs.p, 1.0e-6));
+    assert(approxEqualNumbers(to!number(20340105.9), gs.u, 1.0e-6));
+
+    gs.rho = 10.0;
+    gs.p = 5.0e6;
+    tm.updateFromRhoP(gs);
+    assert(approxEqualNumbers(to!number(11164648.5), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1284.012), gs.T, 1.0e-6));
+
+    gs.p = 1.0e6;
+    number s = 10000.0;
+    tm.updateFromPS(gs, s);
+    assert(approxEqualNumbers(to!number(2560.118), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(12313952.52), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.00309), gs.rho, 1.0e-6));
+
+    s = 11000.0;
+    number h = 17.0e6;
+    tm.updateFromHS(gs, h, s);
+    assert(approxEqualNumbers(to!number(5273.103), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(14946629.7), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(0.4603513), gs.rho, 1.0e-6));
+    assert(approxEqualNumbers(to!number(945271.84), gs.p, 1.0e-4));
+
+    version(complex_numbers) {
+        // Check du/dT = Cv
+        number u0 = gd.u; // copy unperturbed value, but we don't really need it
+        double ih = 1.0e-20;
+        gs.T += complex(0.0,ih);
         tm.updateFromRhoT(gs);
-        assert(approxEqualNumbers(to!number(5841068.3), gs.p, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(20340105.9), gs.u, 1.0e-6), failedUnitTest());
-
-        gs.rho = 10.0;
-        gs.p = 5.0e6;
-        tm.updateFromRhoP(gs);
-        assert(approxEqualNumbers(to!number(11164648.5), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1284.012), gs.T, 1.0e-6), failedUnitTest());
-
-        gs.p = 1.0e6;
-        number s = 10000.0;
-        tm.updateFromPS(gs, s);
-        assert(approxEqualNumbers(to!number(2560.118), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(12313952.52), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.00309), gs.rho, 1.0e-6), failedUnitTest());
-
-        s = 11000.0;
-        number h = 17.0e6;
-        tm.updateFromHS(gs, h, s);
-        assert(approxEqualNumbers(to!number(5273.103), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(14946629.7), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(0.4603513), gs.rho, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(945271.84), gs.p, 1.0e-4), failedUnitTest());
-
-        version(complex_numbers) {
-            // Check du/dT = Cv
-            number u0 = gd.u; // copy unperturbed value, but we don't really need it
-            double ih = 1.0e-20;
-            gs.T += complex(0.0,ih);
-            tm.updateFromRhoT(gs);
-            double myCv = gs.u.im/ih;
-            assert(isClose(myCv, tm.dudTConstV(gs).re), failedUnitTest());
-        }
-
-        return 0;
+        double myCv = gs.u.im/ih;
+        assert(isClose(myCv, tm.dudTConstV(gs).re));
     }
 }
-
