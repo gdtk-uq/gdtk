@@ -1,6 +1,8 @@
 @nogc extern (C) int pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1,
        int verbose);
 
+@nogc extern (C) int satpt(double p,double T,double Gc, int ic, double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1,int verbose);
+
 @nogc extern (C) int rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1,
          double* T,int verbose);
 

@@ -130,6 +130,22 @@ class EquilibriumCalculator {
         molef_to_massf(X1, M, Q.massf);
     }
 
+    @nogc void set_massf_from_satpT(ref GasState Q, double Gc, int ic)
+    {
+    /*
+        A special method for use in saturated equillibrium problems at solid surfaces.
+        Under the hood, eqc will adjust the amount of (for example Carbon) atoms,
+        subject to the constrait that the condensed, solid species is zero in the mixture.
+
+        Gc : Gibbs energy of the target
+        ic : the index of the element to be adjusted during the solution
+    */
+        massf_to_molef(Q.massf, M, X0);
+        int error = eqc.satpt(Q.p.re, Q.T.re, Gc, ic, X0ptr, nsp, nel, lewisptr, Mptr, aptr, X1ptr, 0);
+        if (error!=0) throw new GasModelException("eqc.satpt convergence failure");
+        molef_to_massf(X1, M, Q.massf);
+    }
+
     @nogc double get_s(ref GasState Q)
     {
         massf_to_molef(Q.massf, M, X0);
