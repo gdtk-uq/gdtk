@@ -3,6 +3,8 @@
 
 extern int pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1,int verbose);
 
+extern int satpt(double p,double T,double Gc, int ic, double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1,int verbose);
+
 extern int rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1,double* T,int verbose);
 
 extern int ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1, double* T, int verbose);

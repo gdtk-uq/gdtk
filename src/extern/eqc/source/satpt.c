@@ -19,17 +19,19 @@ C library for equilibrium chemistry calculations
 #include "thermo.h"
 #include "linalg.h"
 #include "common.h"
-#include "pt.h"
+#include "satpt.h"
 
 static void Assemble_Matrices(double* a, double* bi0, double* G0_RTs, double p, double* ns, double* lnns,
-                              double n, int nsp, int nel, double* A, double* B){
+                              double n, int nsp, int nel, int ic, double Gc_RT, double* A, double* B){
     /*
     Construct Iteration Matrix for reduced Newton Rhapson step, (eqn 2.24 and 2.26 from cea_I)
+    Order of rows is (35) from eqc first, then 36, then the condensed species eqn.
+    Order of columns is dln(n), then the piis, then the dbc0 correction.
     */
     double lnn, lnp, akjaijnj, akjnjmuj, mus_RTj, bk;
     double nss, nsmus;
     int k,neq,i,j,s;
-    neq = nel+1;
+    neq = nel+2;
     lnn = log(n);
     lnp = log(p/1e5); // Standard pressure for the tables is one BAR
 
@@ -52,6 +54,13 @@ static void Assemble_Matrices(double* a, double* bi0, double* G0_RTs, double p, 
             akjnjmuj += a[k*nsp+j]*ns[j]*mus_RTj;
 
         }
+        // Add unknown bc0 term if this k is the unknown elemental constituent
+        if (k==ic) {
+            A[k*neq + nel+1] = -bi0[ic];
+        } else {
+            A[k*neq + nel+1] = 0.0; // Need to zero the extra matrix column
+        }
+
         B[k] = bi0[k] - bk + akjnjmuj;// CEA equations
         check_ill_posed_matrix_row(A, B, neq, k, 1);
     }
@@ -71,7 +80,17 @@ static void Assemble_Matrices(double* a, double* bi0, double* G0_RTs, double p, 
         nsmus += ns[j]*mus_RTj;
     }
     A[nel*neq + 0]  = nss - n;
-    B[nel] = n - nss + nsmus;  // CEA equations
+    B[nel] = n - nss + nsmus;
+    A[nel*neq + nel+1] = 0.0; // Need to zero the extra matrix column
+
+    // New equation for the condensed carbon Gibbs energy
+    // See derivation from 04/02/26
+    int iic = nel+1; // this eqn row in the matrix
+    for (i=0; i<neq; i++) {
+        A[iic*neq + i] = 0.0;
+    }
+    A[iic*neq + ic+1] = 1.0;
+    B[iic] = Gc_RT;
     
     //for (i=0; i<neq; i++){
     //    printf("    [");
@@ -130,9 +149,10 @@ static double compute_residual(double* pij, double* a, double* G0_RTs, double p,
         double Rs = 0.0;
         for (int s=0; s<nsp; s++){
             Rs += a[j*nsp + s]*ns[s];
+            if (verbose>1) printf("        a[%d,%d]=%e n[%d]=%e\n", j, s, a[j*nsp+s], s, ns[s]);
         }
         Rs -= bi0[j];
-        if (verbose>1) printf("    Fj[%d]=%e\n", j, Rs);
+        if (verbose>1) printf("    Fj[%d]=%e bi0[%d]=%e\n", j, Rs, j, bi0[j]);
         residual += Rs*Rs;
     }
 
@@ -147,83 +167,13 @@ static double compute_residual(double* pij, double* a, double* G0_RTs, double p,
     return sqrt(residual);
 }
 
-static double lagrangian(double* S, double* a, double* G0_RTs, double p, double T,
-                                 double* ns, double* lnns, double* bi0, int nsp, int nel, int verbose){
-
-    double L = 0.0;
-    double nn = 0.0;
-    for (int s=0; s<nsp; s++) nn += ns[s];
-
-    for (int s=0; s<nsp; s++){
-        // ns*log(ns) is badly behaved at ns==0.0, but this should basically never happen anymore
-        double nss = ns[s];
-        double nslogns = nss*lnns[s];
-
-        L += Ru*T*(nss*G0_RTs[s] + nslogns - nss*log(nn) + nss*log(p/1e5));
-    }
-
-    for (int j=0; j<nel; j++){
-        double ajsns = 0.0; for (int s=0; s<nsp; s++) ajsns += a[j*nsp + s]*ns[s];
-        double lambda_j = -1.0*Ru*T*S[j+1];
-        L += lambda_j*(ajsns - bi0[j]);
-    }
-
-    return L;
-}
-
-static double analytic_lagrangian_derivative(double* S, double* a, double* G0_RTs, double p, double T, double n,
-                                             double* ns, double* lnns, double* bi0, int nsp, int nel, int s){
-
-    double dLdns = Ru*T*(G0_RTs[s] + lnns[s] - log(n) + log(p/1e5));
-
-    for (int j=0; j<nel; j++){
-        double ajs = a[j*nsp+s];
-        double lambda_j = -1.0*Ru*T*S[j+1];
-        dLdns += lambda_j*ajs;
-    }
-
-    return dLdns;
-}
-
-
-static void compute_lagrangian_derivatives(double* S, double* a, double* G0_RTs, double p, double T, double n,
-                                 double* ns, double* lnns, double* bi0, int nsp, int nel, double* dLdn, int verbose){
-    // For verification purposes, we want to numerically differentiate the
-    // Lagrangian to check that we have correctly found the actual stationary point.
-    double eps = 1e-7;
-    double L = lagrangian(S, a, G0_RTs, p, T, ns, lnns, bi0, nsp, nel, verbose);
-    if (verbose>2) printf("Lagrangian:[%e]\n", L);
-
-    for (int s=0; s<nsp; s++) {
-        double lnns_save = lnns[s];
-        double ns_save = ns[s];
-        double perturb = ns[s]*eps;
-
-        // Note that it's important to perturb n as well, though the "lagrangian" function below actually
-        // computes n internally to make sure.
-        ns[s] += perturb;
-        lnns[s] = log(ns[s]); // Normally we don't want to compute ln(ns) but this is an exception.
-        double L2 = lagrangian(S, a, G0_RTs, p, T, ns, lnns, bi0, nsp, nel, verbose);
-        ns[s] = ns_save;
-        lnns[s] = lnns_save;
-
-        double dLdns = (L2-L)/perturb;
-
-        double dLdns_a = analytic_lagrangian_derivative(S, a, G0_RTs, p, T, n, ns, lnns, bi0, nsp, nel, s);
-        if (verbose>2) printf(" dLdn[%d]= %e (%e) dLdn[%d]/L= %e\n",s, dLdns, dLdns_a, s, dLdns/L);
-        dLdn[s] = dLdns;
-    }
-    if (verbose>2) printf("\n");
-    return;
-}
-
 static void species_corrections(double* S,double* a,double* G0_RTs,double p,double n,double* ns,double* lnns,
                         int nsp, int nel, double* dlnns, int verbose){
     /*
     Compute delta_log(ns) from the reduced iteration equations from 
     equation 2.18m using the other deltas in S
     Inputs:
-        S      : Corrections (pi1, pi2, pi3 ... dlog(n) [nel+1]
+        S      : Corrections (dlog(n), pi1, pi2, pi3 ...)  [nel+1]
         a      : elemental composition array [nel,nsp]
         G0_RTs : Gibbs free energy of each species, divided by RT [nsp]
         p      : pressure 
@@ -285,26 +235,36 @@ static void handle_singularity(double* S,double* a,double* G0_RTs,double p,doubl
     return; 
 }
 
-static void update_unknowns(double* S,double* dlnns,int nsp,int nel,double* ns,double* lnns,double* n,int verbose){
+static void update_unknowns(double* S,double* dlnns,int nsp,int nel,int ic,double* ns,double* lnns,double* n,double* b0,double* lnb,int verbose){
     /*
     Add corrections to unknown values (ignoring lagrange multipliers)
     Inputs:
-        S     : vector of corrections from matrix step [nel+1]
+        S     : vector of corrections from matrix step [nel+2]
         dlnns : vector of species mole/mixture corrections [nsp]
         nsp   : number of species
+        nsp   : number of elements
+        ic    : index of unknown saturating element
     Outputs:
         ns    : vector of species mole/mixtures [nsp]
         lnns  : natural log of the species moles/mixture kg [nsp]
         n     : pointer to total moles/mixture (passed by reference!) [1]
+        b0    : pointer to bi0 constraint vector [nel]
+        lnb   : log(bi0[ic]), the log of the unknown saturating quantity
     */
     int s;
-    double newlnns,lnn,n_copy,lambda,newns,rdlnns;
+    double newlnns,lnn,n_copy,lambda,newns,rdlnns,lnbcopy,newlnb;
     const char pstring[] = "  s: %d lnns: % f rdlnns: % f dlnns: %f TR: % e lambda: % f\n";
 
     lnn = log(*n); // compute the log of the thing n is pointing to
     lambda = update_limit_factor(lnn, S[0], relaxation_limit);
     n_copy = exp(lnn + lambda*S[0]); 
     *n = n_copy;   // thing pointed to by n set to exp(lnn + S[0]);
+
+    lnbcopy = *lnb;
+    lambda = update_limit_factor(lnbcopy, S[nel+1], relaxation_limit);
+    newlnb = lnbcopy + lambda*S[nel+1];
+    *lnb = newlnb;
+    b0[ic] = exp(newlnb);
 
     for (s=0; s<nsp; s++){
         if (ns[s]==0.0) {
@@ -325,12 +285,14 @@ static void update_unknowns(double* S,double* dlnns,int nsp,int nel,double* ns,d
     return;
 }
 
-int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1, int verbose){
+int solve_satpt(double p,double T,double Gc,int ic,double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1, int verbose){
     /*
     Compute the equilibrium composition X1 at a fixed temperature and pressure
     Inputs:
         p     : Pressure (Pa)
         T     : Temperature (K)
+        Gc    : Gibbs energy of saturating condensed species
+        ic    : index of saturating element
         X0    : Intial Mole fractions [nsp]
         nsp   : number of species 
         nel   : number of elements 
@@ -346,9 +308,10 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
     double *lp;
     int neq,s,i,k,errorcode,solvecode;
     double n,M1,errorrms;
+    double Gc_RT, lnbc0;
 
     errorcode=0;
-    neq= nel+1;
+    neq= nel+2;
     errorrms=1e99;
     A     = (double*) malloc(sizeof(double)*neq*neq); // Iteration Jacobian
     B     = (double*) malloc(sizeof(double)*neq);     // Iteration RHS
@@ -359,9 +322,12 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
     bi0   = (double*) malloc(sizeof(double)*nel);     // starting composition coefficients
     dlnns = (double*) malloc(sizeof(double)*nsp);     // starting composition coefficients
 
+    Gc_RT = Gc/Ru/T;
+
     composition_guess(a, M, X0, nsp, nel, ns, &n, bi0);
     for (s=0; s<nsp; s++) lnns[s] = log(ns[s]);
     n*=1.1;
+    lnbc0 = log(bi0[ic]);
 
     for (s=0; s<nsp; s++){
         lp = lewis + 9*3*s;
@@ -371,15 +337,15 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
     // Main Iteration Loop: 
     for (k=0; k<=attempts; k++){
         // 1: Perform an update of the equations
-        Assemble_Matrices(a, bi0, G0_RTs, p, ns, lnns, n, nsp, nel, A, B);
+        Assemble_Matrices(a, bi0, G0_RTs, p, ns, lnns, n, nsp, nel, ic, Gc_RT, A, B);
         solvecode = solve_matrix(A, B, S, neq);
         if (solvecode!=0) {
             handle_singularity(S, a, G0_RTs, p, n, ns, lnns, nsp, nel, dlnns, verbose);
             continue;
         }
         species_corrections(S, a, G0_RTs, p, n, ns, lnns, nsp, nel, dlnns, verbose);
-        update_unknowns(S, dlnns, nsp, nel, ns, lnns, &n, verbose);
-        handle_trace_species_locking(a, n, nsp, nel, ns, bi0, dlnns, verbose);
+        update_unknowns(S, dlnns, nsp, nel, ic, ns, lnns, &n, bi0, &lnbc0, verbose);
+        //handle_trace_species_locking(a, n, nsp, nel, ns, bi0, dlnns, verbose);
         errorrms = compute_residual(S, a, G0_RTs, p, T, n, ns, lnns, bi0, nsp, nel, verbose);
 
 
@@ -433,74 +399,6 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
     free(lnns);
     free(bi0);
     free(dlnns);
-    return errorcode;
-}
-
-int verify_equilibrium_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a, double* dLdn, int verbose){
-    /*
-    Compute the equilibrium composition X1 at a fixed temperature and pressure
-    Inputs:
-        p     : Pressure (Pa)
-        T     : Temperature (K)
-        X0    : Intial Mole fractions [nsp]
-        nsp   : number of species
-        nel   : number of elements
-        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
-        M     : Molar Mass of each species (kg/mol) [nsp]
-        a     : elemental composition array [nel,nsp]
-        verbose: print debugging information
-
-    Output:
-        dLdn : Derivatives of the final Lagrangian [nsp]
-    */
-    double *A, *B, *S, *G0_RTs, *ns, *lnns, *bi0; // Dynamic arrays
-    double *lp;
-    int neq,s,i,errorcode;
-    double n,M0;
-
-    errorcode=0;
-    neq= nel+1;
-    A     = (double*) malloc(sizeof(double)*neq*neq); // Iteration Jacobian
-    B     = (double*) malloc(sizeof(double)*neq);     // Iteration RHS
-    S     = (double*) malloc(sizeof(double)*neq);     // Iteration unknown vector
-    G0_RTs= (double*) malloc(sizeof(double)*nsp);     // Species Gibbs Free Energy
-    ns    = (double*) malloc(sizeof(double)*nsp);     // Species moles/mixture mass
-    lnns  = (double*) malloc(sizeof(double)*nsp);     // Species moles/mixture mass
-    bi0   = (double*) malloc(sizeof(double)*nel);     // starting composition coefficients
-
-    M0 = 0.0;
-    for (s=0; s<nsp; s++) M0 += M[s]*X0[s];
-    for (s=0; s<nsp; s++) ns[s] = X0[s]/M0;
-    for (s=0; s<nsp; s++) lnns[s] = log(ns[s]);
-
-    for (i=0; i<nel; i++){
-        bi0[i] = 0.0;
-        for (s=0; s<nsp; s++){
-            bi0[i] += a[i*nsp + s]*X0[s]/M0;
-        }
-    }
-
-    n = 0.0;
-    for (s=0; s<nsp; s++) n += ns[s];
-
-    for (s=0; s<nsp; s++){
-        lp = lewis + 9*3*s;
-        G0_RTs[s] = compute_G0_RT(T, lp);
-    }
-
-    // 1: Perform an update of the equations to get the lagrange multipliers
-    Assemble_Matrices(a, bi0, G0_RTs, p, ns, lnns, n, nsp, nel, A, B);
-    errorcode = solve_matrix(A, B, S, neq);
-
-    compute_lagrangian_derivatives(S, a, G0_RTs, p, T, n, ns, lnns, bi0, nsp, nel, dLdn, verbose);
-
-    free(A);
-    free(B);
-    free(S);
-    free(G0_RTs);
-    free(ns);
-    free(lnns);
-    free(bi0);
     return errorcode;
 }
 
