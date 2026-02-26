@@ -15,13 +15,16 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
+PROGRAMS := puffin lrkt-run
+PY_PROGRAMS := puffin-prep puffin-post lrkt-prep lrkt-post
 
 PUFFIN_FILES := config.d marching_calc.d streamtube.d \
 	cell.d face.d flow.d flux.d interp.d
 
 LORIKEET_FILES := config.d transient_calc.d fluidblock.d \
 	cell.d face.d flow.d flux.d interp.d
+
+GDTK_PY_DIR := ../gdtk-py
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -149,7 +152,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Puffin code built."
 
-install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
+install: $(PROGRAMS) $(PY_PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -165,6 +168,7 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 clean:
 	- rm *.o
 	- rm $(PROGRAMS)
+	- rm -rf __pycache__/ *.egg-info/
 	- rm -r $(BUILD_DIR)/*
 	- rm puffin_main_with_rev_string.d lorikeet_main_with_rev_string.d
 	- cd $(LUA_DIR); make clean;
@@ -198,14 +202,6 @@ puffin: puffin_main.d $(PUFFIN_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-puffin-prep: puffin_prep.py
-	cp puffin_prep.py puffin-prep
-	chmod +x puffin-prep
-
-puffin-post: puffin_post.py
-	cp puffin_post.py puffin-post
-	chmod +x puffin-post
-
 lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
 	$(GEOM_FILES) \
 	$(GAS_FILES) $(EQC_SRC_FILES) $(LIBEQC) $(LIBLUA) $(GZIP_FILES) \
@@ -226,13 +222,31 @@ lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
 		$(LIBEQC) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-lrkt-prep: lorikeet_prep.py
-	cp lorikeet_prep.py lrkt-prep
-	chmod +x lrkt-prep
+# Priority:
+#   1. VIRTUAL_ENV - Standard set by python virtual-environments
+#   2. CONDA_PREFIX - Set by (ana)conda environments
+#   3. INSTALL_DIR/.venv - Create our own if none already exist
+CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
+VIRTUAL_ENV ?= $(CONDA_PREFIX)
 
-lrkt-post: lorikeet_post.py
-	cp lorikeet_post.py lrkt-post
-	chmod +x lrkt-post
+# Override if using uv with `PIP='uv pip'`
+PIP ?= $(VIRTUAL_ENV)/bin/pip
+PYTHON ?= python3
+
+# If it doesn't already exist
+$(VIRTUAL_ENV):
+	- mkdir -p $(INSTALL_DIR)
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
+	$(info Updating pip)
+	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
+
+$(PY_PROGRAMS): $(VIRTUAL_ENV)
+	make -C $(GDTK_PY_DIR) build
+	$(info Installing python tools)
+	$(PIP) install .
+	- mkdir -p $(INSTALL_DIR)/bin
+	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
