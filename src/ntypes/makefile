@@ -40,6 +40,7 @@ endif
 
 .PHONY: test
 test: test_runner
+	@echo "Running tests"
 	./test_runner --module ntypes
 
 # We need to pull the test_runner.d to the front to ensure no linker errors

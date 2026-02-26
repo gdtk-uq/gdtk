@@ -71,15 +71,15 @@ endif
 # if you are invoking this makefile from within the geom models directory.
 # ----------------------------------------------------------------------
 
-.PHONY: test-all test-real test-complex
-test-all: test-real test-complex
+.PHONY: test test-real test-complex
+test: test-real test-complex
 
 test-real: test_runner_real
-	@echo "Running real tests"
+	@echo "Running tests (real)"
 	- exec ./test_runner_real --module geom
 
 test-complex: test_runner_complex
-	@echo "Running complex tests"
+	@echo "Running tests (complex)"
 	- exec ./test_runner_complex --module geom
 
 # We need to pull the test_runner.d to the front to ensure no linker errors

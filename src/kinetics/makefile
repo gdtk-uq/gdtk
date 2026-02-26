@@ -61,7 +61,7 @@ build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
 	cp prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics; chmod +x $(BUILD_DIR)/bin/prep-kinetics
 
 test: test_runner
-	@echo "Running real tests"
+	@echo "Running tests"
 	- exec ./test_runner --module kinetics
 
 # We need to pull the test_runner.d to the front to ensure no linker errors

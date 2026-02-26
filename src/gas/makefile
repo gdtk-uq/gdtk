@@ -158,15 +158,13 @@ install: build-prep-gas build-libgas
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
-.PHONY: test-all test-real
-test-all: test-real
-
-test-real: test_runner_real
+.PHONY: test
+test: test_runner
 	@echo "Running tests"
-	- ./test_runner_real --module gas
+	- ./test_runner --module gas
 
 # We need to pull the test_runner.d to the front to ensure no linker errors
-test_runner_real: test_gas_calc.d $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
+test_runner: test_gas_calc.d $(GAS_FILES) $(GAS_LUA_FILES) $(EQC_SRC_FILES) \
 		$(KINETICS_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(UTIL_FILES) $(LIBEQC) $(LIBLUA) ../util/test_runner.d | gas-calc
 	@echo "Compiling test runner..."
@@ -185,6 +183,7 @@ clean:
 	- rm -f gas-calc
 	- rm -f species-database/species-database.lua
 	- rm -f LOGFILE*TEST
+	- rm -r test_runner
 	- rm -f thermo.inp thermo.lib thermo.out
 	- rm -f trans.inp trans.lib trans.out
 	- rm -f tmp.inp tmp.out tmp.plt
