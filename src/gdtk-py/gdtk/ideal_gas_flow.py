@@ -32,8 +32,7 @@ Two-dimensional flows:
    * Taylor-Maccoll conical flow
 """
 
-from math import *
-import numpy
+import numpy as np
 from gdtk.numeric.zero_solvers import secant as solve
 from gdtk.numeric.zero_solvers import newton as solve_newton
 
@@ -51,7 +50,7 @@ def A_Astar(M, g=1.4):
     t1 = (g + 1.0) / (g - 1.0)
     m2 = M**2
     t2 = 1.0 / m2 * (2.0 / (g + 1.0) * (1.0 + (g - 1.0) * 0.5 * m2))**t1
-    t2 = sqrt(t2)
+    t2 = np.sqrt(t2)
     return t2
 
 def T0_T(M, g=1.4):
@@ -97,7 +96,7 @@ def m2_shock(M1, g=1.4):
     """
     numer = 1.0 + (g - 1.0) * 0.5 * M1**2
     denom = g * M1**2 - (g - 1.0) * 0.5
-    return sqrt(numer / denom)
+    return np.sqrt(numer / denom)
 
 def r2_r1(M1, g=1.4):
     """
@@ -163,7 +162,7 @@ def ds_Cv(M1, g=1.4):
     """
     t1 = p2_p1(M1, g)
     t2 = r2_r1(M1, g)
-    return log(t1 * t2**g)
+    return np.log(t1 * t2**g)
 
 def pitot_p(p1, M1, g=1.4):
     """
@@ -277,10 +276,10 @@ def PM1(M, g=1.4):
     """
     if M > 1.0:
         t1 = M**2 - 1.0
-        t2 = sqrt((g - 1.0) / (g + 1.0) * t1)
-        t3 = sqrt(t1)
-        t4 = sqrt((g + 1.0) / (g - 1.0))
-        nu = t4 * atan(t2) - atan(t3)
+        t2 = np.sqrt((g - 1.0) / (g + 1.0) * t1)
+        t3 = np.sqrt(t1)
+        t4 = np.sqrt((g + 1.0) / (g - 1.0))
+        nu = t4 * np.atan(t2) - np.atan(t3)
     else:
         nu = 0.0
     return nu
@@ -321,7 +320,7 @@ def beta_obl(M1, theta, g=1.4, tol=1.0e-6):
     # sin() and back through asin() would put the
     # value on the wrong side of 1.0, ie. < 1.0.
     EPS = 1.0e-12
-    b1 = asin(1.0/M1) + EPS;
+    b1 = np.asin(1.0/M1) + EPS;
     if theta < tol:
         # Small deflection will produce a very weak shock.
         return sign_beta * b1
@@ -345,25 +344,25 @@ def beta_obl_newt(M1, theta, g=1.4, tol=1.0e-6):
     if M1 < 1.0: raise Exception("M1 is subsonic")
     sign_beta = -1 if theta < 0.0 else 1
     theta = abs(theta)
-    b0 = asin(1.0/M1)
+    b0 = np.asin(1.0/M1)
     if theta < tol:
         # Small deflection will produce a very weak shock.
         return sign_beta * b0
     def fun(beta):
-        m1sb = M1 * abs(sin(beta))
-        m1cb = M1 * abs(cos(beta))
+        m1sb = M1 * abs(np.sin(beta))
+        m1cb = M1 * abs(np.cos(beta))
         if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
-        t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
-        t2 = 1/(M1**2 * (g + cos(2.0 * beta)) + 2.0)
-        return atan(t1*t2) - theta
+        t1 = 2.0 / np.tan(beta) * (m1sb**2 - 1.0)
+        t2 = 1/(M1**2 * (g + np.cos(2.0 * beta)) + 2.0)
+        return np.atan(t1*t2) - theta
     def fun_dash(beta):
-        m1sb = M1 * abs(sin(beta))
-        t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
-        t2 = 1/(M1**2 * (g + cos(2.0 * beta)) + 2.0)
+        m1sb = M1 * abs(np.sin(beta))
+        t1 = 2.0 / np.tan(beta) * (m1sb**2 - 1.0)
+        t2 = 1/(M1**2 * (g + np.cos(2.0 * beta)) + 2.0)
         x = t1*t2
         df_dx = 1/(1+x**2)
-        dt1_db = 2*M1**2 * cos(2*beta) + 2/(sin(beta)**2)
-        dt2_db = (M1**2 * (g + cos(2.0 * beta)) + 2.0)**-2 * M1**2 * 2 *sin(2*beta)
+        dt1_db = 2*M1**2 * np.cos(2*beta) + 2/(np.sin(beta)**2)
+        dt2_db = (M1**2 * (g + np.cos(2.0 * beta)) + 2.0)**-2 * M1**2 * 2 * np.sin(2*beta)
         dx_db = dt1_db*t2 + t1*dt2_db
         return df_dx*dx_db
     return sign_beta * solve_newton(fun, fun_dash, 0.9*b0, tol=tol)
@@ -378,8 +377,8 @@ def beta_obl2(M1, p2_p1, g=1.4):
     """
     if M1 < 1.0: raise Exception("M1 is subsonic: %g" % M1)
     if p2_p1 < 1.0: raise Exception("Invalid p2_p1: %g" % p2_p1)
-    dum1 = sqrt(((g+1.0)*p2_p1+g-1.0)/2.0/g)
-    return asin(dum1/M1)
+    dum1 = np.sqrt(((g+1.0)*p2_p1+g-1.0)/2.0/g)
+    return np.asin(dum1/M1)
 
 def theta_obl(M1, beta, g=1.4):
     """
@@ -389,12 +388,12 @@ def theta_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: theta, flow deflection angle (radians)
     """
-    m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    m1sb = M1 * abs(np.sin(beta))
+    m1cb = M1 * abs(np.cos(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
-    t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
-    t2 = M1**2 * (g + cos(2.0 * beta)) + 2.0
-    theta = atan(t1/t2)
+    t1 = 2.0 / np.tan(beta) * (m1sb**2 - 1.0)
+    t2 = M1**2 * (g + np.cos(2.0 * beta)) + 2.0
+    theta = np.atan(t1/t2)
     return theta
 
 def M2_obl(M1, beta, theta, g=1.4):
@@ -405,12 +404,12 @@ def M2_obl(M1, beta, theta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: M2, Mach number in flow after the shock
     """
-    m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    m1sb = M1 * abs(np.sin(beta))
+    m1cb = M1 * abs(np.cos(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = 1.0 + (g - 1.0) * 0.5 * m1sb**2
     denom = g * m1sb**2 - (g - 1.0) * 0.5
-    m2 = sqrt(numer / denom / (sin(beta - theta))**2 )
+    m2 = np.sqrt(numer / denom / (np.sin(beta - theta))**2 )
     return m2
 
 def r2_r1_obl(M1, beta, g=1.4):
@@ -421,8 +420,8 @@ def r2_r1_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: r2/r1
     """
-    m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    m1sb = M1 * abs(np.sin(beta))
+    m1cb = M1 * abs(np.cos(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = (g + 1.0) * m1sb**2
     denom = 2.0 + (g - 1.0) * m1sb**2
@@ -446,7 +445,7 @@ def v2_v1_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: v2/v1
     """
-    return sqrt((sin(beta) / r2_r1_obl(M1, beta, g))**2 + (cos(beta))**2)
+    return np.sqrt((np.sin(beta) / r2_r1_obl(M1, beta, g))**2 + (np.cos(beta))**2)
 
 def p2_p1_obl(M1, beta, g=1.4):
     """
@@ -456,8 +455,8 @@ def p2_p1_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: p2/p1
     """
-    m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    m1sb = M1 * abs(np.sin(beta))
+    m1cb = M1 * abs(np.cos(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     return 1.0 + 2.0 * g / (g + 1.0) * (m1sb**2 - 1.0)
 
@@ -479,8 +478,8 @@ def p02_p01_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: p02/p01
     """
-    m1sb = M1 * abs(sin(beta))
-    m1cb = M1 * abs(cos(beta))
+    m1sb = M1 * abs(np.sin(beta))
+    m1cb = M1 * abs(np.cos(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0))
     t2 = (g + 1.0) * m1sb**2 / (2.0 + (g - 1.0) * m1sb**2)
@@ -499,14 +498,14 @@ def taylor_maccoll_odes(z, theta, g=1.4):
     """
     rho, V_r, V_theta, h, p = z
     # Assemble linear system for determining the derivatives wrt theta.
-    A = numpy.zeros((5,5), float)
-    b = numpy.zeros((5,), float)
-    A[0,0] = V_theta; A[0,2] = rho; b[0] = -2.0*rho*V_r - rho*V_theta/tan(theta)
+    A = np.zeros((5,5), float)
+    b = np.zeros((5,), float)
+    A[0,0] = V_theta; A[0,2] = rho; b[0] = -2.0*rho*V_r - rho*V_theta/np.tan(theta)
     A[1,1] = 1.0; b[1] = V_theta
     A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0
     A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0
     A[4,0] = h*(g-1)/g; A[4,3] = rho*(g-1)/g; A[4,4] = -1.0
-    dzdtheta = numpy.linalg.solve(A,b)
+    dzdtheta = np.linalg.solve(A,b)
     return dzdtheta
 
 def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4, dtheta=-1.0e-5):
@@ -541,13 +540,13 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4, dtheta=-1.0e-5):
     # we'll apply a linear interpolation
     LINEAR_INTERP_SWITCH = 1.01
     # Free-stream properties and gas model.
-    a1 = sqrt(g*R*T1)
+    a1 = np.sqrt(g*R*T1)
     M1 = V1 / a1
     C_p = R * g / (g-1)
     h1 = C_p * T1
     rho1 = p1 / (R * T1)
     # Test beta in relation to the Mach angle, mu
-    mu = asin(1.0/M1)
+    mu = np.asin(1.0/M1)
     beta2 = LINEAR_INTERP_SWITCH*mu
     #print "beta= ", beta, "mu= ", mu, " beta2= ", beta2
     if beta <= mu:
@@ -576,11 +575,11 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4, dtheta=-1.0e-5):
     T2 = T1 * T2_T1_obl(M1, beta, g)
     h2 = T2 * C_p
     theta = beta
-    V_r = V2 * cos(beta - theta_s)
-    V_theta = -V2 * sin(beta - theta_s)
+    V_r = V2 * np.cos(beta - theta_s)
+    V_theta = -V2 * np.sin(beta - theta_s)
     #
     # For integrating across the shock layer, the state vector is:
-    z = numpy.array([rho2, V_r, V_theta, h2, p2])
+    z = np.array([rho2, V_r, V_theta, h2, p2])
     #
     while V_theta < 0.0:
         # Keep a copy for linear interpolation at the end.
@@ -622,19 +621,19 @@ def beta_cone(V1, p1, T1, theta, R=287.1, g=1.4, tol=1.0e-8, dtheta=-1.0e-5):
     This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
     """
     # Free-stream properties and gas model.
-    a1 = sqrt(g*R*T1)
+    a1 = np.sqrt(g*R*T1)
     M1 = V1 / a1
     C_p = R * g / (g-1)
     h1 = C_p * T1
     rho1 = p1 / (R * T1)
     # Initial guess
     M1 = V1 / a1
-    b1 = asin(1.0 / M1) * 1.01 # to be stronger than a Mach wave
+    b1 = np.asin(1.0 / M1) * 1.01 # to be stronger than a Mach wave
     b2 = b1 * 1.05
     def error_in_theta(beta_guess):
         theta_guess, V_c, p_c, T_c = theta_cone(V1, p1, T1, beta_guess, R, g, dtheta)
         return theta_guess - theta
-    return solve(error_in_theta, b1, b2, tol=tol, limits=[asin(1.0/M1), pi/2.0])
+    return solve(error_in_theta, b1, b2, tol=tol, limits=[np.asin(1.0/M1), np.pi/2.0])
 
 def beta_cone2(M1, theta, R=287.1, g=1.4, tol=1.0e-8, dtheta=-1e-5):
     """
@@ -654,7 +653,7 @@ def beta_cone2(M1, theta, R=287.1, g=1.4, tol=1.0e-8, dtheta=-1e-5):
     """
     # Compute free stream velocity assuming unit value temperature
     T1 = 1.0
-    a1 = sqrt(g*R*T1)
+    a1 = np.sqrt(g*R*T1)
     V1 = M1*a1
     # Set free stream pressure to unit value
     p1 = 1.0
@@ -670,7 +669,7 @@ def theta_cone_flowfield(V1, p1, T1, beta, theta_cone, rays_num,
     Maciej Grybko, University of Southern Queensland, 2022
     """
     # Free-stream properties and gas model.
-    a1 = sqrt(g*R*T1)
+    a1 = np.sqrt(g*R*T1)
     M1 = V1 / a1
     C_p = R * g / (g-1)
     h1 = C_p * T1
@@ -686,17 +685,17 @@ def theta_cone_flowfield(V1, p1, T1, beta, theta_cone, rays_num,
     T2 = T1 * T2_T1_obl(M1, beta, g)
     h2 = T2 * C_p
     theta = beta
-    V_r = V2 * cos(beta - theta_s)
-    V_theta = -V2 * sin(beta - theta_s)
+    V_r = V2 * np.cos(beta - theta_s)
+    V_theta = -V2 * np.sin(beta - theta_s)
     #
     # For integrating across the shock layer, the state vector is:
-    z = numpy.array([rho2, V_r, V_theta, h2, p2])
+    z = np.array([rho2, V_r, V_theta, h2, p2])
     #
     # Save Mach number and flow direction for a number of rays
     M = [M2]
-    flow_dir = [beta + atan(V_theta/V_r)] # flow direction
+    flow_dir = [beta + np.atan(V_theta/V_r)] # flow direction
     theta_vec = [beta]                    # polar coordinate
-    mu = [asin(1/M2)]                     # mach wave angle
+    mu = [np.asin(1/M2)]                     # mach wave angle
     #
     S = beta - theta_cone                  # sum of all theta increments
     n = rays_num - 2
@@ -716,13 +715,13 @@ def theta_cone_flowfield(V1, p1, T1, beta, theta_cone, rays_num,
         if theta < theta_series: # save flow properties for desired thetas
             i += 1
             theta_series -= S*(1-q)/(1-q**n)*q**i
-            V = sqrt(V_r**2 + V_theta**2)
+            V = np.sqrt(V_r**2 + V_theta**2)
             T = h / C_p
-            a = sqrt(g*R*T)
+            a = np.sqrt(g*R*T)
             M.append(V/a)
-            flow_dir.append(theta + atan(V_theta/V_r))
+            flow_dir.append(theta + np.atan(V_theta/V_r))
             theta_vec.append(theta)
-            mu.append(asin(1/M[-1]))
+            mu.append(np.asin(1/M[-1]))
     #
     # At this point, V_theta should have crossed zero so
     # we can linearly-interpolate the cone-surface conditions.
@@ -732,13 +731,13 @@ def theta_cone_flowfield(V1, p1, T1, beta, theta_cone, rays_num,
     theta_c = theta_old*(1.0-frac) + theta*frac
     # At the cone surface...
     rho, V_r, V_theta, h, p = z_c
-    V = sqrt(V_r**2 + V_theta**2)
+    V = np.sqrt(V_r**2 + V_theta**2)
     T = h / C_p
-    a = sqrt(g*R*T)
+    a = np.sqrt(g*R*T)
     M.append(V/a)
-    flow_dir.append(theta + atan(V_theta/V_r))
+    flow_dir.append(theta + np.atan(V_theta/V_r))
     theta_vec.append(theta_c)
-    mu.append(asin(1/M[-1]))
+    mu.append(np.asin(1/M[-1]))
     #
     assert abs(V_theta) < 1.0e-6
     #
