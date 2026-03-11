@@ -13,6 +13,7 @@ Versions:
    27-Feb-2012: Use relative import in cfpylib
    29-Dec-2019: Port to the Eilmer4 collection, update to Python3.
    17-jul-2022: Bring in Maciej's additions (theta_cone_flowfield).
+   11-Mar-2026: Change to numpy from math
 
 Contents:
 
