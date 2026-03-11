@@ -91,7 +91,7 @@ ifeq ($(WITH_CHECK_JAC), 1)
 endif
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
-PY_PROG_DIR := python-programs
+PY_PROG_DIR := ./python-programs
 PY_PROGRAMS := lmr-verify
 AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
 AUX_PROGRAMS += gdtk-module
