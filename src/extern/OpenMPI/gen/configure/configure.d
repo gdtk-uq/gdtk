@@ -20,6 +20,7 @@ void main(string[] args)
 
     foreach(line; mpi.splitLines())
     {
+        if (!canFind(line, "#define")) continue;
         line = line.byChar.map!(c => c == '\t' ? ' ' : c).to!string;
         auto r = line.findSplitAfter("#define")[1].stripLeft.findSplit(" ");
         r[0] = r[0].stripRight;
@@ -108,7 +109,8 @@ immutable ints = [
     "OMPI_HAVE_SYS_SYNCH_H",
     "OMPI_HAVE_LONG_LONG",
     "OMPI_SIZEOF_BOOL",
-    "OMPI_SIZEOF_INT"
+    "OMPI_SIZEOF_INT",
+    "OMPI_FORTRAN_STATUS_SIZE"
     ];
 
 immutable types = [
