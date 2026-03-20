@@ -474,6 +474,75 @@ string SU2toMetisMeshFormat(string su2FileName, ref Domain grid) {
 
 } // end SU2toMetisFormat
 
+void read_cell_connectivity(ref File f, ref Domain grid, size_t ncells) {
+/*
+    Read the NELEM block in an already open SU2 file.
+    su2 files can vary a bit. We support having a column of
+    cell indexes on far right, or if this is not present,
+    we assume that the cells are index the order they appear.
+*/
+    grid.cells.length = ncells;
+    foreach(i; 0 .. ncells) {
+        auto lineContent = f.readln().strip();
+        auto tokens = lineContent.split();
+        int cell_type = to!int(tokens[0]);
+        size_t cell_id = to!size_t(tokens[$-1]);
+        size_t[] my_node_id_list;
+        foreach(j; 1 .. tokens.length-1) { my_node_id_list ~= to!size_t(tokens[j]); }
+        grid.cells[cell_id] = new Cell(cell_id, cell_type, my_node_id_list, grid.dimensions);
+    }
+}
+
+void read_node_positions(ref File f, ref Domain grid, size_t nnodes) {
+/*
+    Read the NPOIN section of an already open SU2 file. Once
+    again we have to be prepared for the option of explicit
+    node indices or not.
+*/
+    grid.nodes.length = nnodes;
+    foreach(i; 0 .. nnodes) {
+        auto tokens = f.readln().strip().split();
+        double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
+        if (grid.dimensions == 2) {
+            x = to!double(tokens[0]);
+            y = to!double(tokens[1]);
+            indx = to!size_t(tokens[2]);
+        } else {
+            assert(grid.dimensions == 3, "invalid dimensions");
+            x = to!double(tokens[0]);
+            y = to!double(tokens[1]);
+            z = to!double(tokens[2]);
+            indx = to!size_t(tokens[3]);
+        }
+        double[3] pos = [x, y, z];
+        grid.nodes[indx] = new Node(indx, pos, grid.nblocks);
+    } // end foreach i .. nnodes
+}
+
+Boundary read_boundary_faces(ref File f, size_t nelem, size_t i, string tag){
+/*
+    Read a boundary marker section of an already open SU2 file.
+*/
+    size_t[][] face_node_ids;
+    string[] face_tag_list; // TODO: tags could be size_t pairs maybe
+
+    face_node_ids.length = nelem;
+    face_tag_list.length = nelem;
+    foreach(j; 0 .. nelem) {
+        auto tokens = f.readln().strip().split();
+        int vtk_type = to!int(tokens[0]);
+        size_t[] my_face_node_id_list;
+        foreach(k; 1 .. tokens.length) { my_face_node_id_list ~= to!size_t(tokens[k]); }
+        string face_tag = makeFaceTag(my_face_node_id_list);
+        face_tag_list[j] = face_tag;
+        face_node_ids[j] ~= my_face_node_id_list;
+    } // end foreach j
+
+    // we will use a binary search on the face_tag_list, so we should order this array
+    face_tag_list.sort!();
+    return new Boundary(i+1, tag, face_node_ids, face_tag_list);
+}
+
 void readSU2grid(string meshFile, ref Domain grid) {
     // Proceed through SU2 file and read in the cell, node, and boundary information
     // input: SU2 mesh stored as a .su2 file
@@ -499,40 +568,12 @@ void readSU2grid(string meshFile, ref Domain grid) {
 
     // general information
     grid.dimensions = to!int(getHeaderContent("NDIME"));
-    auto ncells = to!size_t(getHeaderContent("NELEM"));
-
-    // Cells
-    grid.cells.length = ncells;
-    foreach(i; 0 .. ncells) {
-        auto lineContent = f.readln().strip();
-        auto tokens = lineContent.split();
-        int cell_type = to!int(tokens[0]);
-        size_t cell_id = to!size_t(tokens[$-1]);
-        size_t[] my_node_id_list;
-        foreach(j; 1 .. tokens.length-1) { my_node_id_list ~= to!size_t(tokens[j]); }
-        grid.cells[cell_id] = new Cell(cell_id, cell_type, my_node_id_list, grid.dimensions);
-    }
+    size_t ncells = to!size_t(getHeaderContent("NELEM"));
+    read_cell_connectivity(f, grid, ncells);
 
     // Nodes
-    auto nnodes = to!size_t(getHeaderContent("NPOIN"));
-    grid.nodes.length = nnodes;
-    foreach(i; 0 .. nnodes) {
-        auto tokens = f.readln().strip().split();
-        double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
-        if (grid.dimensions == 2) {
-            x = to!double(tokens[0]);
-            y = to!double(tokens[1]);
-            indx = to!size_t(tokens[2]);
-        } else {
-            assert(grid.dimensions == 3, "invalid dimensions");
-            x = to!double(tokens[0]);
-            y = to!double(tokens[1]);
-            z = to!double(tokens[2]);
-            indx = to!size_t(tokens[3]);
-        }
-        double[3] pos = [x, y, z];
-        grid.nodes[indx] = new Node(indx, pos, grid.nblocks);
-    } // end foreach i .. nnodes
+    size_t nnodes = to!size_t(getHeaderContent("NPOIN"));
+    read_node_positions(f, grid, nnodes);
 
     // Boundaries
     auto nboundaries = to!size_t(getHeaderContent("NMARK"));
@@ -540,24 +581,8 @@ void readSU2grid(string meshFile, ref Domain grid) {
     foreach(i; 0 .. nboundaries) {
         string tag = getHeaderContent("MARKER_TAG");
         writeln("-- -- -- Found boundary i=", i, " tag=", tag);
-        size_t[][] face_node_ids;
-        string[] face_tag_list;
         size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS"));
-        face_node_ids.length = nelem;
-        face_tag_list.length = nelem;
-        foreach(j; 0 .. nelem) {
-            auto tokens = f.readln().strip().split();
-            int vtk_type = to!int(tokens[0]);
-            size_t[] my_face_node_id_list;
-            foreach(k; 1 .. tokens.length) { my_face_node_id_list ~= to!size_t(tokens[k]); }
-            string face_tag = makeFaceTag(my_face_node_id_list);
-            face_tag_list[j] = face_tag;
-            face_node_ids[j] ~= my_face_node_id_list;
-        } // end foreach j
-
-        // we will use a binary search on the face_tag_list, so we should order this array
-        face_tag_list.sort!();
-        grid.boundary[i] = new Boundary(i+1, tag, face_node_ids, face_tag_list);
+        grid.boundary[i] = read_boundary_faces(f, nelem, i, tag);
     } // end foreach i
     return;
 }
