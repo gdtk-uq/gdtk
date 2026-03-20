@@ -474,7 +474,7 @@ string SU2toMetisMeshFormat(string su2FileName, ref Domain grid) {
 
 } // end SU2toMetisFormat
 
-void read_cell_connectivity(ref File f, ref Domain grid, size_t ncells) {
+void readSU2CellConnectivity(ref File f, ref Domain grid, size_t ncells) {
 /*
     Read the NELEM block in an already open SU2 file.
     su2 files can vary a bit. We support having a column of
@@ -493,7 +493,7 @@ void read_cell_connectivity(ref File f, ref Domain grid, size_t ncells) {
     }
 }
 
-void read_node_positions(ref File f, ref Domain grid, size_t nnodes) {
+void readSU2VertexPositions(ref File f, ref Domain grid, size_t nnodes) {
 /*
     Read the NPOIN section of an already open SU2 file. Once
     again we have to be prepared for the option of explicit
@@ -519,7 +519,7 @@ void read_node_positions(ref File f, ref Domain grid, size_t nnodes) {
     } // end foreach i .. nnodes
 }
 
-Boundary read_boundary_faces(ref File f, size_t nelem, size_t i, string tag){
+Boundary readSU2BoundaryDefs(ref File f, size_t nelem, size_t i, string tag){
 /*
     Read a boundary marker section of an already open SU2 file.
 */
@@ -543,6 +543,26 @@ Boundary read_boundary_faces(ref File f, size_t nelem, size_t i, string tag){
     return new Boundary(i+1, tag, face_node_ids, face_tag_list);
 }
 
+string getHeaderContent(string mark, string line)
+/*
+    Extract information from an SU2 header section header line.
+    We check that the string "mark" is present at the beginning
+    of the line.
+
+    Valid headers look this this, for example:
+    NELEM= 1234
+*/
+{
+    auto tokens = line.split("=");
+    if (tokens[0] != mark) {
+        throw new Error(format("Failed to parse content from line %s", line));
+    }
+    if (tokens.length != 2) {
+        throw new Error(format("Failed to parse content from line %s", line));
+    }
+    return tokens[1].strip();
+}
+
 void readSU2grid(string meshFile, ref Domain grid) {
     // Proceed through SU2 file and read in the cell, node, and boundary information
     // input: SU2 mesh stored as a .su2 file
@@ -550,40 +570,59 @@ void readSU2grid(string meshFile, ref Domain grid) {
 
     writeln("-- -- Import SU2 mesh");
     auto f = File(meshFile, "r");
-    string getHeaderContent(string target)
-    // Helper function to proceed through file, line-by-line,
-    // looking for a particular header line.
-    // Returns the content from the header line and leaves the file
-    // at the next line to be read, presumably with expected data.
-    {
-        while (!f.eof) {
-            auto line = f.readln().strip();
-            if (canFind(line, target)) {
-                auto tokens = line.split("=");
-                return tokens[1].strip();
-            }
-        } // end while
-        return ""; // didn't find the target
+
+    bool missing_ndim  = true;
+    bool missing_cells = true;
+    bool missing_vtxs  = true;
+    bool missing_bcs   = true;
+
+    while (missing_ndim || missing_cells || missing_vtxs || missing_bcs) {
+        if (f.eof) throw new Error("Reached end of file");
+
+        string line = f.readln().strip();
+        if (line.startsWith("%")) continue;
+        if (line=="") continue;
+        if (line.length < 5) throw new Error("Too short line in .su2");
+
+        switch(line[0 .. 5]) {
+        case "NDIME": // line
+            grid.dimensions = to!int(getHeaderContent("NDIME", line));
+            missing_ndim = false;
+            break;
+
+        case "NELEM": // line
+            size_t ncells = to!size_t(getHeaderContent("NELEM", line));
+            readSU2CellConnectivity(f, grid, ncells);
+            missing_cells = false;
+            break;
+
+        case "NPOIN": // line
+            size_t nnodes = to!size_t(getHeaderContent("NPOIN", line));
+            readSU2VertexPositions(f, grid, nnodes);
+            missing_vtxs = false;
+            break;
+
+        case "NMARK": // line
+            size_t nboundaries = to!size_t(getHeaderContent("NMARK", line));
+            grid.boundary.length = nboundaries;
+
+            foreach(i; 0 .. nboundaries) {
+                auto nextline = f.readln().strip(); // FIXME: Assume no blank lines
+                string tag = getHeaderContent("MARKER_TAG", nextline);
+                writeln("-- -- -- Found boundary i=", i, " tag=", tag);
+
+                nextline = f.readln().strip(); // FIXME: Assume no blank lines
+                size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS", nextline));
+                grid.boundary[i] = readSU2BoundaryDefs(f, nelem, i, tag);
+
+            } // end foreach i
+            missing_bcs = false;
+            break;
+
+        default:
+            throw new Error(format("Invalid Section Header %s", line));
+        }
     }
-
-    // general information
-    grid.dimensions = to!int(getHeaderContent("NDIME"));
-    size_t ncells = to!size_t(getHeaderContent("NELEM"));
-    read_cell_connectivity(f, grid, ncells);
-
-    // Nodes
-    size_t nnodes = to!size_t(getHeaderContent("NPOIN"));
-    read_node_positions(f, grid, nnodes);
-
-    // Boundaries
-    auto nboundaries = to!size_t(getHeaderContent("NMARK"));
-    grid.boundary.length = nboundaries;
-    foreach(i; 0 .. nboundaries) {
-        string tag = getHeaderContent("MARKER_TAG");
-        writeln("-- -- -- Found boundary i=", i, " tag=", tag);
-        size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS"));
-        grid.boundary[i] = read_boundary_faces(f, nelem, i, tag);
-    } // end foreach i
     return;
 }
 
