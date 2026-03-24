@@ -51,7 +51,7 @@ void printHelp()
 {
     writeln("Usage: ugrid_partition");
     writeln("");
-    writeln(" > ugrid_parition grid-file.su2 mapped-cells.txt nParitions nDim");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt nParitions nDim");
     writeln("");
     writeln("   where:");
     writeln("   grid-file.su2      : name of grid file in SU2 format.");
@@ -417,60 +417,25 @@ string partitionDual(string fileName, int nparts) {
 
 } // end partitionDual
 
-string SU2toMetisMeshFormat(string fileName, int ncommon) {
+string SU2toMetisMeshFormat(string su2FileName, ref Domain grid) {
     // Preprocesses the mesh stored in SU2 format for use with Metis
-    // input: SU2 mesh stored as a .su2 file
+    // input: Unstructured grid read from an SU2 mesh
     // output: file storing mesh in Metis format
 
-    writeln("-- Converting SU2 mesh to Metis mesh format");
-    auto f = File(fileName, "r");
-
-    // Check that the nDim command line argument matches the file dimensionality (NNG 07/21)
-    // Users setting nDim incorrectly can result in some very strange (and sometimes silent) bugs.
-    int ndim=-1;
-    while (!f.eof) {
-        auto line = f.readln().strip();
-        if (canFind(line, "NDIME")) {
-            auto tokens = line.split("=");
-            ndim = to!int(tokens[1].strip());
-            break;
-        }
-    }
-    if (ndim==-1) throw new Error(format("NDIME field not found in .su2 file %s",  fileName));
-    if (ndim!=ncommon) {
-        string msg = format("ugrid_parition dimensionality %d does not match file %s with NDIME= %d",
-                             ncommon, fileName, ndim);
-        throw new Error(msg);
-    }
-
-    size_t ncells;
-    while (!f.eof) {
-        auto line = f.readln().strip();
-        if (canFind(line, "NELEM")) {
-            auto tokens = line.split("=");
-            ncells = to!size_t(tokens[1].strip());
-            break;
-        }
-    }
-    string[] cells;
-    cells.length = ncells;
-    foreach(i; 0 .. ncells) {
-        auto lineContent = f.readln().strip();
-        auto tokens = lineContent.split();
-        size_t idx = to!size_t(tokens[tokens.length-1]);
-        string[] vtxids;
-        foreach(j; 1 .. tokens.length-1) { vtxids ~= format("%d \t", to!int(tokens[j])+1); }
-        cells[idx] = vtxids.join();
-    }
-
     // Strip out just the filename, it may be in another directory. (NNG 22/06/22)
-    string baseFileName = baseName(fileName);
+    string baseFileName = baseName(su2FileName);
     string outputFileName = "metisFormat_"~baseFileName;
+
+    // Now write cell -> vtx connectivity to a file
+    // Note that metis expects 1 indexing instead of 0
     File outFile;
     outFile = File(outputFileName, "w");
-    outFile.writeln(ncells);
-    foreach(cell; cells){
-        outFile.writeln(cell);
+    outFile.writeln(grid.cells.length);
+    foreach(cell; grid.cells){
+        foreach(vtx; cell.node_ids) {
+            outFile.write(format("%d \t", vtx+1));
+        }
+        outFile.writeln("");
     }
     return outputFileName;
 
@@ -904,6 +869,11 @@ int main(string[] args){
     // import entire SU2 grid file
     Domain grid = new Domain(nparts, ncommon);
     readSU2grid(inputMeshFile, grid);
+    if (grid.dimensions!=ncommon) {
+        string msg = format("ugrid_partition dimensionality %d does not match file %s with NDIME= %d",
+                             ncommon, inputMeshFile, grid.dimensions);
+        throw new Error(msg);
+    }
 
     // Let's check the user doesn't have any previous partitioned su2 files in the directory
     // since this will upset the code if the user intends on partitioning more than one su2 file
@@ -915,7 +885,7 @@ int main(string[] args){
     if (metisCheck() != 0)  throw new Error("Metis partition software cannot be found.");
 
     // convert the SU2 grid into the mesh format Metis is expecting
-    string metisFormatFile = SU2toMetisMeshFormat(inputMeshFile, ncommon);
+    string metisFormatFile = SU2toMetisMeshFormat(inputMeshFile, grid);
 
     // convert the mesh into a dual graph using Metis
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
