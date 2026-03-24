@@ -318,6 +318,22 @@ public:
 
 } // end class Boundary
 
+size_t nPointsFromElementType(size_t element_type)
+{
+/*
+    Proscribe the number of expected points from the element
+    type, as dictated by VTK definitions available here:
+    https://su2code.github.io/docs/Mesh-File/
+*/
+     switch (element_type) {
+        case 5: return 3;  // Triangle
+        case 9: return 4;  // Quadrilateral
+        case 10: return 4; // Tetrahedron
+        case 12: return 8; // Hexahedron
+        default: throw new Error("Unsupported element type");
+    }
+}
+
 // --------------------
 // Function definitions
 // --------------------
@@ -446,16 +462,19 @@ void readSU2CellConnectivity(ref File f, ref Domain grid, size_t ncells) {
     Read the NELEM block in an already open SU2 file.
     su2 files can vary a bit. We support having a column of
     cell indexes on far right, or if this is not present,
-    we assume that the cells are index the order they appear.
+    we assume that the cells are indexed in the order they appear.
 */
     grid.cells.length = ncells;
     foreach(i; 0 .. ncells) {
         auto lineContent = f.readln().strip();
         auto tokens = lineContent.split();
-        int cell_type = to!int(tokens[0]);
-        size_t cell_id = to!size_t(tokens[$-1]);
+        size_t cell_type = to!size_t(tokens[0]);
+
+        size_t n_points = nPointsFromElementType(cell_type);
         size_t[] my_node_id_list;
-        foreach(j; 1 .. tokens.length-1) { my_node_id_list ~= to!size_t(tokens[j]); }
+        foreach(j; 1 .. n_points+1) { my_node_id_list ~= to!size_t(tokens[j]); }
+
+        size_t cell_id = (tokens.length > n_points+1) ? to!size_t(tokens[n_points+1]) : i;
         grid.cells[cell_id] = new Cell(cell_id, cell_type, my_node_id_list, grid.dimensions);
     }
 }
@@ -473,13 +492,16 @@ void readSU2VertexPositions(ref File f, ref Domain grid, size_t nnodes) {
         if (grid.dimensions == 2) {
             x = to!double(tokens[0]);
             y = to!double(tokens[1]);
-            indx = to!size_t(tokens[2]);
-        } else {
-            assert(grid.dimensions == 3, "invalid dimensions");
+            indx = (tokens.length > 2) ? to!size_t(tokens[2]) : i;
+
+        } else if (grid.dimensions == 3) {
             x = to!double(tokens[0]);
             y = to!double(tokens[1]);
             z = to!double(tokens[2]);
-            indx = to!size_t(tokens[3]);
+            indx = (tokens.length > 3) ? to!size_t(tokens[3]) : i;
+
+        } else {
+            throw new Error("Invalid dimensions");
         }
         double[3] pos = [x, y, z];
         grid.nodes[indx] = new Node(indx, pos, grid.nblocks);
