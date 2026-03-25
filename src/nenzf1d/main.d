@@ -31,6 +31,7 @@ Options:
                        2 == echo input as well as printing more detailed results
                        3 == debug printing as well
    --kpa               Report pressure in kPa rather than Pa.
+   --mj                Report enthalpy in MJ/kg rather than J/kg.
    --help              Print this help message.";
     if (args.length < 2) {
         writeln("Too few arguments. You need to specify the input file.");
@@ -41,11 +42,13 @@ Options:
     }
     int verbosityLevel = 1; // default to commenting on major steps
     bool report_kPa = false;
+    bool report_MJ = false;
     bool helpWanted = false;
     try {
         getopt(args,
                "verbosity", &verbosityLevel,
                "kpa", &report_kPa,
+               "mj", &report_MJ,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -88,7 +91,7 @@ Options:
     //
     // Run nenzf1d simulation and output results
     try{
-        auto result = analyse(verbosityLevel, config, report_kPa);
+        auto result = analyse(verbosityLevel, config, report_kPa, report_MJ);
         writeln("Exit condition:");
         writefln("  x           %g m", result.x);
         writefln("  area-ratio  %g", result.area_ratio);

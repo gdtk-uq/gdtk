@@ -49,7 +49,7 @@ class Nenzf1dAnalysisException : Exception {
     }
 }
 
-Result analyse(int verbosityLevel, Config config, bool report_kPa)
+Result analyse(int verbosityLevel, Config config, bool report_kPa, bool report_MJ)
 {
     // The core of the nenzf1d program is a sequence of state-to-state calculations
     // for the test gas that initially fills the shock tube.
@@ -126,7 +126,11 @@ Result analyse(int verbosityLevel, Config config, bool report_kPa)
         gm1.update_sound_speed(state5s);
         double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
         if (verbosityLevel >= 1) {
-            writefln("  H5s         %g MJ/kg", H5s/1.0e6);
+            if (report_MJ) {
+                writefln("  H5s         %g MJ/kg", H5s/1.0e6);
+            } else {
+                writefln("  H5s         %g J/kg", H5s);
+            }
             write_cea_state(state5s);
             if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
         }
@@ -141,7 +145,11 @@ Result analyse(int verbosityLevel, Config config, bool report_kPa)
         double H1 = gm1.internal_energy(state1) + state1.p/state1.rho;
         if (verbosityLevel >= 1) {
             write_cea_state(state1);
-            writefln("  H1          %g MJ/kg", H1/1.0e6);
+            if (report_MJ) {
+                writefln("  H1          %g MJ/kg", H1/1.0e6);
+            } else {
+                writefln("  H1          %g J/kg", H1);
+            }
             if (verbosityLevel >= 3) { writeln("  state1: ", state1); }
         }
         //
@@ -170,8 +178,13 @@ Result analyse(int verbosityLevel, Config config, bool report_kPa)
         double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
         if (verbosityLevel >= 1) {
             writefln("  entropy     %g J/kg/K", entropy5);
-            writefln("  H5s         %g MJ/kg", H5s/1.0e6);
-            writefln("  H5s-H1      %g MJ/kg", (H5s-H1)/1.0e6);
+            if (report_MJ) {
+                writefln("  H5s         %g MJ/kg", H5s/1.0e6);
+                writefln("  H5s-H1      %g MJ/kg", (H5s-H1)/1.0e6);
+            } else {
+                writefln("  H5s         %g J/kg", H5s);
+                writefln("  H5s-H1      %g J/kg", H5s-H1);
+            }
             write_cea_state(state5s);
             if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
         }
