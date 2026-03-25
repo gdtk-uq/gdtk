@@ -163,10 +163,11 @@ extern (C) PlainResult run(int verbosityLevel, PlainConfig cfg)
 {
     int exitCode = 0;
     config = plain_to_fancy(cfg);
+    bool report_kPa = false;
 
     PlainResult rst;
     try{
-        result = nenzf1d.shock_tube_nozzle.analyse(verbosityLevel, config);
+        result = nenzf1d.shock_tube_nozzle.analyse(verbosityLevel, config, report_kPa);
         rst = d_result_to_c(result);
     }
     catch(Exception e) {

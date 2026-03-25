@@ -49,7 +49,7 @@ class Nenzf1dAnalysisException : Exception {
     }
 }
 
-Result analyse(int verbosityLevel, Config config)
+Result analyse(int verbosityLevel, Config config, bool report_kPa)
 {
     // The core of the nenzf1d program is a sequence of state-to-state calculations
     // for the test gas that initially fills the shock tube.
@@ -108,7 +108,11 @@ Result analyse(int verbosityLevel, Config config)
     //
     void write_cea_state(ref const(GasState) gs, string fill="  ")
     {
-        writefln("%spressure    %g kPa", fill, gs.p/1000.0);
+        if (report_kPa) {
+            writefln("%spressure    %g kPa", fill, gs.p/1000.0);
+        } else {
+            writefln("%spressure    %g Pa", fill, gs.p);
+        }
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
         writefln("%stemperature %g K", fill, gs.T);
     }
@@ -202,7 +206,7 @@ Result analyse(int verbosityLevel, Config config)
     double mflux6 = state6.rho * V6;  // mass flux per unit area, at throat
     if (verbosityLevel >= 1) {
         writefln("  V6          %g m/s", V6);
-        writefln("  mflux6      %g", mflux6);
+        writefln("  mflux6      %g kg/(m^2.s)", mflux6);
         write_cea_state(state6);
         if (verbosityLevel >= 3) { writeln("  state6= ", state6); }
     }
@@ -235,7 +239,7 @@ Result analyse(int verbosityLevel, Config config)
     double ar6e = mflux6 / mflux6e;
     if (verbosityLevel >= 1) {
         writefln("  V6e         %g m/s", V6e);
-        writefln("  mflux6e     %g", mflux6e);
+        writefln("  mflux6e     %g kg/(m^2.s)", mflux6e);
         writefln("  ar6e        %g", ar6e);
         write_cea_state(state6e);
         if (verbosityLevel >= 3) { writeln("  state6e= ", state6e); }
@@ -274,8 +278,12 @@ Result analyse(int verbosityLevel, Config config)
         writefln("  area_ratio  %g", ar);
         writefln("  V7          %g m/s", V7);
         write_cea_state(state7);
-        writefln("  mflux7      %g", mflux7);
-        writefln("  pitot7      %g kPa", state7_pitot.p/1000.0);
+        writefln("  mflux7      %g kg/(m^2.s)", mflux7);
+        if (report_kPa) {
+            writefln("  pitot7      %g kPa", state7_pitot.p/1000.0);
+        } else {
+            writefln("  pitot7      %g Pa", state7_pitot.p);
+        }
         if (verbosityLevel >= 3) { writeln("  state7= ", state7); }
         writeln("End of part A: shock-tube and frozen/eq nozzle analysis.");
     }
@@ -290,7 +298,11 @@ Result analyse(int verbosityLevel, Config config)
     //
     void write_tp_state(ref const(GasState) gs, string fill="  ")
     {
-        writefln("%spressure    %g kPa", fill, gs.p/1000.0);
+        if (report_kPa) {
+            writefln("%spressure    %g kPa", fill, gs.p/1000.0);
+        } else {
+            writefln("%spressure    %g Pa", fill, gs.p);
+        }
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
         writefln("%stemperature %g K", fill, gs.T);
         foreach (i; 0 .. gs.T_modes.length) {
@@ -572,20 +584,30 @@ Result analyse(int verbosityLevel, Config config)
         if (verbosityLevel >= 2) {
             writeln(sample_data(x1, area1, v1, gas1, dt_suggest));
         }
-	// Check that we are going down the supersonic-branch of the expansion.
-	if (check_supersonic_expansion && (dv < 0.0 || du_gda > 0.0)) {
+        // Check that we are going down the supersonic-branch of the expansion.
+        if (check_supersonic_expansion && (dv < 0.0 || du_gda > 0.0)) {
             string msg = format("We seem to be going down the subsonic branch dv=%g du_gda=%g", dv, du_gda);
-	    msg ~= "\nMaybe the equilibrium-flow analysis did not continue far enough past M=1 at the throat.";
-	    msg ~= "\nTry increasing the value of meq_throat.";
+            msg ~= "\nMaybe the equilibrium-flow analysis did not continue far enough past M=1 at the throat.";
+            msg ~= "\nTry increasing the value of meq_throat.";
             msg ~= format(" Present value: meq_throat=%g", meq_throat);
-	    throw new Nenzf1dAnalysisException(msg);
-	}
+            throw new Nenzf1dAnalysisException(msg);
+        }
         // House-keeping for the next step.
         v = v1; t = t1; x = x1; d =  d1; area = area1;
         gas0.copy_values_from(gas1);
         p_pitot = C * gas0.rho*v*v;
         t_inc = fmin(t_inc*t_inc_factor, t_inc_max);
     } // end while
+    //
+    // Report the reason(s) for stopping the main stepping loop.
+    if (verbosityLevel >= 1) {
+        writeln("Reason(s) for stopping:");
+        // The following conditions are copied from the top of the while loop.
+        if (!(x < x_end)) writeln("  x-position reached x_end.");
+        if (!(area < ar)) writeln("  area reached ar.");
+        if (!(t < t_final)) writeln("  time reached t_final.");
+        if (!(p_pitot > pp_ps*state5s.p)) writeln("  Pitot pressure reached.");
+    }
     //
     // Build a structure of the computed data for printing upstairs in "main"
     Result result;

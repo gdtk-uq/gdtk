@@ -30,6 +30,7 @@ Options:
                        1 == key results printed (default)
                        2 == echo input as well as printing more detailed results
                        3 == debug printing as well
+   --kpa               Report pressure in kPa rather than Pa.
    --help              Print this help message.";
     if (args.length < 2) {
         writeln("Too few arguments. You need to specify the input file.");
@@ -39,10 +40,12 @@ Options:
         return exitFlag;
     }
     int verbosityLevel = 1; // default to commenting on major steps
+    bool report_kPa = false;
     bool helpWanted = false;
     try {
         getopt(args,
                "verbosity", &verbosityLevel,
+               "kpa", &report_kPa,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -85,18 +88,29 @@ Options:
     //
     // Run nenzf1d simulation and output results
     try{
-        auto result = analyse(verbosityLevel, config);
+        auto result = analyse(verbosityLevel, config, report_kPa);
         writeln("Exit condition:");
         writefln("  x           %g m", result.x);
         writefln("  area-ratio  %g", result.area_ratio);
         writefln("  velocity    %g m/s", result.velocity);
         writefln("  Mach        %g", result.Mach_number);
-        writefln("  p_pitot     %g kPa (C.rho.V^2)", result.p_pitot/1000);
-        if (result.rayleigh_pitot > 0.0) {
-            writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen kinetics)",
-                    result.rayleigh_pitot/1000);
+        if (report_kPa) {
+            writefln("  p_pitot     %g kPa (C.rho.V^2, C=%g)",
+                     result.p_pitot/1000, config.C);
+            if (result.rayleigh_pitot > 0.0) {
+                writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen kinetics)",
+                         result.rayleigh_pitot/1000);
+            }
+            writefln("  pressure    %g kPa", result.pressure/1000.0);
+        } else {
+            writefln("  p_pitot     %g Pa (C.rho.V^2, C=%g)",
+                     result.p_pitot, config.C);
+            if (result.rayleigh_pitot > 0.0) {
+                writefln("  p_pitot     %g Pa (Rayleigh-Pitot, frozen kinetics)",
+                         result.rayleigh_pitot);
+            }
+            writefln("  pressure    %g Pa", result.pressure);
         }
-        writefln("  pressure    %g kPa", result.pressure/1000.0);
         writefln("  density     %g kg/m^3", result.density);
         writefln("  temperature %g K", result.temperature);
         foreach (i; 0 .. result.T_modes.length) {
