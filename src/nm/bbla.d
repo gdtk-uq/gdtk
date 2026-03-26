@@ -820,6 +820,11 @@ void solve(T)(in Matrix!T c, ref Matrix!T rhs, in size_t[2][] permuteList)
     if (rhs.ncols < 1 || rhs.nrows != nrows) {
         throw new Exception("invalid right-hand side");
     }
+    // Handle degenerate case with a single element matrix
+    if ((c.ncols==1) && (c.nrows==1)) {
+        rhs[0,0] = rhs[0,0]/c[0,0];
+        return;
+    }
     // Get the right-hand side rows into final order.
     foreach (rowPair; permuteList) {
         rhs.swapRows(rowPair[0], rowPair[1]);
