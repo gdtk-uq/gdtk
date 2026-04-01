@@ -322,12 +322,13 @@ class StreamTube():
         add_tE = [self.add_tE(x) for x in xs]
         fileName = config.job_name + ('/streamtube-%d.data' % self.indx)
         with open(fileName, 'w') as fp:
-            fp.write('# x  y0  y1  bc0  bc1 act add_rho add_xmo add_ymo add_tE\n')
-            fp.write('# n_bc=%d\n' % self.nbc)
-            fp.write('# dx_bc=%g\n' % (xs[1]-xs[0]))
+            fp.write("# x  y0  y1  bc0  bc1 act add_rho add_xmo add_ymo add_tE\n")
+            fp.write(f"# n_bc={self.nbc}\n")
+            fp.write(f"# dx_bc={(xs[1]-xs[0]):.18e}\n")
             for i in range(len(xs)):
-                fp.write('%g %g %g %g %g %g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i], 
-                                                            active[i], add_rho[i], add_xmo[i], add_ymo[i], add_tE[i]))
+                fp.write(f"{xs[i]:.18e} {y0s[i]:.18e} {y1s[i]:.18e} {bc0s[i]} {bc1s[i]} "
+                         f"{active[i]} {add_rho[i]:.18e} {add_xmo[i]:.18e} "
+                         f"{add_ymo[i]:.18e} {add_tE[i]:.18e}\n")
         return
 
 # --------------------------------------------------------------------
