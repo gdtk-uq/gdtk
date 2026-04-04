@@ -317,7 +317,8 @@ def write_vtk_structured_grid_file(fileName, grid, flowData, whole_niv, whole_nj
 
 # --------------------------------------------------------------------
 
-if __name__ == '__main__':
+
+def main():
     print("Begin lorikeet postprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
@@ -472,3 +473,7 @@ if __name__ == '__main__':
     #
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
