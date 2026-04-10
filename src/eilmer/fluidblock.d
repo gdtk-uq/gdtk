@@ -333,17 +333,18 @@ public:
         celldata.volumes.length = ncells + nghost;
         celldata.lengths.length = ncells + nghost;
         celldata.positions.length = ncells + nghost;
-        celldata.U0.length = (ncells + nghost)*neq*nftl;
         celldata.cell_cloud_indices.length = ncells;
-        if (nftl>1) celldata.U1.length = (ncells + nghost)*neq*nftl;
-        if (nftl>2) celldata.U2.length = (ncells + nghost)*neq*nftl;
-        if (nftl>3) celldata.U3.length = (ncells + nghost)*neq*nftl;
-        if (nftl>4) celldata.U4.length = (ncells + nghost)*neq*nftl;
-        celldata.dUdt0.length = (ncells + nghost)*neq*nftl;
-        if (nftl>1) celldata.dUdt1.length = (ncells + nghost)*neq*nftl;
-        if (nftl>2) celldata.dUdt2.length = (ncells + nghost)*neq*nftl;
-        if (nftl>3) celldata.dUdt3.length = (ncells + nghost)*neq*nftl;
-        if (nftl>4) celldata.dUdt4.length = (ncells + nghost)*neq*nftl;
+
+        celldata.U0.length = (ncells + nghost)*neq;
+        if (nftl>1) celldata.U1.length = (ncells + nghost)*neq;
+        if (nftl>2) celldata.U2.length = (ncells + nghost)*neq;
+        if (nftl>3) celldata.U3.length = (ncells + nghost)*neq;
+        if (nftl>4) celldata.U4.length = (ncells + nghost)*neq;
+        celldata.dUdt0.length = (ncells + nghost)*neq;
+        if (nftl>1) celldata.dUdt1.length = (ncells + nghost)*neq;
+        if (nftl>2) celldata.dUdt2.length = (ncells + nghost)*neq;
+        if (nftl>3) celldata.dUdt3.length = (ncells + nghost)*neq;
+        if (nftl>4) celldata.dUdt4.length = (ncells + nghost)*neq;
         celldata.source_terms.length = (ncells + nghost)*neq;
 
         celldata.flowstates.reserve(ncells + nghost);
