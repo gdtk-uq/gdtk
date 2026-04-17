@@ -46,8 +46,20 @@ public:
 
         auto L = init_lua_State();
         doLuaFile(L, fname1);
+
+        lua_getglobal(L, "config");
+        lua_getfield(L, -1, "tempLimits");
+        lua_getfield(L, -1, "lower");
+        double T_lower_limit = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "upper");
+        double T_upper_limit = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+
         lua_getglobal(L, "reaction");
-        mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
+        mRmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
 
         // Initialise energy exchange mechanism
         if (typeid(gmodel) is typeid(CompositeGas)) {
