@@ -3876,11 +3876,11 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
     }
     double minOmega = nkCfg.minRelaxationFactorForUpdate;
     double lambdaReductionFactor = nkCfg.relaxationFactorReductionFactor;
-    double alpha = 1.0e-04;                // a constant used in the step-acceptance test
-    double lambda = 1.0, lambdaPrev = 1.0; // step length
-    double f = 0.0;                        // objective function evaluated at starting point
-    double fPlus, fPlusPrev;               // objective function evaluated at new point
-    double initSlope = 0.0;                // intial slope used in the step-acceptance test
+    double alpha = 1.0e-04;                 // a constant used in the step-acceptance test
+    double lambda = 1.0, lambdaPrev = -1.0; // step length
+    double f = 0.0;                         // objective function evaluated at starting point
+    double fPlus, fPlusPrev;                // objective function evaluated at new point
+    double initSlope = 0.0;                 // intial slope used in the step-acceptance test
 
 
     // evaluate objective function at starting point
@@ -3995,9 +3995,10 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                 lambda *= lambdaReductionFactor;
             } else {
                 double lambdaNext;
-                if (lineSearchOrder == 2 || (lineSearchOrder == 3 && lambda == 1.0)) {
+                bool firstInterpolation = (lambdaPrev <= 0.0);
+                if (lineSearchOrder == 2 || (lineSearchOrder == 3 && firstInterpolation)) {
                     // use a quadratic fit
-                    lambdaNext = -initSlope / (2*(fPlus-f-initSlope));
+                    lambdaNext = -(initSlope * lambda * lambda) / (2.0 * (fPlus - f - lambda * initSlope));
                 } else {
                     // use a cubic fit
                     double v1 = fPlus-f-lambda*initSlope;
