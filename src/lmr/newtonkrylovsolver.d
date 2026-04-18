@@ -3273,15 +3273,14 @@ void evalAugmentedJacobianVectorProduct(size_t currentPhase, int stepsIntoCurren
 
     // Determine perturbation size, sigma
     double sigma;
-    version (complex_numbers) {
-        // For complex-valued Frechet derivative, a very small perturbation
-        // works well (almost) all the time.
-        sigma = nkCfg.frechetDerivativePerturbation;
-    }
-    else {
+    if (nkCfg.useRealValuedFrechetDerivative) {
         // For real-valued Frechet derivative, we compute a perturbation size
         // based on the zed vector.
         sigma = computePerturbationSize();
+    } else {
+        // For complex-valued Frechet derivative, a very small perturbation
+        // works well (almost) all the time.
+        sigma = nkCfg.frechetDerivativePerturbation;
     }
 
     // Evaluate Jz and place result in zed vector
