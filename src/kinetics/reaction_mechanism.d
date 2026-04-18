@@ -96,9 +96,9 @@ public:
     }
 
     @nogc
-    final void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
+    final void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values)
     {
-        gmodel.massf2conc(Q, _conc_for_source_terms);
+        gmodel.massf2conc(Q, _conc_for_source_terms, clip_small_gas_composition_values);
         eval_rate_constants(gmodel, Q);
         eval_rates(_conc_for_source_terms, _rates_for_source_terms);
         gmodel.rates2source(_rates_for_source_terms, source);

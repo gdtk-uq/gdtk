@@ -235,7 +235,7 @@ public:
     }
     //
     @nogc
-    final void massf2conc(ref GasState Q, number[] conc) const
+    final void massf2conc(ref GasState Q, number[] conc, bool clip_small_values=true) const
     in {
         debug {
             assert(Q.massf.length == conc.length,
@@ -248,12 +248,12 @@ public:
         }
         foreach ( i; 0.._n_species ) {
             conc[i] = Q.massf[i]*Q.rho / _mol_masses[i];
-            if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
+            if ( clip_small_values && conc[i] < MIN_MOLES ) conc[i] = 0.0;
         }
     }
     //
     @nogc
-    final void conc2massf(const(number[]) conc, ref GasState Q) const
+    final void conc2massf(const(number[]) conc, ref GasState Q, bool clip_small_values=true) const
     in {
         debug {
             assert(Q.massf.length == conc.length,
@@ -266,7 +266,7 @@ public:
         }
         foreach ( i; 0.._n_species ) {
             Q.massf[i] = conc[i]*_mol_masses[i] / Q.rho;
-            if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
+            if ( clip_small_values && Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
         }
     }
     //
@@ -291,7 +291,7 @@ public:
     }
     //
     @nogc
-    final void numden2massf(const(number[]) numden, ref GasState Q) const
+    final void numden2massf(const(number[]) numden, ref GasState Q, bool clip_small_values=true) const
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -299,7 +299,7 @@ public:
     do {
         foreach ( i; 0.._n_species ) {
             Q.massf[i] = numden[i]*_mol_masses[i] / (Avogadro_number*Q.rho);
-            if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
+            if ( clip_small_values && Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
         }
     }
     //

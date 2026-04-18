@@ -51,7 +51,7 @@ public:
     // For a multi-species gas, there will be first n_species elements for the chemical species
     // followed by n_modes of energies for a multi-temperature gas.
     @nogc
-    abstract void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source);
+    abstract void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true);
     //
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.

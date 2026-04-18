@@ -304,10 +304,10 @@ public:
         dtSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
         // species source terms
         auto chem_source = source[0..mNSpecies]; // these are actually references not copies
-        mRmech.eval_source_terms(gmodel, Q, chem_source);
+        mRmech.eval_source_terms(gmodel, Q, chem_source, clip_small_gas_composition_values);
         // energy modes source terms
         auto therm_source = source[mNSpecies..source.length];
         mEES.eval_source_terms(mRmech, Q, therm_rates, therm_source);

@@ -257,7 +257,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
         number[2] myF = rates(Q);
 
         number electron_formation_rate_in_numden = myF[0];
