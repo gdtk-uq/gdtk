@@ -3921,75 +3921,75 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
     bool reduceLambda = true;
     while (reduceLambda) {
 
-	//----
-	// 1. Compute residual at updated state
-	//----
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-		cell.U[1].copy_values_from(cell.U[0]);
-		foreach (ivar; 0 .. nConserved) {
-		    cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
-		}
-		cell.decode_conserved(0, 1, blk.omegaz);
-		startIdx += nConserved;
-	    }
-	}
-	evalResidual(1, currentPhase, stepsIntoCurrentPhase);
-    setResiduals(1);
-    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-            // return cell to original state
-            cell.decode_conserved(0, 0, blk.omegaz);
-	    }
-	}
-
-    //----
-	// 2. Compute unsteady term
-	//----
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-            blk.R[startIdx .. startIdx+nConserved] += -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
-            startIdx += nConserved;
-	    }
-	}
-
-	//----
-	// 3. Add smoothing source term
-	//----
-	if (activePhase.useResidualSmoothing) {
-            applyResidualSmoothing();
-	}
-
-	//----
-	// 4. Compute objective function at new point
-	//----
-    if (nkCfg.useScalingInLineSearch) {
+        //----
+        // 1. Compute residual at updated state
+        //----
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(rowScale, blk.R, nConserved, nConserved*blk.cells.length);
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                cell.U[1].copy_values_from(cell.U[0]);
+                foreach (ivar; 0 .. nConserved) {
+                    cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
+                }
+                cell.decode_conserved(0, 1, blk.omegaz);
+                startIdx += nConserved;
+            }
         }
-    }
-	mixin(dotOverBlocks("fPlus", "R", "R"));
-	version(mpi_parallel) {
-	    MPI_Allreduce(MPI_IN_PLACE, &fPlus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	}
-	fPlus = 0.5*fPlus;
+        evalResidual(1, currentPhase, stepsIntoCurrentPhase);
+        setResiduals(1);
+        if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                // return cell to original state
+                cell.decode_conserved(0, 0, blk.omegaz);
+            }
+        }
+
+        //----
+        // 2. Compute unsteady term
+        //----
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                blk.R[startIdx .. startIdx+nConserved] += -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
+                startIdx += nConserved;
+            }
+        }
+
+        //----
+        // 3. Add smoothing source term
+        //----
+        if (activePhase.useResidualSmoothing) {
+            applyResidualSmoothing();
+        }
+
+        //----
+        // 4. Compute objective function at new point
+        //----
+        if (nkCfg.useScalingInLineSearch) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                scaleVector(rowScale, blk.R, nConserved, nConserved*blk.cells.length);
+            }
+        }
+        mixin(dotOverBlocks("fPlus", "R", "R"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &fPlus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        fPlus = 0.5*fPlus;
 
         //debug {
         //    writefln("lambda: %.8e    RUn: %.8e    RU0: %.8e    test: %.8e", lambda, fPlus, f, f + alpha*lambda*initSlope);
         //}
 
-	//----
-	// 5. Check if objective function is reduced
-	//----
-	if ( (fPlus <= f + alpha*lambda*initSlope) || (lambda*omega < minOmega) ) {
-	    // we are done, don't attempt to reduce lambda any further
-	    reduceLambda = false;
-	}
-	else {
+        //----
+        // 5. Check if objective function is reduced
+        //----
+        if ( (fPlus <= f + alpha*lambda*initSlope) || (lambda*omega < minOmega) ) {
+            // we are done, don't attempt to reduce lambda any further
+            reduceLambda = false;
+        }
+        else {
             if (lineSearchOrder == 1) {
                 // just backtrack
                 lambda *= lambdaReductionFactor;
@@ -4027,7 +4027,7 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                     lambda = lambdaNext;
                 }
             }
-	}
+        }
     }
 
     return lambda*omega;
