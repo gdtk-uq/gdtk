@@ -617,8 +617,8 @@ private:
         @nogc
         number vibElecTemperature(ref GasState gs)
         {
-            immutable int MAX_ITERATIONS = 10;
-            immutable double TOL = 1e-10;
+            immutable int MAX_ITERATIONS = 40;
+            immutable double TOL = 1e-12;
 
             // Take the supplied T_modes[0] as the initial guess.
             number T_guess = gs.T_modes[0];
@@ -640,7 +640,7 @@ private:
                 f_guess = vibElecEnergyMixture(gs, T_guess, logT_guess) - gs.u_modes[0];
                 count++;
             }
-            if (fabs(dT)>1e-3) {
+            if ((count == MAX_ITERATIONS)&&(fabs(dT.re)>1e-3)) {
                 string msg = "The 'vibTemperature' function failed to converge.\n";
                 debug {
                     msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
@@ -655,16 +655,14 @@ private:
         @nogc
         number vibElecTemperature(ref GasState gs)
         {
-            int MAX_ITERATIONS = 40;
+            immutable int MAX_ITERATIONS = 40;
+            immutable double TOL = 1e-12;
 
             // Take the supplied T_modes[0] as the initial guess.
             number T_guess = gs.T_modes[0];
-            number u0 = vibElecEnergyMixture(gs, T_guess);
+            number logT_guess = log(T_guess);
+            number u0 = vibElecEnergyMixture(gs, T_guess, logT_guess);
             number f_guess =  u0 - gs.u_modes[0];
-
-            // We'll keep adjusting our temperature estimate
-            // until it is less than TOL.
-            double TOL = 1.0e-9;
 
             // Begin iterating.
             int count = 0;
@@ -673,13 +671,13 @@ private:
                 Cv = vibElecCvMixture(gs, T_guess);
                 dT = -f_guess/Cv;
                 T_guess += dT;
-                if (fabs(dT) < TOL) {
-                    break;
+                if (fabs(dT)/T_guess < TOL) {
+                    return T_guess;
                 }
-                f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+                logT_guess = log(T_guess);
+                f_guess = vibElecEnergyMixture(gs, T_guess, logT_guess) - gs.u_modes[0];
                 count++;
             }
-
             if ((count == MAX_ITERATIONS)&&(fabs(dT)>1e-3)) {
                 string msg = "The 'vibTemperature' function failed to converge.\n";
                 debug {
