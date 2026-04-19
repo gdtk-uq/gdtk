@@ -107,7 +107,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         dtSuggest = dt;
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values)
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true)
     {
         number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, source);
     }

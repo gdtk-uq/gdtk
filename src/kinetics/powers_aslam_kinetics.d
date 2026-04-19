@@ -64,7 +64,7 @@ final class UpdateAB : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         if (Q.T > _Ti) {
             // We are above the ignition point, proceed with reaction.
             number rhoA = Q.massf[0] * Q.rho;

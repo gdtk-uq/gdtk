@@ -325,7 +325,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
         dtSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         rmech.eval_source_terms(gmodel, Q, source, clip_small_gas_composition_values);
     }
 
