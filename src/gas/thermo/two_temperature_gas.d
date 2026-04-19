@@ -662,13 +662,6 @@ private:
             number u0 = vibElecEnergyMixture(gs, T_guess);
             number f_guess =  u0 - gs.u_modes[0];
 
-            // Before iterating, check if the supplied guess is
-            // good enough. Define good enough as 1/100th of a Joule.
-            double E_TOL = 1e-5;
-            if (fabs(f_guess) < E_TOL) {
-                return gs.T_modes[0];
-            }
-
             // We'll keep adjusting our temperature estimate
             // until it is less than TOL.
             double TOL = 1.0e-9;
