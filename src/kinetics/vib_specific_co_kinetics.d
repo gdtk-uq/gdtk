@@ -58,7 +58,7 @@ class VibSpecificCORelaxation : ThermochemicalReactor {
         throw new Error("Substepping does not work for vibe_specific_co!");
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         source[] = to!number(0.0);
         foreach (v; 0 .. gm.n_vibe_states)
             c[v] = Q.massf[v] * Q.rho / _M;
@@ -274,7 +274,7 @@ final class VibSpecificCOMixtureRelaxation : VibSpecificCORelaxation {
         }
     }
 
-    @nogc final override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
+    @nogc final override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         source[] = to!number(0.0);
         foreach (v; 0 .. gm.n_vibe_states)
             c[v] = Q.massf[v] * Q.rho / _M;

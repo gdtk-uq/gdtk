@@ -36,7 +36,7 @@ final class UpdateGasGiant : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         string errMsg = "eval_source_terms not implemented for two_temperature_gasgiant_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

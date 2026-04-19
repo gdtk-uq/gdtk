@@ -244,7 +244,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         } //end if/ else
     } //end function opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         string errMsg = "eval_source_terms not implemented for fuel_air_mix_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
