@@ -223,21 +223,21 @@ unittest {
     // Set up the species mass fractions assuming equilibrium.
     foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] = gm.boltzmann_eq_species(i, Q.T); }
 
-    double R_N2 = 296.805; // gas constant for N2
-    double M_N2 = 0.0280134; // kg/mole
-    double gamma = 7.0/5.0; // ratio of specific heats.
+    number R_N2 = 296.805; // gas constant for N2
+    number M_N2 = 0.0280134; // kg/mole
+    number gamma = 7.0/5.0; // ratio of specific heats.
 
     gm.update_thermo_from_pT(Q);
-    double my_rho = 1.0e5 / (R_N2 * 300.0);
+    number my_rho = 1.0e5 / (R_N2 * 300.0);
     assert(isClose(Q.rho, my_rho, 1.0e-6));
 
-    double my_u = 2.5 * R_N2 * 300.0;
+    number my_u = 2.5 * R_N2 * 300.0;
     foreach (i; 0 .. gm.numVibLevels) {
         my_u += (Avogadro_number/M_N2) * gm.vib_energy(i) * Q.massf[i];
     }
     assert(isClose(Q.u, my_u, 1.0e-6));
 
-    double Tvib = gm.compute_Tvib(Q, 400.0);
+    number Tvib = gm.compute_Tvib(Q, to!number(400.0));
     assert(isClose(Tvib, Q.T, 1.0e-3));
 
     gm.update_trans_coeffs(Q);
@@ -245,6 +245,6 @@ unittest {
     assert(isClose(Q.k, 0.0, 1.0e-6));
 
     gm.update_sound_speed(Q);
-    double my_a = sqrt(gamma * R_N2 * 300.0);
+    number my_a = sqrt(gamma * R_N2 * 300.0);
     assert(isClose(Q.a, my_a, 1.0e-6));
 }

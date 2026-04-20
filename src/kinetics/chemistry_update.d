@@ -661,9 +661,9 @@ unittest {
     import kinetics.reaction;
     import gas.therm_perf_gas;
 
-    double numericalEstimate(double dt, double tMax, double[] conc0, ChemODEStep step) {
+    number numericalEstimate(double dt, double tMax, number[] conc0, ChemODEStep step) {
         double t = 0.0;
-        double[] conc1;
+        number[] conc1;
         conc1.length = conc0.length;
         double dtDummy;
         int count = 0;
@@ -682,10 +682,10 @@ unittest {
 
     GasState gd = GasState(gmodel);
     gd.T = 700.0;
-    double c0 = 4.54;
-    double[] conc0 = [c0, c0, 0.0];
+    number c0 = 4.54;
+    number[] conc0 = [c0, c0, to!number(0.0)];
     gd.p = 2.0 * c0 * R_universal * gd.T;
-    double[] molef = [0.5, 0.5, 0.0];
+    number[] molef = [to!number(0.5), to!number(0.5), to!number(0.0)];
     gmodel.molef2massf(molef, gd);
     gmodel.update_thermo_from_pT(gd);
     rmech.eval_rate_constants(gmodel, gd);
@@ -703,13 +703,13 @@ unittest {
      */
     auto rkfStep = new RKFStep(gmodel, rmech, 1.0e-3);
     double dt = 287.175;
-    double numVal0 = numericalEstimate(dt, tInterval, conc0, rkfStep);
-    double err0 = analyticalVal - numVal0;
+    number numVal0 = numericalEstimate(dt, tInterval, conc0, rkfStep);
+    number err0 = analyticalVal - numVal0;
     // Reduce timestep and repeat test
     dt *= 2.0 ^^ (-1. / 5.);
-    conc0 = [c0, c0, 0.0];
-    double numVal1 = numericalEstimate(dt, tInterval, conc0, rkfStep);
-    double err1 = analyticalVal - numVal1;
+    conc0 = [c0, c0, to!number(0.0)];
+    number numVal1 = numericalEstimate(dt, tInterval, conc0, rkfStep);
+    number err1 = analyticalVal - numVal1;
     assert(isClose(1.96809, err0 / err1, 1.0e-4));
 
     /* 2. Test alpha-QSS step
@@ -727,7 +727,7 @@ unittest {
     err0 = analyticalVal - numVal0;
     // Reduce timestep and repeat test
     dt *= 0.5;
-    conc0 = [c0, c0, 0.0];
+    conc0 = [c0, c0, to!number(0.0)];
     numVal1 = numericalEstimate(dt, tInterval, conc0, alphaStep);
     err1 = analyticalVal - numVal1;
     assert(isClose(7.1420197868416215, numVal1, 1.0e-4));
@@ -742,9 +742,9 @@ unittest {
 
     double dtSuggest = 200.0;
     auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
-    double[maxParams] params;
+    number[maxParams] params;
     chemUpdate(gd, tInterval, dtSuggest, params);
-    double[] conc;
+    number[] conc;
     conc.length = 3;
     gmodel.massf2conc(gd, conc);
     assert(isClose(7.14201983840, conc[2], 1.0e-9));

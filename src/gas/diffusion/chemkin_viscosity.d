@@ -154,7 +154,7 @@ unittest {
         "C": -3.018511062902e-01, "D": 1.346540184145e-02
     ];
     auto chemkinCurve = ChemkinViscCurve(params);
-    assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6));
+    assert(isClose(4.47483851e-05, chemkinCurve.eval(to!number(900.0)), 1.0e-6));
 
     /*
     /// Next, let's test the creation and functionality
@@ -178,7 +178,7 @@ unittest {
         "C": -3.018511062902e-01, "D": 1.346540184145e-02
     ];
     auto chemkinCurve = ChemkinViscCurve(params);
-    assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6));
+    assert(isClose(4.47483851e-05, chemkinCurve.eval(to!number(900.0)), 1.0e-6));
 
     /*
     /// Next, let's test the creation and functionality

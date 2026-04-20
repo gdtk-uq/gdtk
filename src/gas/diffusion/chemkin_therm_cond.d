@@ -154,7 +154,7 @@ unittest {
         "B": 5.186927559697e+00, "C": -4.741229077145e-01, "D": 1.610702319175e-02
     ];
     auto chemkinCurve = ChemkinThermCondCurve(params);
-    assert(isClose(0.124382229603, chemkinCurve.eval(2000.0), 1.0e-6));
+    assert(isClose(0.124382229603, chemkinCurve.eval(to!number(2000.0)), 1.0e-6));
 
     /*
     /// Next, let's test the creation and functionality
@@ -178,7 +178,7 @@ unittest {
         "B": 5.186927559697e+00, "C": -4.741229077145e-01, "D": 1.610702319175e-02
     ];
     auto chemkinCurve = ChemkinThermCondCurve(params);
-    assert(isClose(0.124382229603, chemkinCurve.eval(2000.0), 1.0e-6));
+    assert(isClose(0.124382229603, chemkinCurve.eval(to!number(2000.0)), 1.0e-6));
 
     /*
     /// Next, let's test the creation and functionality

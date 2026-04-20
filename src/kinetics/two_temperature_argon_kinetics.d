@@ -534,8 +534,8 @@ unittest {
     _mol_masses[2] = 5.485799e-7; // Units are kg/mol
     _mol_masses[1] = _mol_masses[0] - _mol_masses[2]; // Units are kg/mol
     double theta_ion = 183_100.0;
-    double alpha;
-    double new_vel;
+    number alpha;
+    number new_vel;
 
     double Ru = R_universal;
     double m_Ar = 6.6335209e-26; //mass of argon (kg)
@@ -564,35 +564,35 @@ unittest {
     gm.update_sound_speed(gs); // (not necessary)
 
     // Some space- and time-stepping information
-    double vel = 1548.98; // m/s
-    double x = 0.0;
+    number vel = 1548.98; // m/s
+    number x = 0.0;
     double maxtime = 4.0e-6; // max time for the simulation
     double dt = 1.0e-9; // time interval for chemistry update
     int maxsteps = to!int(maxtime / dt + 1); // number of steps in which to iterate through
     int writefreq = maxsteps / 1000;
 
     // initialise the storage arrays
-    double[] t_list;
-    double[] x_list;
-    double[] T_list;
-    double[] T_modes_list;
-    double[] P_list;
-    double[] u_list;
-    double[] alpha_list;
+    number[] t_list;
+    number[] x_list;
+    number[] T_list;
+    number[] T_modes_list;
+    number[] P_list;
+    number[] u_list;
+    number[] alpha_list;
 
     // Initial values for storage arrays
-    t_list ~= 0.0;
+    t_list ~= to!number(0.0);
     x_list ~= x;
     T_list ~= gs.T;
     T_modes_list ~= gs.T_modes[0];
     P_list ~= gs.p;
     u_list ~= vel;
-    alpha_list ~= 0.0;
+    alpha_list ~= to!number(0.0);
 
     // Now, step along, allowing the reactions to proceed.
     //
     auto argonChemUpdate = new UpdateArgonFrac(modelFileName, gm);
-    double[maxParams] params; // ignore
+    number[maxParams] params; // ignore
     double dtSuggest = dt; // To give 100 steps per integration interval.
     //
     foreach (i; 1 .. maxsteps) {
@@ -610,7 +610,7 @@ unittest {
         gs.rho = rho1 * u1 / vel;
         gs.p = rho1 * ((Ru / M_Ar) * T1 + pow(u1, 2)) - gs.rho * pow(vel, 2);
         // New internal energy
-        double e_new = 5 * (Ru / M_Ar) * T1 / 2. + pow(u1, 2) / 2 - pow(vel, 2) / 2 - gs.p / gs.rho;
+        number e_new = 5 * (Ru / M_Ar) * T1 / 2. + pow(u1, 2) / 2 - pow(vel, 2) / 2 - gs.p / gs.rho;
         // Give all of the new energy to the heavy particles.
         gs.u = gs.u + (e_new - (gs.u + gs.u_modes[0]));
         // Update the temperature of the heavy paritcles based on this.
@@ -620,7 +620,7 @@ unittest {
             writefreq = 1;
         }
         if ((i % writefreq) == 0) { // only save 1000 points
-            t_list ~= i * dt;
+            t_list ~= to!number(i * dt);
             x_list ~= x;
             T_list ~= gs.T;
             T_modes_list ~= gs.T_modes[0];
@@ -631,7 +631,7 @@ unittest {
     } // end foreach i
 
     writeln("writing to Data file... please wait");
-    double[][] collateddata = [t_list, x_list, T_list, T_modes_list, P_list, u_list, alpha_list];
+    number[][] collateddata = [t_list, x_list, T_list, T_modes_list, P_list, u_list, alpha_list];
     //
     File file = File("two_temperature_argon_kinetics_test_results.data", "w");
     foreach (i; 0 .. t_list.length) {

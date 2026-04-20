@@ -100,6 +100,6 @@ unittest {
     ));
 
     auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
-    double k = tcm.eval(300.0);
-    assert(approxEqualNumbers(k, to!number(0.0262449), 1.0e-6));
+    number k = tcm.eval(to!number(300.0));
+    assert(approxEqualNumbers(to!number(k), to!number(0.0262449), 1.0e-6));
 }
