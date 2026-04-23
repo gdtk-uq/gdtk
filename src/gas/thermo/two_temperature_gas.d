@@ -726,4 +726,33 @@ unittest {
     assert(approxEqualNumbers(to!number(2000.0), gs.T, 1.0e-6));
     assert(approxEqualNumbers(to!number(2000.0), gs.T_modes[0], 1.0e-6));
     assert(approxEqualNumbers(to!number(1e6), gs.p, 1.0e-6));
+
+    // Check that the analytic sensitivity of the vibrational/electronic temperature
+    // to modal energy, dTve/du_modes[0] = 1/Cvve, matches the derivative recovered
+    // from updateFromRhoU using finite differences and/or complex-step differentiation.
+
+    number Cvve = tm.vibElecCvMixture(gs, gs.T_modes[0]);
+    number dTve_du_analytic = (1.0 / Cvve).re;
+    immutable number hFD = to!number(1.0e-06);
+
+    auto gsPlus = gs;
+    gsPlus.u_modes[0] += hFD;
+    tm.updateFromRhoU(gsPlus);
+    number dTve_du_fd = ((gsPlus.T_modes[0] - gs.T_modes[0]) / hFD).re;
+
+    // stderr.writefln!"dTve/du_modes analytic = %.14g"(dTve_du_analytic);
+    // stderr.writefln!"dTve/du_modes FD = %.14g"(dTve_du_fd);
+    assert(isClose(dTve_du_fd, dTve_du_analytic, 1.0e-03));
+
+    version(complex_numbers) {
+        immutable double hCS = 5.0e-50;
+
+        auto gsCS = gs;
+        gsCS.u_modes[0] += complex(0.0, hCS);
+        tm.updateFromRhoU(gsCS);
+        number dTve_du_cs = gsCS.T_modes[0].im / hCS;
+
+        // stderr.writefln!"dTve/du_modes CS = %.14g"(dTve_du_cs);
+        assert(isClose(dTve_du_cs, dTve_du_analytic, 1.0e-14));
+    }
 }
