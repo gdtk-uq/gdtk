@@ -3993,6 +3993,7 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                 // just backtrack
                 lambda *= lambdaReductionFactor;
             } else {
+                immutable double eps = 1.0e-14;
                 double lambdaNext;
                 bool firstInterpolation = (lambdaPrev <= 0.0);
                 if (lineSearchOrder == 2 || (lineSearchOrder == 3 && firstInterpolation)) {
@@ -4006,9 +4007,13 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                     double b  = (-lambdaPrev*v1/(lambda*lambda) + lambda*v2/(lambdaPrev*lambdaPrev))/(lambda-lambdaPrev);
                     double d  = b*b - 3*a*initSlope;
                     if (d < 0.0) d = 0.0; // prevent taking sqrt of -ve number
-                    if (a == 0.0) {
-                        // the cubic is a quadratic
-                        lambdaNext = -initSlope/(2.0*b);
+                    if (abs(a) < eps) {
+                        // the cubic is effectively a quadratic
+                        if (abs(b) < eps) {
+                            lambdaNext = lambdaReductionFactor*lambda;
+                        } else {
+                            lambdaNext = -initSlope/(2.0*b);
+                        }
                     } else {
                         // legitimate cubic
                         lambdaNext = (-b + sqrt(d))/(3.0*a);
