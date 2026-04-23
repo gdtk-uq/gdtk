@@ -939,7 +939,7 @@ unittest {
     lua_close(L);
     auto gs = GasState(1, 2);
 
-    gs.T = 300.0; gs.T_modes[] = 300.0;
+    gs.T = to!number(300.0); gs.T_modes[] = to!number(300.0);
     gs.massf[0] = 1.0;
     gs.p = 1e5;
     tm.updateFromPT(gs);

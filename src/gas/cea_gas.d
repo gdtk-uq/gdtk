@@ -613,7 +613,7 @@ unittest {
     assert(isClose(gd.mu, 1.87e-05, 0.01));
     assert(isClose(gd.k, 0.02647, 1.0e-5));
 
-    gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
+    gm.update_thermo_from_ps(gd, to!number(gd.ceaSavedData.s));
     assert(isClose(gd.p, 1.0e5, 1.0));
     assert(isClose(gd.T, 300.0, 0.1));
 

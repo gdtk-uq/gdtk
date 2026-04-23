@@ -532,7 +532,7 @@ unittest {
 
     version(complex_numbers) {
         // Check du/dT = Cv
-        number u0 = gd.u; // copy unperturbed value, but we don't really need it
+        number u0 = gs.u; // copy unperturbed value, but we don't really need it
         double ih = 1.0e-20;
         gs.T += complex(0.0,ih);
         tm.updateFromRhoT(gs);

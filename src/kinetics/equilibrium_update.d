@@ -396,11 +396,11 @@ unittest {
     double T_target = 2500.0;
     gs2.rho = rho_target;
     gs2.u = u_target;
-    gs2.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
+    gs2.massf = [to!number(0.74311527), to!number(0.25688473), to!number(0.0), to!number(0.0), to!number(0.0)];
     gs2.T = 2000.0; // eqc doesn't guess temperature anymore
     double tInterval = 0.0;
     double dtSuggest = -1.0;
-    double[maxParams] params;
+    number[maxParams] params;
 
     reactor(gs2, tInterval, dtSuggest, params);
     writeln("T: ", gs2.T);

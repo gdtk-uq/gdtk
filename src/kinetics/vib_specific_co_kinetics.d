@@ -356,12 +356,16 @@ unittest {
     int[nrows] vs = [1, 8, 9, 10, 11, 12, 15, 20, 30, 40, 50, 60];
     int[nrows] ws = [0, 7, 8, 9, 10, 11, 14, 19, 29, 39, 49, 59];
     number[nrows] Pvvm1_times_c_targets = [
-        8.728e-12, 1.695e-9, 3.010e-9, 5.274e-9, 9.152e-9,
-        1.575e-8, 7.735e-8, 1.009e-6, 1.455e-4, 1.875e-2, 2.279e0, 2.679e2
+                                           to!number(8.728e-12), to!number(1.695e-9), to!number(3.010e-9),
+                                           to!number(5.274e-9), to!number(9.152e-9), to!number(1.575e-8),
+                                           to!number(7.735e-8), to!number(1.009e-6), to!number(1.455e-4),
+                                           to!number(1.875e-2), to!number(2.279e0), to!number(2.679e2)
     ];
     number[nrows] Pvvm1_wwp1_times_c_targets = [
-        1.644e3, 1.146e5, 1.470e5, 1.837e5, 2.251e5,
-        2.714e5, 4.409e5, 8.383e5, 2.171e6, 4.490e6, 8.275e6, 1.422e7
+                                                to!number(1.644e3), to!number(1.146e5), to!number(1.470e5),
+                                                to!number(1.837e5), to!number(2.251e5), to!number(2.714e5),
+                                                to!number(4.409e5), to!number(8.383e5), to!number(2.171e6),
+                                                to!number(4.490e6), to!number(8.275e6), to!number(1.422e7)
     ];
 
     /*

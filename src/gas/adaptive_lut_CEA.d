@@ -754,11 +754,11 @@ unittest {
     // Return values not stored in the GasState
     // The constructor of the gas state will call update_thermo_from_pT
     // which itself calls update_thermo_from_rhou, so we are testing both
-    double Cv = gm.dudT_const_v(Q);
-    double Cp = gm.dhdT_const_p(Q);
-    double R = gm.gas_constant(Q);
-    double h = gm.enthalpy(Q);
-    double s = gm.entropy(Q);
+    number Cv = gm.dudT_const_v(Q);
+    number Cp = gm.dhdT_const_p(Q);
+    number R = gm.gas_constant(Q);
+    number h = gm.enthalpy(Q);
+    number s = gm.entropy(Q);
 
     assert(gm.n_modes == 0);
     assert(gm.n_species == 1);
