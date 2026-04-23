@@ -602,18 +602,24 @@ private:
     }
 
     version(complex_numbers) {
-        // For the complex numbers version of the code we need a Newton's method with a fixed number of iterations.
-        // An explanation can be found in:
-        //     E. J. Nielsen and W. L. Kleb
-        //     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids by Using Complex Variables
-        //     AIAA Journal, vol. 44, no. 4, 2006.
-        //
         // Changed Oct 2024 by NNG to match single species T from u.
         //   1.) We can now exit early if the real component is converged, this saves lots of time.
         //   2.) We always do at least one iteration, to ensure the complex component is set.
         //   3.) We throw an exception if the real part of dT isn't small at the end. This helps the
         //       physicality check make sure that the gas state has been set to a sensible value.
-        //   TODO: We don't really need a different routine for complex and real now.
+        //
+        // We previously followed Nielsen & Kleb, who forced 10 Newton iterations in complex mode
+        // to avoid premature exit before the imaginary perturbation developed. Here, for complex-step
+        // linearisation, we start from a converged real state and add only an infinitesimal imaginary
+        // perturbation, so we are not solving for a new nearby real root. The unit test at the end of
+        // this file and practical experiments indicate that one update is sufficient and that extra
+        // forced iterations do not change the computed derivative. KAD April 2026.
+        //
+        //     E. J. Nielsen and W. L. Kleb
+        //     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids by Using Complex Variables
+        //     AIAA Journal, vol. 44, no. 4, 2006.
+        //
+        // TODO: We don't really need a different routine for complex and real now.
         @nogc
         number vibElecTemperature(ref GasState gs)
         {
