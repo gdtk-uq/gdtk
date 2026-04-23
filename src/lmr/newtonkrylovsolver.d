@@ -3936,7 +3936,7 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
         }
         evalResidual(1, currentPhase, stepsIntoCurrentPhase);
         setResiduals(1);
-        if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
+        if (nkCfg.dualTime) { addUnsteadyTermToResiduals(1); }
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t startIdx = 0;
             foreach (cell; blk.cells) {

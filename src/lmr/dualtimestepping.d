@@ -880,7 +880,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
  * Authors: RJG and KAD
  * Date: 2025-09-07
  */
-void addUnsteadyTermToResiduals()
+void addUnsteadyTermToResiduals(int ftl=0)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     int bdfOrder = dtsController.bdfOrder;
@@ -895,9 +895,9 @@ void addUnsteadyTermToResiduals()
                     double c1 = 1.0/dt + 1.0/dtPrev - dt/(dtPrev*(dt+dtPrev));
                     double c2 = 1.0/dt + 1.0/dtPrev;
                     double c3 = dt/(dtPrev*(dt+dtPrev));
-                    blk.R[startIdx+ivar] += -c1*cell.U[0][ivar].re + c2*cell.U[2][ivar].re - c3*cell.U[3][ivar].re;
+                    blk.R[startIdx+ivar] += -c1*cell.U[ftl][ivar].re + c2*cell.U[2][ivar].re - c3*cell.U[3][ivar].re;
                 } else { // we assume BDF1
-                    blk.R[startIdx+ivar] += -(1.0/dt)*cell.U[0][ivar].re + (1.0/dt)*cell.U[2][ivar].re;
+                    blk.R[startIdx+ivar] += -(1.0/dt)*cell.U[ftl][ivar].re + (1.0/dt)*cell.U[2][ivar].re;
                 }
             }
             startIdx += nConserved;
