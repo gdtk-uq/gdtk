@@ -52,10 +52,10 @@ void printHelp()
     writeln("Usage: ugrid_partition");
     writeln("");
     writeln(" Preferred format:");
-    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt --nblks=N --dim=2|3 [--reorder=false|true] [--ptype=kway|rb] [--ncuts=N] [--niter=N] [--seed=N]");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt --nblks=N --dim=2|3 [--reorder=false|true] [--ptype=kway|rb] [--objtype=cut|vol] [--ncuts=N] [--niter=N] [--seed=N] [--contig=true|false] [--minconn=true|false] [--ufactor=N]");
     writeln("");
     writeln(" Legacy positional format, still supported:");
-    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt nPartitions nDim [reorder] [--ptype=kway|rb] [--ncuts=N] [--niter=N] [--seed=N]");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt nPartitions nDim [reorder] [--ptype=kway|rb] [--objtype=cut|vol] [--ncuts=N] [--niter=N] [--seed=N] [--contig=true|false] [--minconn=true|false] [--ufactor=N]");
     writeln("");
     writeln("   where:");
     writeln("   grid-file.su2          : name of grid file in SU2 format.");
@@ -65,9 +65,16 @@ void printHelp()
     writeln("   --dim / nDim           : integer (2 or 3) for dimensionality of grid.");
     writeln("   --reorder / reorder    : optional boolean; defaults to false.");
     writeln("   --ptype                : optional METIS partition type; if omitted, METIS default is used.");
+    writeln("   --objtype              : optional METIS objective type, cut or vol; if omitted, METIS default is used.");
     writeln("   --ncuts                : optional METIS number of cuts; if omitted, METIS default is used.");
     writeln("   --niter                : optional METIS number of refinement iterations; if omitted, METIS default is used.");
     writeln("   --seed                 : optional METIS random seed; if omitted, METIS default is used.");
+    writeln("   --contig               : optional METIS boolean option; true passes -contig to gpmetis; if omitted or false, METIS default is used.");
+    writeln("   --minconn              : optional METIS boolean option; true passes -minconn to gpmetis; if omitted or false, METIS default is used.");
+    writeln("   --ufactor              : optional METIS imbalance tolerance; if omitted, METIS default is used.");
+    writeln("");
+    writeln("   For more details on METIS settings and defaults, run:");
+    writeln("   > gpmetis -help");
     writeln("");
 }
 
@@ -421,9 +428,13 @@ int metisCheck() {
 
 struct MetisOptions {
     string ptype;
+    string objtype;
     int ncuts = -1;
     int niter = -1;
     int seed = -1;
+    bool contig = false;
+    bool minconn = false;
+    int ufactor = -1;
 }
 
 struct CommandLineOptions {
@@ -463,6 +474,12 @@ void parseOptionalArgument(ref CommandLineOptions options, string arg) {
         }
         options.metisOptions.ptype = value;
         break;
+    case "objtype":
+        if (value != "cut" && value != "vol") {
+            throw new Error("Invalid --objtype value. Expected cut or vol.");
+        }
+        options.metisOptions.objtype = value;
+        break;
     case "ncuts":
         options.metisOptions.ncuts = to!int(value);
         break;
@@ -471,6 +488,15 @@ void parseOptionalArgument(ref CommandLineOptions options, string arg) {
         break;
     case "seed":
         options.metisOptions.seed = to!int(value);
+        break;
+    case "contig":
+        options.metisOptions.contig = to!bool(value);
+        break;
+    case "minconn":
+        options.metisOptions.minconn = to!bool(value);
+        break;
+    case "ufactor":
+        options.metisOptions.ufactor = to!int(value);
         break;
     default:
         throw new Error("Unknown option: " ~ arg);
@@ -483,6 +509,9 @@ string metisOptionsToCommandString(MetisOptions options) {
     if (options.ptype.length > 0) {
         optionList ~= "-ptype=" ~ options.ptype;
     }
+    if (options.objtype.length > 0) {
+        optionList ~= "-objtype=" ~ options.objtype;
+    }
     if (options.ncuts >= 0) {
         optionList ~= "-ncuts=" ~ to!string(options.ncuts);
     }
@@ -491,6 +520,15 @@ string metisOptionsToCommandString(MetisOptions options) {
     }
     if (options.seed >= 0) {
         optionList ~= "-seed=" ~ to!string(options.seed);
+    }
+    if (options.contig) {
+        optionList ~= "-contig";
+    }
+    if (options.minconn) {
+        optionList ~= "-minconn";
+    }
+    if (options.ufactor >= 0) {
+        optionList ~= "-ufactor=" ~ to!string(options.ufactor);
     }
 
     return optionList.join(" ");
