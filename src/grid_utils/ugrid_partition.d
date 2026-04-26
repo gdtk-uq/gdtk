@@ -51,13 +51,23 @@ void printHelp()
 {
     writeln("Usage: ugrid_partition");
     writeln("");
-    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt nParitions nDim");
+    writeln(" Preferred format:");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt --nblks=N --dim=2|3 [--reorder=false|true] [--ptype=kway|rb] [--ncuts=N] [--niter=N] [--seed=N]");
+    writeln("");
+    writeln(" Legacy positional format, still supported:");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt nPartitions nDim [reorder] [--ptype=kway|rb] [--ncuts=N] [--niter=N] [--seed=N]");
     writeln("");
     writeln("   where:");
-    writeln("   grid-file.su2      : name of grid file in SU2 format.");
-    writeln("   mapped-cells.txt   : name of output file for mapped cells.");
-    writeln("   nPartitions        : integer number of desired partitions.");
-    writeln("   nDim               : integer (2 or 3) for dimensionality of grid.");
+    writeln("   grid-file.su2          : name of grid file in SU2 format.");
+    writeln("   mapped-cells.txt       : name of output file for mapped cells.");
+    writeln("");
+    writeln("   --nblks / nPartitions  : integer number of desired partitions/blocks.");
+    writeln("   --dim / nDim           : integer (2 or 3) for dimensionality of grid.");
+    writeln("   --reorder / reorder    : optional boolean; defaults to false.");
+    writeln("   --ptype                : optional METIS partition type; if omitted, METIS default is used.");
+    writeln("   --ncuts                : optional METIS number of cuts; if omitted, METIS default is used.");
+    writeln("   --niter                : optional METIS number of refinement iterations; if omitted, METIS default is used.");
+    writeln("   --seed                 : optional METIS random seed; if omitted, METIS default is used.");
     writeln("");
 }
 
@@ -409,6 +419,83 @@ int metisCheck() {
 
 } // end metisCheck
 
+struct MetisOptions {
+    string ptype;
+    int ncuts = -1;
+    int niter = -1;
+    int seed = -1;
+}
+
+struct CommandLineOptions {
+    int nparts = -1;
+    int ncommon = -1;
+    bool reorder = false;
+    MetisOptions metisOptions;
+}
+
+void parseOptionalArgument(ref CommandLineOptions options, string arg) {
+    if (!arg.startsWith("--")) {
+        throw new Error("Expected optional argument in --name=value format: " ~ arg);
+    }
+
+    string[] parts = arg[2 .. $].split("=");
+
+    if (parts.length != 2) {
+        throw new Error("Expected --name=value: " ~ arg);
+    }
+
+    string key = parts[0];
+    string value = parts[1];
+
+    switch (key) {
+    case "nblks":
+        options.nparts = to!int(value);
+        break;
+    case "dim":
+        options.ncommon = to!int(value);
+        break;
+    case "reorder":
+        options.reorder = to!bool(value);
+        break;
+    case "ptype":
+        if (value != "kway" && value != "rb") {
+            throw new Error("Invalid --ptype value. Expected kway or rb.");
+        }
+        options.metisOptions.ptype = value;
+        break;
+    case "ncuts":
+        options.metisOptions.ncuts = to!int(value);
+        break;
+    case "niter":
+        options.metisOptions.niter = to!int(value);
+        break;
+    case "seed":
+        options.metisOptions.seed = to!int(value);
+        break;
+    default:
+        throw new Error("Unknown option: " ~ arg);
+    }
+}
+
+string metisOptionsToCommandString(MetisOptions options) {
+    string[] optionList;
+
+    if (options.ptype.length > 0) {
+        optionList ~= "-ptype=" ~ options.ptype;
+    }
+    if (options.ncuts >= 0) {
+        optionList ~= "-ncuts=" ~ to!string(options.ncuts);
+    }
+    if (options.niter >= 0) {
+        optionList ~= "-niter=" ~ to!string(options.niter);
+    }
+    if (options.seed >= 0) {
+        optionList ~= "-seed=" ~ to!string(options.seed);
+    }
+
+    return optionList.join(" ");
+}
+
 string mesh2dual(string fileName, int ncommon) {
     // Calls Metis to convert the mesh into Metis' dual format
 
@@ -421,13 +508,22 @@ string mesh2dual(string fileName, int ncommon) {
 
 } // end mesh2dual
 
-string partitionDual(string fileName, int nparts) {
+string partitionDual(string fileName, int nparts, MetisOptions metisOptions) {
     // Calls Metis to partition the mesh stored in Metis' dual format
 
     writeln("-- Partitioning dual format");
     string outputFile = fileName ~ ".part." ~ to!string(nparts);
     string nparts_arg = to!string(nparts);
-    string command = "gpmetis " ~ " " ~ fileName ~ " " ~ nparts_arg;
+    string metisCommandOptions = metisOptionsToCommandString(metisOptions);
+    string command = "gpmetis ";
+    if (metisCommandOptions.length > 0) {
+        command ~= metisCommandOptions ~ " ";
+        writeln("-- METIS options: ", metisCommandOptions);
+    } else {
+        writeln("-- METIS options: none specified; using gpmetis build defaults. Run gpmetis -help to inspect defaults for your installed build.");
+    }
+    command ~= fileName ~ " " ~ nparts_arg;
+    writeln("-- METIS command: ", command);
     executeShell(command);
     return outputFile;
 
@@ -931,27 +1027,57 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
 
 int main(string[] args){
 
-    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon; bool reorder;
-    // we will accept either 5 or 6 command line arguments
-    if (args.length != 6) {
-        if (args.length != 5) {
-            writeln("Wrong number of command line arguments.");
-            printHelp();
-            return 1;
-        } else {
-            // we assume the user does not want the grid reordered if they didn't specify a 6th argument
-            args ~= "false";
-        }
+    string inputMeshFile; string mappedCellsFilename;
+    CommandLineOptions cliOptions;
+
+    if (args.length < 3) {
+        writeln("Wrong number of command line arguments.");
+        printHelp();
+        return 1;
     }
 
     // assign command line arguments to variable names
     inputMeshFile = args[1];
     mappedCellsFilename = args[2];
-    nparts = to!int(args[3]);
-    ncommon = to!int(args[4]);
-    reorder = to!bool(args[5]);
+
+    size_t iarg = 3;
+
+    // Preserve the original positional form:
+    // ugrid_partition mesh.su2 mapped_cells nPartitions nDim [reorder]
+    if (args.length > iarg && !args[iarg].startsWith("--")) {
+        cliOptions.nparts = to!int(args[iarg]);
+        iarg++;
+    }
+    if (args.length > iarg && !args[iarg].startsWith("--")) {
+        cliOptions.ncommon = to!int(args[iarg]);
+        iarg++;
+    }
+    if (args.length > iarg && !args[iarg].startsWith("--")) {
+        cliOptions.reorder = to!bool(args[iarg]);
+        iarg++;
+    }
+
+    // Also support named options:
+    // ugrid_partition mesh.su2 mapped_cells --nblks=8 --dim=2 --reorder=false
+    // Parse remaining named options...
+    while (iarg < args.length) {
+        parseOptionalArgument(cliOptions, args[iarg]);
+        iarg++;
+    }
+
+    if (cliOptions.nparts < 1 || (cliOptions.ncommon != 2 && cliOptions.ncommon != 3)) {
+        writeln("Invalid or missing partition settings.");
+        printHelp();
+        return 1;
+    }
+
+    int nparts = cliOptions.nparts;
+    int ncommon = cliOptions.ncommon;
+    bool reorder = cliOptions.reorder;
+    MetisOptions metisOptions = cliOptions.metisOptions;
 
     writeln("Begin partitioning................");
+    writeln("-- Grid partition settings: nblks=", nparts, ", dim=", ncommon, ", reorder=", reorder);
     // import entire SU2 grid file
     Domain grid = new Domain(nparts, ncommon);
     readSU2grid(inputMeshFile, grid);
@@ -979,7 +1105,7 @@ int main(string[] args){
     // partition the dual graph using Metis
     string partitionFile;
     if (nparts > 1) {
-        partitionFile = partitionDual(dualFormatFile, nparts);
+        partitionFile = partitionDual(dualFormatFile, nparts, metisOptions);
     } else {
         // we need to construct our own partition file in cases when the user wants to reorder a grid without partitioning it
         partitionFile = dualFormatFile ~ ".part." ~ to!string(nparts);
