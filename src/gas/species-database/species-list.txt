@@ -57,6 +57,7 @@ CHO.lua       :	CHO	 : aldehyde (2)
 Cl2.lua       : Cl2  : diatomic chlorine
 Cl.lua        : Cl   : atomic chlorine
 CN.lua        :	CN	 : cyanide
+CN_plus.lua   :	CN	 : cyanide ion
 CO.lua        :	CO	 : carbon monoxide
 CO_plus.lua   : CO+  : carbon monoxide ion
 CO2.lua       :	CO2	 : carbon dioxide
