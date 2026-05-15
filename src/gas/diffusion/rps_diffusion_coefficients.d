@@ -93,3 +93,28 @@ private:
     double[][] mSigmas;
     double[][] mM;
 }
+
+unittest {
+    import std.conv;
+    import std.file;
+
+    // For a H2, H, He gas mixture
+    double[] mol_masses = [2.01588000e-03,1.00794000e-03, 4.00260200e-03 ];
+    double[] LJ_sigmas = [2.92000000, 2.05000000, 2.55100000 ];
+    double[] LJ_epsilons = [38.00000000, 145.00000000, 10.22007017];
+    auto dcs = new RPSDiffusionCoefficients(mol_masses, LJ_sigmas, LJ_epsilons);
+
+    GasState gs = GasState(3,0);
+    gs.T = 2000.0;
+    gs.p = 812.0;
+
+    number[][] bd_coeffs;
+    bd_coeffs.length = 3;
+    foreach(i; 0 .. 3) bd_coeffs[i].length = 3;
+
+    // The matrix of coefficients has no diagonal, and is symmetric on either side
+    dcs.compute_bdc(gs, bd_coeffs);
+    assert(approxEqualNumbers(bd_coeffs[0][1], to!number(0.65401533213544194), 1.0e-3));
+    assert(approxEqualNumbers(bd_coeffs[0][2], to!number(0.46998736119635443), 1.0e-3));
+    assert(approxEqualNumbers(bd_coeffs[1][2], to!number(0.7723894756502554), 1.0e-3));
+}
