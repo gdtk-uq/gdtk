@@ -70,10 +70,10 @@ public:
                 // Compute collision integral with Neufeld et al fit.
                 // Eqn (4.67) in RJG Thesis
                 number T_star = T/mEpsilons[isp][jsp];
-                number Omega = A/(pow(T_star, B));
-                Omega += C/(exp(d*T_star));
-                Omega += E/(exp(F*T_star));
-                Omega += G/(exp(H*T_star));
+                number Omega = A*pow(T_star, -B);
+                Omega += C*exp(-d*T_star);
+                Omega += E*exp(-F*T_star);
+                Omega += G*exp(-H*T_star);
 
                 number numer = 0.00266*sqrt(T*T*T);
                 numer *= 1.0e-4; // cm^2/s --> m^2/s
