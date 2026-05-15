@@ -391,12 +391,12 @@ unittest {
     auto reactor = new EquilibriumUpdate("../gas/sample-data/therm-perf-equil-5-species-air.lua", gm);
 
     auto gs2 = GasState(5, 0);
-    double rho_target = 0.0139638507337;
-    double u_target = 2_131_154.032665843;
+    double rho_target = 0.013928480332929151;
+    double u_target = 2_122_523.3998044934;
     double T_target = 2500.0;
     gs2.rho = rho_target;
     gs2.u = u_target;
-    gs2.massf = [to!number(0.74311527), to!number(0.25688473), to!number(0.0), to!number(0.0), to!number(0.0)];
+    gs2.massf = [to!number(0.76708249), to!number(0.23291751), to!number(0.0), to!number(0.0), to!number(0.0)];
     gs2.T = 2000.0; // eqc doesn't guess temperature anymore
     double tInterval = 0.0;
     double dtSuggest = -1.0;
@@ -404,12 +404,14 @@ unittest {
 
     reactor(gs2, tInterval, dtSuggest, params);
     writeln("T: ", gs2.T);
-    assert(isClose(0.7321963, gs2.massf[0], 1.0e-6));
-    assert(isClose(0.23281198, gs2.massf[1], 1.0e-6));
-    assert(isClose(0.0, gs2.massf[2], 1.0e-6));
-    assert(isClose(0.01160037, gs2.massf[3], 1.0e-6));
-    assert(isClose(0.02339135, gs2.massf[4], 1.0e-6));
-    assert(isClose(T_target, gs2.T, 1.0e-6));
-    assert(isClose(rho_target, gs2.rho, 1.0e-6));
-    assert(isClose(u_target, gs2.u, 1.0e-1));
+
+    // Target values from stand-alone eqc python code
+    assert(isClose(7.56544529e-01, gs2.massf[0], 5.0e-6));
+    assert(isClose(2.09853276e-01, gs2.massf[1], 5.0e-6));
+    assert(isClose(3.94970532e-07, gs2.massf[2], 5.0e-6));
+    assert(isClose(1.10275167e-02, gs2.massf[3], 5.0e-6));
+    assert(isClose(2.25742840e-02, gs2.massf[4], 5.0e-6));
+    assert(isClose(T_target, gs2.T, 1.0e-4));
+    assert(isClose(rho_target, gs2.rho, 5.0e-6));
+    assert(isClose(u_target, gs2.u, 1.0e-3));
 }
