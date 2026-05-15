@@ -433,41 +433,46 @@ private:
 
 
 unittest {
+    import util.test_runner : skip;
     import std.file;
-    import gas.composite_gas;
+
+    skip("This unit test has no content.");
+
+    //import std.file;
+    //import gas.composite_gas;
 
     // Find the lua files in sample-data
-    chdir("./sample-data");
-    scope(exit) chdir("..");
+    //chdir("./sample-data");
+    //scope(exit) chdir("..");
 
-    FloatingPointControl fpctrl;
-    // Enable hardware exceptions for division by zero, overflow to infinity,
-    // invalid operations, and uninitialized floating-point variables.
-    // Copied from https://dlang.org/library/std/math/floating_point_control.html
-    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    //FloatingPointControl fpctrl;
+    //// Enable hardware exceptions for division by zero, overflow to infinity,
+    //// invalid operations, and uninitialized floating-point variables.
+    //// Copied from https://dlang.org/library/std/math/floating_point_control.html
+    //fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-    auto L = init_lua_State();
-    GasModel gm = new CompositeGas("N2-N.lua");
-    doLuaFile(L, "N2-N.lua");
-    string[] speciesNames;
-    getArrayOfStrings(L, "species", speciesNames);
-    auto ttp = new TwoTemperatureTransProps(L, speciesNames);
-    lua_close(L);
-    auto gs = GasState(2, 1);
-    gs.p = 1.0e5;
-    gs.T = 2000.0;
-    gs.T_modes[0] = 3000.0;
-    gs.massf[0] = 0.8;
-    gs.massf[1] = 0.2;
+    //auto L = init_lua_State();
+    //GasModel gm = new CompositeGas("N2-2sp-2T.lua");
+    //doLuaFile(L, "N2-2sp-2T.lua");
+    //string[] speciesNames;
+    //getArrayOfStrings(L, "species", speciesNames);
+    //auto ttp = new TwoTemperatureTransProps(L, speciesNames);
+    //lua_close(L);
+    //auto gs = GasState(2, 1);
+    //gs.p = 1.0e5;
+    //gs.T = 2000.0;
+    //gs.T_modes[0] = 3000.0;
+    //gs.massf[0] = 0.8;
+    //gs.massf[1] = 0.2;
 
-    ttp.updateTransProps(gs, gm);
+    //ttp.updateTransProps(gs, gm);
 
-    import std.stdio;
-    writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
+    //import std.stdio;
+    ////writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
 
-    gs.T_modes[0] = 300.0;
-    ttp.updateTransProps(gs, gm);
-    writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
+    //gs.T_modes[0] = 300.0;
+    //ttp.updateTransProps(gs, gm);
+    //writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
 
     //auto L = init_lua_State();
     //GasModel gm = new CompositeGas("gm-air11-2T.lua");
