@@ -3273,15 +3273,14 @@ void evalAugmentedJacobianVectorProduct(size_t currentPhase, int stepsIntoCurren
 
     // Determine perturbation size, sigma
     double sigma;
-    version (complex_numbers) {
-        // For complex-valued Frechet derivative, a very small perturbation
-        // works well (almost) all the time.
-        sigma = nkCfg.frechetDerivativePerturbation;
-    }
-    else {
+    if (nkCfg.useRealValuedFrechetDerivative) {
         // For real-valued Frechet derivative, we compute a perturbation size
         // based on the zed vector.
         sigma = computePerturbationSize();
+    } else {
+        // For complex-valued Frechet derivative, a very small perturbation
+        // works well (almost) all the time.
+        sigma = nkCfg.frechetDerivativePerturbation;
     }
 
     // Evaluate Jz and place result in zed vector
@@ -3876,11 +3875,11 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
     }
     double minOmega = nkCfg.minRelaxationFactorForUpdate;
     double lambdaReductionFactor = nkCfg.relaxationFactorReductionFactor;
-    double alpha = 1.0e-04;                // a constant used in the step-acceptance test
-    double lambda = 1.0, lambdaPrev = 1.0; // step length
-    double f = 0.0;                        // objective function evaluated at starting point
-    double fPlus, fPlusPrev;               // objective function evaluated at new point
-    double initSlope = 0.0;                // intial slope used in the step-acceptance test
+    double alpha = 1.0e-04;                 // a constant used in the step-acceptance test
+    double lambda = 1.0, lambdaPrev = -1.0; // step length
+    double f = 0.0;                         // objective function evaluated at starting point
+    double fPlus, fPlusPrev;                // objective function evaluated at new point
+    double initSlope = 0.0;                 // intial slope used in the step-acceptance test
 
 
     // evaluate objective function at starting point
@@ -3921,83 +3920,85 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
     bool reduceLambda = true;
     while (reduceLambda) {
 
-	//----
-	// 1. Compute residual at updated state
-	//----
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-		cell.U[1].copy_values_from(cell.U[0]);
-		foreach (ivar; 0 .. nConserved) {
-		    cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
-		}
-		cell.decode_conserved(0, 1, blk.omegaz);
-		startIdx += nConserved;
-	    }
-	}
-	evalResidual(1, currentPhase, stepsIntoCurrentPhase);
-    setResiduals(1);
-    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-            // return cell to original state
-            cell.decode_conserved(0, 0, blk.omegaz);
-	    }
-	}
-
-    //----
-	// 2. Compute unsteady term
-	//----
-	foreach (blk; parallel(localFluidBlocks,1)) {
-	    size_t startIdx = 0;
-	    foreach (cell; blk.cells) {
-            blk.R[startIdx .. startIdx+nConserved] += -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
-            startIdx += nConserved;
-	    }
-	}
-
-	//----
-	// 3. Add smoothing source term
-	//----
-	if (activePhase.useResidualSmoothing) {
-            applyResidualSmoothing();
-	}
-
-	//----
-	// 4. Compute objective function at new point
-	//----
-    if (nkCfg.useScalingInLineSearch) {
+        //----
+        // 1. Compute residual at updated state
+        //----
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(rowScale, blk.R, nConserved, nConserved*blk.cells.length);
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                cell.U[1].copy_values_from(cell.U[0]);
+                foreach (ivar; 0 .. nConserved) {
+                    cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
+                }
+                cell.decode_conserved(0, 1, blk.omegaz);
+                startIdx += nConserved;
+            }
         }
-    }
-	mixin(dotOverBlocks("fPlus", "R", "R"));
-	version(mpi_parallel) {
-	    MPI_Allreduce(MPI_IN_PLACE, &fPlus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	}
-	fPlus = 0.5*fPlus;
+        evalResidual(1, currentPhase, stepsIntoCurrentPhase);
+        setResiduals(1);
+        if (nkCfg.dualTime) { addUnsteadyTermToResiduals(1); }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                // return cell to original state
+                cell.decode_conserved(0, 0, blk.omegaz);
+            }
+        }
+
+        //----
+        // 2. Compute unsteady term
+        //----
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t startIdx = 0;
+            foreach (cell; blk.cells) {
+                blk.R[startIdx .. startIdx+nConserved] += -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
+                startIdx += nConserved;
+            }
+        }
+
+        //----
+        // 3. Add smoothing source term
+        //----
+        if (activePhase.useResidualSmoothing) {
+            applyResidualSmoothing();
+        }
+
+        //----
+        // 4. Compute objective function at new point
+        //----
+        if (nkCfg.useScalingInLineSearch) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                scaleVector(rowScale, blk.R, nConserved, nConserved*blk.cells.length);
+            }
+        }
+        mixin(dotOverBlocks("fPlus", "R", "R"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &fPlus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        fPlus = 0.5*fPlus;
 
         //debug {
         //    writefln("lambda: %.8e    RUn: %.8e    RU0: %.8e    test: %.8e", lambda, fPlus, f, f + alpha*lambda*initSlope);
         //}
 
-	//----
-	// 5. Check if objective function is reduced
-	//----
-	if ( (fPlus <= f + alpha*lambda*initSlope) || (lambda*omega < minOmega) ) {
-	    // we are done, don't attempt to reduce lambda any further
-	    reduceLambda = false;
-	}
-	else {
+        //----
+        // 5. Check if objective function is reduced
+        //----
+        if ( (fPlus <= f + alpha*lambda*initSlope) || (lambda*omega < minOmega) ) {
+            // we are done, don't attempt to reduce lambda any further
+            reduceLambda = false;
+        }
+        else {
             if (lineSearchOrder == 1) {
                 // just backtrack
                 lambda *= lambdaReductionFactor;
             } else {
+                immutable double eps = 1.0e-14;
                 double lambdaNext;
-                if (lineSearchOrder == 2 || (lineSearchOrder == 3 && lambda == 1.0)) {
+                bool firstInterpolation = (lambdaPrev <= 0.0);
+                if (lineSearchOrder == 2 || (lineSearchOrder == 3 && firstInterpolation)) {
                     // use a quadratic fit
-                    lambdaNext = -initSlope / (2*(fPlus-f-initSlope));
+                    lambdaNext = -(initSlope * lambda * lambda) / (2.0 * (fPlus - f - lambda * initSlope));
                 } else {
                     // use a cubic fit
                     double v1 = fPlus-f-lambda*initSlope;
@@ -4006,9 +4007,13 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                     double b  = (-lambdaPrev*v1/(lambda*lambda) + lambda*v2/(lambdaPrev*lambdaPrev))/(lambda-lambdaPrev);
                     double d  = b*b - 3*a*initSlope;
                     if (d < 0.0) d = 0.0; // prevent taking sqrt of -ve number
-                    if (a == 0.0) {
-                        // the cubic is a quadratic
-                        lambdaNext = -initSlope/(2.0*b);
+                    if (abs(a) < eps) {
+                        // the cubic is effectively a quadratic
+                        if (abs(b) < eps) {
+                            lambdaNext = lambdaReductionFactor*lambda;
+                        } else {
+                            lambdaNext = -initSlope/(2.0*b);
+                        }
                     } else {
                         // legitimate cubic
                         lambdaNext = (-b + sqrt(d))/(3.0*a);
@@ -4027,7 +4032,7 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                     lambda = lambdaNext;
                 }
             }
-	}
+        }
     }
 
     return lambda*omega;

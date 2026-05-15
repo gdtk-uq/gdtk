@@ -271,16 +271,11 @@ private:
 // Unit test of the basic gas model...
 
 unittest {
-    import std.stdio;
-    import std.process;
-
-    // Before running this test, we need the gas model files in place.
-    auto cmd = executeShell("cp air-5sp-eq.lua .");
-    assert(cmd.status == 0);
-    cmd = executeShell("cp ../../examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .");
-    assert(cmd.status == 0);
-    cmd = executeShell("prep-gas air-5sp-1T.inp air-5sp-1T.lua");
-    assert(cmd.status == 0);
+    import std.file;
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
     auto gm = new EquilibriumGas("air-5sp-eq.lua");
     // writeln("gm=", gm); // Can see that the reactants_massf and _molef set.
@@ -291,7 +286,12 @@ unittest {
 
     gd.T = 3352.068185; // Same guess as normal eqc
     gm.update_thermo_from_rhou(gd);
-    // writeln("gd.p=", gd.p, " gd.T=", gd.T);
-    assert(isClose(2500.0, gd.T, 1.0));
-    assert(isClose(10135.0, gd.p, 1.0));
+
+    assert(approxEqualNumbers(to!number(2500.0), gd.T, 1.0e-2));
+    assert(approxEqualNumbers(to!number(10135.0), gd.p, 1.0e-2));
+    assert(approxEqualNumbers(to!number(7.56544647e-01), gm.savedGasState.massf[0], 1.0e-2));
+    assert(approxEqualNumbers(to!number(2.09853770e-01), gm.savedGasState.massf[1], 1.0e-2));
+    assert(approxEqualNumbers(to!number(3.94945088e-07), gm.savedGasState.massf[2], 1.0e-2));
+    assert(approxEqualNumbers(to!number(1.10271575e-02), gm.savedGasState.massf[3], 1.0e-2));
+    assert(approxEqualNumbers(to!number(2.25740310e-02), gm.savedGasState.massf[4], 1.0e-2));
 }

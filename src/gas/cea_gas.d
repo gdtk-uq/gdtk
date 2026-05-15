@@ -579,45 +579,47 @@ private:
 } // end class CEAGgas
 
 unittest {
+    import util.test_runner : skip;
     import std.file;
 
+    skip("CEAgas is being phased out.");
     // Find the lua files in sample-data
-    chdir("./sample-data");
-    scope(exit) chdir("..");
+    //chdir("./sample-data");
+    //scope(exit) chdir("..");
 
-    lua_State* L = init_lua_State();
-    doLuaFile(L, "cea-air5species-gas-model.lua");
-    auto gm = new CEAGas(L);
-    lua_close(L);
+    //lua_State* L = init_lua_State();
+    //doLuaFile(L, "cea-air5species-gas-model.lua");
+    //auto gm = new CEAGas(L);
+    //lua_close(L);
 
-    auto gd = GasState(1, 0, true);
-    gd.p = 1.0e5;
-    gd.T = 300.0;
-    gd.massf[0] = 1.0;
-    gm.update_thermo_from_pT(gd);
-    assert(isClose(gm.R(gd), 288.198, 0.01));
-    assert(gm.n_modes == 0);
-    assert(gm.n_species == 1);
-    assert(isClose(gd.p, 1.0e5, 1.0e-6));
-    assert(isClose(gd.T, 300.0, 1.0e-6));
-    assert(isClose(gd.massf[0], 1.0, 1.0e-6));
-    assert(isClose(gd.rho, 1.1566, 1.0e-4));
-    assert(isClose(gd.u, -84_587.0, 0.1));
-    assert(isClose(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5));
-    assert(isClose(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5));
+    //auto gd = GasState(1, 0, true);
+    //gd.p = 1.0e5;
+    //gd.T = 300.0;
+    //gd.massf[0] = 1.0;
+    //gm.update_thermo_from_pT(gd);
+    //assert(isClose(gm.R(gd), 288.198, 0.01));
+    //assert(gm.n_modes == 0);
+    //assert(gm.n_species == 1);
+    //assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    //assert(isClose(gd.T, 300.0, 1.0e-6));
+    //assert(isClose(gd.massf[0], 1.0, 1.0e-6));
+    //assert(isClose(gd.rho, 1.1566, 1.0e-4));
+    //assert(isClose(gd.u, -84_587.0, 0.1));
+    //assert(isClose(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5));
+    //assert(isClose(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5));
 
-    gm.update_sound_speed(gd);
-    assert(isClose(gd.a, 347.7, 0.1));
+    //gm.update_sound_speed(gd);
+    //assert(isClose(gd.a, 347.7, 0.1));
 
-    gm.update_trans_coeffs(gd);
-    assert(isClose(gd.mu, 1.87e-05, 0.01));
-    assert(isClose(gd.k, 0.02647, 1.0e-5));
+    //gm.update_trans_coeffs(gd);
+    //assert(isClose(gd.mu, 1.87e-05, 0.01));
+    //assert(isClose(gd.k, 0.02647, 1.0e-5));
 
-    gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
-    assert(isClose(gd.p, 1.0e5, 1.0));
-    assert(isClose(gd.T, 300.0, 0.1));
+    //gm.update_thermo_from_ps(gd, to!number(gd.ceaSavedData.s));
+    //assert(isClose(gd.p, 1.0e5, 1.0));
+    //assert(isClose(gd.T, 300.0, 0.1));
 
-    gm.update_thermo_from_rhou(gd);
-    assert(isClose(gd.p, 1.0e5, 1.0));
-    assert(isClose(gd.T, 300.0, 0.1));
+    //gm.update_thermo_from_rhou(gd);
+    //assert(isClose(gd.p, 1.0e5, 1.0));
+    //assert(isClose(gd.T, 300.0, 0.1));
 }

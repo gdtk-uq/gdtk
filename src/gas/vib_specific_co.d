@@ -466,15 +466,15 @@ unittest {
     // Set up the species mass fractions assuming equilibrium.
     foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
 
-    double R_CO = 296.8379191791532; // gas constant for CO
-    double M_CO = 0.0280101; // kg/mole
-    double gamma = 7.0/5.0; // ratio of specific heats.
+    number R_CO = 296.8379191791532; // gas constant for CO
+    number M_CO = 0.0280101; // kg/mole
+    number gamma = 7.0/5.0; // ratio of specific heats.
 
     gm.update_thermo_from_pT(Q);
-    double my_rho = 26.7 / (R_CO * 175.0);
+    number my_rho = 26.7 / (R_CO * 175.0);
     assert(isClose(Q.rho, my_rho, 1.0e-6));
 
-    double my_u = 2.5 * R_CO * 175.0;
+    number my_u = 2.5 * R_CO * 175.0;
     foreach (i; 0 .. gm.n_vibe_states) {
         my_u += (Avogadro_number/M_CO) * gm.vib_energy(i) * Q.massf[i];
     }
@@ -485,7 +485,7 @@ unittest {
     //assert(isClose(Q.k, 0.0, 1.0e-6));
 
     gm.update_sound_speed(Q);
-    double my_a = sqrt(gamma * R_CO * 175.0);
+    number my_a = sqrt(gamma * R_CO * 175.0);
     assert(isClose(Q.a, my_a, 1.0e-6));
 
 }
@@ -509,15 +509,15 @@ unittest {
     foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
     Q.massf[gm.n_vibe_states] = 0.0;
 
-    double R_CO = 296.8379191791532; // gas constant for CO
-    double M_CO = 0.0280101; // kg/mole
-    double gamma = 7.0/5.0; // ratio of specific heats.
+    number R_CO = 296.8379191791532; // gas constant for CO
+    number M_CO = 0.0280101; // kg/mole
+    number gamma = 7.0/5.0; // ratio of specific heats.
 
     gm.update_thermo_from_pT(Q);
-    double my_rho = 26.7 / (R_CO * 175.0);
+    number my_rho = 26.7 / (R_CO * 175.0);
     assert(isClose(Q.rho, my_rho, 1.0e-6));
 
-    double my_u = 2.5 * R_CO * 175.0;
+    number my_u = 2.5 * R_CO * 175.0;
     foreach (i; 0 .. gm.n_vibe_states) {
         my_u += (Avogadro_number/M_CO) * gm.vib_energy(i) * Q.massf[i];
     }
@@ -528,7 +528,7 @@ unittest {
     //assert(isClose(Q.k, 0.0, 1.0e-6));
 
     gm.update_sound_speed(Q);
-    double my_a = sqrt(gamma * R_CO * 175.0);
+    number my_a = sqrt(gamma * R_CO * 175.0);
     assert(isClose(Q.a, my_a, 1.0e-6));
 
     number save_T = Q.T;

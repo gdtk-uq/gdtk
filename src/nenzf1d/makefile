@@ -54,10 +54,10 @@ LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
-DYAML_DIR := $(DGD_REPO)/src/extern/D-YAML/source/dyaml
+DYAML_DIR := ../extern/D-YAML/source/dyaml
 include $(DYAML_DIR)/dyaml_files.mk
 
-TINYENDIAN_DIR := $(DGD_REPO)/src/extern/tinyendian/source
+TINYENDIAN_DIR := ../extern/tinyendian/source
 include $(TINYENDIAN_DIR)/tinyendian_files.mk
 
 # The install destination.

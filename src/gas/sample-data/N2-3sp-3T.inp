@@ -1,0 +1,2 @@
+model = "three temperature gas"
+species = {'N2', "N2+", "e-"}

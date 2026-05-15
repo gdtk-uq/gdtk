@@ -51,13 +51,30 @@ void printHelp()
 {
     writeln("Usage: ugrid_partition");
     writeln("");
-    writeln(" > ugrid_parition grid-file.su2 mapped-cells.txt nParitions nDim");
+    writeln(" Preferred format:");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt --nblks=N --dim=2|3 [--reorder=false|true] [--ptype=kway|rb] [--objtype=cut|vol] [--ncuts=N] [--niter=N] [--seed=N] [--contig=true|false] [--minconn=true|false] [--ufactor=N]");
+    writeln("");
+    writeln(" Legacy positional format, still supported:");
+    writeln(" > ugrid_partition grid-file.su2 mapped-cells.txt nPartitions nDim [reorder] [--ptype=kway|rb] [--objtype=cut|vol] [--ncuts=N] [--niter=N] [--seed=N] [--contig=true|false] [--minconn=true|false] [--ufactor=N]");
     writeln("");
     writeln("   where:");
-    writeln("   grid-file.su2      : name of grid file in SU2 format.");
-    writeln("   mapped-cells.txt   : name of output file for mapped cells.");
-    writeln("   nPartitions        : integer number of desired partitions.");
-    writeln("   nDim               : integer (2 or 3) for dimensionality of grid.");
+    writeln("   grid-file.su2          : name of grid file in SU2 format.");
+    writeln("   mapped-cells.txt       : name of output file for mapped cells.");
+    writeln("");
+    writeln("   --nblks / nPartitions  : integer number of desired partitions/blocks.");
+    writeln("   --dim / nDim           : integer (2 or 3) for dimensionality of grid.");
+    writeln("   --reorder / reorder    : optional boolean; defaults to false.");
+    writeln("   --ptype                : optional METIS partition type; if omitted, METIS default is used.");
+    writeln("   --objtype              : optional METIS objective type, cut or vol; if omitted, METIS default is used.");
+    writeln("   --ncuts                : optional METIS number of cuts; if omitted, METIS default is used.");
+    writeln("   --niter                : optional METIS number of refinement iterations; if omitted, METIS default is used.");
+    writeln("   --seed                 : optional METIS random seed; if omitted, METIS default is used.");
+    writeln("   --contig               : optional METIS boolean option; true passes -contig to gpmetis; if omitted or false, METIS default is used.");
+    writeln("   --minconn              : optional METIS boolean option; true passes -minconn to gpmetis; if omitted or false, METIS default is used.");
+    writeln("   --ufactor              : optional METIS imbalance tolerance; if omitted, METIS default is used.");
+    writeln("");
+    writeln("   For more details on METIS settings and defaults, run:");
+    writeln("   > gpmetis -help");
     writeln("");
 }
 
@@ -318,6 +335,22 @@ public:
 
 } // end class Boundary
 
+size_t nPointsFromElementType(size_t element_type)
+{
+/*
+    Proscribe the number of expected points from the element
+    type, as dictated by VTK definitions available here:
+    https://su2code.github.io/docs/Mesh-File/
+*/
+     switch (element_type) {
+        case 5: return 3;  // Triangle
+        case 9: return 4;  // Quadrilateral
+        case 10: return 4; // Tetrahedron
+        case 12: return 8; // Hexahedron
+        default: throw new Error("Unsupported element type");
+    }
+}
+
 // --------------------
 // Function definitions
 // --------------------
@@ -393,6 +426,114 @@ int metisCheck() {
 
 } // end metisCheck
 
+struct MetisOptions {
+    string ptype;
+    string objtype;
+    int ncuts = -1;
+    int niter = -1;
+    int seed = -1;
+    bool contig = false;
+    bool minconn = false;
+    int ufactor = -1;
+}
+
+struct CommandLineOptions {
+    int nparts = -1;
+    int ncommon = -1;
+    bool reorder = false;
+    MetisOptions metisOptions;
+}
+
+void parseOptionalArgument(ref CommandLineOptions options, string arg) {
+    if (!arg.startsWith("--")) {
+        throw new Error("Expected optional argument in --name=value format: " ~ arg);
+    }
+
+    string[] parts = arg[2 .. $].split("=");
+
+    if (parts.length != 2) {
+        throw new Error("Expected --name=value: " ~ arg);
+    }
+
+    string key = parts[0];
+    string value = parts[1];
+
+    switch (key) {
+    case "nblks":
+        options.nparts = to!int(value);
+        break;
+    case "dim":
+        options.ncommon = to!int(value);
+        break;
+    case "reorder":
+        options.reorder = to!bool(value);
+        break;
+    case "ptype":
+        if (value != "kway" && value != "rb") {
+            throw new Error("Invalid --ptype value. Expected kway or rb.");
+        }
+        options.metisOptions.ptype = value;
+        break;
+    case "objtype":
+        if (value != "cut" && value != "vol") {
+            throw new Error("Invalid --objtype value. Expected cut or vol.");
+        }
+        options.metisOptions.objtype = value;
+        break;
+    case "ncuts":
+        options.metisOptions.ncuts = to!int(value);
+        break;
+    case "niter":
+        options.metisOptions.niter = to!int(value);
+        break;
+    case "seed":
+        options.metisOptions.seed = to!int(value);
+        break;
+    case "contig":
+        options.metisOptions.contig = to!bool(value);
+        break;
+    case "minconn":
+        options.metisOptions.minconn = to!bool(value);
+        break;
+    case "ufactor":
+        options.metisOptions.ufactor = to!int(value);
+        break;
+    default:
+        throw new Error("Unknown option: " ~ arg);
+    }
+}
+
+string metisOptionsToCommandString(MetisOptions options) {
+    string[] optionList;
+
+    if (options.ptype.length > 0) {
+        optionList ~= "-ptype=" ~ options.ptype;
+    }
+    if (options.objtype.length > 0) {
+        optionList ~= "-objtype=" ~ options.objtype;
+    }
+    if (options.ncuts >= 0) {
+        optionList ~= "-ncuts=" ~ to!string(options.ncuts);
+    }
+    if (options.niter >= 0) {
+        optionList ~= "-niter=" ~ to!string(options.niter);
+    }
+    if (options.seed >= 0) {
+        optionList ~= "-seed=" ~ to!string(options.seed);
+    }
+    if (options.contig) {
+        optionList ~= "-contig";
+    }
+    if (options.minconn) {
+        optionList ~= "-minconn";
+    }
+    if (options.ufactor >= 0) {
+        optionList ~= "-ufactor=" ~ to!string(options.ufactor);
+    }
+
+    return optionList.join(" ");
+}
+
 string mesh2dual(string fileName, int ncommon) {
     // Calls Metis to convert the mesh into Metis' dual format
 
@@ -405,76 +546,145 @@ string mesh2dual(string fileName, int ncommon) {
 
 } // end mesh2dual
 
-string partitionDual(string fileName, int nparts) {
+string partitionDual(string fileName, int nparts, MetisOptions metisOptions) {
     // Calls Metis to partition the mesh stored in Metis' dual format
 
     writeln("-- Partitioning dual format");
     string outputFile = fileName ~ ".part." ~ to!string(nparts);
     string nparts_arg = to!string(nparts);
-    string command = "gpmetis " ~ " " ~ fileName ~ " " ~ nparts_arg;
+    string metisCommandOptions = metisOptionsToCommandString(metisOptions);
+    string command = "gpmetis ";
+    if (metisCommandOptions.length > 0) {
+        command ~= metisCommandOptions ~ " ";
+        writeln("-- METIS options: ", metisCommandOptions);
+    } else {
+        writeln("-- METIS options: none specified; using gpmetis build defaults. Run gpmetis -help to inspect defaults for your installed build.");
+    }
+    command ~= fileName ~ " " ~ nparts_arg;
+    writeln("-- METIS command: ", command);
     executeShell(command);
     return outputFile;
 
 } // end partitionDual
 
-string SU2toMetisMeshFormat(string fileName, int ncommon) {
+string SU2toMetisMeshFormat(string su2FileName, ref Domain grid) {
     // Preprocesses the mesh stored in SU2 format for use with Metis
-    // input: SU2 mesh stored as a .su2 file
+    // input: Unstructured grid read from an SU2 mesh
     // output: file storing mesh in Metis format
 
-    writeln("-- Converting SU2 mesh to Metis mesh format");
-    auto f = File(fileName, "r");
-
-    // Check that the nDim command line argument matches the file dimensionality (NNG 07/21)
-    // Users setting nDim incorrectly can result in some very strange (and sometimes silent) bugs.
-    int ndim=-1;
-    while (!f.eof) {
-        auto line = f.readln().strip();
-        if (canFind(line, "NDIME")) {
-            auto tokens = line.split("=");
-            ndim = to!int(tokens[1].strip());
-            break;
-        }
-    }
-    if (ndim==-1) throw new Error(format("NDIME field not found in .su2 file %s",  fileName));
-    if (ndim!=ncommon) {
-        string msg = format("ugrid_parition dimensionality %d does not match file %s with NDIME= %d",
-                             ncommon, fileName, ndim);
-        throw new Error(msg);
-    }
-
-    size_t ncells;
-    while (!f.eof) {
-        auto line = f.readln().strip();
-        if (canFind(line, "NELEM")) {
-            auto tokens = line.split("=");
-            ncells = to!size_t(tokens[1].strip());
-            break;
-        }
-    }
-    string[] cells;
-    cells.length = ncells;
-    foreach(i; 0 .. ncells) {
-        auto lineContent = f.readln().strip();
-        auto tokens = lineContent.split();
-        size_t idx = to!size_t(tokens[tokens.length-1]);
-        string[] vtxids;
-        foreach(j; 1 .. tokens.length-1) { vtxids ~= format("%d \t", to!int(tokens[j])+1); }
-        cells[idx] = vtxids.join();
-    }
-
     // Strip out just the filename, it may be in another directory. (NNG 22/06/22)
-    string baseFileName = baseName(fileName);
+    string baseFileName = baseName(su2FileName);
     string outputFileName = "metisFormat_"~baseFileName;
+
+    // Now write cell -> vtx connectivity to a file
+    // Note that metis expects 1 indexing instead of 0
     File outFile;
     outFile = File(outputFileName, "w");
-    outFile.writeln(ncells);
-    foreach(cell; cells){
-        outFile.writeln(cell);
+    outFile.writeln(grid.cells.length);
+    foreach(cell; grid.cells){
+        foreach(vtx; cell.node_ids) {
+            outFile.write(format("%d \t", vtx+1));
+        }
+        outFile.writeln("");
     }
     return outputFileName;
 
 } // end SU2toMetisFormat
+
+void readSU2CellConnectivity(ref File f, ref Domain grid, size_t ncells) {
+/*
+    Read the NELEM block in an already open SU2 file.
+    su2 files can vary a bit. We support having a column of
+    cell indexes on far right, or if this is not present,
+    we assume that the cells are indexed in the order they appear.
+*/
+    grid.cells.length = ncells;
+    foreach(i; 0 .. ncells) {
+        auto lineContent = f.readln().strip();
+        auto tokens = lineContent.split();
+        size_t cell_type = to!size_t(tokens[0]);
+
+        size_t n_points = nPointsFromElementType(cell_type);
+        size_t[] my_node_id_list;
+        foreach(j; 1 .. n_points+1) { my_node_id_list ~= to!size_t(tokens[j]); }
+
+        size_t cell_id = (tokens.length > n_points+1) ? to!size_t(tokens[n_points+1]) : i;
+        grid.cells[cell_id] = new Cell(cell_id, cell_type, my_node_id_list, grid.dimensions);
+    }
+}
+
+void readSU2VertexPositions(ref File f, ref Domain grid, size_t nnodes) {
+/*
+    Read the NPOIN section of an already open SU2 file. Once
+    again we have to be prepared for the option of explicit
+    node indices or not.
+*/
+    grid.nodes.length = nnodes;
+    foreach(i; 0 .. nnodes) {
+        auto tokens = f.readln().strip().split();
+        double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
+        if (grid.dimensions == 2) {
+            x = to!double(tokens[0]);
+            y = to!double(tokens[1]);
+            indx = (tokens.length > 2) ? to!size_t(tokens[2]) : i;
+
+        } else if (grid.dimensions == 3) {
+            x = to!double(tokens[0]);
+            y = to!double(tokens[1]);
+            z = to!double(tokens[2]);
+            indx = (tokens.length > 3) ? to!size_t(tokens[3]) : i;
+
+        } else {
+            throw new Error("Invalid dimensions");
+        }
+        double[3] pos = [x, y, z];
+        grid.nodes[indx] = new Node(indx, pos, grid.nblocks);
+    } // end foreach i .. nnodes
+}
+
+Boundary readSU2BoundaryDefs(ref File f, size_t nelem, size_t i, string tag){
+/*
+    Read a boundary marker section of an already open SU2 file.
+*/
+    size_t[][] face_node_ids;
+    string[] face_tag_list; // TODO: tags could be size_t pairs maybe
+
+    face_node_ids.length = nelem;
+    face_tag_list.length = nelem;
+    foreach(j; 0 .. nelem) {
+        auto tokens = f.readln().strip().split();
+        int vtk_type = to!int(tokens[0]);
+        size_t[] my_face_node_id_list;
+        foreach(k; 1 .. tokens.length) { my_face_node_id_list ~= to!size_t(tokens[k]); }
+        string face_tag = makeFaceTag(my_face_node_id_list);
+        face_tag_list[j] = face_tag;
+        face_node_ids[j] ~= my_face_node_id_list;
+    } // end foreach j
+
+    // we will use a binary search on the face_tag_list, so we should order this array
+    face_tag_list.sort!();
+    return new Boundary(i+1, tag, face_node_ids, face_tag_list);
+}
+
+string getHeaderContent(string mark, string line)
+/*
+    Extract information from an SU2 header section header line.
+    We check that the string "mark" is present at the beginning
+    of the line.
+
+    Valid headers look this this, for example:
+    NELEM= 1234
+*/
+{
+    auto tokens = line.split("=");
+    if (tokens[0] != mark) {
+        throw new Error(format("Failed to parse content from line %s", line));
+    }
+    if (tokens.length != 2) {
+        throw new Error(format("Failed to parse content from line %s", line));
+    }
+    return tokens[1].strip();
+}
 
 void readSU2grid(string meshFile, ref Domain grid) {
     // Proceed through SU2 file and read in the cell, node, and boundary information
@@ -483,84 +693,59 @@ void readSU2grid(string meshFile, ref Domain grid) {
 
     writeln("-- -- Import SU2 mesh");
     auto f = File(meshFile, "r");
-    string getHeaderContent(string target)
-    // Helper function to proceed through file, line-by-line,
-    // looking for a particular header line.
-    // Returns the content from the header line and leaves the file
-    // at the next line to be read, presumably with expected data.
-    {
-        while (!f.eof) {
-            auto line = f.readln().strip();
-            if (canFind(line, target)) {
-                auto tokens = line.split("=");
-                return tokens[1].strip();
-            }
-        } // end while
-        return ""; // didn't find the target
-    }
 
-    // general information
-    grid.dimensions = to!int(getHeaderContent("NDIME"));
-    auto ncells = to!size_t(getHeaderContent("NELEM"));
+    bool missing_ndim  = true;
+    bool missing_cells = true;
+    bool missing_vtxs  = true;
+    bool missing_bcs   = true;
 
-    // Cells
-    grid.cells.length = ncells;
-    foreach(i; 0 .. ncells) {
-        auto lineContent = f.readln().strip();
-        auto tokens = lineContent.split();
-        int cell_type = to!int(tokens[0]);
-        size_t cell_id = to!size_t(tokens[$-1]);
-        size_t[] my_node_id_list;
-        foreach(j; 1 .. tokens.length-1) { my_node_id_list ~= to!size_t(tokens[j]); }
-        grid.cells[cell_id] = new Cell(cell_id, cell_type, my_node_id_list, grid.dimensions);
-    }
+    while (missing_ndim || missing_cells || missing_vtxs || missing_bcs) {
+        if (f.eof) throw new Error("Reached end of file");
 
-    // Nodes
-    auto nnodes = to!size_t(getHeaderContent("NPOIN"));
-    grid.nodes.length = nnodes;
-    foreach(i; 0 .. nnodes) {
-        auto tokens = f.readln().strip().split();
-        double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
-        if (grid.dimensions == 2) {
-            x = to!double(tokens[0]);
-            y = to!double(tokens[1]);
-            indx = to!size_t(tokens[2]);
-        } else {
-            assert(grid.dimensions == 3, "invalid dimensions");
-            x = to!double(tokens[0]);
-            y = to!double(tokens[1]);
-            z = to!double(tokens[2]);
-            indx = to!size_t(tokens[3]);
+        string line = f.readln().strip();
+        if (line.startsWith("%")) continue;
+        if (line=="") continue;
+        if (line.length < 5) throw new Error("Too short line in .su2");
+
+        switch(line[0 .. 5]) {
+        case "NDIME": // line
+            grid.dimensions = to!int(getHeaderContent("NDIME", line));
+            missing_ndim = false;
+            break;
+
+        case "NELEM": // line
+            size_t ncells = to!size_t(getHeaderContent("NELEM", line));
+            readSU2CellConnectivity(f, grid, ncells);
+            missing_cells = false;
+            break;
+
+        case "NPOIN": // line
+            size_t nnodes = to!size_t(getHeaderContent("NPOIN", line));
+            readSU2VertexPositions(f, grid, nnodes);
+            missing_vtxs = false;
+            break;
+
+        case "NMARK": // line
+            size_t nboundaries = to!size_t(getHeaderContent("NMARK", line));
+            grid.boundary.length = nboundaries;
+
+            foreach(i; 0 .. nboundaries) {
+                auto nextline = f.readln().strip(); // FIXME: Assume no blank lines
+                string tag = getHeaderContent("MARKER_TAG", nextline);
+                writeln("-- -- -- Found boundary i=", i, " tag=", tag);
+
+                nextline = f.readln().strip(); // FIXME: Assume no blank lines
+                size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS", nextline));
+                grid.boundary[i] = readSU2BoundaryDefs(f, nelem, i, tag);
+
+            } // end foreach i
+            missing_bcs = false;
+            break;
+
+        default:
+            throw new Error(format("Invalid Section Header %s", line));
         }
-        double[3] pos = [x, y, z];
-        grid.nodes[indx] = new Node(indx, pos, grid.nblocks);
-    } // end foreach i .. nnodes
-
-    // Boundaries
-    auto nboundaries = to!size_t(getHeaderContent("NMARK"));
-    grid.boundary.length = nboundaries;
-    foreach(i; 0 .. nboundaries) {
-        string tag = getHeaderContent("MARKER_TAG");
-        writeln("-- -- -- Found boundary i=", i, " tag=", tag);
-        size_t[][] face_node_ids;
-        string[] face_tag_list;
-        size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS"));
-        face_node_ids.length = nelem;
-        face_tag_list.length = nelem;
-        foreach(j; 0 .. nelem) {
-            auto tokens = f.readln().strip().split();
-            int vtk_type = to!int(tokens[0]);
-            size_t[] my_face_node_id_list;
-            foreach(k; 1 .. tokens.length) { my_face_node_id_list ~= to!size_t(tokens[k]); }
-            string face_tag = makeFaceTag(my_face_node_id_list);
-            face_tag_list[j] = face_tag;
-            face_node_ids[j] ~= my_face_node_id_list;
-        } // end foreach j
-
-        // we will use a binary search on the face_tag_list, so we should order this array
-        face_tag_list.sort!();
-        grid.boundary[i] = new Boundary(i+1, tag, face_node_ids, face_tag_list);
-    } // end foreach i
+    }
     return;
 }
 
@@ -880,30 +1065,65 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
 
 int main(string[] args){
 
-    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon; bool reorder;
-    // we will accept either 5 or 6 command line arguments
-    if (args.length != 6) {
-        if (args.length != 5) {
-            writeln("Wrong number of command line arguments.");
-            printHelp();
-            return 1;
-        } else {
-            // we assume the user does not want the grid reordered if they didn't specify a 6th argument
-            args ~= "false";
-        }
+    string inputMeshFile; string mappedCellsFilename;
+    CommandLineOptions cliOptions;
+
+    if (args.length < 3) {
+        writeln("Wrong number of command line arguments.");
+        printHelp();
+        return 1;
     }
 
     // assign command line arguments to variable names
     inputMeshFile = args[1];
     mappedCellsFilename = args[2];
-    nparts = to!int(args[3]);
-    ncommon = to!int(args[4]);
-    reorder = to!bool(args[5]);
+
+    size_t iarg = 3;
+
+    // Preserve the original positional form:
+    // ugrid_partition mesh.su2 mapped_cells nPartitions nDim [reorder]
+    if (args.length > iarg && !args[iarg].startsWith("--")) {
+        cliOptions.nparts = to!int(args[iarg]);
+        iarg++;
+    }
+    if (args.length > iarg && !args[iarg].startsWith("--")) {
+        cliOptions.ncommon = to!int(args[iarg]);
+        iarg++;
+    }
+    if (args.length > iarg && !args[iarg].startsWith("--")) {
+        cliOptions.reorder = to!bool(args[iarg]);
+        iarg++;
+    }
+
+    // Also support named options:
+    // ugrid_partition mesh.su2 mapped_cells --nblks=8 --dim=2 --reorder=false
+    // Parse remaining named options...
+    while (iarg < args.length) {
+        parseOptionalArgument(cliOptions, args[iarg]);
+        iarg++;
+    }
+
+    if (cliOptions.nparts < 1 || (cliOptions.ncommon != 2 && cliOptions.ncommon != 3)) {
+        writeln("Invalid or missing partition settings.");
+        printHelp();
+        return 1;
+    }
+
+    int nparts = cliOptions.nparts;
+    int ncommon = cliOptions.ncommon;
+    bool reorder = cliOptions.reorder;
+    MetisOptions metisOptions = cliOptions.metisOptions;
 
     writeln("Begin partitioning................");
+    writeln("-- Grid partition settings: nblks=", nparts, ", dim=", ncommon, ", reorder=", reorder);
     // import entire SU2 grid file
     Domain grid = new Domain(nparts, ncommon);
     readSU2grid(inputMeshFile, grid);
+    if (grid.dimensions!=ncommon) {
+        string msg = format("ugrid_partition dimensionality %d does not match file %s with NDIME= %d",
+                             ncommon, inputMeshFile, grid.dimensions);
+        throw new Error(msg);
+    }
 
     // Let's check the user doesn't have any previous partitioned su2 files in the directory
     // since this will upset the code if the user intends on partitioning more than one su2 file
@@ -915,7 +1135,7 @@ int main(string[] args){
     if (metisCheck() != 0)  throw new Error("Metis partition software cannot be found.");
 
     // convert the SU2 grid into the mesh format Metis is expecting
-    string metisFormatFile = SU2toMetisMeshFormat(inputMeshFile, ncommon);
+    string metisFormatFile = SU2toMetisMeshFormat(inputMeshFile, grid);
 
     // convert the mesh into a dual graph using Metis
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
@@ -923,7 +1143,7 @@ int main(string[] args){
     // partition the dual graph using Metis
     string partitionFile;
     if (nparts > 1) {
-        partitionFile = partitionDual(dualFormatFile, nparts);
+        partitionFile = partitionDual(dualFormatFile, nparts, metisOptions);
     } else {
         // we need to construct our own partition file in cases when the user wants to reorder a grid without partitioning it
         partitionFile = dualFormatFile ~ ".part." ~ to!string(nparts);

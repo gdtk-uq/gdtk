@@ -168,7 +168,7 @@ unittest {
                              "A":0.62526577, "B":-0.31779652e2,
                              "C":-0.1640798e4, "D":0.17454992e01];
     auto ceaCurve = CEAViscCurve(params);
-    assert(isClose(3.8818e-5, ceaCurve.eval(900.0), 1.0e-3));
+    assert(isClose(3.8818e-5, ceaCurve.eval(to!number(900.0)), 1.0e-3));
 
     /// Next, let's test the creation and functionality
     /// of a CEAViscosity object.

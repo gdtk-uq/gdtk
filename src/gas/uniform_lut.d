@@ -637,7 +637,7 @@ unittest {
     number k_given = 0.0662; // W/(m.K)
     number Cv_given = e_given / T_given; // J/(kg.K)
 
-    auto Q = GasState(gm, p_given, T_given);
+    auto Q = GasState(gm, p_given.re, T_given.re);
     // Return values not stored in the GasState
     number Cv = gm.dudT_const_v(Q);
     number Cp = gm.dhdT_const_p(Q);

@@ -65,7 +65,7 @@ unittest {
 
     gd.p = 1.0e6;
     gd.T = 2000.0;
-    gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
+    gd.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];
     gm.update_thermo_from_pT(gd);
     assert(isClose(11_801_825.6, gd.u, 1.0e-6));
     assert(isClose(1.2840117, gd.rho, 1.0e-6));

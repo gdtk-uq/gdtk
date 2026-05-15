@@ -12,6 +12,10 @@ from cffi import FFI
 from dataclasses import dataclass
 import math
 from pathlib import Path
+import sys
+if sys.platform == 'darwin':
+    import os
+    os.environ['DYLD_LIBRARY_PATH'] = os.getenv('DGD') + '/lib'
 
 ffi = FFI()
 ffi.cdef("""

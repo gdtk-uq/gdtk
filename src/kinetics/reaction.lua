@@ -216,6 +216,31 @@ local function ecModelToLuaStr(ec)
    return "{}"
 end
 
+local function checkEquationSpecies(r, reactionstring)
+   -- Ensure that each reaction is using species in the declared gas model
+   -- and return a helpful error if we find something unexpected.
+   -- @author: NNG
+   local errstring = "ERROR: Species %s in reaction %s not found in gas model!"
+   for _,p in ipairs(r[1]) do
+      local sp = p[2]
+      if sp ~= "M" then
+         if db[sp] == nil then
+            print(string.format(errstring, sp, reactionstring))
+            os.exit(1)
+         end
+      end
+   end
+
+   for _,p in ipairs(r[3]) do
+      local sp = p[2]
+      if sp ~= "M" then
+         if db[sp] == nil then
+            print(string.format(errstring, sp, reactionstring))
+            os.exit(1)
+         end
+      end
+   end
+end
 
 local function checkEquationBalances(r, rnumber)
    -- Checks both mass and charge balance
@@ -330,6 +355,7 @@ function reaction.validateReaction(t)
       os.exit(1)
    end
 
+   checkEquationSpecies(reac, t[1])
    mass, charge = checkEquationBalances(reac, t.number)
 	    
    if not mass then

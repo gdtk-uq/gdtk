@@ -108,7 +108,7 @@ unittest {
     assert(isClose(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-3));
 
     auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
-    double mu = vm.eval(300.0);
+    number mu = vm.eval(to!number(300.0));
     assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-5));
 
     lua_State* L = init_lua_State();
@@ -116,6 +116,6 @@ unittest {
     lua_getglobal(L, "Sutherland");
     vm = createSutherlandViscosity(L);
     lua_close(L);
-    mu = vm.eval(300.0);
+    mu = vm.eval(to!number(300.0));
     assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-3));
 }

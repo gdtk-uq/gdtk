@@ -73,16 +73,16 @@ struct FluidCellData{
         positions.length = ngtl*(ncells + nghost);
         lengths.length   = ncells + nghost;
 
-        U0.length = (ncells + nghost)*neq*nftl;
-        if (nftl>1) U1.length = (ncells + nghost)*neq*nftl;
-        if (nftl>2) U2.length = (ncells + nghost)*neq*nftl;
-        if (nftl>3) U3.length = (ncells + nghost)*neq*nftl;
-        if (nftl>4) U4.length = (ncells + nghost)*neq*nftl;
-        dUdt0.length = (ncells + nghost)*neq*nftl;
-        if (nftl>1) dUdt1.length = (ncells + nghost)*neq*nftl;
-        if (nftl>2) dUdt2.length = (ncells + nghost)*neq*nftl;
-        if (nftl>3) dUdt3.length = (ncells + nghost)*neq*nftl;
-        if (nftl>4) dUdt4.length = (ncells + nghost)*neq*nftl;
+        U0.length = (ncells + nghost)*neq;
+        if (nftl>1) U1.length = (ncells + nghost)*neq;
+        if (nftl>2) U2.length = (ncells + nghost)*neq;
+        if (nftl>3) U3.length = (ncells + nghost)*neq;
+        if (nftl>4) U4.length = (ncells + nghost)*neq;
+        dUdt0.length = (ncells + nghost)*neq;
+        if (nftl>1) dUdt1.length = (ncells + nghost)*neq;
+        if (nftl>2) dUdt2.length = (ncells + nghost)*neq;
+        if (nftl>3) dUdt3.length = (ncells + nghost)*neq;
+        if (nftl>4) dUdt4.length = (ncells + nghost)*neq;
         source_terms.length = (ncells + nghost)*neq;
 
         flowstates.reserve(ncells + nghost);

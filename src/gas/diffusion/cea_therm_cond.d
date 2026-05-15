@@ -165,7 +165,7 @@ unittest {
                              "A":0.76269502, "B":0.62341752e3,
                              "C":-0.71899552e6, "D":0.56927918];
     auto ceaCurve = CEAThermCondCurve(params);
-    assert(isClose(0.1662583, ceaCurve.eval(7200.0), 1.0e-6));
+    assert(isClose(0.1662583, ceaCurve.eval(to!number(7200.0)), 1.0e-6));
 
     /// Next, let's test the creation and functionality
     /// of a CEAThermalConductivity object.

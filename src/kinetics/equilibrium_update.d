@@ -50,7 +50,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         string errMsg = "eval_source_terms not implemented for equilibrium_update.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -156,12 +156,27 @@ class EquilibriumCalculator {
     @nogc int n_species() const { return nsp; }
     @nogc int n_elements() const { return nel; }
 
-private:
-    int nel,nsp;
-    double[string][] element_map;
-    string[] element_set,species_names;
-    double[] a,X0,X1,lewis,M;
-    double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
+    @nogc size_t element_index(string target_element) const {
+        size_t cidx = 9999;
+        foreach(idx, element; element_set) {
+            if (element==target_element) {
+                cidx = idx;
+                break;
+            }
+        }
+        if (cidx==9999) throw new Error("Target element not found in element_set");
+        return cidx;
+    }
+
+    @nogc const
+    double element_count(size_t elidx, size_t spidx) {
+        return a[elidx*nsp + spidx];
+    }
+
+    @nogc const
+    double molar_mass(size_t spidx) {
+        return M[spidx];
+    }
 
     @nogc
     void massf_to_molef(number[] massf, double[] M, double[] molef){
@@ -188,6 +203,14 @@ private:
             massf[i] = to!number(molef[i] * M[i] / mixMolMass);
         }
     }
+
+private:
+    int nel,nsp;
+    double[string][] element_map;
+    string[] element_set,species_names;
+    double[] a,X0,X1,lewis,M;
+    double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
+
 
     void compile_molar_masses(lua_State* L, string[] _species_names, ref double[] _M){
         /*
@@ -373,11 +396,11 @@ unittest {
     double T_target = 2500.0;
     gs2.rho = rho_target;
     gs2.u = u_target;
-    gs2.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
+    gs2.massf = [to!number(0.74311527), to!number(0.25688473), to!number(0.0), to!number(0.0), to!number(0.0)];
     gs2.T = 2000.0; // eqc doesn't guess temperature anymore
     double tInterval = 0.0;
     double dtSuggest = -1.0;
-    double[maxParams] params;
+    number[maxParams] params;
 
     reactor(gs2, tInterval, dtSuggest, params);
     writeln("T: ", gs2.T);
