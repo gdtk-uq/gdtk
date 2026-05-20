@@ -2,7 +2,7 @@
 #
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
-DMD ?= dmd
+DMD ?= ldmd2
 
 ifeq ($(shell uname -s), Darwin)
     PLATFORM := macosx
@@ -50,4 +50,5 @@ test_runner: $(NUMBER_FILE) $(NTYPES_FILES) $(UTIL_FILES) ../util/test_runner.d
 		../util/test_runner.d $(filter-out %/test_runner.d,$^)
 
 clean:
-	- rm test_runner
+	- rm -f *.o *.so *.a *.obj *.lib
+	- rm -f test_runner
