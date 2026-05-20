@@ -168,13 +168,25 @@ int main_(string[] args)
     }
 
     locationStr = locationStr.strip();
+    if (verbosity > 2) {
+        writefln("Location string, as received: %s", locationStr);
+    }
     locationStr = locationStr.replaceAll(regex("\""), "");
+    if (verbosity > 2) {
+        writefln("Location string, stripped of quotes: %s", locationStr);
+    }
     double[] xp, yp, zp;
     foreach(triple; locationStr.split(";")) {
+        if (verbosity > 2) {
+            writefln("triple string: %s", triple);
+        }
         auto items = triple.split(",");
         xp ~= to!double(items[0]);
         yp ~= to!double(items[1]);
         zp ~= (items.length > 2) ? to!double(items[2]) : 0.0;
+        if (verbosity > 2) {
+            writefln("location coordinates: %g %g %g", xp[$-1], yp[$-1], zp[$-1]);
+        }
     }
     if (xp.length == 0) {
         writeln("No probe locations given.");

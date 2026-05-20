@@ -173,21 +173,17 @@ private:
 
 } // end class Very_viscous_air
 
-version(very_viscous_air_test) {
-    int main() {
-        auto gm = new VeryViscousAir();
-        auto gs = GasState(gm, 100.0e3, 300.0);
-        assert(isClose(gm.R(gs), 287.0, 1.0e-6), failedUnitTest());
+unittest {
+    auto gm = new VeryViscousAir();
+    auto gs = GasState(gm, 100.0e3, 300.0);
+    assert(isClose(gm.R(gs), 287.0, 1.0e-6));
 
-        gm.update_thermo_from_pT(gs);
-        gm.update_sound_speed(gs);
-        assert(isClose(gs.rho, 1.16144, 1.0e-6), failedUnitTest());
-        assert(isClose(gs.u, 215250, 1.0e-6), failedUnitTest());
-        assert(isClose(gs.a, 347.189, 1.0e-6), failedUnitTest());
-        gm.update_trans_coeffs(gs);
-        assert(isClose(gs.mu, 10.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gs.k, 10045, 1.0e-6), failedUnitTest());
-
-        return 0;
-    }
+    gm.update_thermo_from_pT(gs);
+    gm.update_sound_speed(gs);
+    assert(isClose(gs.rho, 1.16144, 1.0e-6));
+    assert(isClose(gs.u, 215_250, 1.0e-6));
+    assert(isClose(gs.a, 347.189, 1.0e-6));
+    gm.update_trans_coeffs(gs);
+    assert(isClose(gs.mu, 10.0, 1.0e-6));
+    assert(isClose(gs.k, 10_045, 1.0e-6));
 }

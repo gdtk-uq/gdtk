@@ -167,107 +167,109 @@ GasModel init_gas_model(string file_name="gas-model.lua")
 } // end init_gas_model()
 
 
-version(init_gas_model_test) {
-    int main() {
-        import std.math;
-        import std.stdio;
-        import std.conv;
-        import ntypes.complex;
-        import nm.number;
+unittest {
+    import std.file;
+    import std.math;
+    import std.stdio;
+    import std.conv;
+    import ntypes.complex;
+    import nm.number;
 
-        // Methods for testing gas state class
-        import gas.gas_state;
-        GasState* gd = new GasState(2, 1); // Use a pointer because we will change the GasModel later.
-        gd.massf[0] = 0.8;
-        gd.massf[1] = 0.2;
-        number[] phi = [to!number(9.0), to!number(16.0)];
-        assert(approxEqualNumbers(to!number(10.4), mass_average(*gd, phi), 1.0e-6));
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope(exit) chdir("..");
 
-        // Iterative methods test using idealgas single species model
-        // These assume IdealGas class is working properly
-        import gas.init_gas_model: init_gas_model;
-        GasModel gm;
-        try {
-            gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
-        }
-        catch (Exception e) {
-            writeln(e.msg);
-            string msg;
-            msg ~= "Test of iterative methods in gas_model.d require file:";
-            msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";
-            throw new Exception(msg);
-        }
+    // Methods for testing gas state class
+    import gas.gas_state;
+    GasState* gd = new GasState(2, 1); // Use a pointer because we will change the GasModel later.
+    gd.massf[0] = 0.8;
+    gd.massf[1] = 0.2;
+    number[] phi = [to!number(9.0), to!number(16.0)];
+    assert(approxEqualNumbers(to!number(10.4), mass_average(*gd, phi), 1.0e-6));
 
-        gd = new GasState(gm, 100.0e3, 300.0);
-        assert(approxEqualNumbers(gm.R(*gd), to!number(287.086), 1.0e-4), "gas constant");
-        assert(gm.n_modes == 0, "number of energy modes");
-        assert(gm.n_species == 1, "number of species");
-        assert(approxEqualNumbers(gd.p, to!number(1.0e5)), "pressure");
-        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), "static temperature");
-        assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), "massf[0]");
+    // Iterative methods test using idealgas single species model
+    // These assume IdealGas class is working properly
+    import gas.init_gas_model: init_gas_model;
+    GasModel gm;
+    try {
+        gm = init_gas_model("ideal-air-gas-model.lua");
+    }
+    catch (Exception e) {
+        writeln(e.msg);
+        string msg;
+        msg ~= "Test of iterative methods in gas_model.d require file:";
+        msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";
+        throw new Exception(msg);
+    }
 
-        gm.update_thermo_from_pT(*gd);
-        gm.update_sound_speed(*gd);
-        assert(approxEqualNumbers(gd.rho, to!number(1.16109), 1.0e-4), "density");
-        assert(approxEqualNumbers(gd.u, to!number(215314.0), 1.0e-4), "internal energy");
-        assert(approxEqualNumbers(gd.a, to!number(347.241), 1.0e-4), "sound speed");
-        gm.update_trans_coeffs(*gd);
-        assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), "viscosity");
-        assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), "conductivity");
+    gd = new GasState(gm, 100.0e3, 300.0);
+    assert(approxEqualNumbers(gm.R(*gd), to!number(287.086), 1.0e-4), "gas constant");
+    assert(gm.n_modes == 0, "number of energy modes");
+    assert(gm.n_species == 1, "number of species");
+    assert(approxEqualNumbers(gd.p, to!number(1.0e5)), "pressure");
+    assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), "static temperature");
+    assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), "massf[0]");
 
-        // Select arbitrary energy and density and establish a set of
-        // variables that are thermodynamically consistent
-        number e_given = 1.0e7;
-        number rho_given = 2.0;
-        GasState Q = GasState(gm); // Use the struct directly.
-        Q.u = e_given;
-        Q.rho = rho_given;
-        gm.update_thermo_from_rhou(Q);
-        number p_given = Q.p;
-        number T_given = Q.T;
+    gm.update_thermo_from_pT(*gd);
+    gm.update_sound_speed(*gd);
+    assert(approxEqualNumbers(gd.rho, to!number(1.16109), 1.0e-4), "density");
+    assert(approxEqualNumbers(gd.u, to!number(215_314.0), 1.0e-4), "internal energy");
+    assert(approxEqualNumbers(gd.a, to!number(347.241), 1.0e-4), "sound speed");
+    gm.update_trans_coeffs(*gd);
+    assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), "viscosity");
+    assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), "conductivity");
 
-        // Initialise the same state from the different property combinations
-        // Test pT iterative update
-        Q.p = p_given;
-        Q.T = T_given;
-        update_thermo_state_pT(gm, Q);
-        // Determine correct entropy/enthalpy for updates that use them
-        number s_given = gm.entropy(Q);
-        number h_given = gm.enthalpy(Q);
-        assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
-        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
-        // Test rhoT iterative update
-        Q.rho = rho_given;
-        Q.T = T_given;
+    // Select arbitrary energy and density and establish a set of
+    // variables that are thermodynamically consistent
+    number e_given = 1.0e7;
+    number rho_given = 2.0;
+    GasState Q = GasState(gm); // Use the struct directly.
+    Q.u = e_given;
+    Q.rho = rho_given;
+    gm.update_thermo_from_rhou(Q);
+    number p_given = Q.p;
+    number T_given = Q.T;
+
+    // Initialise the same state from the different property combinations
+    // Test pT iterative update
+    Q.p = p_given;
+    Q.T = T_given;
+    update_thermo_state_pT(gm, Q);
+    // Determine correct entropy/enthalpy for updates that use them
+    number s_given = gm.entropy(Q);
+    number h_given = gm.enthalpy(Q);
+    assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.u, e_given, 1.0e-6));
+    // Test rhoT iterative update
+    Q.rho = rho_given;
+    Q.T = T_given;
+    update_thermo_state_rhoT(gm, Q);
+    assert(approxEqualNumbers(Q.u, e_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.p, p_given, 1.0e-6));
+    // Test rhop iterative update
+    Q.rho = rho_given;
+    Q.p = p_given;
+    assert(approxEqualNumbers(Q.T, T_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.u, e_given, 1.0e-6));
+    // Test  ps iterative update
+    Q.p = p_given;
+    update_thermo_state_ps(gm, Q, s_given);
+    assert(approxEqualNumbers(Q.T, T_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.u, e_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6));
+    // Test hs iterative update
+    assert(approxEqualNumbers(Q.T, T_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.u, e_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6));
+    assert(approxEqualNumbers(Q.p, p_given, 1.0e-6));
+
+    version(complex_numbers) {
+        // Check du/dT = Cv
+        number u0 = Q.u;
+        double h = 1.0e-20;
+        Q.T += complex(0.0,h);
         update_thermo_state_rhoT(gm, Q);
-        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.p, p_given, 1.0e-6),  failedUnitTest());
-        // Test rhop iterative update
-        Q.rho = rho_given;
-        Q.p = p_given;
-        assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
-        // Test  ps iterative update
-        Q.p = p_given;
-        update_thermo_state_ps(gm, Q, s_given);
-        assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6), failedUnitTest());
-        // Test hs iterative update
-        assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(Q.p, p_given, 1.0e-6), failedUnitTest());
-
-        version(complex_numbers) {
-            // Check du/dT = Cv
-            number u0 = Q.u;
-            double h = 1.0e-20;
-            Q.T += complex(0.0,h);
-            update_thermo_state_rhoT(gm, Q);
-            double myCv = Q.u.im/h;
-            assert(isClose(myCv, gm.dudT_const_v(Q).re), failedUnitTest());
-        }
-        return 0;
+        double myCv = Q.u.im/h;
+        assert(isClose(myCv, gm.dudT_const_v(Q).re));
     }
 }

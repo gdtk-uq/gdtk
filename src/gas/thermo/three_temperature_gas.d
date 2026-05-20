@@ -917,35 +917,42 @@ private:
     }
 }
 
-version(three_temperature_gas_test)
-{
-    int main() {
-        import util.msg_service;
+unittest {
+    import std.file;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    // Look for lua files in /sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/N2_3T.lua");
-        string[] speciesNames;
-        getArrayOfStrings(L, "species", speciesNames);
-        auto tm = new ThreeTemperatureGasMixture(L, speciesNames);
-        lua_close(L);
-        auto gs = new GasState(1, 2);
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        gs.T = 300.0; gs.T_modes[] = 300.0;
-        gs.massf[0] = 1.0;
-        gs.p = 1e5;
-        tm.updateFromPT(gs);
+    auto L = init_lua_State();
+    doLuaFile(L, "N2_3T.lua");
+    string[] speciesNames;
+    getArrayOfStrings(L, "species", speciesNames);
+    auto tm = new ThreeTemperatureGasMixture(L, speciesNames);
+    lua_close(L);
+    auto gs = GasState(3, 2);
 
-        // known low temperature values to make sure things aren't severely broken
-        assert(approxEqualNumbers(to!number(1.934130659e3), tm.enthalpy(gs), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(-8.7107292374465e4), tm.internalEnergy(gs), 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(-8.711961231946e4), gs.u, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(7.4247638645e2), tm.dudTConstV(gs), 1.0e-6), failedUnitTest());
-        return 0;
-    }
+    gs.T = to!number(300.0); gs.T_modes[] = to!number(300.0);
+    gs.massf[0] = to!number(1.0);
+    gs.massf[1] = to!number(0.0);
+    gs.massf[2] = to!number(0.0);
+    gs.p = 1e5;
+    tm.updateFromPT(gs);
+
+    // known low temperature values to make sure things aren't severely broken
+    number h = tm.enthalpy(gs);
+    number u = tm.internalEnergy(gs);
+    number cv = tm.dudTConstV(gs);
+    assert(approxEqualNumbers(to!number(1911.9097859468166), h, 1.0e-6));
+    assert(approxEqualNumbers(to!number(-87129.51324731583), u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(-87119.612101189501), gs.u, 1.0e-6));
+    assert(approxEqualNumbers(to!number(742.88298728372058), cv, 1.0e-6 ));
+
 }

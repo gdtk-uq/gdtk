@@ -1136,11 +1136,14 @@ final class GlobalConfig {
     // Allow the AUSMDV entropy fix to be switched off
     // Note: this is an experimental feature that will probably be removed in a later revision [KAD 20-12-2021]
     shared static bool apply_entropy_fix = true;
-    //
     // Switch for enforcing strict positivity on the species densities in fvcell's decode routine
     shared static bool enforce_species_density_positivity = false;
     // A switch for calling scale_mass_fractions in onedinterp.d
     shared static bool scale_species_after_reconstruction = true;
+    // This switch enables or disables clipping small gas-model composition values
+    // (for example, concentrations and mass fractions) to 0.0.
+    // Setting it to false can improve Newton-Krylov solver performance.
+    shared static bool clip_small_gas_composition_values = true;
     //
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
@@ -1485,6 +1488,7 @@ public:
     bool apply_entropy_fix;
     bool enforce_species_density_positivity;
     bool scale_species_after_reconstruction;
+    bool clip_small_gas_composition_values;
     UnstructuredLimiter unstructured_limiter;
     bool apply_unstructured_limiter_stagnation_point_filter;
     bool apply_unstructured_limiter_min_pressure_filter;
@@ -1676,6 +1680,7 @@ public:
         apply_entropy_fix = cfg.apply_entropy_fix;
         enforce_species_density_positivity = cfg.enforce_species_density_positivity;
         scale_species_after_reconstruction = cfg.scale_species_after_reconstruction;
+        clip_small_gas_composition_values = cfg.clip_small_gas_composition_values;
         unstructured_limiter = cfg.unstructured_limiter;
         apply_unstructured_limiter_stagnation_point_filter = cfg.apply_unstructured_limiter_stagnation_point_filter;
         apply_unstructured_limiter_min_pressure_filter = cfg.apply_unstructured_limiter_min_pressure_filter;
@@ -2036,6 +2041,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("apply_entropy_fix", "apply_entropy_fix"));
     mixin(update_bool("enforce_species_density_positivity", "enforce_species_density_positivity"));
     mixin(update_bool("scale_species_after_reconstruction", "scale_species_after_reconstruction"));
+    mixin(update_bool("clip_small_gas_composition_values", "clip_small_gas_composition_values"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_bool("apply_unstructured_limiter_stagnation_point_filter", "apply_unstructured_limiter_stagnation_point_filter"));
     mixin(update_bool("apply_unstructured_limiter_min_pressure_filter", "apply_unstructured_limiter_min_pressure_filter"));
@@ -2138,6 +2144,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
         writeln("  enforce_species_density_positivity: ", cfg.enforce_species_density_positivity);
         writeln("  scale_species_after_reconstruction: ", cfg.scale_species_after_reconstruction);
+        writeln("  clip_small_gas_composition_values: ", cfg.clip_small_gas_composition_values);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));
         writeln("  apply_unstructured_limiter_stagnation_point_filter: ", cfg.apply_unstructured_limiter_stagnation_point_filter);
         writeln("  apply_unstructured_limiter_min_pressure_filter: ", cfg.apply_unstructured_limiter_min_pressure_filter);

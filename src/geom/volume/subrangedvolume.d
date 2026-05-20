@@ -54,5 +54,3 @@ public:
             ")";
     }
 } // end class SubRangedVolume
-
-// [TODO] test

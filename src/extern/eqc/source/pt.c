@@ -192,7 +192,7 @@ static void compute_lagrangian_derivatives(double* S, double* a, double* G0_RTs,
     // Lagrangian to check that we have correctly found the actual stationary point.
     double eps = 1e-7;
     double L = lagrangian(S, a, G0_RTs, p, T, ns, lnns, bi0, nsp, nel, verbose);
-    if (verbose>2) printf("Lagrangian:[%e]\n   ",L);
+    if (verbose>2) printf("Lagrangian:[%e]\n", L);
 
     for (int s=0; s<nsp; s++) {
         double lnns_save = lnns[s];
@@ -210,7 +210,7 @@ static void compute_lagrangian_derivatives(double* S, double* a, double* G0_RTs,
         double dLdns = (L2-L)/perturb;
 
         double dLdns_a = analytic_lagrangian_derivative(S, a, G0_RTs, p, T, n, ns, lnns, bi0, nsp, nel, s);
-        if (verbose>2) printf(" dLdn[%d]= %e (%e) ",s, dLdns, dLdns_a);
+        if (verbose>2) printf(" dLdn[%d]= %e (%e) dLdn[%d]/L= %e\n",s, dLdns, dLdns_a, s, dLdns/L);
         dLdn[s] = dLdns;
     }
     if (verbose>2) printf("\n");

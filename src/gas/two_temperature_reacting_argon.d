@@ -219,50 +219,52 @@ private:
 
 //// Unit test of the basic gas model...
 
-version(two_temperature_reacting_argon_test) {
+unittest {
+    import std.file;
     import std.stdio;
-    import util.msg_service;
     import std.math : isClose;
-    int main() {
-        lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/two-temperature-reacting-argon-model.lua");
-        auto gm = new TwoTemperatureReactingArgon(L);
-        lua_close(L);
-        auto gd = GasState(3, 1);
-        gd.p = 1.0e5;
-        gd.T = 300.0;
-        gd.T_modes[0] = 300.0;
-        gd.massf[Species.Ar] = 1.0;
-        gd.massf[Species.Ar_plus] = 0.0;
-        gd.massf[Species.e_minus] = 0.0;
 
-        assert(isClose(gm.R(gd), 208.0, 1.0e-4), failedUnitTest());
-        assert(gm.n_modes == 1, failedUnitTest());
-        assert(gm.n_species == 3, failedUnitTest());
-        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.Ar], 1.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.Ar_plus], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[Species.e_minus], 0.0, 1.0e-6), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
-        number my_rho = 1.0e5 / (208.0 * 300.0);
-        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
+    lua_State* L = init_lua_State();
+    doLuaFile(L, "two-temperature-reacting-argon-model.lua");
+    auto gm = new TwoTemperatureReactingArgon(L);
+    lua_close(L);
+    auto gd = GasState(3, 1);
+    gd.p = 1.0e5;
+    gd.T = 300.0;
+    gd.T_modes[0] = 300.0;
+    gd.massf[Species.Ar] = 1.0;
+    gd.massf[Species.Ar_plus] = 0.0;
+    gd.massf[Species.e_minus] = 0.0;
 
-        number my_Cv = gm.dudT_const_v(gd);
-        number my_u = my_Cv*300.0;
-        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
+    assert(isClose(gm.R(gd), 208.0, 1.0e-4));
+    assert(gm.n_modes == 1);
+    assert(gm.n_species == 3);
+    assert(isClose(gd.p, 1.0e5, 1.0e-6));
+    assert(isClose(gd.T, 300.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.Ar], 1.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.Ar_plus], 0.0, 1.0e-6));
+    assert(isClose(gd.massf[Species.e_minus], 0.0, 1.0e-6));
 
-        number my_Cp = gm.dhdT_const_p(gd);
-        number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
-        number my_a = sqrt(5.0/3.0*208.0*(gd.T + alpha*gd.T_modes[0]));
-        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
+    gm.update_thermo_from_pT(gd);
+    gm.update_sound_speed(gd);
+    number my_rho = 1.0e5 / (208.0 * 300.0);
+    assert(isClose(gd.rho, my_rho, 1.0e-4));
 
-        gm.update_trans_coeffs(gd);
-        assert(isClose(gd.mu, 22.912e-6, 1.0e-3), failedUnitTest());
-        assert(isClose(gd.k, 0.0178625, 1.0e-6), failedUnitTest());
+    number my_Cv = gm.dudT_const_v(gd);
+    number my_u = my_Cv*300.0;
+    assert(isClose(gd.u, my_u, 1.0e-3));
 
-        return 0;
-    }
+    number my_Cp = gm.dhdT_const_p(gd);
+    number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
+    number my_a = sqrt(5.0/3.0*208.0*(gd.T + alpha*gd.T_modes[0]));
+    assert(isClose(gd.a, my_a, 1.0e-3));
+
+    gm.update_trans_coeffs(gd);
+    assert(isClose(gd.mu, 22.912e-6, 1.0e-3));
+    assert(isClose(gd.k, 0.0178625, 1.0e-6));
 }

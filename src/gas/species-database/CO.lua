@@ -8,6 +8,26 @@ db.CO.theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Capitelli et al (2005), Table 11. omega_e in ground state converted to K'
 }
+db.CO.theta_D = {
+   value = 128717.117,
+   units = 'K',
+   desciption = 'characteristic dissociation temperature',
+   reference = 'Capitelli et al (2005), Table 11. E_diss converted to K'
+}
+db.CO.electronic_levels = {
+   g = {
+      value = {1, 6, 3, 6, 3},
+      units = "NA",
+      description = 'degeneracy of electronic levels',
+      reference = 'NIST'
+   },
+   Te = {
+      value = {0.0, 48686.7, 55825.49, 61120.0, 64230.2},
+      units = 'cm^(-1)',
+      description = 'electronic excitation energy',
+      reference = 'NIST'
+   }
+}
 db.CO.charge = 0
 db.CO.M = {
    value = 28.010100e-3,
@@ -32,6 +52,18 @@ db.CO.epsilon = {
    units = 'K',
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CO.SSH_mass_factor = {
+   value = 0.96025,
+   units = "unitless",
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'computation in description'
+}
+db.CO.r_eq = {
+   value = 1.1283e-10,
+   units = 'm',
+   description = 'Equilibrium intermolecular distance',
+   reference = 'Capitelli 2005, Table 11, ground state r_e'
 }
 db.CO.Lewis = {
    value = 1.171

@@ -19,6 +19,7 @@ References:
 
 #include "thermo.h"
 #include "pt.h"
+#include "satpt.h"
 #include "rhou.h"
 #include "ps.h"
 #include "rhot.h"
@@ -43,6 +44,26 @@ int pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* M,doub
         X1 : Equilibrium Mole Fraction [nsp]  
     */
     return solve_pt(p, T, X0, nsp, nel, lewis, M, a, X1, verbose);
+}
+
+int satpt(double p,double T, double Gc, int ic, double* X0,int nsp,int nel,double* lewis,double* M,double* a,double* X1, int verbose){
+    /*
+    Compute the equilibrium composition X1 at a fixed temperature and pressure
+    Inputs:
+        p     : Pressure (Pa)
+        T     : Temperature (K)
+        X0    : Intial Mole fractions [nsp]
+        nsp   : number of species
+        nel   : number of elements
+        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
+        M     : Molar Mass of each species (kg/mol) [nsp]
+        a     : elemental composition array [nel,nsp]
+        verbose: print debugging information
+
+    Output:
+        X1 : Equilibrium Mole Fraction [nsp]
+    */
+    return solve_satpt(p, T, Gc, ic, X0, nsp, nel, lewis, M, a, X1, verbose);
 }
 
 int rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,double* M,double* a,

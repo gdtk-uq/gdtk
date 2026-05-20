@@ -319,67 +319,76 @@ protected:
     }
 } // end class RotatedAboutZAxisPath
 
+unittest {
+    import std.stdio;
+    import geom.gpath.bezier;
 
-version(modifiedpath_test) {
-    import util.msg_service;
-    int main() {
-        import geom.gpath.line;
-        import geom.gpath.arc;
-        import geom.gpath.polyline;
-        import geom.gpath.bezier;
-        auto a = Vector3([0.0, 0.0, 0.0]);
-        auto b = Vector3([1.0, 1.0, 1.0]);
-        auto c = Vector3([4.0, 4.0, 4.0]);
-        auto abc = new Bezier([a, b, c]);
-        auto abc_dsh = new ArcLengthParameterizedPath(abc);
-        auto f = abc_dsh(0.5);
-        assert(approxEqualVectors(f, Vector3(2,2,2)), failedUnitTest());
+    auto a = Vector3([0.0, 0.0, 0.0]);
+    auto b = Vector3([1.0, 1.0, 1.0]);
+    auto c = Vector3([4.0, 4.0, 4.0]);
+    auto abc = new Bezier([a, b, c]);
+    auto abc_dsh = new ArcLengthParameterizedPath(abc);
+    auto f = abc_dsh(0.5);
+    assert(approxEqualVectors(f, Vector3(2, 2, 2)));
+}
 
-        a = Vector3([2.0, 2.0, 0.0]);
-        b = Vector3([1.0, 2.0, 1.0]);
-        c = Vector3([1.0, 2.0, 0.0]);
-        auto acb = new ArcLengthParameterizedPath(new Bezier([a, c, b]));
-        auto L = acb.underlying_path.length();
-        auto dA = Vector3(-1, 0, 1);
-        auto dAdt = abs(dA)/L;
-        Vector3 d2A = Vector3(-1, 0, 1);
-        auto d2Adt2 = dot(unit(d2A),Vector3(2,0,2))/L;
-        // check to finite-difference in Path
-        assert(approxEqualVectors(acb.dpdt(0.5), acb.Path.dpdt(0.5)),
-               failedUnitTest());
-        assert(approxEqualVectors(acb.d2pdt2(0.5), acb.Path.d2pdt2(0.5)),
-               failedUnitTest());
-        // the following checks are kind of redundant since they just follow
-        // the same math as the function definitions
-        assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)/dAdt),
-               failedUnitTest());
-        assert(approxEqualVectors(acb.d2pdt2(0.5),
-                                  Vector3(2,0,2)/pow(dAdt,2)-
-                                  Vector3(-1, 0, 1)*d2Adt2/pow(dAdt,3)),
-               failedUnitTest());
+unittest {
+    import geom.gpath.bezier;
 
-        a = Vector3([2.0, 2.0, 0.0]);
-        b = Vector3([1.0, 2.0, 1.0]);
-        c = Vector3([1.0, 2.0, 0.0]);
-        abc = new Arc(a, b, c);
-        auto polyline = new Polyline([abc, new Line(b, c)]);
-        auto rev_poly = new ReversedPath(polyline);
-        assert(approxEqualVectors(polyline(0.25), rev_poly(0.75)), failedUnitTest());
-        acb = new SubRangedPath(new Bezier([a, c, b]), 0.5, 0.75);
-        assert(approxEqualVectors(acb.dpdt(0), Vector3(-1, 0, 1)/4), failedUnitTest());
-        assert(approxEqualVectors(acb.d2pdt2(0), Vector3(2,0,2)/16), failedUnitTest());
-        auto r_acb = new ReversedPath(new Bezier([a, c, b]));
-        assert(approxEqualVectors(r_acb.dpdt(0.5), -Vector3(-1, 0, 1)), failedUnitTest());
-        assert(approxEqualVectors(r_acb.d2pdt2(0.5), Vector3(2,0,2)), failedUnitTest());
+    auto a = Vector3([2.0, 2.0, 0.0]);
+    auto b = Vector3([1.0, 2.0, 1.0]);
+    auto c = Vector3([1.0, 2.0, 0.0]);
+    auto acb = new ArcLengthParameterizedPath(new Bezier([a, c, b]));
+    auto L = acb.underlying_path.length();
+    auto dA = Vector3(-1, 0, 1);
+    auto dAdt = abs(dA) / L;
+    Vector3 d2A = Vector3(-1, 0, 1);
+    auto d = Vector3(2, 0, 2);
+    auto d2Adt2 = unit(d2A).dot(d) / L;
+    // check to finite-difference in Path
+    assert(approxEqualVectors(acb.dpdt(0.5), acb.Path.dpdt(0.5)));
+    assert(approxEqualVectors(acb.d2pdt2(0.5), acb.Path.d2pdt2(0.5)));
+    // the following checks are kind of redundant since they just follow
+    // the same math as the function definitions
+    assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1) / dAdt));
+    assert(approxEqualVectors(acb.d2pdt2(0.5),
+            Vector3(2, 0, 2) / pow(dAdt, 2) -
+            Vector3(-1, 0, 1) * d2Adt2 / pow(dAdt, 3)));
 
-        a = Vector3([2.0, 0.0, 0.0]);
-        b = Vector3([0.0, 2.0, 0.0]);
-        c = Vector3([0.0, 0.0, 0.0]);
-        abc = new Arc(a, b, c);
-        auto abc_rotated = new RotatedAboutZAxisPath(abc, PI/4);
-        // writeln("abc_rotated(1.0)=", abc_rotated(1.0));
-        assert(approxEqualVectors(abc_rotated(1.0), sqrt(2.0)*Vector3(-1, 1, 0)),
-               failedUnitTest());
-        return 0;
-    }
-} // end mofifiedpath_test
+}
+
+unittest {
+    import std.stdio;
+
+    import geom.gpath.line;
+    import geom.gpath.arc;
+    import geom.gpath.polyline;
+    import geom.gpath.bezier;
+
+    auto a = Vector3([2.0, 2.0, 0.0]);
+    auto b = Vector3([1.0, 2.0, 1.0]);
+    auto c = Vector3([1.0, 2.0, 0.0]);
+    auto abc = new Arc(a, b, c);
+    auto polyline = new Polyline([abc, new Line(b, c)]);
+    auto rev_poly = new ReversedPath(polyline);
+    assert(approxEqualVectors(polyline(0.25), rev_poly(0.75)));
+    auto acb = new SubRangedPath(new Bezier([a, c, b]), 0.5, 0.75);
+    assert(approxEqualVectors(acb.dpdt(0), Vector3(-1, 0, 1) / 4));
+    assert(approxEqualVectors(acb.d2pdt2(0), Vector3(2, 0, 2) / 16));
+    auto r_acb = new ReversedPath(new Bezier([a, c, b]));
+    assert(approxEqualVectors(r_acb.dpdt(0.5), -Vector3(-1, 0, 1)));
+    assert(approxEqualVectors(r_acb.d2pdt2(0.5), Vector3(2, 0, 2)));
+}
+
+unittest {
+    import std.stdio;
+    import geom.gpath.arc;
+
+    auto a = Vector3([2.0, 0.0, 0.0]);
+    auto b = Vector3([0.0, 2.0, 0.0]);
+    auto c = Vector3([0.0, 0.0, 0.0]);
+    auto abc = new Arc(a, b, c);
+    auto abc_rotated = new RotatedAboutZAxisPath(abc, PI / 4);
+    writeln("abc_rotated(1.0)=", abc_rotated(1.0));
+    assert(approxEqualVectors(abc_rotated(1.0), sqrt(2.0) * Vector3(-1, 1, 0)));
+}

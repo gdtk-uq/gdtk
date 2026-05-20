@@ -10,6 +10,26 @@ db.CO2.theta_v = {
    description = 'charateristic vibrational temperature',
    reference = 'Park et al (1993)'
 }
+db.CO2.theta_D = {
+   value = 63283.67,
+   units = 'K',
+   description = 'Characteristic dissociation temperature',
+   reference = 'Capitelli et al (2005), table 13, E_diss converted to K'
+}
+db.CO2.electronic_levels = {
+   g = {
+      value = {1, 6, 3, 6, 3, 2},
+      units = "NA",
+      description = "degeneracy of electronic levels",
+      reference = "Table 13 Capitelli (2005) ESA STR-246"
+   },
+   Te = {
+      value = {0.0, 30000.0, 33000.0, 46000.0, 72480.0, 73100.0},
+      units = "cm^(-1)",
+      description = "electronic excitation energy",
+      reference = "Table 13 Capitelli (2005) ESA STR-246"
+   }
+}
 db.CO2.charge = 0
 db.CO2.M = {
    value = 0.04401,

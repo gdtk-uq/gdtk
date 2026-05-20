@@ -331,10 +331,10 @@ public:
                 double Vy = fs.vel.y;
                 double M = sqrt(Vx*Vx+Vy*Vy)/g.a;
                 double shock = (cells[j].shock_flag) ? 1.0 : 0.0;
-                fp.write(format("%e %e %e %e %e", face.pos.x, face.pos.y, Vx, Vy, M));
-                fp.write(format(" %e %e %e %e %e %f", g.rho, g.p, g.T, g.u, g.a, shock));
-                foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
-                foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }
+                fp.write(format("%.18e %.18e %.18e %.18e %.18e", face.pos.x, face.pos.y, Vx, Vy, M));
+                fp.write(format(" %.18e %.18e %.18e %.18e %.18e %f", g.rho, g.p, g.T, g.u, g.a, shock));
+                foreach (i; 0 .. nsp) { fp.write(format(" %.18e", g.massf[i])); }
+                foreach (i; 0 .. nmodes) { fp.write(format(" %.18e %.18e", g.T_modes[i], g.u_modes[i])); }
                 fp.write("\n");
             }
         }

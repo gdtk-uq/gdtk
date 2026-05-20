@@ -60,13 +60,18 @@ DFLAGS += -dip1008 -preview=in
 # if you are invoking this makefile from within the gas models directory.
 # ----------------------------------------------------------------------
 
-test: test_runner
-	- exec ./test_runner --module nm
+.PHONY: test test-real test-complex
+test: test-real test-complex
+
+test-real: test_runner_real
+	@echo "Running tests (real)"
+	- exec ./test_runner_real --module nm
 
 test-complex: test_runner_complex
+	@echo "Running tests (complex)"
 	- exec ./test_runner_complex --module nm
 
-test_runner: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) ../util/test_runner.d
+test_runner_real: $(NM_FILES) $(NM_LUA_FILES) $(NTYPES_FILES) $(UTIL_FILES) $(LIBLUA) ../util/test_runner.d
 	@echo "Compiling test runner..."
 	$(DMD) -of$@ -debug -g -w -dip1008 --unittest $(DLINKFLAGS) \
 		../util/test_runner.d $(filter-out %/test_runner.d,$^)

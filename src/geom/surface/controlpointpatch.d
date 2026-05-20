@@ -295,47 +295,46 @@ private:
 
 }
 
-version(controlpointpatch_test) {
+unittest {
+    int N = 4;
+    int M = 5;
+    double L = 1.0;
 
-    import util.msg_service;
-    int main() {
-        int N = 4;
-        int M = 5;
-        double L = 1.0;
+    Vector3[][] C;
+    C.length = N;
+    foreach (i; 0 .. N)
+        C[i].length = M;
 
-        Vector3[][] C;
-        C.length = N;
-        foreach (i; 0 .. N) C[i].length = M;
+    C[0][0] = Vector3(0.0, 0.0);
+    C[1][0] = Vector3(0.25 * L, 0.0);
+    C[2][0] = Vector3(0.75 * L, 0.0);
+    C[3][0] = Vector3(L, 0.0);
 
-        C[0][0] = Vector3(0.0, 0.0);
-        C[1][0] = Vector3(0.25*L, 0.0);
-        C[2][0] = Vector3(0.75*L, 0.0);
-        C[3][0] = Vector3(L, 0.0);
+    auto dy = Vector3(0.0, L / 6.0);
+    foreach (i; 0 .. N)
+        C[i][1] = C[i][0] + dy;
 
-        auto dy = Vector3(0.0, L/6.0);
-        foreach (i; 0 .. N) C[i][1] = C[i][0] + dy;
+    dy = Vector3(0.0, 3.0 * L / 6.0);
+    foreach (i; 0 .. N)
+        C[i][2] = C[i][0] + dy;
 
-        dy = Vector3(0.0, 3.0*L/6.0);
-        foreach (i; 0 .. N) C[i][2] = C[i][0] + dy;
+    dy = Vector3(0.0, 5.0 * L / 6.0);
+    foreach (i; 0 .. N)
+        C[i][3] = C[i][0] + dy;
 
-        dy = Vector3(0.0, 5.0*L/6.0);
-        foreach (i; 0 .. N) C[i][3] = C[i][0] + dy;
+    dy = Vector3(0.0, L);
+    foreach (i; 0 .. N)
+        C[i][4] = C[i][0] + dy;
 
-        dy = Vector3(0.0, L);
-        foreach (i; 0 .. N) C[i][4] = C[i][0] + dy;
+    Line north = new Line(C[0][4], C[3][4]);
+    Line east = new Line(C[3][0], C[3][4]);
+    Line south = new Line(C[0][0], C[3][0]);
+    Line west = new Line(C[0][0], C[0][4]);
 
-        Line north = new Line(C[0][4], C[3][4]);
-        Line east = new Line(C[3][0], C[3][4]);
-        Line south = new Line(C[0][0], C[3][0]);
-        Line west = new Line(C[0][0], C[0][4]);
+    ControlPointPatch ctrlPtPatch = new ControlPointPatch(south, north, west, east, C);
 
-        ControlPointPatch ctrlPtPatch = new ControlPointPatch(south, north, west, east, C);
-
-        auto p = ctrlPtPatch(0.5, 0.5);
-        assert(approxEqualVectors(p, Vector3(0.5, 0.5)), failedUnitTest());
-        p = ctrlPtPatch(1.0, 1.0);
-        assert(approxEqualVectors(p, Vector3(1.0, 1.0)), failedUnitTest());
-
-        return 0;
-    }
+    auto p = ctrlPtPatch(0.5, 0.5);
+    assert(approxEqualVectors(p, Vector3(0.5, 0.5)));
+    p = ctrlPtPatch(1.0, 1.0);
+    assert(approxEqualVectors(p, Vector3(1.0, 1.0)));
 }

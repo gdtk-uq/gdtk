@@ -46,8 +46,20 @@ public:
 
         auto L = init_lua_State();
         doLuaFile(L, fname1);
+
+        lua_getglobal(L, "config");
+        lua_getfield(L, -1, "tempLimits");
+        lua_getfield(L, -1, "lower");
+        double T_lower_limit = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "upper");
+        double T_upper_limit = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+
         lua_getglobal(L, "reaction");
-        mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
+        mRmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
 
         // Initialise energy exchange mechanism
         if (typeid(gmodel) is typeid(CompositeGas)) {
@@ -292,10 +304,10 @@ public:
         dtSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         // species source terms
         auto chem_source = source[0..mNSpecies]; // these are actually references not copies
-        mRmech.eval_source_terms(gmodel, Q, chem_source);
+        mRmech.eval_source_terms(gmodel, Q, chem_source, clip_small_gas_composition_values);
         // energy modes source terms
         auto therm_source = source[mNSpecies..source.length];
         mEES.eval_source_terms(mRmech, Q, therm_rates, therm_source);

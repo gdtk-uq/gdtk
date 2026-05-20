@@ -101,6 +101,7 @@ configOptionsHidden = { -- hidden from user
    apply_entropy_fix = true,
    enforce_species_density_positivity = false,
    scale_species_after_reconstruction = true,
+   clip_small_gas_composition_values = true,
    unstructured_limiter = "venkat",
    apply_unstructured_limiter_stagnation_point_filter = false,
    apply_unstructured_limiter_min_pressure_filter = false,

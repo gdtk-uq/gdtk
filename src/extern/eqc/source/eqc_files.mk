@@ -8,6 +8,7 @@ EQC_OBJ_FILES := $(EQC_DIR)/eqc.o \
 	$(EQC_DIR)/common.o \
 	$(EQC_DIR)/linalg.o \
 	$(EQC_DIR)/pt.o \
+	$(EQC_DIR)/satpt.o \
 	$(EQC_DIR)/rhou.o \
 	$(EQC_DIR)/ps.o \
 	$(EQC_DIR)/rhot.o \

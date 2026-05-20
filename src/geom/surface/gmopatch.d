@@ -147,20 +147,18 @@ public:
 } // end class GMOPatch
 
 
-version(gmopatch_test) {
-    import util.msg_service;
-    int main() {
-        auto p00 = Vector3([0.0, 0.1, 3.0]);
-        auto p10 = Vector3(1.0, 0.1, 3.0);
-        auto p11 = Vector3(1.0, 1.1, 3.0);
-        auto p01 = Vector3(0.0, 1.1, 3.0);
-        auto my_patch = new GMOPatch(p00, p10, p11, p01, 11, 11);
-        auto c = my_patch(0.5, 0.5);
-        // debug { import std.stdio; writeln("c=", c); }
-        assert(approxEqualVectors(c, Vector3(0.477, 0.646, 3.0), 1.0e-1), failedUnitTest());
-        c = my_patch(0.1, 0.1);
-        // debug { import std.stdio; writeln("c=", c); }
-        assert(approxEqualVectors(c, Vector3(0.117, 0.235, 3.0), 1.0e-1), failedUnitTest());
-        return 0;
-    }
+unittest {
+    import std.stdio;
+
+    auto p00 = Vector3([0.0, 0.1, 3.0]);
+    auto p10 = Vector3(1.0, 0.1, 3.0);
+    auto p11 = Vector3(1.0, 1.1, 3.0);
+    auto p01 = Vector3(0.0, 1.1, 3.0);
+    auto my_patch = new GMOPatch(p00, p10, p11, p01, 11, 11);
+    auto c = my_patch(0.5, 0.5);
+    writeln("c=", c);
+    assert(approxEqualVectors(c, Vector3(0.477, 0.646, 3.0), 1.0e-1));
+    c = my_patch(0.1, 0.1);
+    writeln("c=", c);
+    assert(approxEqualVectors(c, Vector3(0.117, 0.235, 3.0), 1.0e-1));
 }

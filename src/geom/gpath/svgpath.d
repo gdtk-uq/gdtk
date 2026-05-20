@@ -201,33 +201,28 @@ private:
 } // end class SVGPath
 
 
-version(svgpath_test) {
-    import util.msg_service;
-    int main()
-    {
-        // We are going to use semicolons as separators between path commands,
-        // single-character command names (MmLlZ) and
-        // commas as separators between coordinate values.
-        // Note that the path is restricted to the z=0 plane.
-        auto pth1 = new SVGPath("M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z");
-        auto p1 = pth1(0.5);
-        // import std.stdio: writeln;
-        // writeln("pth1=", pth1);
-        // writeln("pth1(0.5)=", p1);
-        assert(approxEqualVectors(p1, Vector3(4.0,4.0,0.0)), failedUnitTest());
-        //
-        auto pth2 = new SVGPath("M2.0,0.0;Q2.0,2.0 0.0,2.0");
-        auto p2 = pth2(0.5);
-        // writeln("pth2=", pth2);
-        // writeln("pth2(0.5)=", p2);
-        assert(approxEqualVectors(p2, Vector3(1.5,1.5,0.0)), failedUnitTest());
-        //
-        // Approximate a quarter circle
-        auto pth3 = new SVGPath("M2.0,0.0;C2.0,1.10457 1.10457,2.0 0.0,2.0");
-        auto p3 = pth3(0.5);
-        // writeln("pth3=", pth3);
-        // writeln("pth3(0.5)=", p3);
-        assert(approxEqualVectors(p3, Vector3(1.41421,1.41421,0.0)), failedUnitTest());
-        return 0;
-    }
-} // end svgpath_test
+unittest {
+    // We are going to use semicolons as separators between path commands,
+    // single-character command names (MmLlZ) and
+    // commas as separators between coordinate values.
+    // Note that the path is restricted to the z=0 plane.
+    auto pth1 = new SVGPath("M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z");
+    auto p1 = pth1(0.5);
+    // import std.stdio: writeln;
+    // writeln("pth1=", pth1);
+    // writeln("pth1(0.5)=", p1);
+    assert(approxEqualVectors(p1, Vector3(4.0,4.0,0.0)));
+    //
+    auto pth2 = new SVGPath("M2.0,0.0;Q2.0,2.0 0.0,2.0");
+    auto p2 = pth2(0.5);
+    // writeln("pth2=", pth2);
+    // writeln("pth2(0.5)=", p2);
+    assert(approxEqualVectors(p2, Vector3(1.5,1.5,0.0)));
+    //
+    // Approximate a quarter circle
+    auto pth3 = new SVGPath("M2.0,0.0;C2.0,1.10457 1.10457,2.0 0.0,2.0");
+    auto p3 = pth3(0.5);
+    // writeln("pth3=", pth3);
+    // writeln("pth3(0.5)=", p3);
+    assert(approxEqualVectors(p3, Vector3(1.41421,1.41421,0.0)));
+}

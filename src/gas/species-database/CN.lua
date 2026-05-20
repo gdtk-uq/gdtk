@@ -7,6 +7,12 @@ db.CN.theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Capitelli et al (2005), Table 15. omega_e in ground state converted to K'
 }
+db.CN.theta_D = {
+   value = 90051.66,
+   units = 'K',
+   description = 'characteristic dissociation temperature',
+   reference = 'Capitelli et al (2005), Table 8. E_diss converted to K'
+}
 db.CN.atomicConstituents = {C=1,N=1,}
 db.CN.charge = 0
 db.CN.M = {
@@ -14,6 +20,20 @@ db.CN.M = {
    units = 'kg/mol',
    description = 'molecular mass',
    reference = 'CEA2::thermo.inp'
+}
+db.CN.electronic_levels = {
+   g = {
+      value = {2, 4, 2, 4, 4, 2, 4, 4, 4, 4},
+      units = "NA",
+      description = "Degeneracy of electronic energy levels",
+      reference = "Table 8 Capitelli (2005)",
+   },
+   Te = {
+      value = {0.0, 9245.28, 25752.0, 32400.0, 54486.3, 59151.18, 60095.64, 61655.0, 61969.7, 65258.18},
+      units = "cm^(-1)",
+      description = "Electronic excitation energy",
+      reference = "Table 8 Capitelli (2005)",
+   }
 }
 db.CN.gamma = {
    value = 1.399,
@@ -32,6 +52,18 @@ db.CN.epsilon = {
    units = 'K',
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CN.SSH_mass_factor = {
+   value = 0.9883,
+   units = 'unitless',
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'computation in description'
+}
+db.CN.r_eq = {
+   value = 1.1718e-10,
+   units = 'm',
+   description = 'Equilibrium intermolecular distance',
+   reference = 'Capitelli 2005, Table 8. r_e in ground state'
 }
 db.CN.ceaThermoCoeffs = {
    nsegments = 3,

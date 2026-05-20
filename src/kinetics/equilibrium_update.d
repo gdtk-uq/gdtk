@@ -50,7 +50,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source, bool clip_small_gas_composition_values=true) {
         string errMsg = "eval_source_terms not implemented for equilibrium_update.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -130,6 +130,22 @@ class EquilibriumCalculator {
         molef_to_massf(X1, M, Q.massf);
     }
 
+    @nogc void set_massf_from_satpT(ref GasState Q, double Gc, int ic)
+    {
+    /*
+        A special method for use in saturated equillibrium problems at solid surfaces.
+        Under the hood, eqc will adjust the amount of (for example Carbon) atoms,
+        subject to the constrait that the condensed, solid species is zero in the mixture.
+
+        Gc : Gibbs energy of the target
+        ic : the index of the element to be adjusted during the solution
+    */
+        massf_to_molef(Q.massf, M, X0);
+        int error = eqc.satpt(Q.p.re, Q.T.re, Gc, ic, X0ptr, nsp, nel, lewisptr, Mptr, aptr, X1ptr, 0);
+        if (error!=0) throw new GasModelException("eqc.satpt convergence failure");
+        molef_to_massf(X1, M, Q.massf);
+    }
+
     @nogc double get_s(ref GasState Q)
     {
         massf_to_molef(Q.massf, M, X0);
@@ -140,12 +156,27 @@ class EquilibriumCalculator {
     @nogc int n_species() const { return nsp; }
     @nogc int n_elements() const { return nel; }
 
-private:
-    int nel,nsp;
-    double[string][] element_map;
-    string[] element_set,species_names;
-    double[] a,X0,X1,lewis,M;
-    double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
+    @nogc size_t element_index(string target_element) const {
+        size_t cidx = 9999;
+        foreach(idx, element; element_set) {
+            if (element==target_element) {
+                cidx = idx;
+                break;
+            }
+        }
+        if (cidx==9999) throw new Error("Target element not found in element_set");
+        return cidx;
+    }
+
+    @nogc const
+    double element_count(size_t elidx, size_t spidx) {
+        return a[elidx*nsp + spidx];
+    }
+
+    @nogc const
+    double molar_mass(size_t spidx) {
+        return M[spidx];
+    }
 
     @nogc
     void massf_to_molef(number[] massf, double[] M, double[] molef){
@@ -172,6 +203,14 @@ private:
             massf[i] = to!number(molef[i] * M[i] / mixMolMass);
         }
     }
+
+private:
+    int nel,nsp;
+    double[string][] element_map;
+    string[] element_set,species_names;
+    double[] a,X0,X1,lewis,M;
+    double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
+
 
     void compile_molar_masses(lua_State* L, string[] _species_names, ref double[] _M){
         /*
@@ -344,38 +383,35 @@ private:
 
 } // end class EquilibriumCalculator
 
-
-version(equilibrium_update_test) {
+unittest {
     import std.stdio;
-    import util.msg_service;
     import gas.therm_perf_gas;
 
-    int main() {
-        auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-equil-5-species-air.lua");
-        auto reactor = new EquilibriumUpdate("../gas/sample-data/therm-perf-equil-5-species-air.lua", gm);
+    auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-equil-5-species-air.lua");
+    auto reactor = new EquilibriumUpdate("../gas/sample-data/therm-perf-equil-5-species-air.lua", gm);
 
-        auto gs2 = GasState(5, 0);
-        double rho_target = 0.0139638507337;
-        double u_target = 2131154.032665843;
-        double T_target = 2500.0;
-        gs2.rho = rho_target;
-        gs2.u = u_target;
-        gs2.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
-        gs2.T = 2000.0; // eqc doesn't guess temperature anymore
-        double tInterval = 0.0;
-        double dtSuggest = -1.0;
-        double[maxParams] params;
+    auto gs2 = GasState(5, 0);
+    double rho_target = 0.013928480332929151;
+    double u_target = 2_122_523.3998044934;
+    double T_target = 2500.0;
+    gs2.rho = rho_target;
+    gs2.u = u_target;
+    gs2.massf = [to!number(0.76708249), to!number(0.23291751), to!number(0.0), to!number(0.0), to!number(0.0)];
+    gs2.T = 2000.0; // eqc doesn't guess temperature anymore
+    double tInterval = 0.0;
+    double dtSuggest = -1.0;
+    number[maxParams] params;
 
-        reactor(gs2, tInterval, dtSuggest, params);
-        // writeln("T: ", gs2.T);
-        assert(isClose(0.7321963 , gs2.massf[0], 1.0e-6));
-        assert(isClose(0.23281198, gs2.massf[1], 1.0e-6));
-        assert(isClose(0.0, gs2.massf[2], 1.0e-6));
-        assert(isClose(0.01160037, gs2.massf[3], 1.0e-6));
-        assert(isClose(0.02339135, gs2.massf[4], 1.0e-6));
-        assert(isClose(T_target, gs2.T, 1.0e-6));
-        assert(isClose(rho_target, gs2.rho, 1.0e-6));
-        assert(isClose(u_target, gs2.u, 1.0e-1));
-        return 0;
-    }
+    reactor(gs2, tInterval, dtSuggest, params);
+    writeln("T: ", gs2.T);
+
+    // Target values from stand-alone eqc python code
+    assert(isClose(7.56544529e-01, gs2.massf[0], 5.0e-6));
+    assert(isClose(2.09853276e-01, gs2.massf[1], 5.0e-6));
+    assert(isClose(3.94970532e-07, gs2.massf[2], 5.0e-6));
+    assert(isClose(1.10275167e-02, gs2.massf[3], 5.0e-6));
+    assert(isClose(2.25742840e-02, gs2.massf[4], 5.0e-6));
+    assert(isClose(T_target, gs2.T, 1.0e-4));
+    assert(isClose(rho_target, gs2.rho, 5.0e-6));
+    assert(isClose(u_target, gs2.u, 1.0e-3));
 }

@@ -737,58 +737,57 @@ private:
     }
 }
 
-version(multi_temperature_gas_test) {
-    int main() {
-        import util.msg_service;
+unittest {
+    import std.file;
 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/air-5sp-5T-gas-model.lua");
-        string[] speciesNames;
-        string[] energy_mode_names;
-        getArrayOfStrings(L, "species", speciesNames);
-        getArrayOfStrings(L, "energy_modes", energy_mode_names);
-        auto tm = new MultiTemperatureGasMixture(L, speciesNames, energy_mode_names);
-        lua_close(L);
-        auto gs = GasState(5, 4);
+    FloatingPointControl fpctrl;
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/floating_point_control.html
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-        gs.p = 1.0e6;
-        gs.T = 300.0;
-        gs.T_modes = [to!number(901), to!number(302), to!number(403), to!number(704)];
-        gs.massf = [to!number(0.8), to!number(0.1), to!number(0.025), to!number(0.025), to!number(0.05)];
-        tm.updateFromPT(gs);
-        number rho = gs.rho;
-        gs.T = 450.0;
-        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(1500)];
-        gs.p = 1.2e6;
-        tm.updateFromRhoU(gs);
+    auto L = init_lua_State();
+    doLuaFile(L, "air-5sp-5T-gas-model.lua");
+    string[] speciesNames;
+    string[] energy_mode_names;
+    getArrayOfStrings(L, "species", speciesNames);
+    getArrayOfStrings(L, "energy_modes", energy_mode_names);
+    auto tm = new MultiTemperatureGasMixture(L, speciesNames, energy_mode_names);
+    lua_close(L);
+    auto gs = GasState(5, 4);
 
-        assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(901.0), gs.T_modes[0], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(1.0e6), gs.p, 1.0e-6), failedUnitTest());
+    gs.p = 1.0e6;
+    gs.T = 300.0;
+    gs.T_modes = [to!number(901), to!number(302), to!number(403), to!number(704)];
+    gs.massf = [to!number(0.8), to!number(0.1), to!number(0.025), to!number(0.025), to!number(0.05)];
+    tm.updateFromPT(gs);
+    number rho = gs.rho;
+    gs.T = 450.0;
+    gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(1500)];
+    gs.p = 1.2e6;
+    tm.updateFromRhoU(gs);
 
-        gs.T = 550.0;
-        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(700)];
-        gs.rho = 0.1;
-        tm.updateFromPU(gs);
+    assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(901.0), gs.T_modes[0], 1.0e-6));
+    assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6));
+    assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6));
+    assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6));
+    assert(approxEqualNumbers(to!number(1.0e6), gs.p, 1.0e-6));
 
-        assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(901.0), gs.T_modes[0], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6), failedUnitTest());
-        assert(approxEqualNumbers(to!number(rho), gs.rho, 1.0e-6), failedUnitTest());
+    gs.T = 550.0;
+    gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(700)];
+    gs.rho = 0.1;
+    tm.updateFromPU(gs);
 
-
-
-        return 0;
-    }
+    assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6));
+    assert(approxEqualNumbers(to!number(901.0), gs.T_modes[0], 1.0e-6));
+    assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6));
+    assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6));
+    assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6));
+    assert(approxEqualNumbers(to!number(rho), gs.rho, 1.0e-6));
 }

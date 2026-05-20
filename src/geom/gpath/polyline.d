@@ -290,43 +290,38 @@ private:
     } // end reset_breakpoints()
 } // end class Polyline
 
+unittest {
+    auto a = Vector3([2.0, 2.0, 0.0]);
+    auto b = Vector3([1.0, 2.0, 1.0]);
+    auto c = Vector3([1.0, 2.0, 0.0]);
+    auto abc = new Arc(a, b, c);
+    auto polyline1 = new Polyline([abc, new Line(b, c)]);
+    auto f = polyline1(0.5);
+    assert(approxEqualVectors(f, Vector3(1.28154, 2, 0.95955)));
+    auto polyline2 = new Polyline(polyline1, true);
+    auto g = polyline2(0.999999);
+    assert(approxEqualVectors(g, a));
 
-version(polyline_test) {
-    import util.msg_service;
-    int main() {
-        auto a = Vector3([2.0, 2.0, 0.0]);
-        auto b = Vector3([1.0, 2.0, 1.0]);
-        auto c = Vector3([1.0, 2.0, 0.0]);
-        auto abc = new Arc(a, b, c);
-        auto polyline1 = new Polyline([abc, new Line(b, c)]);
-        auto f = polyline1(0.5);
-        assert(approxEqualVectors(f, Vector3(1.28154, 2, 0.95955)), failedUnitTest());
-        auto polyline2 = new Polyline(polyline1, true);
-        auto g = polyline2(0.999999);
-        assert(approxEqualVectors(g, a), failedUnitTest());
-                //
-        version(complex_numbers) {
-            // Try out the complex derivative evaluation.
-            double h = 1.0e-20;
-            number ih = complex(0,h);
-            number zero = 0.0;
-            number one = 1.0;
-            double alpha = 1.0;
-            auto pa_dash = Vector3(alpha+ih, alpha+ih);
-            auto pb = Vector3(one, zero);
-            auto pc = Vector3(zero, one);
-            auto line0 = new Line(pc, pa_dash);
-            auto line1 = new Line(pa_dash, pb);
-            auto polyline3 = new Polyline([line0, line1]);
-            // What we want to compute is the sensitivity
-            // of the midpoint of the arc with respect to alpha.
-            double dpmid_da_x = polyline3(0.5).x.im / h;
-            double dpmid_da_y = polyline3(0.5).y.im / h;
-            double dpmid_da_z = polyline3(0.5).z.im / h;
-            assert(isClose(dpmid_da_x,1.0), failedUnitTest());
-            assert(isClose(dpmid_da_y,1.0), failedUnitTest());
-            assert(isClose(dpmid_da_z,0.0), failedUnitTest());
-        }
-        return 0;
+    version (complex_numbers) {
+        // Try out the complex derivative evaluation.
+        double h = 1.0e-20;
+        number ih = complex(0, h);
+        number zero = 0.0;
+        number one = 1.0;
+        double alpha = 1.0;
+        auto pa_dash = Vector3(alpha + ih, alpha + ih);
+        auto pb = Vector3(one, zero);
+        auto pc = Vector3(zero, one);
+        auto line0 = new Line(pc, pa_dash);
+        auto line1 = new Line(pa_dash, pb);
+        auto polyline3 = new Polyline([line0, line1]);
+        // What we want to compute is the sensitivity
+        // of the midpoint of the arc with respect to alpha.
+        double dpmid_da_x = polyline3(0.5).x.im / h;
+        double dpmid_da_y = polyline3(0.5).y.im / h;
+        double dpmid_da_z = polyline3(0.5).z.im / h;
+        assert(isClose(dpmid_da_x, 1.0));
+        assert(isClose(dpmid_da_y, 1.0));
+        assert(isClose(dpmid_da_z, 0.0));
     }
-} // end polyline_test
+}

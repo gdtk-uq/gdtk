@@ -183,33 +183,35 @@ private:
 }
 
 
-version(cea_thermo_curves_test) {
-    int main() {
+unittest {
+    import std.file;
 
-        import util.msg_service;
-        // 1. Test CEA thermo curve for monatomic oxygen
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/O-thermo.lua");
-        lua_getglobal(L, "CEA_coeffs");
-        double R = 8.31451/0.0159994;
-        auto oThermo = new CEAThermoCurve(L, R);
-        lua_close(L);
-        number T = 500.0;
-        assert(isClose(1328.627, oThermo.eval_Cp(T).re, 1.0e-6), failedUnitTest());
-        T = 3700.0;
-        assert(isClose(20030794.683, oThermo.eval_h(T).re, 1.0e-6), failedUnitTest());
-        T = 10000.0;
-        assert(isClose(14772.717, oThermo.eval_s(T).re, 1.0e-3), failedUnitTest());
+    // Find the lua files in sample-data
+    chdir("./sample-data");
+    scope (exit)
+        chdir("..");
 
-        version(complex_numbers) {
-            // Try out the complex derivative evaluation
-            double h = 1.0e-20;
-            T = complex(3700.0, h);
-            number enthalpy = oThermo.eval_h(T);
-            double Cp_cd = enthalpy.im / h;
-            number Cp_eval = oThermo.eval_Cp(T);
-            assert(isClose(Cp_cd, Cp_eval.re, 1.0e-6), failedUnitTest());
-        }
-        return 0;
+    // 1. Test CEA thermo curve for monatomic oxygen
+    auto L = init_lua_State();
+    doLuaFile(L, "O-thermo.lua");
+    lua_getglobal(L, "CEA_coeffs");
+    double R = 8.31451/0.0159994;
+    auto oThermo = new CEAThermoCurve(L, R);
+    lua_close(L);
+    number T = 500.0;
+    assert(isClose(1328.627, oThermo.eval_Cp(T).re, 1.0e-6));
+    T = 3700.0;
+    assert(isClose(20_030_794.683, oThermo.eval_h(T).re, 1.0e-6));
+    T = 10_000.0;
+    assert(isClose(14_772.717, oThermo.eval_s(T).re, 1.0e-3));
+
+    version(complex_numbers) {
+        // Try out the complex derivative evaluation
+        double h = 1.0e-20;
+        T = complex(3700.0, h);
+        number enthalpy = oThermo.eval_h(T);
+        double Cp_cd = enthalpy.im / h;
+        number Cp_eval = oThermo.eval_Cp(T);
+        assert(isClose(Cp_cd, Cp_eval.re, 1.0e-6));
     }
 }

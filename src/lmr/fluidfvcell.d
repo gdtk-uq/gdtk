@@ -1309,7 +1309,7 @@ public:
 
         auto cqi = myConfig.cqi;
         if (fs.gas.T <= myConfig.T_frozen) { return; } // TODO: What about T_frozen_energy?
-        myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source);
+        myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source, myConfig.clip_small_gas_composition_values);
 
         version(multi_species_gas) {
             if (cqi.n_species > 1) {

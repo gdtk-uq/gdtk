@@ -597,14 +597,19 @@ StateSpecificRateConstant createSSRateConstant(lua_State* L)
     }
 }
 
-version(pseudo_species_kinetics_test) {
-    int main()
+unittest {
+    import std.file;
+
     {
-        import util.msg_service;
+        // Look for lua files in ../gas/sample-data
+        auto thisDir = getcwd();
+        chdir("../gas/sample-data");
+        scope (exit)
+            chdir(thisDir);
 
         // Set up gas model
         auto L = init_lua_State();
-        doLuaFile(L, "../gas/sample-data/pseudo-species-3-components.lua");
+        doLuaFile(L, "pseudo-species-3-components.lua");
         auto gm = new PseudoSpeciesGas(L);
         auto gd = GasState(2, 0);
         gd.massf[0] = 0.2;
@@ -613,29 +618,26 @@ version(pseudo_species_kinetics_test) {
         gd.T = 4000.0;
         gm.update_thermo_from_pT(gd);
         lua_close(L);
-
-        // Set up kinetics object
-        auto L2 = init_lua_State();
-        writeln("Parsing kinetics file.");
-        doLuaFile(L2, "sample-input/state-specific-N2-diss.lua");
-
-        PseudoSpeciesKinetics psk = new PseudoSpeciesKinetics(L2, gm);
-
-        writeln("Gas state BEFORE update: ", gd);
-
-        double tInterval = 1.0e-6;
-        double dtSuggest = -1.0;
-        number[] params;
-
-        psk(gd, 1.0e-6, dtSuggest, params);
-
-        writeln("Gas state AFTER update: ", gd);
-        // Apply thermo constraint.
-        //gm.update_thermo_from_rhou(gd);
-
-        //writeln("Gas state AFTER update: ", gd);
-
-        return 0;
-
     }
+
+    // Set up kinetics object
+    auto L2 = init_lua_State();
+    writeln("Parsing kinetics file.");
+    doLuaFile(L2, "sample-input/state-specific-N2-diss.lua");
+
+    PseudoSpeciesKinetics psk = new PseudoSpeciesKinetics(L2, gm);
+
+    writeln("Gas state BEFORE update: ", gd);
+
+    double tInterval = 1.0e-6;
+    double dtSuggest = -1.0;
+    number[] params;
+
+    psk(gd, 1.0e-6, dtSuggest, params);
+
+    writeln("Gas state AFTER update: ", gd);
+    // Apply thermo constraint.
+    //gm.update_thermo_from_rhou(gd);
+
+    writeln("Gas state AFTER update: ", gd);
 }

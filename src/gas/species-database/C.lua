@@ -8,6 +8,20 @@ db.C.M = {
    description = 'molecular mass',
    reference = 'molecular weight from CEA2'
 }
+db.C.electronic_levels = {
+   g = {
+      value = {1, 3, 5, 5, 1, 5, 1, 7, 3, 5},
+      units = "NA",
+      description = 'degeneracy of electronic levels',
+      reference = 'NIST'
+   },
+   Te = {
+      value = {0.0, 16.416, 43.413, 10192.657, 21648.030, 33735.121, 61981.832, 64086.96961, 64089.899, 64090.994},
+      units = "cm^(-1)",
+      description = "electronic excitation energy",
+      reference = 'NIST'
+  }
+}
 db.C.gamma = { 
    value = 1.664,
    units = 'non-dimensional',
