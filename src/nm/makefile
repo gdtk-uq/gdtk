@@ -87,7 +87,7 @@ demo: ${DEMO_PROGRAMS}
 clean:
 	- rm -f *.o *.obj
 	- rm -f ${DEMO_PROGRAMS}
-	- rm -f test_runner test_runner_complex
+	- rm -f test_runner_real test_runner_complex
 	- cd $(LUA); make clean
 
 # Specific targets, for individual artefacts.
