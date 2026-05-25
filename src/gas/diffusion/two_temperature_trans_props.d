@@ -403,8 +403,8 @@ unittest {
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
     auto L = init_lua_State();
-    GasModel gm = new CompositeGas("N2-N.lua");
-    doLuaFile(L, "N2-N.lua");
+    GasModel gm = new CompositeGas("N2-2sp-2T.lua");
+    doLuaFile(L, "N2-2sp-2T.lua");
     string[] speciesNames;
     getArrayOfStrings(L, "species", speciesNames);
     auto ttp = new TwoTemperatureTransProps(L, speciesNames);
@@ -417,13 +417,18 @@ unittest {
     gs.massf[1] = 0.2;
 
     ttp.updateTransProps(gs, gm);
+    assert(approxEqualNumbers(to!number(6.5398632009870612e-05), gs.mu, 1.0e-2));
+    assert(approxEqualNumbers(to!number(0.11258026890719305), gs.k, 1.0e-2));
+    assert(approxEqualNumbers(to!number(0.018734503743319659), gs.k_modes[0], 1.0e-2));
 
-    import std.stdio;
-    writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
+    //import std.stdio;
+    //writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
 
     gs.T_modes[0] = 300.0;
     ttp.updateTransProps(gs, gm);
-    writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
+    //writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
+    assert(approxEqualNumbers(to!number(5.7677760411478017e-05), gs.k_modes[0], 1.0e-2));
+
 
     //auto L = init_lua_State();
     //GasModel gm = new CompositeGas("gm-air11-2T.lua");

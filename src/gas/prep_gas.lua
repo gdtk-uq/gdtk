@@ -13,7 +13,8 @@
 CIDBFileName = {
    gupta = "gupta_etal_1990_CI_data.lua",
    wright = "wright_etal_CI_data.lua",
-   palmer = "palmer_etal_CI_data.lua"
+   palmer = "palmer_etal_CI_data.lua",
+   air_CO_He = "air_CO_He_CI_data.lua"
 }
 
 
