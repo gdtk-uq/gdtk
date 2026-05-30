@@ -40,6 +40,7 @@ import util.lua;
 import util.lua_service;
 import util.time_utils : timeStringToSeconds;
 
+import lmr.flowsolution;
 import lmr.special_block_init;
 import lmr.bc;
 import lmr.blockio;
@@ -1034,6 +1035,18 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         prevGlobalResidual = restart.prevGlobalResidual;
         currentPhase = restart.phase;
         stepsIntoCurrentPhase = restart.stepsIntoPhase;
+        // When restarting from a phase with frozen limiter and/or shock detector values,
+        // set the frozen-value flags before setPhaseSettings(), so its residual
+        // evaluation does not overwrite values restored from the snapshot.
+        if (nkPhases[currentPhase].frozenLimiterForResidual && cfg.interpolation_order > 1) {
+            // Limiter values may exist in the snapshot directory but are not read by the flow solution.
+            bool limiterValuesLoaded = readLimiterValues(snapshotStart);
+            if (limiterValuesLoaded) { cfg.frozen_limiter = true; }
+        }
+        if (nkPhases[currentPhase].frozenShockDetector) {
+            // Shock detector values were read by the flow solution in the snapshot directory.
+            cfg.frozen_shock_detector = true;
+        }
         setPhaseSettings(currentPhase);
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
@@ -1081,6 +1094,19 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             initialiseDiagnosticsFile();
         }
         // On fresh start, the phase setting must be at 0
+        //
+        // Support advanced users who may warm-start a simulation from a previous
+        // solution with shock detector values already present, or manually copy frozen
+        // limiter values into the 0000 snapshot directory before starting a new simulation.
+        if (nkPhases[0].frozenLimiterForResidual && cfg.interpolation_order > 1) {
+            // Limiter values may exist in the snapshot directory but are not read by the flow solution.
+            bool limiterValuesLoaded = readLimiterValues(snapshotStart);
+            if (limiterValuesLoaded) { cfg.frozen_limiter = true; }
+        }
+        if (nkPhases[0].frozenShockDetector) {
+            // Shock detector values were read by the flow solution in the snapshot directory.
+            cfg.frozen_shock_detector = true;
+        }
         setPhaseSettings(0);
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
@@ -4543,3 +4569,91 @@ string sgs_solve(string lhs_vec, string rhs_vec)
     return code;
 }
 
+bool readLimiterValues(int snapshot)
+{
+    /*
+    Reads limiter values from file.
+
+    TODO: A similar function is used in the check-jacobian command. We should consolidate these into a single shared definition. KAD 2026-05
+    */
+    alias cfg = GlobalConfig;
+
+    if (!exists(lmrCfg.limiterMetadataFile)) {
+        // no limiter metadata found so we continue without reading in any limiter values
+        return false;
+    } else {
+        if (cfg.is_master_task) {
+            writeln("--> Detected saved unstructured grid limiter values; reading from snapshot: ", snapshot);
+        }
+    }
+
+    double[][] data;
+    string[] variables;
+    string fileFmt;
+
+    fileFmt = cfg.field_format;
+    variables = readVariablesFromMetadata(lmrCfg.limiterMetadataFile);
+    size_t[string] variableIndex;
+    foreach (i, var; variables) variableIndex[var] = i;
+    auto soln = new FlowSolution(to!int(snapshot), cfg.nFluidBlocks);
+    foreach (blk; localFluidBlocks) {
+        auto limiterFilename = limiterFilename(to!int(snapshot), to!int(blk.id));
+        if (!exists(limiterFilename)) {
+            if (cfg.is_master_task) {
+                string errMsg = "Found limiter metadata, but no limiter snapshot files at the specified snapshot.\n";
+                errMsg ~= format("You selected snapshot: %d\n", snapshot);
+                errMsg ~= "Bailing out.\n";
+                throw new NewtonKrylovException(errMsg);
+            }
+        }
+        readValuesFromFile(data, limiterFilename, variables, soln.flowBlocks[blk.id].ncells, fileFmt);
+        foreach (j, cell; blk.cells) {
+            cell.gradients.velxPhi = data[j][variableIndex["vel.x"]];
+            cell.gradients.velyPhi = data[j][variableIndex["vel.y"]];
+            if (cfg.dimensions == 3) {
+                cell.gradients.velzPhi = data[j][variableIndex["vel.z"]];
+            } else {
+                cell.gradients.velzPhi = 0.0;
+            }
+            final switch (cfg.thermo_interpolator) {
+                case InterpolateOption.pt:
+                    cell.gradients.pPhi = data[j][variableIndex["p"]];
+                    cell.gradients.TPhi = data[j][variableIndex["T"]];
+                    break;
+                case InterpolateOption.rhou:
+                    cell.gradients.rhoPhi = data[j][variableIndex["rho"]];
+                    cell.gradients.uPhi = data[j][variableIndex["e"]];
+                    break;
+                case InterpolateOption.rhop:
+                    cell.gradients.rhoPhi = data[j][variableIndex["rho"]];
+                    cell.gradients.pPhi = data[j][variableIndex["p"]];
+                    break;
+                case InterpolateOption.rhot:
+                    cell.gradients.rhoPhi = data[j][variableIndex["rho"]];
+                    cell.gradients.TPhi = data[j][variableIndex["T"]];
+                    break;
+            }
+            foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+                cell.gradients.rho_sPhi[isp] = data[j][variableIndex["massf-" ~ cfg.gmodel_master.species_name(isp)]];
+            }
+            foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+                if (cfg.thermo_interpolator == InterpolateOption.rhou ||
+                    cfg.thermo_interpolator == InterpolateOption.rhop ) {
+                    cell.gradients.u_modesPhi[imode] = data[j][variableIndex["e-" ~ cfg.gmodel_master.energy_mode_name(imode)]];
+                }
+                else {
+                    cell.gradients.T_modesPhi[imode] = data[j][variableIndex["T-" ~ cfg.gmodel_master.energy_mode_name(imode)]];
+                }
+            }
+            if (cfg.turbulence_model_name != "none") {
+                foreach (iturb; 0 .. cfg.turb_model.nturb) {
+                    cell.gradients.turbPhi[iturb] = data[j][variableIndex["tq-" ~ cfg.turb_model.primitive_variable_name(iturb)]];
+                }
+            }
+            if (cfg.MHD) {
+                writeln("WARNING: we currently do not support reading MHD limiter values, proceeding with re-evaluated MHD limiter values.");
+            }
+        }
+    }
+    return true;
+}
