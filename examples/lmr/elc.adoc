@@ -68,4 +68,6 @@ include::2D/supersonic-aerofoil/README.adoc[tag=description]
 
 include::2D/capsule-phoebus/README.adoc[tag=description]
 
+include::2D/shock-tunnel-nozzles/README.adoc[tag=description]
+
 include::3D/manufactured-solutions/README.adoc[tag=description]
