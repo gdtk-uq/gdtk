@@ -5,7 +5,7 @@
 Nick N. Gibbons
 2026-05-29
 
-This directory collects some example simulations of 2D, axisymmetric, Laval nozzles that are used in hypersonic test facilities such as reflected shock tunnels. These facilities use nozzles to expand a reservior of high pressure, high temperature gas to produce a supersonic test flow that can pass over an experiment. In these examples we consider contoured nozzles, which are designed to produce a region of of uniform-ish core flow that mimics the conditions encountered in supersonic flight. They may be helpful for you in predicting the size of this core flow, or for computing the amount of core nonunformity, however if you merely need an estimate of the test flow conditions, we recommend faster tools such as nenzf1d or ESTCn.
+This directory collects some example simulations of 2D, axisymmetric, de Laval nozzles that are used in hypersonic test facilities such as reflected shock tunnels. These facilities use nozzles to expand a reservior of high pressure, high temperature gas to produce a supersonic test flow that can pass over an experiment. In these examples we consider contoured nozzles, which are designed to produce a region of of uniform-ish core flow that mimics the conditions encountered in supersonic flight. They may be helpful for you in predicting the size of this core flow, or for computing the amount of core nonunformity, however if you merely need an estimate of the test flow conditions, we recommend faster tools such as nenzf1d or ESTCn.
 
 An example calculation, using the Mach 7 nozzle from the T4 shock tunnel, is depicted below.
 
