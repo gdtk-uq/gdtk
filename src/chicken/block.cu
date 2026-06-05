@@ -215,7 +215,7 @@ struct Block {
         vertices.resize((cfg.nic+1)*(cfg.njc+1)*(cfg.nkc+1));
         bytes_allocated += vertices.size()*sizeof(Vector3);
         //
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
         // We need to allocate corresponding memory space on the GPU.
         auto status = cudaMalloc(&cells_on_gpu, cells.size()*sizeof(FVCell));
         if (status) throw runtime_error("Could not allocate cells on gpu.");
@@ -620,7 +620,7 @@ struct Block {
         dQdt.resize(0);
         faces.resize(0);
         vertices.resize(0);
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
         if (cells_on_gpu) { cudaFree(&cells_on_gpu); cells_on_gpu = NULL; }
         if (Q_on_gpu) { cudaFree(&Q_on_gpu); Q_on_gpu = NULL; }
         if (dQdt_on_gpu) { cudaFree(&dQdt_on_gpu); dQdt_on_gpu = NULL; }
