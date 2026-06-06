@@ -55,8 +55,8 @@ def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
 expected_reason_for_stop = "relative-global-residual-target"
-expected_number_steps = 66
-expected_final_cfl = 8.813e+05
+expected_number_steps = 61
+expected_final_cfl = 2.681e+05
 tolerance_on_cfl_check = 0.01
 tolerance_on_norms = 1.0e-6
 

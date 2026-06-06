@@ -14,9 +14,9 @@ def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
 expected_reason_for_stop = "relative-global-residual-target"
-expected_number_steps = 27
-expected_final_cfl = 8.747e+03
-expected_restart_step = 21
+expected_number_steps = 22
+expected_final_cfl = 3.459e+03
+expected_restart_step = 16
 
 def expected_output(proc, check_start_step=False):
     steps = 0

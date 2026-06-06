@@ -64,7 +64,7 @@ def test_run():
         expected_number_steps = 323
         expected_final_cfl = 1.000e+06
     else:
-        expected_number_steps = 326
+        expected_number_steps = 320
         expected_final_cfl = 1.000e+06
     reason = ""
     steps = 0

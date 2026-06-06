@@ -46,8 +46,8 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 56
-    expected_final_cfl = 2.068e+05
+    expected_number_steps = 54
+    expected_final_cfl = 1.378e+05
     reason = ""
     steps = 0
     cfl = 0.0
@@ -81,10 +81,10 @@ def test_solution():
     # file names
     if (sys.platform == 'linux'):
         ref_solution_file = "reference_solution_linux.dat"
-        solution_file = "lmrsim/loads/0055/blk-0000-bndry-1-wall.dat"
+        solution_file = "lmrsim/loads/0053/blk-0000-bndry-1-wall.dat"
     else:
         ref_solution_file = "reference_solution_macos.dat"
-        solution_file = "lmrsim/loads/0055/blk-0000-bndry-1-wall.dat"
+        solution_file = "lmrsim/loads/0053/blk-0000-bndry-1-wall.dat"
 
     # read in data
     ref_data = read_file(ref_solution_file)

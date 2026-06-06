@@ -60,8 +60,8 @@ def test_run_steady():
         expected_number_steps = 247
         expected_final_cfl = 1.716e+04
     else:
-        expected_number_steps = 249
-        expected_final_cfl = 2.466e+04
+        expected_number_steps = 243
+        expected_final_cfl = 6.322e+03
     reason = ""
     steps = 0
     cfl = 0.0

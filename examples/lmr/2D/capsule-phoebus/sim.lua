@@ -106,7 +106,7 @@ NewtonKrylovPhase:new{
   use_auto_cfl = true,
   threshold_relative_residual_for_cfl_growth = 0.99,
   start_cfl = 0.5,
-  max_cfl = 1.0e4,
+  max_cfl = 40.0,
   auto_cfl_exponent = 0.8,
   use_local_timestep = false
 }
