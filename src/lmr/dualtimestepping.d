@@ -522,11 +522,11 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
 
         // evaluate a reference residual for the nonlinear solve
         evalResidualWorker(0);
-        setResiduals();
-        addUnsteadyTermToResiduals();
+        fillResidualVector();
+        addUnsteadyTermToResidualVector();
         computeGlobalResidual();
         referenceGlobalResidual = globalResidual;
-        computeResiduals(referenceResiduals);
+        computeMaxResiduals(referenceResiduals);
         // Add value of 1.0 to each residaul.
         // If values are very large, 1.0 makes no difference.
         // If values are zero, the 1.0 should mean the reference residual
@@ -642,6 +642,11 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
                 // We think??? If not, we bail at this point.
                 try {
                     applyNewtonUpdate(omega);
+
+                    // Update the residual state as soon as the Newton update is accepted;
+                    // the stopping checks use the updated global residual value.
+                    assembleResidualVector(0, currentPhase, stepsIntoCurrentPhase);
+                    computeGlobalResidual();
                 }
                 catch (NewtonKrylovException e) {
                     // We need to bail out at this point.
@@ -880,7 +885,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
  * Authors: RJG and KAD
  * Date: 2025-09-07
  */
-void addUnsteadyTermToResiduals(int ftl=0)
+void addUnsteadyTermToResidualVector(int ftl=0)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     int bdfOrder = dtsController.bdfOrder;
@@ -997,7 +1002,7 @@ void printNewtonStepStatusToScreen(int step, double cfl, double dt, ref bool res
     alias cfg = GlobalConfig;
 
     if (!residualsUpToDate) {
-        computeResiduals(currentResiduals);
+        computeMaxResiduals(currentResiduals);
         residualsUpToDate = true;
     }
 

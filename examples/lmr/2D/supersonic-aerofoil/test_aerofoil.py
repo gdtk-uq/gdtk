@@ -79,7 +79,7 @@ def test_run_steady():
             steps = int(line.split()[1])
     assert reason.startswith("relative-global-residual-target"), \
       "Failed to stop for the expected reason:" + reason
-    assert abs(steps-102) < 4, "Failed to take correct number of steps:" + str(steps)
+    assert abs(steps-97) < 4, "Failed to take correct number of steps:" + str(steps)
 
 def test_solution():
     data = wall_data()

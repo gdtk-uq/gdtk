@@ -83,7 +83,7 @@ def test_run_steady():
             steps = int(line.split()[1])
     assert reason.startswith("relative-global-residual-target"), \
       "Failed to stop for the expected reason:" + reason
-    assert abs(steps-357) < 5, "Failed to take correct number of steps:" + str(steps)
+    assert abs(steps-349) < 5, "Failed to take correct number of steps:" + str(steps)
 
 def test_solution():
     cmd = 'lmr extract-line -l "0.4,0.508,0.0,0.75,0.321,0.0,10"'

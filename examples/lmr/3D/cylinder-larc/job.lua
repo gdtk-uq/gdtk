@@ -178,6 +178,7 @@ NewtonKrylovPhase:new{
 }
 
 NewtonKrylovPhase:new{
+   linear_solve_tolerance = 0.001,
    frozen_shock_detector = true,
    frozen_limiter_for_residual = true,
    frozen_limiter_for_jacobian = true,

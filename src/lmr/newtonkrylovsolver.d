@@ -74,7 +74,7 @@ import lmr.grid_motion;
 import lmr.grid_motion_udf;
 import lmr.grid_motion_shock_fitting;
 import lmr.lmrwarnings;
-import lmr.dualtimestepping: addUnsteadyTermToResiduals;
+import lmr.dualtimestepping: addUnsteadyTermToResidualVector;
 
 version(mpi_parallel) {
     import mpi;
@@ -638,10 +638,10 @@ LinearSystemInput lsi;
 
 struct GMRESInfo {
     int nRestarts;
-    double initResidual;
-    double finalResidual;
+    double initResidual = 1.0;
+    double finalResidual = 1.0;
     int iterationCount;
-    double linearSolveWallTime;
+    double linearSolveWallTime = 0.0;
     double pcWallTime = 0.0 ; // initialize to 0.0 to handle cases where FGMRES never invokes the preconditioner
 };
 GMRESInfo gmresInfo;
@@ -1135,10 +1135,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         // On fresh start, may need to set reference residuals based on initial condition.
         evalResidual(0, currentPhase, stepsIntoCurrentPhase);
-        setResiduals();
+        fillResidualVector();
         computeGlobalResidual();
         referenceGlobalResidual = globalResidual;
-        computeResiduals(referenceResiduals);
+        computeMaxResiduals(referenceResiduals);
         // Add value of 1.0 to each residaul.
         // If values are very large, 1.0 makes no difference.
         // If values are zero, the 1.0 should mean the reference residual
@@ -1146,6 +1146,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         foreach (ref residual; referenceResiduals) residual += to!number(1.0);
 
         if (nkCfg.numberOfStepsForSettingReferenceResiduals == 0) {
+            writeDiagnostics(0, 0.0, cfl, 0.0, 0.0, 0.0, 1.0, 0, residualsUpToDate);
             referenceResidualsAreSet = true;
             if (GlobalConfig.is_master_task) {
                 writeln("*************************************************************************");
@@ -1312,6 +1313,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             // We think??? If not, we bail at this point.
             try {
                 applyNewtonUpdate(omega);
+
+                // Update the residual state as soon as the Newton update is accepted;
+                // the stopping checks use the updated global residual value.
+                assembleResidualVector(0, currentPhase, stepsIntoCurrentPhase);
+                computeGlobalResidual();
             }
             catch (NewtonKrylovException e) {
                 // We need to bail out at this point.
@@ -1366,7 +1372,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         if (!referenceResidualsAreSet) {
             referenceGlobalResidual = fmax(referenceGlobalResidual, globalResidual);
             if (!residualsUpToDate) {
-                computeResiduals(currentResiduals);
+                computeMaxResiduals(currentResiduals);
                 residualsUpToDate = true;
             }
             foreach (ivar; 0 .. nConserved) {
@@ -1683,7 +1689,7 @@ void setPhaseSettings(size_t phase)
     }
 }
 
-void computeResiduals(ref ConservedQuantities residuals)
+void computeMaxResiduals(ref ConservedQuantities residuals)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1819,7 +1825,6 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-
 /**
  * This function solves a linear system to provide a Newton step for the flow field.
  *
@@ -1899,11 +1904,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep,
      *---
      */
 
-    evalResidual(0, currentPhase, stepsIntoCurrentPhase);
-
-    setResiduals();
-
-    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
+    assembleResidualVector(0, currentPhase, stepsIntoCurrentPhase);
 
     if (nkCfg.useRealValuedFrechetDerivative) { setR0(currentPhase, stepsIntoCurrentPhase); }
 
@@ -2076,11 +2077,7 @@ void solveNewtonStepFGMRES(size_t currentPhase, int stepsIntoCurrentPhase)
      *---
      */
 
-    evalResidual(0, currentPhase, stepsIntoCurrentPhase);
-
-    setResiduals();
-
-    if (nkCfg.dualTime) { addUnsteadyTermToResiduals(); }
+    assembleResidualVector(0, currentPhase, stepsIntoCurrentPhase);
 
     if (nkCfg.useRealValuedFrechetDerivative) { setR0(currentPhase, stepsIntoCurrentPhase); }
 
@@ -2194,12 +2191,29 @@ void solveNewtonStepFGMRES(size_t currentPhase, int stepsIntoCurrentPhase)
 }
 
 /**
+ * Evaluate the residuals for the requested flow-time level and assemble
+ * the residual vector R from that same level.
+ *
+ * For dual-time stepping, the unsteady term is also included in R.
+ *
+ * Authors: RJG and KAD
+ * Date: 2026-06-04
+ */
+void assembleResidualVector(int ftl, size_t currentPhase, int stepsIntoCurrentPhase)
+{
+    evalResidual(ftl, currentPhase, stepsIntoCurrentPhase);
+    fillResidualVector(ftl);
+    if (nkCfg.dualTime) { addUnsteadyTermToResidualVector(ftl); }
+}
+
+/**
  * Copy values from dUdt into R.
  *
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-void setResiduals(int ftl=0)
+
+void fillResidualVector(int ftl=0)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2388,10 +2402,6 @@ void determineScaleFactors(ref ScaleFactors rowScale, ref ScaleFactors invColSca
 
 /**
  * Compute the global residual based on vector R.
- *
- * For certain turbulence models, we scale the contribution in the global residual
- * so that certain quantities do not dominate this norm. For example, the turbulent
- * kinetic energy in the k-omega model has its contribution scaled down.
  *
  * Authors: KAD and RJG
  * Date: 2022-03-02
@@ -3960,9 +3970,7 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
                 startIdx += nConserved;
             }
         }
-        evalResidual(1, currentPhase, stepsIntoCurrentPhase);
-        setResiduals(1);
-        if (nkCfg.dualTime) { addUnsteadyTermToResiduals(1); }
+        assembleResidualVector(1, currentPhase, stepsIntoCurrentPhase);
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t startIdx = 0;
             foreach (cell; blk.cells) {
@@ -4169,7 +4177,7 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
 
     double massBalance = compute_mass_balance();
     if (!residualsUpToDate) {
-        computeResiduals(currentResiduals);
+        computeMaxResiduals(currentResiduals);
         residualsUpToDate = true;
     }
 
@@ -4201,7 +4209,7 @@ void writeSnapshot(int step, double dt, double cfl, int currentPhase, int stepsI
     }
 
     if (!residualsUpToDate) {
-	computeResiduals(currentResiduals);
+	computeMaxResiduals(currentResiduals);
 	residualsUpToDate = true;
     }
 
@@ -4345,7 +4353,7 @@ void printStatusToScreen(int step, double cfl, double dt, double wallClockElapse
     alias cfg = GlobalConfig;
 
     if (!residualsUpToDate) {
-        computeResiduals(currentResiduals);
+        computeMaxResiduals(currentResiduals);
         residualsUpToDate = true;
     }
 
