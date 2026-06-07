@@ -43,6 +43,11 @@ public:
         _is_plasma = true;
         _n_species = 3;
         _n_modes = 1;
+        // conservedquantities.d requires a name for each energy mode (matches the
+        // two_temperature_air convention); without this the mode-name array is empty
+        // and ConservedQuantitiesIndices indexes out of bounds.
+        _energy_mode_names.length = 1;
+        _energy_mode_names[0] = "vibroelectronic";
         _species_names.length = 3;
         _species_names[Species.Ar] = "Ar";
         _species_names[Species.Ar_plus] = "Ar+";
@@ -60,6 +65,7 @@ public:
         lua_pop(L, 1); // dispose of the table
         // Compute derived parameters
         create_species_reverse_lookup();
+        create_energy_mode_reverse_lookup();
     } // end constructor
 
     override string toString() const
