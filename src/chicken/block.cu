@@ -795,7 +795,7 @@ struct Block {
             throw runtime_error("Do not ask to FP32 code to read grid file with binary data.");
 # endif
             // Raw, binary data in the grid file.
-            auto f = ifstream(fileName);
+            auto f = ifstream(fileName, ios::binary);
             if (!f) {
                 throw runtime_error("Did not open binary grid file successfully: "+fileName);
             }
