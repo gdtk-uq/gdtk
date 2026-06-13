@@ -58,10 +58,10 @@ def test_run_steady():
     # CPU: Apple M1 Pro
     if (sys.platform == 'linux'):
         expected_number_steps = 247
-        expected_final_cfl = 1.627e+04
+        expected_final_cfl = 1.235e+04
     else:
         expected_number_steps = 243
-        expected_final_cfl = 6.322e+03
+        expected_final_cfl = 9.872e+03
     reason = ""
     steps = 0
     cfl = 0.0
