@@ -119,7 +119,7 @@ NewtonKrylovGlobalConfig{
    -- nonlinear system solver settings
    max_newton_steps = 2000,
    max_consecutive_bad_steps = 10,
-   stop_on_relative_residual = 1.0e-10,
+   stop_on_relative_residual = 1.0e-12,
 
    -- linear system solver settings
    frechet_derivative_perturbation = 1.0e-50,
