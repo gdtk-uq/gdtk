@@ -86,7 +86,7 @@ This might be useful for purely two-dimensional constructions.
 == Ruled surface
 The constructor for a ruled surface is:
 ----
-RuledSurface:new{edge0, edge1, ruled_direction='s', pured2D=false}
+RuledSurface:new{edge0, edge1, ruled_direction='s', pure2D=false}
 ----
 
 The ruled surface is used to build a surface connecting to

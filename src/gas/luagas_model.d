@@ -590,9 +590,6 @@ extern(C) int molef2massf(lua_State* L)
         throw new Error(errMsg);
     }
     auto Q = GasState(gm);
-    if ( narg == 3 ) {
-        getGasStateFromTable(L, gm, 3, Q);
-    }
     gm.molef2massf(molef, Q);
     // Update table with new mass fractions
     if ( narg == 3 ) {
@@ -724,7 +721,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
     }
     // 3. Now find those values that we have explicitly set
     foreach (isp; 0 .. gm.n_species()) {
-        lua_getfield(L, -1, toStringz(gm.species_name(isp)));
+        lua_getfield(L, idx, toStringz(gm.species_name(isp)));
         if ( lua_isnumber(L, -1) ) {
             vals[isp] = lua_tonumber(L, -1);
         } else if ( lua_isnil(L, -1) ) {
