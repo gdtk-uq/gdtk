@@ -1,0 +1,14 @@
+[project]
+name = "lmr-python-programs"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "click",
+    "pyyaml",
+]
+
+[project.scripts]
+lmr-verify = "lmr_verify:verify"
+
+[tool.setuptools]
+py-modules = ["lmr_verify"]
