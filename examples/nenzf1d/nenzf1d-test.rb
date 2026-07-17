@@ -84,11 +84,11 @@ class TestNENZF1D < Test::Unit::TestCase
         end
       end
     end
-    assert((enthalpy - 4.79689).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert((enthalpy - 4.79689e6).abs < 0.01e6, "Failed to compute correct enthalpy.")
     assert(found_exit_condition, "Failed to find exit condition in output.")
     assert((mach - 7.15261).abs < 0.01, "Failed to compute correct Mach number.")
     assert((temperature - 432.096).abs < 0.1, "Failed to compute correct temperature.")
-    assert((pressure - 4.69785).abs < 0.01, "Failed to compute correct pressure.")
+    assert((pressure - 4697.85).abs < 0.01e3, "Failed to compute correct pressure.")
     assert((massf_NO - 0.068366).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
   end
 
@@ -127,11 +127,11 @@ class TestNENZF1D < Test::Unit::TestCase
         end
       end
     end
-    assert((enthalpy - 2.47955).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert((enthalpy - 2.47955e6).abs < 0.01e6, "Failed to compute correct enthalpy.")
     assert(found_exit_condition, "Failed to find exit condition in output.")
     assert((mach - 7.0331).abs < 0.01, "Failed to compute correct Mach number.")
     assert((temperature - 250.641).abs < 0.1, "Failed to compute correct temperature.")
-    assert((pressure - 3.11959).abs < 0.01, "Failed to compute correct pressure.")
+    assert((pressure - 3.11959e3).abs < 0.01e3, "Failed to compute correct pressure.")
     assert((massf_NO - 0.00972495).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
   end
 
@@ -170,11 +170,11 @@ class TestNENZF1D < Test::Unit::TestCase
         end
       end
     end
-    assert((enthalpy - 2.47813).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert((enthalpy - 2.47813e6).abs < 0.01e6, "Failed to compute correct enthalpy.")
     assert(found_exit_condition, "Failed to find exit condition in output.")
     assert((mach - 7.03297).abs < 0.01, "Failed to compute correct Mach number.")
     assert((temperature - 250.643).abs < 0.1, "Failed to compute correct temperature.")
-    assert((pressure - 3.11968).abs < 0.01, "Failed to compute correct pressure.")
+    assert((pressure - 3.11968e3).abs < 0.01e3, "Failed to compute correct pressure.")
     assert((massf_NO - 0.00972406).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
   end
 
@@ -217,11 +217,11 @@ class TestNENZF1D < Test::Unit::TestCase
         end
       end
     end
-    assert((enthalpy - 2.47976).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert((enthalpy - 2.47976e6).abs < 0.01e6, "Failed to compute correct enthalpy.")
     assert(found_exit_condition, "Failed to find exit condition in output.")
     assert((mach - 7.64642).abs < 0.01, "Failed to compute correct Mach number.")
     assert((temperature - 219.023).abs < 0.1, "Failed to compute correct temperature.")
-    assert((pressure - 2.81165).abs < 0.01, "Failed to compute correct pressure.")
+    assert((pressure - 2.81165e3).abs < 0.01e3, "Failed to compute correct pressure.")
     assert((massf_NO - 0.00972722).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
     assert((tvib - 1385.79).abs < 0.1, "Failed to compute correct vibrational temperature.")
   end
@@ -262,7 +262,7 @@ class TestNENZF1D < Test::Unit::TestCase
         end
       end
     end
-    assert((enthalpy - 4.79689).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert((enthalpy - 4.79689e6).abs < 0.01e6, "Failed to compute correct enthalpy.")
     assert(found_exit_condition, "Failed to find exit condition in output.")
     assert((mach - 7.15261).abs < 0.01, "Failed to compute correct Mach number.")
     assert((temperature - 432.096).abs < 0.1, "Failed to compute correct temperature.")
