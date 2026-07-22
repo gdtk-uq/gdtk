@@ -23,6 +23,13 @@ import std.utf;
 import dyaml.node;
 import dyaml.exception;
 
+/*
+ This routine contains fixes from NNG (July 2026) to fix the float regex. These have not
+ been merged upstream into the official DYAML repo, so future GDTk maintainers beware.
+
+ The fix was taken from this stack overflow post:
+     https://stackoverflow.com/questions/30458977/yaml-loads-5e-6-as-string-and-not-a-number
+*/
 
 /// Type of `regexes`
 private alias RegexType = Tuple!(string, "tag", const Regex!char, "regexp", string, "chars");
@@ -33,12 +40,13 @@ private immutable RegexType[] regexes = [
                      "|false|False|FALSE|on|On|ON|off|Off|OFF)$"),
               "yYnNtTfFoO"),
     RegexType("tag:yaml.org,2002:float",
-              regex(r"^(?:[-+]?([0-9][0-9_]*)\\.[0-9_]*" ~
-                     "(?:[eE][-+][0-9]+)?|[-+]?(?:[0-9][0-9_]" ~
-                     "*)?\\.[0-9_]+(?:[eE][-+][0-9]+)?|[-+]?" ~
-                     "[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]" ~
-                     "*|[-+]?\\.(?:inf|Inf|INF)|\\." ~
-                     "(?:nan|NaN|NAN))$"),
+              regex(r"^(?:" ~
+                     "[-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?" ~
+                    "|[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)" ~
+                    "|\\.[0-9_]+(?:[eE][-+][0-9]+)?" ~
+                    "|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*" ~
+                    "|[-+]?\\.(?:inf|Inf|INF)" ~
+                    "|\\.(?:nan|NaN|NAN))$"),
               "-+0123456789."),
     RegexType("tag:yaml.org,2002:int",
               regex(r"^(?:[-+]?0b[0-1_]+" ~
