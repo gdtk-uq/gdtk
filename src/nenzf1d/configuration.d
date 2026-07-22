@@ -49,63 +49,71 @@ Config process_config(Node configdata) {
     // The second gas model is for the expansion process that has finite-rate 1T chemistry.
     config.gm2_filename = configdata["gas-model-2"].as!string;
     config.reactions_filename = configdata["reactions"].as!string;
-    try {
-        config.reactions_filename2 = configdata["reactions-file2"].as!string;
-    } catch (YAMLException e) {
-        // We cannot set the second reactions file so assume 1T chemistry.
-    }
+    if ("reactions-file2" in configdata) config.reactions_filename2 = configdata["reactions-file2"].as!string;
     //
     foreach(string name; configdata["species"]) { config.species ~= name; }
     foreach(name; config.species) {
         double mf = 0.0;
-        try { mf = to!double(configdata["molef"][name].as!string); } catch (YAMLException e) {}
+        if ("molef" in configdata) {
+            if (name in configdata["molef"]) mf = configdata["molef"][name].as!double;
+        }
         config.molef ~= mf;
     }
     //
     // Initial gas state in shock tube.
     // These initial-state and shock speed data are needed for the shock-tube analysis
     // but not for the case of skipping to the direct setting of the nozzle-supply condition.
-    try { config.T1 = to!double(configdata["T1"].as!string); } catch (YAMLException e) {}
-    try { config.p1 = to!double(configdata["p1"].as!string); } catch (YAMLException e) {}
-    try { config.Vs = to!double(configdata["Vs"].as!string); } catch (YAMLException e) {}
+    if ("T1" in configdata) config.T1 = configdata["T1"].as!double;
+    if ("p1" in configdata) config.p1 = configdata["p1"].as!double;
+    if ("Vs" in configdata) config.Vs = configdata["Vs"].as!double;
     //
     // Observed relaxation pressure for reflected-shock, nozzle-supply region.
-    // A value of 0.0 indicates that we should use the ideal shock-reflection pressure.
-    try { config.pe = to!double(configdata["pe"].as!string); } catch (YAMLException e) {}
+    // A value of 0.0, or not present, indicates that we should use the ideal shock-reflection pressure.
+    if ("pe" in configdata) config.pe = configdata["pe"].as!double;
     // Specified temperature for nozzle-supply region.
-    // A value of 0.0 indicates that we should use do the analysis of the shock-tube processes,
+    // A value of 0.0, or not present, indicates that we should use do the analysis of the shock-tube processes,
     // but a nonzero value (together with a nonzero pe) skips directly to setting the
     // stagnation condition for the nozzle-supply region.
-    try { config.Te = to!double(configdata["Te"].as!string); } catch (YAMLException e) {}
+    if ("Te" in configdata) {
+        config.Te = configdata["Te"].as!double;
+        if ("pe" !in configdata) throw new Error("Missing stagnation temperature pe. When using Te, this parameter is required.");
+    } else {
+        if ("T1" !in configdata) throw new Error("Missing shock tube fill temperature T1. Without Te this parameter is required.");
+        if ("p1" !in configdata) throw new Error("Missing shock tube fill pressure p1. Without Te this parameter is required.");
+        if ("Vs" !in configdata) throw new Error("Missing incident shock velocity Vs. Without Te this parameter is required.");
+    }
     //
     // Mach number (in equilibrium gas) at nozzle throat.
     // Nominally, it would be 1.0 for sonic flow.
     // It may be good to expand a little more so that,
     // on changing to the frozen-gas sound speed in the nonequilibrium gas model,
     // the flow remains slightly supersonic.
-    try { config.meq_throat = to!double(configdata["meq_throat"].as!string); } catch (YAMLException e) {}
+    if ("meq_throat" in configdata) config.meq_throat = configdata["meq_throat"].as!double;
     //
     // Nozzle-exit area ratio for terminating expansion.
-    try { config.ar = to!double(configdata["ar"].as!string); } catch (YAMLException e) {}
+    if ("ar" in configdata) config.ar = configdata["ar"].as!double;
     //
     // Alternatively, we might stop on pPitot/pSupply becoming less than pp_ps.
-    try { config.pp_ps = to!double(configdata["pp_ps"].as!string); } catch (YAMLException e) {}
+    // A value of zero, or not present, removes this stopping criterion.
+    if ("pp_ps" in configdata) config.pp_ps = configdata["pp_ps"].as!double;
     // pPitot = C * rho*V^^2
-    // A value of C=1.0 is a good default.
     // In a number of sphere simulations, for flows representative of T4 flow conditions,
     // values of pPitot/(rho*v^^2) appeared to be in the range 0.96 to 1.0.
-    try { config.C = to!double(configdata["C"].as!string); } catch (YAMLException e) {}
+    // TODO: Per discussion with PJ in July 2026, we might want to change the
+    // default value here to 0.94, as recommended by Sopek et al.
+    // (doi.org/10.1016/j.actaastro.2024.07.008).
+    if ("C" in configdata) config.C = configdata["C"].as!double;
     //
-    // Nozzle x,diameter schedule.
-    foreach(string val; configdata["xi"]) { config.xi ~= to!double(val); }
-    foreach(string val; configdata["di"]) { config.di ~= to!double(val); }
+    // Nozzle x,diameter schedule. These parameters are required
+    foreach(double val; configdata["xi"]) { config.xi ~= val; }
+    foreach(double val; configdata["di"]) { config.di ~= val; }
 
-    // Part 2 of config
+    // Part 2 of config, all optional parameters
     config.x_end = config.xi[$-1];  // Nozzle-exit position for terminating expansion.
-    try { config.x_end = to!double(configdata["x_end"].as!string); } catch (YAMLException e) {}
-    try { config.t_final = to!double(configdata["t_final"].as!string); } catch (YAMLException e) {}
-    try { config.t_inc = to!double(configdata["t_inc"].as!string); } catch (YAMLException e) {}
-    try { config.t_inc_factor = to!double(configdata["t_inc_factor"].as!string); } catch (YAMLException e) {}
-    try { config.t_inc_max = to!double(configdata["t_inc_max"].as!string); } catch (YAMLException e) {}
+    if ("x_end" in configdata)        config.x_end        = configdata["x_end"].as!double;
+    if ("t_final" in configdata)      config.t_final      = configdata["t_final"].as!double;
+    if ("t_inc" in configdata)        config.t_inc        = configdata["t_inc"].as!double;
+    if ("t_inc_factor" in configdata) config.t_inc_factor = configdata["t_inc_factor"].as!double;
+    if ("t_inc_max" in configdata)    config.t_inc_max    = configdata["t_inc_max"].as!double;
     return config;
 } // end process_config()
