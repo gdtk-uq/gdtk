@@ -9,6 +9,15 @@ define nl
 
 endef
 
+define pythonpath-dep-msg
+
+--------------------------------------------------------------------------
+WARN: The PYTHONPATH installation method will be deprecated in the future.
+      	Removing $(INSTALL_DIR)/lib from PYTHONPATH allows for
+      	installation to virtual-envs.
+--------------------------------------------------------------------------
+endef 
+
 DMD_ALLOWED_OPTS := dmd ldc2
 # We can specify the DMD64 compiler as DMD=dmd on the command-line
 # when invoking this makefile.
@@ -326,7 +335,7 @@ clean:
 	- rm -rf $(BUILD_DIR)/*
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
-	- rm -rf $(PY_PROG_DIR)/__pycache__ $(PY_PROG_DIR)/*.egg-info
+	- rm -rf $(PY_PROG_DIR)/__pycache__ $(PY_PROG_DIR)/*.egg-info $(PY_PROG_DIR)/build
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_mpi.d
 	- rm -f gdtk-module
@@ -437,23 +446,30 @@ lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) |
 CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
 VIRTUAL_ENV ?= $(CONDA_PREFIX)
 
-# Override if using uv with `PIP='uv pip'`
-PIP ?= $(VIRTUAL_ENV)/bin/pip
 PYTHON ?= python3
+
+USE_PYTHONPATH ?= $(shell echo ":$$PYTHONPATH:" | grep -c ":$(INSTALL_DIR)/lib:")
 
 # If it doesn't already exist
 $(VIRTUAL_ENV):
 	- mkdir -p $(INSTALL_DIR)
 	$(info Creating virtual environment ...)
-	$(PYTHON) -m venv $(VIRTUAL_ENV)
-	$(info Updating pip)
-	$(VIRTUAL_ENV)/bin/pip install --upgrade pip -q
+	$(PYTHON) -m venv $(VIRTUAL_ENV) --prompt gdtk --upgrade-deps
 
-$(PY_PROGRAMS): $(VIRTUAL_ENV)
-	$(info Installing python tools)
-	$(PIP) install ./$(PY_PROG_DIR)
-	- mkdir -p $(INSTALL_DIR)/bin
+ifeq ($(USE_PYTHONPATH), 0)
+$(PY_PROGRAMS): | $(VIRTUAL_ENV)
+	$(info Installing python tool/s)
+	$(VIRTUAL_ENV)/bin/pip install ./$(PY_PROG_DIR)
+	- install -d $(INSTALL_DIR)/bin
 	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+else
+# This is just a fallback while we migrate to virtual-environments
+$(PY_PROGRAMS):
+	$(info Installing python tool/s)
+	$(warning $(pythonpath-dep-msg))
+	- install -d $(INSTALL_DIR)/bin
+	- install -m 755 $(PY_PROG_DIR)/lmr_verify.py $(INSTALL_DIR)/bin/lmr-verify
+endif
 
 #### Auxiliary programs but part of making an eilmer install useful
 prep-gas:
