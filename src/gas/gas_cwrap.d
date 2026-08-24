@@ -799,6 +799,18 @@ extern (C) int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp,
     }
 }
 
+extern (C) int gas_model_gas_state_enthalpy_isp_in_mode(int gm_i, int gs_i, int isp, int imode,
+                                                        double* result)
+{
+    try {
+        *result = gas_models[gm_i].enthalpyPerSpeciesInMode(*(gas_states[gs_i]), isp, imode);
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 extern (C) int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp,
                                                double* result)
 {
