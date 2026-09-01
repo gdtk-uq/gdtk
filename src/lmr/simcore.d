@@ -57,6 +57,7 @@ import lmr.solid.ssolidblock;
 import lmr.special_block_init;
 import lmr.ufluidblock;
 import lmr.user_defined_source_terms;
+import lmr.newtonkrylovsolver : nkSimState;
 
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
@@ -144,12 +145,12 @@ void synchronize_corner_coords_for_all_blocks()
     }
 } // end synchronize_corner_coords_for_all_blocks()
 
-enum ItStartFnName : string {
+enum AtStartFnName : string {
     at_timestep_start = "atTimestepStart",
     at_iteration_start = "atIterationStart"
 }
 
-void call_UDF_at_iteration_start(ItStartFnName fn_name)
+void call_UDF_at_iteration_start(AtStartFnName fn_name)
 {
     auto L = GlobalConfig.master_lua_State;
     lua_getglobal(L, toStringz(cast(string)fn_name));
@@ -162,26 +163,29 @@ void call_UDF_at_iteration_start(ItStartFnName fn_name)
         }
         // Set up table with arguments for caller
         lua_newtable(L);
-        switch (fn_name) {
-            case ItStartFnName.at_timestep_start:
+        final switch (fn_name) {
+            case AtStartFnName.at_timestep_start:
                 lua_pushnumber(L, SimState.time); lua_setfield(L, -2, "time");
                 // add "simTime" as alias fro "time"
                 lua_pushnumber(L, SimState.time); lua_setfield(L, -2, "simTime");
                 lua_pushnumber(L, SimState.step); lua_setfield(L, -2, "step");
                 lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "timeStep");
                 break;
-            default:
-                assert(0);
+            case AtStartFnName.at_iteration_start:
+                lua_pushnumber(L, nkSimState.step); lua_setfield(L, -2, "step");
+                lua_pushnumber(L, nkSimState.phase); lua_setfield(L, -2, "phase");
+                lua_pushnumber(L, nkSimState.cfl); lua_setfield(L, -2, "cfl");
+                break;
         }
         // Proceed to call the user's function
         int number_args = 1;
         int number_results = 0;
         if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-            string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
+            string errMsg = format("ERROR: while running user-defined function %s()\n", cast(string)fn_name);
             errMsg ~= to!string(lua_tostring(L, -1));
             throw new FlowSolverException(errMsg);
         }
-        if (fn_name == ItStartFnName.at_timestep_start) {
+        if (fn_name == AtStartFnName.at_timestep_start) {
             lua_getglobal(L, "dt_override");
             if (lua_isnumber(L, -1)) {
                 SimState.dt_override = to!double(lua_tonumber(L, -1));

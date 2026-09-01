@@ -58,7 +58,7 @@ import lmr.simcore :
     compute_L2_residual,
     compute_Linf_residuals,
     compute_mass_balance,
-    ItStartFnName,
+    AtStartFnName,
     set_mu_and_k,
     synchronize_corner_coords_for_all_blocks,
     update_ch_for_divergence_cleaning;
@@ -412,7 +412,7 @@ int integrateInTime(double targetTimeAsRequested)
             if (GlobalConfig.udf_supervisor_file.length > 0) {
                 // Note that the following call allows the user to do almost anything
                 // at the start of the time step, including changing flow states in cells.
-                call_UDF_at_iteration_start(ItStartFnName.at_timestep_start);
+                call_UDF_at_iteration_start(AtStartFnName.at_timestep_start);
                 // If the user has adjusted any of the flow states via the Lua functions,
                 // we will beed to re-encode the conserved quantities, so that they have
                 // consistent data.

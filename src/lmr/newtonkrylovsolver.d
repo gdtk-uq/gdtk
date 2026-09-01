@@ -59,7 +59,9 @@ import lmr.lmrerrors : LmrError, lmrErrorExit;
 import lmr.lmrwarnings;
 import lmr.lua_helper;
 import lmr.sfluidblock : SFluidBlock;
-import lmr.simcore : compute_mass_balance;
+import lmr.simcore : compute_mass_balance,
+    call_UDF_at_iteration_start,
+    AtStartFnName;
 import lmr.simcore_exchange;
 import lmr.simcore_gasdynamic_step : detect_shocks;
 import lmr.ufluidblock : UFluidBlock;
@@ -364,6 +366,13 @@ struct NKPhaseConfig {
 
 NKPhaseConfig[] nkPhases;
 NKPhaseConfig activePhase;
+
+struct NKSimState {
+    size_t step; // Newton step number
+    size_t phase;
+    double cfl;
+}
+NKSimState nkSimState;
 
 /*---------------------------------------------------------------------
  * Classes to handle CFL selection
@@ -1238,6 +1247,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          *    c. compute CFl for this step
          *    d. set the timestep
          *    e. set flag on preconditioner
+         *    f. set simulation state for step attempt
+         *    g. allow user-defined intervention
          */
         residualsUpToDate = false;
         // 0a. change of phase
@@ -1306,7 +1317,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         dt = setDtInCells(cfl, activePhase.useLocalTimestep);
 
         // 0d. determine if we need to update preconditioner
-
         bool maxLinearSolverIterationsUsed = (nkCfg.maxLinearSolverRestarts == gmresInfo.nRestarts &&
                                               nkCfg.maxLinearSolverIterations == gmresInfo.iterationCount);
         if (step == startStep || startOfNewPhase || numberBadSteps > 0 ||
@@ -1316,6 +1326,24 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
         else {
             updatePreconditionerThisStep = false;
+        }
+
+        // 0e. set simulation state for step we're about to attempt       
+        nkSimState.step = step;
+        nkSimState.phase = currentPhase;
+        nkSimState.cfl = cfl;
+
+        // 0f. call user-defined function, if needed
+        if (GlobalConfig.udf_supervisor_file.length > 0) {
+            // Note that the following call allows the user to do almost anything
+            // at the start of the time step, including changing flow states in cells.
+            call_UDF_at_iteration_start(AtStartFnName.at_timestep_start);
+            // If the user has adjusted any of the flow states via the Lua functions,
+            // we will beed to re-encode the conserved quantities, so that they have
+            // consistent data.
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (cell; blk.cells) { cell.encode_conserved(0, 0, blk.omegaz); }
+            }
         }
         /*---
          * 1. Perforn Newton update
