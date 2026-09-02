@@ -367,13 +367,6 @@ struct NKPhaseConfig {
 NKPhaseConfig[] nkPhases;
 NKPhaseConfig activePhase;
 
-struct NKSimState {
-    size_t step; // Newton step number
-    size_t phase;
-    double cfl;
-}
-NKSimState nkSimState;
-
 /*---------------------------------------------------------------------
  * Classes to handle CFL selection
  *---------------------------------------------------------------------
@@ -1329,9 +1322,9 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
         // 0e. set simulation state for step we're about to attempt       
-        nkSimState.step = step;
-        nkSimState.phase = currentPhase;
-        nkSimState.cfl = cfl;
+        NKSimState.step = step;
+        NKSimState.phase = currentPhase;
+        NKSimState.cfl = cfl;
 
         // 0f. call user-defined function, if needed
         if (GlobalConfig.udf_supervisor_file.length > 0) {

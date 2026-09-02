@@ -68,6 +68,13 @@ final class SimState {
     static int maxWallClockSeconds;
 } // end class SimState
 
+// Simulation state related to N-K solver.
+// Placed here so multiple modules can see it.
+final class NKSimState {
+    shared static size_t step; // Newton step number
+    shared static size_t phase;
+    shared static double cfl;
+}
 
 // For the following globally-accessible data we use the __gshared storage class
 // to put the variables in the classic global memory space.

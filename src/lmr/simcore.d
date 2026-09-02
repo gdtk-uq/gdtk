@@ -57,7 +57,6 @@ import lmr.solid.ssolidblock;
 import lmr.special_block_init;
 import lmr.ufluidblock;
 import lmr.user_defined_source_terms;
-import lmr.newtonkrylovsolver : nkSimState;
 
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
@@ -172,9 +171,9 @@ void call_UDF_at_iteration_start(AtStartFnName fn_name)
                 lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "timeStep");
                 break;
             case AtStartFnName.at_iteration_start:
-                lua_pushnumber(L, nkSimState.step); lua_setfield(L, -2, "step");
-                lua_pushnumber(L, nkSimState.phase); lua_setfield(L, -2, "phase");
-                lua_pushnumber(L, nkSimState.cfl); lua_setfield(L, -2, "cfl");
+                lua_pushnumber(L, NKSimState.step); lua_setfield(L, -2, "step");
+                lua_pushnumber(L, NKSimState.phase); lua_setfield(L, -2, "phase");
+                lua_pushnumber(L, NKSimState.cfl); lua_setfield(L, -2, "cfl");
                 break;
         }
         // Proceed to call the user's function
