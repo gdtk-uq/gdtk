@@ -126,22 +126,39 @@ function writeCeaThermoCoeffs(f, sp, db, optsTable)
    local t
    if optsTable and optsTable.database == "prefer-grimech" then
       if ( not db[sp].grimechThermoCoeffs ) then
-	 print("WARNING: GRIMECH thermo coefficients have been selected as preferred,")
-	 print("WARNING: but they could not be found for species: ", sp)
-	 print("WARNING: We default back to using the CEA thermo coefficients (if available).")
+      	 print("WARNING: GRIMECH thermo coefficients have been selected as preferred,")
+      	 print("WARNING: but they could not be found for species: ", sp)
+      	 print("WARNING: We default back to using the CEA thermo coefficients (if available).")
          print("")
       else
-	 t = db[sp].grimechThermoCoeffs
-	 t.origin = "GRIMECH"
+      	 t = db[sp].grimechThermoCoeffs
+      	 t.origin = "GRIMECH"
       end
    end
 
    if not t then
       if not db[sp].ceaThermoCoeffs  then
-         print("ERROR: The table of CEA coefficients to compute thermodynamic properties")
-         print("ERROR: could not be found for species: ", sp)
-         print("ERROR: Bailing out!")
-         os.exit(1)
+         if optsTable and optsTable.database == "fallback-grimech" then
+            if (db[sp].grimechThermoCoeffs) then
+               print("WARNING: CEA thermo coefficients have been selected as preferred,")
+               print("WARNING: but they could not be found for species: ", sp)
+               print("WARNING: Falling back to GRIMECH coefficients as fallback-grimech selected")
+               print("")
+               t = db[sp].grimechThermoCoeffs
+               t.origin = "GRIMECH"
+            else
+               print("ERROR: The table of thermodynamic properties")
+               print("ERROR: could not be found for species: ", sp)
+               print("ERROR: in either CEA or GRIMECH databases.")
+               print("ERROR: Bailing out!")
+               os.exit(1)
+            end
+         else
+            print("ERROR: The table of CEA coefficients to compute thermodynamic properties")
+            print("ERROR: could not be found for species: ", sp)
+            print("ERROR: Bailing out!")
+            os.exit(1)
+         end
       else
          t = db[sp].ceaThermoCoeffs
          t.origin = "CEA"
