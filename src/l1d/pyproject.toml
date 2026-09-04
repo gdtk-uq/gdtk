@@ -1,0 +1,16 @@
+[project]
+name = "l1d"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "gdtk @ file:../gdtk-py"
+]
+
+[project.scripts]
+l1d4-prep = "l1d4_prep:main"
+l1d4-xt-viewer = "xt_viewer:main"
+
+[tool.setuptools]
+py-modules = ["l1d4_prep", "xt_viewer"]
