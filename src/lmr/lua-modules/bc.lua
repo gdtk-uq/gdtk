@@ -969,20 +969,20 @@ function WallBC_NoSlip_UserDefinedT:new(o)
 end
 
 
-WallBC_ThermionicEmission = BoundaryCondition:new()
-WallBC_ThermionicEmission.type = "wall_thermionic_emission"
-function WallBC_ThermionicEmission:new(o)
-   local flag = type(self)=='table' and self.type=='wall_thermionic_emission'
+WallBC_NoSlip_RadiativeEquilibrium = BoundaryCondition:new()
+WallBC_NoSlip_RadiativeEquilibrium.type = "wall_no_slip_radiative_equilibrium"
+function WallBC_NoSlip_RadiativeEquilibrium:new(o)
+   local flag = type(self)=='table' and self.type=='wall_no_slip_radiative_equilibrium'
    if not flag then
-      error("Make sure that you are using WallBC_ThermionicEmission:new{}"..
-               " and not WallBC_ThermionicEmission.new{}", 2)
+      error("Make sure that you are using WallBC_NoSlip_RadiativeEquilibrium:new{}"..
+               " and not WallBC_NoSlip_RadiativeEquilibrium.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
                                 "catalytic_type", "wall_massf_composition", "field_bc",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
-      error("Invalid name for item supplied to WallBC_ThermionicEmission constructor.", 2)
+      error("Invalid name for item supplied to WallBC_NoSlip_RadiativeEquilibrium constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
    o.ghost_cell_data_available = true
