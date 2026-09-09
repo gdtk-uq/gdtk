@@ -1982,9 +1982,11 @@ protected:
         number qy = IFace.fs.gas.k*cell.grad.T[1];
         number qz = IFace.fs.gas.k*cell.grad.T[2];
         version(multi_T_gas) {
-            qx += IFace.fs.gas.k_modes[0]*cell.grad.T_modes[0][0];
-            qy += IFace.fs.gas.k_modes[0]*cell.grad.T_modes[0][1];
-            qz += IFace.fs.gas.k_modes[0]*cell.grad.T_modes[0][2];
+            foreach(imode; 0 .. n_modes) {
+                qx += IFace.fs.gas.k_modes[imode]*cell.grad.T_modes[imode][0];
+                qy += IFace.fs.gas.k_modes[imode]*cell.grad.T_modes[imode][1];
+                qz += IFace.fs.gas.k_modes[imode]*cell.grad.T_modes[imode][2];
+            }
         }
         // Negative sign is because heat flows along temperature gradient from hot to cold
         number q_conduction = -1.0*(IFace.n.x*qx + IFace.n.y*qy + IFace.n.z*qz);
