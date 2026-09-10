@@ -1614,6 +1614,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                     }
                 }
                 if (stopNow) {
+                    if (nkCfg.writeLoadsOnLastStep && nkCfg.writeLoads) {
+                        writeLoads(step, nWrittenLoads);
+                    }
+                    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
                     if (cfg.is_master_task) {
                         writeln("*** STOPPING: Stop action detected in commands file.");
                         writeln("STOP-REASON: commands-file-action");
