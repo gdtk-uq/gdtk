@@ -70,8 +70,14 @@ class Node(object):
         self.czero_up = czero_up; self.czero_down = czero_down
         if indx < len(nodes):
             nodes[indx] = self
-        else:
+        elif indx == len(nodes):
             nodes.append(self)
+        else:
+            # Appending here would store the Node at a position that does not
+            # match its indx attribute and quietly corrupt every link into it.
+            raise RuntimeError("Node indx=%d is beyond the end of the nodes list"
+                               " (len=%d); use create_node() to reach it."
+                               % (indx, len(nodes)))
         return
 
     def __repr__(self):
