@@ -357,7 +357,7 @@ def cplus_wall(wall, node2, node4=None):
         #
         # Lengths of the characteristic segment.
         dx = x4-x2; dy = y4-y2
-        lengthCminus = sqrt(dx*dx + dy*dy)
+        lengthCplus = sqrt(dx*dx + dy*dy)
         dot_product = dx*xStream + dy*yStream
         if dot_product < 0.0:
             directionCplus = -1
