@@ -28,7 +28,16 @@ nodes = []
 # The indices that are used to link nodes into a characteristic mesh
 # and into streamlines are the locations of the nodes in this list.
 # Once a node is constructed and added to this list, it is important
-# not to remove it, else our simple linking will not work.
+# not to move it, else our simple linking will not work.
+#
+# A node may, however, be removed with delete_node().  Its slot is retained
+# in the nodes list, so that every surviving node keeps its index, and the
+# index is recorded in the deleted set below.  This mirrors the array of
+# node pointers in the original moc C code, where deleting a node left a
+# NULL entry behind that a later CreateNode could fill again.
+
+# Indices of the slots in nodes that no longer hold a live node.
+deleted = set()
 
 # Indices of the nodes that have been added to the characteristics mesh.
 char_mesh = []
@@ -92,7 +101,138 @@ class Node(object):
         return strng
 
 
+def _as_index(i):
+    """
+    Accept either a node index or a Node and return the index.
+    """
+    if isinstance(i, Node): return i.indx
+    if isinstance(i, (int, np.integer)): return int(i)
+    raise RuntimeError("Not an index nor a Node: %s" % repr(i))
+
+
+def valid_node(i):
+    """
+    Returns True if i refers to a slot that holds a live node.
+
+    Port of ValidNode from the original moc C code.
+    """
+    if isinstance(i, Node): i = i.indx
+    if not isinstance(i, (int, np.integer)): return False
+    return 0 <= i < len(nodes) and i not in deleted
+
+
+def number_of_nodes():
+    """
+    Returns the number of live nodes.
+
+    Port of GetNumberOfNodes from the original moc C code.  Note that this is
+    the count of live nodes and not the length of the nodes list; the two
+    differ once any node has been deleted.
+    """
+    return len(nodes) - len(deleted)
+
+
+def get_next_node_id(id_start=-1):
+    """
+    Search for the next live node at an index greater than id_start.
+    Send -1 to find the first one.  Returns -1 if there is no such node.
+
+    Port of GetNextNodeId from the original moc C code.  Useful for walking a
+    nodes list that has holes in it.
+    """
+    if id_start < -1: id_start = -1
+    for i in range(id_start+1, len(nodes)):
+        if i not in deleted: return i
+    return -1
+
+
+def create_node(indx=-1):
+    """
+    Make a new, empty node and return its index.
+
+    indx <  0 : use the lowest-numbered free slot, appending if there is none.
+    indx >= 0 : use that particular slot, deleting whatever was there.
+
+    Port of CreateNode from the original moc C code.  Reusing the lowest free
+    slot is not just tidiness; scripts written against the original kernel can
+    depend on the particular indices that come back, so we reproduce its
+    choice exactly.
+    """
+    if indx is None: indx = -1
+    indx = int(indx)
+    if indx < 0:
+        if deleted:
+            # Take the first available space, as the C kernel does.
+            i = min(deleted)
+            deleted.discard(i)
+            return Node(indx=i).indx
+        return Node().indx
+    # A particular slot has been requested.
+    while len(nodes) <= indx:
+        # Pad with dead slots so that nodes[indx] becomes addressable.
+        # The C kernel had a preallocated array of node pointers, so any index
+        # below MAX_NODES could be filled directly.
+        deleted.add(Node().indx)
+    if indx not in deleted:
+        # If something is already there, destroy it.
+        delete_node(indx)
+    deleted.discard(indx)
+    return Node(indx=indx).indx
+
+
+def delete_node(i):
+    """
+    Remove nodes[i] from the mesh and leave its slot free for reuse.
+
+    Port of DeleteNode from the original moc C code.  As in the C code, the
+    characteristic and streamline connections of the remaining nodes are
+    retained: the node's up-neighbour and down-neighbour are joined to each
+    other, so that a line running through the deleted node stays walkable.
+    """
+    i = _as_index(i)
+    if not valid_node(i): return False
+    n = nodes[i]
+    czero_down = n.czero_down
+    for up, down in (('cplus_up', 'cplus_down'),
+                     ('cminus_up', 'cminus_down'),
+                     ('czero_up', 'czero_down')):
+        u = getattr(n, up); d = getattr(n, down)
+        # Guard each neighbour, in case a link into a slot that has already
+        # been deleted has been left behind somewhere.
+        if valid_node(u) and getattr(nodes[u], down) == i:
+            setattr(nodes[u], down, d)
+        if valid_node(d) and getattr(nodes[d], up) == i:
+            setattr(nodes[d], up, u)
+        setattr(n, up, None); setattr(n, down, None)
+    while i in char_mesh: char_mesh.remove(i)
+    if i in streamlines:
+        # Keep the streamline registered, starting from the next node along.
+        streamlines.remove(i)
+        if czero_down is not None and valid_node(czero_down):
+            streamlines.append(czero_down)
+    deleted.add(i)
+    return True
+
+
+def delete_all_nodes():
+    """
+    Discard every node, starting afresh.
+
+    The walls are left alone, unlike the DeleteAll procedure of the Tcl layer.
+    """
+    nodes.clear(); deleted.clear()
+    char_mesh.clear(); streamlines.clear()
+    return
+
+
 def create_kd_tree():
+    """
+    Build a KDTree over the node positions, for fast searching.
+
+    The tree holds a point for every slot in the nodes list, including the
+    deleted ones, so that the indices it reports are node indices.
+    find_nodes_near() filters the deleted slots out of the search results.
+    """
     kdtree = spatial.KDTree(np.array([(node.x, node.y) for node in nodes]))
     return kdtree
 
@@ -118,6 +258,7 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             idx_near.append(-1) # This single value should be overwritten.
             dist_near = sys.float_info.max
             for idx, node in enumerate(nodes):
+                if idx in deleted: continue
                 dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
                 if dist < dist_near:
                     dist_near = dist
@@ -128,6 +269,7 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             # Collect an array of the closest nodes as tuples of distance and index.
             close_nodes = []
             for idx, node in enumerate(nodes):
+                if idx in deleted: continue
                 dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
                 if dist < tol: close_nodes.append((dist,idx))
             close_nodes.sort(key=lambda t: t[0]) # Sort on distance.
@@ -135,16 +277,22 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             if len(idx_near) > max_count: idx_near = idx_near[0:max_count]
     else:
         # Use the kdtree to do a fast search.
+        # The tree carries a point for every slot in the nodes list, deleted
+        # slots included, so ask for enough neighbours that the deleted ones
+        # cannot crowd the live ones out, then drop them from the result.
+        n_query = max_count
+        if deleted: n_query = min(max_count + len(deleted), kdtree.n)
         if tol <= 0.0:
             # We want the nearest node, so do not bound the search distance.
             # Passing distance_upper_bound=0.0 finds nothing at all and leaves
             # the caller holding kdtree.n, which is not a valid node index.
-            _, pnts = kdtree.query((x, y), max_count)
+            _, pnts = kdtree.query((x, y), n_query)
         else:
-            _, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
+            _, pnts = kdtree.query((x, y), n_query, distance_upper_bound=tol)
         pnts = np.atleast_1d(pnts)
         if tol <= 0.0:
-            idx_near = [i for i in pnts if i != kdtree.n][0:1]
+            idx_near = [i for i in pnts
+                        if i != kdtree.n and i not in deleted][0:1]
         else:
             # Query seems to do something I don't like whereby the list is filled
             # to the length of the max_count with the value of the length of nodes
@@ -153,6 +301,9 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             idx_near = pnts
             idx_near = np.delete(idx_near, np.where(idx_near == kdtree.n))
             idx_near = np.unique(idx_near)
+            if deleted:
+                idx_near = idx_near[~np.isin(idx_near, list(deleted))]
+                if len(idx_near) > max_count: idx_near = idx_near[0:max_count]
     return idx_near
 
 def register_node_in_mesh(i):

@@ -244,6 +244,7 @@ def saveDataFile():
     print("data file:", filename)
     f = open(filename, 'w')
     for node in kernel.nodes:
+        if node.indx in kernel.deleted: continue
         f.write("%s\n" % str(node))
     f.write("char_mesh=[\n")
     n = len(kernel.char_mesh)
@@ -529,6 +530,7 @@ def zoomToIncludeAll():
         x = w.x_max; x_min = min(x_min, x); x_max = max(x_max, x);
         y = w(x); y_min = min(y_min, y); y_max = max(y_max, y);
     for n in kernel.nodes:
+        if n.indx in kernel.deleted: continue
         x = n.x; x_min = min(x_min, x); x_max = max(x_max, x);
         y = n.y; y_min = min(y_min, y); y_max = max(y_max, y);
     if x_max <= x_min: x_max = x_min + 1.0
