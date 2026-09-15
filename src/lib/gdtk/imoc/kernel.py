@@ -129,9 +129,16 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             if len(idx_near) > max_count: idx_near = idx_near[0:max_count]
     else:
         # Use the kdtree to do a fast search.
-        _, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
         if tol <= 0.0:
-            idx_near = [pnts[0]]
+            # We want the nearest node, so do not bound the search distance.
+            # Passing distance_upper_bound=0.0 finds nothing at all and leaves
+            # the caller holding kdtree.n, which is not a valid node index.
+            _, pnts = kdtree.query((x, y), max_count)
+        else:
+            _, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
+        pnts = np.atleast_1d(pnts)
+        if tol <= 0.0:
+            idx_near = [i for i in pnts if i != kdtree.n][0:1]
         else:
             # Query seems to do something I don't like whereby the list is filled
             # to the length of the max_count with the value of the length of nodes
