@@ -872,3 +872,33 @@ def get_nodes_along_characteristic(node0, direction):
         else:
             raise RuntimeError(f"Invalid characteristic direction: {direction}")
     return node_indices
+
+
+def extend_streamline_to_given_line(stream_node, node_list):
+    """
+    Extend a streamline to the line represented by a list of nodes.
+
+    Input:
+    stream_node - index of the node at the downstream end of the streamline
+    node_list   - indices of the nodes defining the line to extend to
+
+    Returns the index of the new streamline node, or None if the streamline
+    does not cross any of the segments.
+
+    Port of ExtendStreamLineToGivenLine from the original moc Tcl code.  As
+    in the Tcl procedure, the segments are searched in the order given and
+    the first valid intersection is the one taken.
+    """
+    if len(node_list) < 2:
+        print(f"There are not enough nodes in the given list: {node_list}")
+        return None
+    for node1, node2 in zip(node_list[:-1], node_list[1:]):
+        try:
+            _, alpha2 = streamline_intersection_weights(stream_node, node1, node2)
+        except RuntimeError:
+            # The streamline is parallel to this segment, or the segment is
+            # degenerate; either way there is nothing to intersect here.
+            continue
+        if 0.0 <= alpha2 <= 1.0:
+            return add_stream_node(stream_node, node1, node2)
+    return None
