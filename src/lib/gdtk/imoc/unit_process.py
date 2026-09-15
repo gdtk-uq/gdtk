@@ -737,10 +737,10 @@ def step_stream_node(node0, dL, node4=None, dR=0.9, kdtree=None):
     near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10, kdtree=kdtree)
     if len(near_nodes) == 0: return None
     # Using PJs format for data handling
-    x = np.zeros_like(near_nodes, dtype=np.float)
-    y = np.zeros_like(near_nodes, dtype=np.float)
-    nu = np.zeros_like(near_nodes, dtype=np.float)
-    theta = np.zeros_like(near_nodes, dtype=np.float)
+    x = np.zeros_like(near_nodes, dtype=float)
+    y = np.zeros_like(near_nodes, dtype=float)
+    nu = np.zeros_like(near_nodes, dtype=float)
+    theta = np.zeros_like(near_nodes, dtype=float)
     for idx, node_idx in enumerate(near_nodes):
         x[idx] = kernel.nodes[node_idx].x
         y[idx] = kernel.nodes[node_idx].y
