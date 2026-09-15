@@ -1,0 +1,72 @@
+//tag::description[]
+= Rao thrust-optimised nozzle
+`gdtk/examples/imoc/rao-nozzle`
+
+Jeremy Moran,
+2026-09-15
+
+This example designs a thrust-optimised axisymmetric (bell) nozzle with the
+`gdtk.imoc` method-of-characteristics package, following Rao's method as
+implemented by J. Kunze in the original Tcl IMOC code and described in
+section 3.1 of his PhD thesis.  A centred expansion fan at the wall point A
+is grown until the mass flow crossing the last fan characteristic AD
+balances the mass flow crossing the control surface DE, along which the two
+Lagrange-multiplier expressions of the variational problem hold their
+nozzle-lip values.  The wall contour is then traced as the streamline
+running from A to the nozzle lip E.
+
+The test case is nozzle A of Rao (1958): M_A=1.103 on the (straight)
+initial characteristic, lip Mach number M_E=3.5, gamma=1.23, vacuum
+back-pressure, and a throat-arc radius R_A/r_A=0.45.  The computed contour,
+wall Mach number and wall angle are compared with data digitised from
+Fig 3.3 of the thesis, which overlays Rao's original results and Kunze's
+IMOC solution.
+//end::description[]
+
+== Running
+
+  $ ./run.sh
+
+The design itself takes about a second and writes `nozzle-wall.data`
+(columns: x/r_A, r/r_A, Mach, theta in degrees) along with a summary of the
+run, including the mass-flow balance and RMS deviations from the digitised
+reference data.  The gnuplot scripts produce `rao-nozzle-contour.eps`,
+`rao-nozzle-mach.eps` and `rao-nozzle-theta.eps`.
+
+== Notes
+
+- The centred-corner approximation is used at A: the initial characteristic
+  is a straight line carrying uniform axial flow at M_A, and the full
+  expansion happens at the point A.  For presentation in the same form as
+  Rao's figure, the corner is unrolled onto the circular throat arc of
+  radius R_A (on which the wall turns from 0 to theta_max carrying the
+  corner-fan flow values) and the computed wall attaches at the arc end.
+- Computed nozzle: theta_max = 32.7 deg, length x_E/r_A = 8.28 and exit
+  radius r_E/r_A = 4.41, against approximately 34.5 deg, 8.19 and 4.39
+  digitised from Rao's data.  The wall Mach number and angle at the lip
+  reproduce M_E and theta_E to better than 0.01.  The residual difference
+  in theta_max is inherited from the straight-initial-characteristic
+  approximation and from digitising a steeply-rising curve near the throat.
+- The mass-flow balance converges to a relative error below 1e-6 and the
+  traced wall closes on the lip E to within 0.006 r_A.
+
+== Reference
+
+  @article{rao1958exhaust,
+    title={Exhaust nozzle contour for optimum thrust},
+    author={Rao, G. V. R.},
+    journal={Journal of Jet Propulsion},
+    volume={28},
+    number={6},
+    pages={377--382},
+    year={1958}
+  }
+
+  @phdthesis{kunze2020thesis,
+    title={Design of a 3D shape transitioning nozzle and experimental
+           thrust measurements of an airframe integrated scramjet},
+    author={Kunze, Jens},
+    school={The University of Queensland},
+    year={2020},
+    note={Section 3.1 describes Rao's method as implemented in IMOC.}
+  }

@@ -1,0 +1,19 @@
+# Wall angle, data points of Rao (1958), nozzle A.
+# Digitised from J. Kunze, PhD thesis, The University of Queensland, 2020, Fig 3.3,
+# which reproduces Rao, J. Jet Propulsion 28(6):377-382, 1958.
+# JM, 2026-09-15, obtained using WebPlotDigitizer.
+# x/r_A      theta(deg)
+    0.237489     34.461930
+    0.327571     32.853893
+    0.933576     32.044310
+    1.023658     31.686273
+    1.162875     31.238464
+    1.465878     30.521172
+    1.875341     29.088538
+    2.309372     27.566375
+    3.373976     23.984385
+    4.201092     21.654751
+    5.429481     18.517565
+    6.502275     16.274779
+    7.984531     13.492217
+    8.189263     13.133043
