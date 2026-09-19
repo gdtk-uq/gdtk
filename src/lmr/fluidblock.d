@@ -128,6 +128,7 @@ public:
     {
     double dtMin;
     double omegaLocal;
+    bool failedDecode = false;
     FlowState* fs_save;
     FlowState* ghost_fs_save;
 

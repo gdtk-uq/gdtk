@@ -159,6 +159,7 @@ public:
     FluidFVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil
     version(newton_krylov) {
+        FlowState* fs_save;
         double[][] dRdU;
         ConservedQuantities Q_save;
         FlowGradients* grad_save;
@@ -238,6 +239,7 @@ public:
         }
 
         version(newton_krylov) {
+            fs_save = new FlowState(myConfig.gmodel, myConfig.turb_model.nturb);
             if (fvcd.saved_gradients) this.grad_save = &(fvcd.saved_gradients[id]);
             if (fvcd.saved_lsqgradients) this.gradients_save = &(fvcd.saved_lsqgradients[id]);
             if (fvcd.saved_source_terms) this.Q_save = fvcd.saved_source_terms[id*ncq .. id*ncq + ncq];

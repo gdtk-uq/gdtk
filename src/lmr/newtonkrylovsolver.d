@@ -3965,8 +3965,8 @@ double determineRelaxationFactor()
 /**
  * Apply a backtracking line search to determine a relaxation factor that reduces the unsteady residual.
  *
- * The line search is applied *after* the physicality check is performed, so we assume
- * that the maximum allowable step (omega*dU) recovers a physically realizable state.
+ * The line search is applied *after* the physicality check is performed. As an additional
+ * safeguard, trial steps that fail to decode are rejected and backtracked.
  *
  * This implementation is based on Algorithm A6.3.1 from pg. 325 of Dennis and Schnabel.
  *
@@ -4054,23 +4054,56 @@ double applyLineSearch(double omega, size_t currentPhase, int stepsIntoCurrentPh
         //----
         // 1. Compute residual at updated state
         //----
+        bool failedDecode = false;
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t startIdx = 0;
+            blk.failedDecode = false;
             foreach (cell; blk.cells) {
+                // Save the original primitive flow state so that restoration does not
+                // require decoding U[0]. In particular, decode_conserved() may use
+                // values such as the current Tvib as an initial guess.
+                cell.fs_save.copy_values_from(*(cell.fs));
+
                 cell.U[1].copy_values_from(cell.U[0]);
                 foreach (ivar; 0 .. nConserved) {
                     cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
                 }
-                cell.decode_conserved(0, 1, blk.omegaz);
+                try {
+                    cell.decode_conserved(0, 1, blk.omegaz);
+                }
+                catch (FlowSolverException e) {
+                    blk.failedDecode = true;
+                    break;
+                }
                 startIdx += nConserved;
             }
         }
+        foreach (blk; localFluidBlocks) failedDecode = failedDecode || blk.failedDecode;
+        version(mpi_parallel) {
+            int failedDecodeInt = failedDecode ? 1 : 0;
+            MPI_Allreduce(MPI_IN_PLACE, &failedDecodeInt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            failedDecode = failedDecodeInt != 0;
+        }
+        if (failedDecode) {
+            // At least one cell failed to decode at this trial step. Restore the
+            // exact primitive state saved before the trial rather than decoding U[0].
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (cell; blk.cells) {
+                    cell.fs.copy_values_from(*(cell.fs_save));
+                }
+            }
+            lambda *= lambdaReductionFactor;
+            if (lambda*omega < minOmega) return lambda*omega;
+            continue;
+        }
+
         assembleResidualVector(1, currentPhase, stepsIntoCurrentPhase);
         foreach (blk; parallel(localFluidBlocks,1)) {
-            size_t startIdx = 0;
             foreach (cell; blk.cells) {
-                // return cell to original state
-                cell.decode_conserved(0, 0, blk.omegaz);
+                // Return the cell to the exact primitive state that existed before
+                // the line-search trial. Do not decode U[0], because the decode may
+                // depend on the current trial state's temperature guesses.
+                cell.fs.copy_values_from(*(cell.fs_save));
             }
         }
 
