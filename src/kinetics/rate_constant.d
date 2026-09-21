@@ -403,6 +403,28 @@ private:
     return num / den;
 }
 
+@nogc number _log_1mexp(number x) {
+    // Compute log|1 - exp(x)|
+    // We don't need to worry about the sign of 1 - exp(x)
+    // because it cancels when computing Q
+    if (x < 0) {
+        // When x < 0, it is safe to do the exponential
+        return log(1 - exp(x));
+    }
+
+    // To avoid exponential with a large positive exponent,
+    // factor the epxression: 
+    // log[1 - exp(x)] = log[exp(x)*(1 - exp(-x))]
+    //                 = x + log(1 - exp(-x))
+    return x + log(1 - exp(-x));
+}
+
+@nogc number _log_Q(number T, number D, number theta) {
+    number ln_num = _log_1mexp(-D / T);
+    number ln_den = _log_1mexp(-theta / T);
+    return ln_num - ln_den;
+}
+
 // Non-equilibrium rate constant from
 // Knab, Fruhauf, Messerschmid 1995. It modifies an existing
 // rate constant to account for vibrational non-equilbrium.
@@ -531,19 +553,24 @@ public:
     }
 
     @nogc number eval(in GasState Q) {
-        number kEQ = _rate.eval(Q);
+        // Depending on the conditions, Q(TF) can overflow. Without floating point
+        // limitations, a small kEQ would recover a sensible rate constant.
+        // To avoid the overflow, compute the log of each term, and only perform
+        // the exponentiation at the end, once we have a sensible exponent.
+        number ln_kEQ = log(_rate.eval(Q));
 
         number Tinv = 1. / Q.T;
         number Tvinv = 1. / Q.T_modes[_mode];
         number Uinv = _aU * Tinv + 1. / _U_star;
         number U = 1. / Uinv;
         number TF = 1. / (Tvinv - Tinv - Uinv);
-        number Q_T = _Q(Q.T, _T_D, _theta);
-        number Q_TF = _Q(TF, _T_D, _theta);
-        number Q_Tv = _Q(Q.T_modes[_mode], _T_D, _theta);
-        number Q_U = _Q(-U, _T_D, _theta);
+
+        number ln_Q_T = _log_Q(Q.T, _T_D, _theta);
+        number ln_Q_TF = _log_Q(TF, _T_D, _theta);
+        number ln_Q_Tv = _log_Q(Q.T_modes[_mode], _T_D, _theta);
+        number ln_Q_U = _log_Q(-U, _T_D, _theta);
         number nb_correction = _nb_correction ? _nb_correction.eval(Q) : to!number(1.0);
-        return nb_correction * kEQ * Q_T * Q_TF / (Q_Tv * Q_U);
+        return nb_correction * exp(ln_kEQ + ln_Q_T + ln_Q_TF - ln_Q_Tv - ln_Q_U);
     }
 
 private:
