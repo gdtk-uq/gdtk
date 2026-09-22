@@ -151,6 +151,8 @@ local function nonBoltzmannCorrectionToLuaStr(nbc)
    -- this function assumes the non-boltzmann correction is valid
    if nbc.model == "constant" then
       return string.format("non_boltzmann_correction = {model='constant', factor=%f}", nbc.factor)
+   elseif nbc.model == "linear_dissociating" then
+      return string.format("non_boltzmann_correction = {model='linear_dissociating', factor=%f}", nbc.factor)
    else
       print("The non boltzmann correction model: ", nbc.model, " is not known.")
       os.exit(1)
