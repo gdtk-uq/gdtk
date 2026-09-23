@@ -18,7 +18,10 @@ image::roberts-cf-images.png[width=100%, align="center"]
 
 == Geometric Function
 
-The geometric function uses a geometric series to grow the cell sizes, starting from a small cell of size `a` and increasing to a second cell of size `ar`, then to a third size of `ar^2`, etc. Eventually, when the cluster function detects that the cells have grown large enough, it switches to a constant cell spacing for the rest of the block. The following example begins with a spacing of one-thousandth the block edge length, and grows by a factor of 1.2 with each step.
+The geometric function uses a geometric series to grow the cell sizes, starting from a small cell of size `a` and increasing to a second cell of size `ar`, then to a third size of `ar^2`, etc.
+`a` is a non-dimensional length defined as the ratio of near-wall cell height to total cluster edge length. In other words, `a` is defined in path parameter space that goes from 0 to 1.
+`a` is _not_ in units of metres; this has confused some users in the past.
+Eventually, when the cluster function detects that the cells have grown large enough, it switches to a constant cell spacing for the rest of the block. The following example begins with a spacing of one-thousandth the block edge length, and grows by a factor of 1.2 with each step.
 
 ----
 cf = GeometricFunction:new{a=0.001, r=1.2, N=60, reverse=false}
