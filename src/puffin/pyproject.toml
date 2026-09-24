@@ -1,0 +1,22 @@
+[project]
+name = "puffin"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+  "gdtk @ file:../gdtk-py",
+  "numpy",
+]
+
+[project.scripts]
+puffin-prep = "puffin_prep:main"
+puffin-post = "puffin_post:main"
+lrkt-prep = "lorikeet_prep:main"
+lrkt-post = "lorikeet_post:main"
+
+[tool.setuptools]
+py-modules = [
+  "puffin_prep",
+  "puffin_post",
+  "lorikeet_prep",
+  "lorikeet_post",
+]

@@ -6,12 +6,12 @@ Chris James (c.james4@uq.edu.au) - 23/11/22
 
 """
 
-VERSION_STRING = '19-Jan-2024'
-
 import os
 from datetime import date
 
-from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_reader
+from pitot3.utils.classes import eilmer4_CEAGas_input_file_reader
+
+VERSION_STRING = '19-Jan-2024'
 
 pitot3_preset_gas_models_folder = os.path.expanduser("~") + '/gdtkinst/share/pitot3_data/preset_gas_models'
 
