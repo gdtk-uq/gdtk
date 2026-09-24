@@ -21,7 +21,6 @@ NewtonKrylovGlobalConfigHidden = {
    -- CFL control
    max_cfl = 1.0e8,
    min_cfl = 0.001,
-   cfl_schedule = { {0, 1.0}, {100, 1.0} },
    cfl_reduction_factor = 0.5,  -- only applies when auto-CFL is in use
 
    -- phase control
@@ -116,12 +115,6 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    -- CFL control
    f:write(string.format('"max_cfl": %.18e,\n', nkConfig.max_cfl))
    f:write(string.format('"min_cfl": %.18e,\n', nkConfig.min_cfl))
-   f:write('"cfl_schedule": [ ')
-   for i,e in ipairs(nkConfig.cfl_schedule) do
-      f:write(string.format(' [ %d, %.3e ]', e[1], e[2]))
-      if i < #(nkConfig.cfl_schedule) then f:write(', ') end
-   end
-   f:write('],\n')
    f:write(string.format('"cfl_reduction_factor": %.18e,\n', nkConfig.cfl_reduction_factor))
    -- phase control
    f:write(string.format('"number_of_phases": %d,\n', nkConfig.number_of_phases))
@@ -209,8 +202,9 @@ NewtonKrylovPhaseDefaults = {
    linear_solve_tolerance = 0.01,
    fgmres_preconditioning_solve_tolerance = 0.01,
 
-   -- Auto CFL control
+   -- CFL control
    use_auto_cfl = false,
+   cfl_schedule = { {0, 1.0}, {100, 1.0} },
    threshold_relative_residual_for_cfl_growth = 0.99,
    start_cfl = 1.0,
    max_cfl = 1000.0,
@@ -254,7 +248,9 @@ function NewtonKrylovPhase:new(o)
    -- Set up defaults to use for this phase
    -- For getting started...
    defaultsForThisPhase = NewtonKrylovPhaseDefaults
-   if o.id > 0 then -- on subsequent phases, inherit setting from previous phase
+   if o.id == 0 and o.max_cfl == nil then
+      o.max_cfl = NewtonKrylovGlobalConfig.max_cfl
+   elseif o.id > 0 then -- on subsequent phases, inherit setting from previous phase
       defaultsForThisPhase = NewtonKrylovPhases[o.id] -- o.id indexes previous phase
    end
    for k,v in pairs(defaultsForThisPhase) do
@@ -262,6 +258,9 @@ function NewtonKrylovPhase:new(o)
       if o[k] == nil then
          o[k] = v
       end
+   end
+   if #o.cfl_schedule ~= 2 then
+      error("The CFL schedule for each Newton-Krylov phase must contain exactly two entries.", 2)
    end
    return o
 end -- end NewtonKrylovPhase:new(o)
@@ -285,6 +284,12 @@ function NewtonKrylovPhase:tojson()
    str = str .. string.format('    "linear_solve_tolerance": %.18e,\n', self.linear_solve_tolerance)
    str = str .. string.format('    "fgmres_preconditioning_solve_tolerance": %.18e,\n', self.fgmres_preconditioning_solve_tolerance)
    str = str .. string.format('    "use_auto_cfl": %s,\n', tostring(self.use_auto_cfl))
+   str = str .. '    "cfl_schedule": [ '
+   for i,e in ipairs(self.cfl_schedule) do
+      str = str .. string.format(' [ %d, %.3e ]', e[1], e[2])
+      if i < #(self.cfl_schedule) then str = str .. ', ' end
+   end
+   str = str .. '],\n'
    if self.use_auto_cfl then
       str = str .. string.format('    "threshold_relative_residual_for_cfl_growth": %.18e,\n', self.threshold_relative_residual_for_cfl_growth)
       str = str .. string.format('    "start_cfl": %.18e,\n', self.start_cfl)

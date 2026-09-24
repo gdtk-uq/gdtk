@@ -373,6 +373,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
     int stepsIntoCurrentPhase = 0;
     bool updatePreconditionerThisStep = false;
     CFLSelector cflSelector;
+    CFLSelector[] phaseCFLSelectors;
     int numberBadSteps = 0;
     bool startOfNewPhase = false;
     double omega = 1.0;
@@ -423,20 +424,18 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
         }
     }
 
-    // Look for global CFL schedule and use to set CFL
-    if (nkCfg.cflSchedule.length > 0) {
-        foreach (i, startRamp; nkCfg.cflSchedule[0 .. $-1]) {
-            if (startStep >= startRamp.step) {
-                auto endRamp = nkCfg.cflSchedule[i+1];
-                cflSelector = new LinearRampCFL(startRamp.step, endRamp.step, startRamp.cfl, endRamp.cfl);
-                break;
-            }
+    // Build phase-specific CFL selectors.
+    phaseCFLSelectors.length = nkCfg.numberOfPhases;
+    foreach (i, phase; nkPhases) {
+        if (phase.useAutoCFL) {
+            phaseCFLSelectors[i] = new ResidualBasedAutoCFL(phase.autoCFLExponent, phase.maxCFL,
+                                                            phase.thresholdRelativeResidualForCFLGrowth,
+                                                            phase.limitOnCFLIncreaseRatio, phase.limitOnCFLDecreaseRatio);
         }
-        // Or check we aren't at end of cfl schedule
-        auto lastEntry = nkCfg.cflSchedule[$-1];
-        if (startStep >= lastEntry.step) {
-            // Set a flat CFL beyond limit of scheule.
-            cflSelector = new LinearRampCFL(lastEntry.step, nkCfg.maxNewtonSteps, lastEntry.cfl, lastEntry.cfl);
+        else {
+            auto startRamp = phase.cflSchedule[0];
+            auto endRamp = phase.cflSchedule[1];
+            phaseCFLSelectors[i] = new LinearRampCFL(startRamp.step, endRamp.step, startRamp.cfl, endRamp.cfl);
         }
     }
 
@@ -467,14 +466,12 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
     }
     // On fresh start, the phase setting must be at 0
     setPhaseSettings(0);
+    cflSelector = phaseCFLSelectors[0];
     if (activePhase.useAutoCFL) {
-        cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
-                                               activePhase.thresholdRelativeResidualForCFLGrowth,
-                                               activePhase.limitOnCFLIncreaseRatio, activePhase.limitOnCFLDecreaseRatio);
         cfl = activePhase.startCFL;
     }
-    else { // Assume we have a global (phase-independent) schedule
-        cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
+    else { // Use the phase CFL schedule
+        cfl = cflSelector.nextCFL(-1.0, stepsIntoCurrentPhase, -1.0, -1.0, -1.0);
     }
 
     //----------------------------------------------
@@ -515,6 +512,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
         finalStep = false;
         currentPhase = 0;
         setPhaseSettings(0);
+        cflSelector = phaseCFLSelectors[0];
         cfl = activePhase.startCFL;
         stepsIntoCurrentPhase = 0;
         updatePreconditionerThisStep = true;
@@ -558,6 +556,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
                 currentPhase++;
                 stepsIntoCurrentPhase = 0;
                 setPhaseSettings(currentPhase);
+                cflSelector = phaseCFLSelectors[currentPhase];
                 if (currentPhase == nkCfg.numberOfPhases-1) terminalPhase = true;
                 if (activePhase.useAutoCFL) {
                     // If the user gives us a positive startCFL, use that.
@@ -581,7 +580,7 @@ void performDualTimeNewtonKrylovUpdates(int snapshotStart, double startCFL, int 
                         }
                     }
                     else {
-                        cfl = cflSelector.nextCFL(-1.0, step, -1.0, -1.0, -1.0);
+                        cfl = cflSelector.nextCFL(-1.0, stepsIntoCurrentPhase, -1.0, -1.0, -1.0);
                     }
                 }
                 else {

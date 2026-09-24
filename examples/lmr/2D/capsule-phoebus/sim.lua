@@ -118,7 +118,7 @@ NewtonKrylovPhase:new{
   linear_solve_tolerance = 1e-2,
   fgmres_preconditioning_solve_tolerance = 1e-2,
   grid_motion_enabled = true,
-  auto_cfl_exponent = 0.5
+  auto_cfl_exponent = 0.8
 }
 
 -- switch to second order numerics once the shock has been fit

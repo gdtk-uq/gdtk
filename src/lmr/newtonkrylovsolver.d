@@ -161,7 +161,6 @@ struct NKGlobalConfig {
     // CFL control
     double cflMax = 1.0e8;
     double cflMin = 0.001;
-    Tuple!(int, "step", double, "cfl")[] cflSchedule;
     double cflReductionFactor = 0.5;
     // phase control
     int numberOfPhases = 1;
@@ -222,11 +221,6 @@ struct NKGlobalConfig {
         maxConsecutiveBadSteps = getJSONint(jsonData, "max_consecutive_bad_steps", maxConsecutiveBadSteps);
         cflMax = getJSONdouble(jsonData, "max_cfl", cflMax);
         cflMin = getJSONdouble(jsonData, "min_cfl", cflMin);
-        auto jsonArray = jsonData["cfl_schedule"].array;
-        foreach (entry; jsonArray) {
-            auto values = entry.array;
-            cflSchedule ~= tuple!("step", "cfl")(values[0].get!int, values[1].get!double);
-        }
         cflReductionFactor = getJSONdouble(jsonData, "cfl_reduction_factor", cflReductionFactor);
         numberOfPhases = getJSONint(jsonData, "number_of_phases", numberOfPhases);
         maxStepsInInitialPhases = getJSONintarray(jsonData, "max_steps_in_initial_phases", maxStepsInInitialPhases);
@@ -316,8 +310,9 @@ struct NKPhaseConfig {
     bool frozenLimiterForJacobian = false;
     double linearSolveTolerance = 0.01;
     double fgmresPreconditionSolveTolerance = 1e-2;
-    // Auto CFL control
+    // CFL control
     bool useAutoCFL = false;
+    Tuple!(int, "step", double, "cfl")[] cflSchedule;
     double thresholdRelativeResidualForCFLGrowth = 0.99;
     double startCFL = 1.0;
     double maxCFL = 1000.0;
@@ -351,6 +346,11 @@ struct NKPhaseConfig {
                                                         "fgmres_preconditioning_solve_tolerance",
                                                         fgmresPreconditionSolveTolerance);
         useAutoCFL = getJSONbool(jsonData, "use_auto_cfl", useAutoCFL);
+        auto jsonArray = jsonData["cfl_schedule"].array;
+        foreach (entry; jsonArray) {
+            auto values = entry.array;
+            cflSchedule ~= tuple!("step", "cfl")(values[0].get!int, values[1].get!double);
+        }
         thresholdRelativeResidualForCFLGrowth = getJSONdouble(jsonData, "threshold_relative_residual_for_cfl_growth", thresholdRelativeResidualForCFLGrowth);
         startCFL = getJSONdouble(jsonData, "start_cfl", startCFL);
         maxCFL = getJSONdouble(jsonData, "max_cfl", maxCFL);
@@ -802,6 +802,10 @@ void readNewtonKrylovConfig()
     foreach (i, ref phase; nkPhases) {
         string key = "NewtonKrylovPhase_" ~ to!string(i);
         phase.readValuesFromJSON(jsonData[key]);
+        if (phase.cflSchedule.length != 2) {
+            string errMsg = format("ERROR: CFL schedule for phase %d must contain exactly two entries.\n", i);
+            throw new Error(errMsg);
+        }
     }
 
     // Perform some consistency checks
@@ -945,6 +949,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     int stepsIntoCurrentPhase = 0;
     bool updatePreconditionerThisStep = false;
     CFLSelector cflSelector;
+    CFLSelector[] phaseCFLSelectors;
     bool enableWriteSnapshotAfterCheck = true;
     int savedSnapshotAfterCheckStep = -1;
 
@@ -1009,20 +1014,18 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     }
     */
 
-    // Look for global CFL schedule and use to set CFL
-    if (nkCfg.cflSchedule.length > 0) {
-        foreach (i, startRamp; nkCfg.cflSchedule[0 .. $-1]) {
-            if (startStep >= startRamp.step) {
-                auto endRamp = nkCfg.cflSchedule[i+1];
-                cflSelector = new LinearRampCFL(startRamp.step, endRamp.step, startRamp.cfl, endRamp.cfl);
-                break;
-            }
+    // Build phase-specific CFL selectors.
+    phaseCFLSelectors.length = nkCfg.numberOfPhases;
+    foreach (i, phase; nkPhases) {
+        if (phase.useAutoCFL) {
+            phaseCFLSelectors[i] = new ResidualBasedAutoCFL(phase.autoCFLExponent, phase.maxCFL,
+                                                            phase.thresholdRelativeResidualForCFLGrowth,
+                                                            phase.limitOnCFLIncreaseRatio, phase.limitOnCFLDecreaseRatio);
         }
-        // Or check we aren't at end of cfl schedule
-        auto lastEntry = nkCfg.cflSchedule[$-1];
-        if (startStep >= lastEntry.step) {
-            // Set a flat CFL beyond limit of scheule.
-            cflSelector = new LinearRampCFL(lastEntry.step, nkCfg.maxNewtonSteps, lastEntry.cfl, lastEntry.cfl);
+        else {
+            auto startRamp = phase.cflSchedule[0];
+            auto endRamp = phase.cflSchedule[1];
+            phaseCFLSelectors[i] = new LinearRampCFL(startRamp.step, endRamp.step, startRamp.cfl, endRamp.cfl);
         }
     }
 
@@ -1088,14 +1091,12 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             cfg.frozen_shock_detector = true;
         }
         setPhaseSettings(currentPhase);
+        cflSelector = phaseCFLSelectors[currentPhase];
         if (activePhase.useAutoCFL) {
-            cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
-                                                   activePhase.thresholdRelativeResidualForCFLGrowth,
-                                                   activePhase.limitOnCFLIncreaseRatio, activePhase.limitOnCFLDecreaseRatio);
             cfl = cflSelector.nextCFL(restart.cfl, startStep, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
         }
-        else { // Assume we have a global (phase-independent) schedule
-            cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
+        else { // Use the phase CFL schedule
+            cfl = cflSelector.nextCFL(-1.0, stepsIntoCurrentPhase, -1.0, -1.0, -1.0);
         }
         // On restart, we need to do some diagonstics file housekeeping
         if (cfg.is_master_task) {
@@ -1148,14 +1149,12 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             cfg.frozen_shock_detector = true;
         }
         setPhaseSettings(0);
+        cflSelector = phaseCFLSelectors[0];
         if (activePhase.useAutoCFL) {
-            cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
-                                                   activePhase.thresholdRelativeResidualForCFLGrowth,
-                                                   activePhase.limitOnCFLIncreaseRatio, activePhase.limitOnCFLDecreaseRatio);
             cfl = activePhase.startCFL;
         }
-        else { // Assume we have a global (phase-independent) schedule
-            cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
+        else { // Use the phase CFL schedule
+            cfl = cflSelector.nextCFL(-1.0, stepsIntoCurrentPhase, -1.0, -1.0, -1.0);
         }
 
         // We can apply a special initialisation to the flow field, if requested.
@@ -1255,6 +1254,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             currentPhase++;
             stepsIntoCurrentPhase = 0;
             setPhaseSettings(currentPhase);
+            cflSelector = phaseCFLSelectors[currentPhase];
             if (currentPhase == nkCfg.numberOfPhases-1) terminalPhase = true;
             if (activePhase.useAutoCFL) {
                 // If the user gives us a positive startCFL, use that.
@@ -1291,7 +1291,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                     }
                 }
                 else {
-                    cfl = cflSelector.nextCFL(-1.0, step, -1.0, -1.0, -1.0);
+                    cfl = cflSelector.nextCFL(-1.0, stepsIntoCurrentPhase, -1.0, -1.0, -1.0);
                 }
             }
             else {
