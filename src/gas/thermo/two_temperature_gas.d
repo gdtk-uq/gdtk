@@ -429,7 +429,7 @@ public:
         // The electron possess energy only in translation.
         // We put this contribution in the electronic energy since
         // its translation is governed by the vibroelectronic temperature.
-        if (isp == mElectronIdx) return (3./2.)* mR[isp] * Tve;
+        if (isp == mElectronIdx) return (3./2.)* mR[isp] * (Tve-T_REF);
         // For heavy particles
         number h_at_Tve = mCurves[isp].eval_h(Tve, logTve);
         number h_ve = h_at_Tve - mCpTR[isp]*(Tve - T_REF) - mDel_hf[isp];
@@ -441,6 +441,23 @@ public:
     {
         number logTve = log(Tve);
         return vibElecEnergyPerSpecies(Tve, logTve, isp);
+    }
+
+    @nogc
+    number vibElecEnthalpyPerSpecies(number Tve, number logTve, int isp)
+    {
+        if (isp == mElectronIdx) return (5./2.)* mR[isp] * (Tve - T_REF);
+        // For heavy particles
+        number h_at_Tve = mCurves[isp].eval_h(Tve, logTve);
+        number h_ve = h_at_Tve - mCpTR[isp]*(Tve - T_REF) - mDel_hf[isp];
+        return h_ve;
+    }
+
+    @nogc
+    number vibElecEnthalpyPerSpecies(number Tve, int isp)
+    {
+        number logTve = log(Tve);
+        return vibElecEnthalpyPerSpecies(Tve, logTve, isp);
     }
 
     @nogc
@@ -462,9 +479,9 @@ public:
     @nogc
     override number cpPerSpecies(in GasState gs, int isp)
     {
-        // Using the fact that internal structure specific heats
-        // are equal, that is, Cp_vib = Cv_vib
-        return mCpTR[isp] + vibElecCvPerSpecies(gs.T_modes[0], isp);
+        // Cp_vib = Cv_vib, except for the electron, so this routine now actually
+        // uses vibElecCpPerSpecies instead of Cv per species
+        return mCpTR[isp] + vibElecCpPerSpecies(gs.T_modes[0], isp);
     }
     @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
     {
@@ -474,9 +491,10 @@ public:
         number logTve = log(Tve);
         number logp = log(gs.p/P_atm);
 
+
         foreach(isp; 0 .. mNSpecies){
             number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-            number h_ve = vibElecEnergyPerSpecies(Tve, logTve, isp);
+            number h_ve = vibElecEnthalpyPerSpecies(Tve, logTve, isp);
             number h = h_tr + h_ve;
             number s = mCurves[isp].eval_s(T, logT) - mR[isp]*logp;
             gibbs_energies[isp] = h - T*s;
@@ -565,6 +583,14 @@ private:
         // We are computing an "internal" Cv here, the Cv_ve.
         // For internal energy storage Cv_int = Cp_int,
         // so we can make the calculation using Cp relations.
+        return mCurves[isp].eval_Cp(Tve) - mCpTR[isp];
+    }
+
+    @nogc
+    number vibElecCpPerSpecies(number Tve, int isp)
+    {
+        // electron as special case
+        if (isp == mElectronIdx) return to!number((5./2.)*mR[isp]);
         return mCurves[isp].eval_Cp(Tve) - mCpTR[isp];
     }
 
