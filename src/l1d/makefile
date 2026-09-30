@@ -16,7 +16,8 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
+PROGRAMS := l1d4
+PY_PROGRAMS := l1d4-prep l1d4-xt-viewer
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
@@ -139,11 +140,11 @@ ifeq ($(WITH_FPE),1)
     DFLAGS += $(DVERSION)enable_fp_exceptions
 endif
 
-default: $(PROGRAMS)
+default: $(PROGRAMS) $(PY_PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
+install: $(PROGRAMS) $(PY_PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
