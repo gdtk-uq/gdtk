@@ -50,21 +50,22 @@ import json
 from gdtk.gas import GasModel, GasState, ThermochemicalReactor
 from gdtk.numeric import roberts
 
-sys.path.append("") # so that we can find user's scripts in current directory
+sys.path.append("")  # so that we can find user's scripts in current directory
 
 shortOptions = "hf:"
 longOptions = ["help", "job="]
 
+
 def printUsage():
     print("")
-    print("Usage: l1d-prep" + \
-          " [--help | -h]" + \
-          " [--job=<jobName> | -f <jobName>]")
+    print("Usage: l1d-prep" + " [--help | -h]" + " [--job=<jobName> | -f <jobName>]")
     print("")
     return
 
-#----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
 # This is where we store the core data for the simulation.
+
 
 class GlobalConfig(object):
     """
@@ -75,19 +76,36 @@ class GlobalConfig(object):
     altering the attributes of the global object "config"
     that already exists by the time the user's script executes.
     """
+
     count = 0
 
     # We want to prevent the user's script from introducing new attributes
     # via typographical errors.
-    __slots__ = 'job_name', 'title', \
-                'gas_model_files', 'gmodels', \
-                'overall_species_count', 'overall_species_index', \
-                'overall_modes_count', 'overall_modes_index', \
-                'reaction_files_1', 'reaction_files_2', \
-                'reactors', 'reacting', 'T_frozen', \
-                'dt_init', 'cfl_list', 'cfl_count', 'print_count', 'dt_plot_list', \
-                'max_time', 'max_step', 'x_order', 't_order', \
-                'hloc_list'
+    __slots__ = (
+        "job_name",
+        "title",
+        "gas_model_files",
+        "gmodels",
+        "overall_species_count",
+        "overall_species_index",
+        "overall_modes_count",
+        "overall_modes_index",
+        "reaction_files_1",
+        "reaction_files_2",
+        "reactors",
+        "reacting",
+        "T_frozen",
+        "dt_init",
+        "cfl_list",
+        "cfl_count",
+        "print_count",
+        "dt_plot_list",
+        "max_time",
+        "max_step",
+        "x_order",
+        "t_order",
+        "hloc_list",
+    )
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -110,8 +128,8 @@ class GlobalConfig(object):
         self.T_frozen = 300.0
         self.dt_init = 1.0e-6
         self.cfl_list = []
-        self.cfl_count = 10;
-        self.print_count = 50;
+        self.cfl_count = 10
+        self.print_count = 50
         # If dt_plot_list is still an empty list when we write
         # the parameter file, just use the max_time value for
         # both dt_plot and dt_his.  Fill in later, when necessary.
@@ -142,7 +160,8 @@ class GlobalConfig(object):
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)
-        if len(self.cfl_list) == 0: add_cfl_value(0.0, 0.5) # Add a default value.
+        if len(self.cfl_list) == 0:
+            add_cfl_value(0.0, 0.5)  # Add a default value.
         n_cfl = len(self.cfl_list)
         assert n_cfl > 0, "Require at least one cfl_value to be specified."
         fp.write('  "n_cfl": %d,\n' % n_cfl)
@@ -182,8 +201,9 @@ class GlobalConfig(object):
         fp.write('  "ndiaphragms": %d,\n' % len(diaphragmList))
         fp.write('  "necs": %d\n' % len(ecList))
         # Note, no comma after last item inside JSON dict
-        fp.write('},\n') # comma here because not the last item in file
+        fp.write("},\n")  # comma here because not the last item in file
         return
+
 
 # We will create just one GlobalConfig object that the user can alter.
 config = GlobalConfig()
@@ -191,6 +211,7 @@ config = GlobalConfig()
 # --------------------------------------------------------------------
 # The following functions are to provide convenient ways of setting
 # some of the GlobalConfig elements.
+
 
 def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     """
@@ -209,10 +230,14 @@ def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     config.gmodels.append(gmodel)
     config.gas_model_files.append(fileName)
     nsp = gmodel.n_species
-    config.overall_species_index.append([config.overall_species_count+i for i in range(nsp)])
+    config.overall_species_index.append(
+        [config.overall_species_count + i for i in range(nsp)]
+    )
     config.overall_species_count += nsp
     nmodes = gmodel.n_modes
-    config.overall_modes_index.append([config.overall_modes_count+i for i in range(nmodes)])
+    config.overall_modes_index.append(
+        [config.overall_modes_count + i for i in range(nmodes)]
+    )
     config.overall_modes_count += nmodes
     #
     # ThermochemicalReactor is always associated with a particular GasModel.
@@ -245,7 +270,12 @@ def add_cfl_value(t_change, cfl_value):
         if t_change > config.cfl_list[-1][0]:
             config.cfl_list.append((t_change, cfl_value))
         else:
-            print("Warning: did not add t_change,cfl_value tuple (", t_change, cfl_value, ").")
+            print(
+                "Warning: did not add t_change,cfl_value tuple (",
+                t_change,
+                cfl_value,
+                ").",
+            )
     else:
         config.cfl_list.append((t_change, cfl_value))
     return len(config.cfl_list)
@@ -268,8 +298,9 @@ def add_dt_plot(t_change, dt_plot, dt_his):
         if t_change > config.dt_plot_list[-1][0]:
             config.dt_plot_list.append((t_change, dt_plot, dt_his))
         else:
-            print("Warning: did not add dt_plot tuple (", \
-                  t_change, dt_plot, dt_his, ").")
+            print(
+                "Warning: did not add dt_plot tuple (", t_change, dt_plot, dt_his, ")."
+            )
     else:
         config.dt_plot_list.append((t_change, dt_plot, dt_his))
     return len(config.dt_plot_list)
@@ -289,7 +320,9 @@ def add_history_loc(x):
         config.hloc_list.append(float(x))
     return len(config.hloc_list)
 
+
 # --------------------------------------------------------------------
+
 
 class Tube(object):
     """
@@ -298,11 +331,25 @@ class Tube(object):
     The user's script should not create one of these
     but should specify the tube details by calling the add_xxxx functions.
     """
+
     count = 0
 
-    __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', \
-        'loss_region_list', 'viscous_factor_patch_list', 'htc_factor_patch_list', \
-        'xs', 'ds', 'K_over_Ls', 'Ts', 'vfs', 'htcfs'
+    __slots__ = (
+        "n",
+        "x_list",
+        "d_list",
+        "T_nominal",
+        "T_patch_list",
+        "loss_region_list",
+        "viscous_factor_patch_list",
+        "htc_factor_patch_list",
+        "xs",
+        "ds",
+        "K_over_Ls",
+        "Ts",
+        "vfs",
+        "htcfs",
+    )
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -335,10 +382,12 @@ class Tube(object):
         Set up the lists that define the "discretized" tube.
         """
         nsegments = len(self.x_list) - 1
-        assert len(self.d_list) == nsegments+1, "Mismatch in tube.x_list, tube.d_list lengths."
+        assert len(self.d_list) == nsegments + 1, (
+            "Mismatch in tube.x_list, tube.d_list lengths."
+        )
         if nsegments < 1:
             raise Exception("You did not specify at least two points in your tube.")
-        self.xs = np.linspace(tube.x_list[0], tube.x_list[-1], num=tube.n+1)
+        self.xs = np.linspace(tube.x_list[0], tube.x_list[-1], num=tube.n + 1)
         self.ds = []
         for x in self.xs:
             iseg = nsegments
@@ -347,40 +396,50 @@ class Tube(object):
                     iseg = i
                     break
             # Have selected the segment containing x.
-            frac = (x - self.x_list[iseg-1]) / (self.x_list[iseg] - self.x_list[iseg-1])
-            d = (1.0-frac)*self.d_list[iseg-1] + frac*self.d_list[iseg]
+            frac = (x - self.x_list[iseg - 1]) / (
+                self.x_list[iseg] - self.x_list[iseg - 1]
+            )
+            d = (1.0 - frac) * self.d_list[iseg - 1] + frac * self.d_list[iseg]
             self.ds.append(d)
         #
         self.K_over_Ls = []
         for x in self.xs:
             value = 0.0
             for region in self.loss_region_list:
-                xL = region['xL']; xR = region['xR']
-                if x >= xL and x <= xR: value = region['K']/(xR-xL)
+                xL = region["xL"]
+                xR = region["xR"]
+                if x >= xL and x <= xR:
+                    value = region["K"] / (xR - xL)
             self.K_over_Ls.append(value)
         #
         self.Ts = []
         for x in self.xs:
             value = self.T_nominal
             for region in self.T_patch_list:
-                xL = region['xL']; xR = region['xR']
-                if x >= xL and x <= xR: value = region['T']
+                xL = region["xL"]
+                xR = region["xR"]
+                if x >= xL and x <= xR:
+                    value = region["T"]
             self.Ts.append(value)
         #
         self.vfs = []
         for x in self.xs:
             value = 1.0
             for region in self.viscous_factor_patch_list:
-                xL = region['xL']; xR = region['xR']
-                if x >= xL and x <= xR: value = region['vf']
+                xL = region["xL"]
+                xR = region["xR"]
+                if x >= xL and x <= xR:
+                    value = region["vf"]
             self.vfs.append(value)
         #
         self.htcfs = []
         for x in self.xs:
             value = 1.0
             for region in self.htc_factor_patch_list:
-                xL = region['xL']; xR = region['xR']
-                if x >= xL and x <= xR: value = region['htcf']
+                xL = region["xL"]
+                xR = region["xR"]
+                if x >= xL and x <= xR:
+                    value = region["htcf"]
             self.htcfs.append(value)
         #
         return
@@ -403,30 +462,42 @@ class Tube(object):
             htcf = self.htcfs[-1]
         else:
             dx = self.xs[1] - self.xs[0]
-            i = int((x - self.xs[0])/dx)
-            frac = (x - self.xs[i])/dx
-            d = (1.0-frac)*self.ds[i] + frac*self.ds[i+1]
-            K_over_L = (1.0-frac)*self.K_over_Ls[i] + frac*self.K_over_Ls[i+1]
-            Twall = (1.0-frac)*self.Ts[i] + frac*self.Ts[i+1]
-            vf = (1.0-frac)*self.vfs[i] + frac*self.vfs[i+1]
-            htcf = (1.0-frac)*self.htcfs[i] + frac*self.htcfs[i+1]
+            i = int((x - self.xs[0]) / dx)
+            frac = (x - self.xs[i]) / dx
+            d = (1.0 - frac) * self.ds[i] + frac * self.ds[i + 1]
+            K_over_L = (1.0 - frac) * self.K_over_Ls[i] + frac * self.K_over_Ls[i + 1]
+            Twall = (1.0 - frac) * self.Ts[i] + frac * self.Ts[i + 1]
+            vf = (1.0 - frac) * self.vfs[i] + frac * self.vfs[i + 1]
+            htcf = (1.0 - frac) * self.htcfs[i] + frac * self.htcfs[i + 1]
         # We compute the area from diameter, assuming a circular cross-section.
         # It is put into the file for later plotting.
-        area = math.pi*(d**2)/4
+        area = math.pi * (d**2) / 4
         return (d, area, K_over_L, Twall, vf, htcf)
 
     def write(self, fp):
         """
         Writes the tube specification to the specified file, in small steps.
         """
-        fp.write('# n= %d\n' % self.n) # n+1 points along tube to follow
-        fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K ' +
-                 ' 6:viscous-factor  7:htc-factor\n')
+        fp.write("# n= %d\n" % self.n)  # n+1 points along tube to follow
+        fp.write(
+            "# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K "
+            + " 6:viscous-factor  7:htc-factor\n"
+        )
         for i in range(len(self.xs)):
-            fp.write('%e %e %e %e %e %e %e\n' %
-                     (self.xs[i], self.ds[i], math.pi*(self.ds[i]**2)/4,
-                      self.K_over_Ls[i], self.Ts[i], self.vfs[i], self.htcfs[i]))
+            fp.write(
+                "%e %e %e %e %e %e %e\n"
+                % (
+                    self.xs[i],
+                    self.ds[i],
+                    math.pi * (self.ds[i] ** 2) / 4,
+                    self.K_over_Ls[i],
+                    self.Ts[i],
+                    self.vfs[i],
+                    self.htcfs[i],
+                )
+            )
         return
+
 
 # We will create just one Tube object that the user can alter.
 tube = Tube()
@@ -434,6 +505,7 @@ tube = Tube()
 # --------------------------------------------------------------------
 # The following functions are to provide convenient ways of setting
 # some of the Tube elements.
+
 
 def add_break_point(x, d):
     """
@@ -452,11 +524,13 @@ def add_break_point(x, d):
     if len(tube.x_list) > 0:
         # Check that we are adding points monotonically in x.
         if x > tube.x_list[-1]:
-            tube.x_list.append(x); tube.d_list.append(d)
+            tube.x_list.append(x)
+            tube.d_list.append(d)
         else:
             print("Warning: did not add new break-point (", x, d, ").")
     else:
-        tube.x_list.append(x); tube.d_list.append(d)
+        tube.x_list.append(x)
+        tube.d_list.append(d)
     return len(tube.x_list)
 
 
@@ -481,7 +555,7 @@ def add_loss_region(xL, xR, K):
         xL, xR = xR, xL
     if abs(xR - xL) < 1.0e-3:
         print("Warning: loss region is very short: (", xL, xR, ")")
-    tube.loss_region_list.append({'xL':xL, 'xR':xR, 'K':K})
+    tube.loss_region_list.append({"xL": xL, "xR": xR, "K": K})
     return len(tube.loss_region_list)
 
 
@@ -500,7 +574,7 @@ def add_T_patch(xL, xR, T):
         xL, xR = xR, xL
     if abs(xR - xL) < 1.0e-3:
         print("Warning: temperature patch is very short: (", xL, xR, ")")
-    tube.T_patch_list.append({'xL':xL, 'xR':xR, 'T':T})
+    tube.T_patch_list.append({"xL": xL, "xR": xR, "T": T})
     return len(tube.T_patch_list)
 
 
@@ -518,7 +592,7 @@ def add_vf_patch(xL, xR, vf):
     if xR < xL:
         # Keep x-values in increasing order
         xL, xR = xR, xL
-    tube.viscous_factor_patch_list.append({'xL':xL, 'xR':xR, 'vf':vf})
+    tube.viscous_factor_patch_list.append({"xL": xL, "xR": xR, "vf": vf})
     return len(tube.viscous_factor_patch_list)
 
 
@@ -538,11 +612,11 @@ def add_htcf_patch(xL, xR, htcf):
     if xR < xL:
         # Keep x-values in increasing order
         xL, xR = xR, xL
-    tube.htc_factor_patch_list.append({'xL':xL, 'xR':xR, 'htcf':htcf})
+    tube.htc_factor_patch_list.append({"xL": xL, "xR": xR, "htcf": htcf})
     return len(tube.htc_factor_patch_list)
 
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # The following classes define the objects that will be assembled into
 # the gas path.
 # ---------------------------------------------------------------------
@@ -558,7 +632,8 @@ freeEndList = []
 velocityEndList = []
 pistonFaceList = []
 
-class GasSlug():
+
+class GasSlug:
     """
     Contains the gas properties and discretisation for each gas slug.
 
@@ -571,31 +646,48 @@ class GasSlug():
     the gas-path via a call to the function assemble_gas_path.
     """
 
-    __slots__ = 'indx', 'label', \
-                'gas', 'gmodel', 'gmodel_id', \
-                'initial_fs_fun', 'vel', 'xL', 'xR', \
-                'ecL', 'ecR', \
-                'ncells', 'to_end_L', 'to_end_R', 'cluster_strength', \
-                'viscous_effects', 'adiabatic', 'hcells', \
-                'ifxs'
+    __slots__ = (
+        "indx",
+        "label",
+        "gas",
+        "gmodel",
+        "gmodel_id",
+        "initial_fs_fun",
+        "vel",
+        "xL",
+        "xR",
+        "ecL",
+        "ecR",
+        "ncells",
+        "to_end_L",
+        "to_end_R",
+        "cluster_strength",
+        "viscous_effects",
+        "adiabatic",
+        "hcells",
+        "ifxs",
+    )
 
-    def __init__(self,
-                 gmodel_id = None,
-                 p = 100.0e3,
-                 vel = 0.0,
-                 T = 300.0,
-                 T_modes = [],
-                 massf = [1.0,],
-                 initial_fs_fun = None,
-                 label="",
-                 ncells = 10,
-                 to_end_L=False,
-                 to_end_R=False,
-                 cluster_strength=0.0,
-                 viscous_effects=0, # several options were available in L1d3
-                 adiabatic=False,
-                 hcells=[],
-                 ):
+    def __init__(
+        self,
+        gmodel_id=None,
+        p=100.0e3,
+        vel=0.0,
+        T=300.0,
+        T_modes=[],
+        massf=[
+            1.0,
+        ],
+        initial_fs_fun=None,
+        label="",
+        ncells=10,
+        to_end_L=False,
+        to_end_R=False,
+        cluster_strength=0.0,
+        viscous_effects=0,  # several options were available in L1d3
+        adiabatic=False,
+        hcells=[],
+    ):
         """
         Creates a gas slug with user-specified properties.
 
@@ -620,8 +712,10 @@ class GasSlug():
             self.gas.massf = massf
             self.gas.T = T
             if len(T_modes) != nmodes:
-                raise Exception("T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s"
-                                % (nmodes, T_modes));
+                raise Exception(
+                    "T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s"
+                    % (nmodes, T_modes)
+                )
             self.gas.T_modes = T_modes
             self.gas.update_thermo_from_pT()
             self.gas.update_sound_speed()
@@ -631,7 +725,9 @@ class GasSlug():
         else:
             # If we have something for initial_fs_fn, we will try to use it.
             if not callable(initial_fs_fun):
-                raise RuntimeError("Was expecting a callable function for initial_fs_fun.")
+                raise RuntimeError(
+                    "Was expecting a callable function for initial_fs_fun."
+                )
             self.initial_fs_fun = initial_fs_fun
         #
         self.label = label
@@ -643,9 +739,11 @@ class GasSlug():
         #
         self.viscous_effects = viscous_effects
         self.adiabatic = adiabatic
-        if isinstance(hcells,int):
-            hcells=[hcells,]
-        elif isinstance(hcells,list):
+        if isinstance(hcells, int):
+            hcells = [
+                hcells,
+            ]
+        elif isinstance(hcells, list):
             pass
         else:
             print("Warning: hcells reset to empty list.")
@@ -668,7 +766,7 @@ class GasSlug():
         # The GasSlug objects need an identity that can be
         # transferred to the main simulation program.
         global slugList
-        self.indx = len(slugList) # next available index
+        self.indx = len(slugList)  # next available index
         slugList.append(self)
         return
 
@@ -688,13 +786,18 @@ class GasSlug():
         fp.write('  "nhcells": %d,\n' % len(self.hcells))
         fp.write('  "hcells": %s\n' % json.dumps(self.hcells))
         # Note no comma after last item in JSON dict.
-        fp.write('},\n') # presume that this dict not the last
+        fp.write("},\n")  # presume that this dict not the last
         return
 
     def construct_cells_and_faces(self):
-        self.ifxs = roberts.distribute_points_1(self.xL, self.xR, self.ncells,
-                                                self.to_end_L, self.to_end_R,
-                                                self.cluster_strength)
+        self.ifxs = roberts.distribute_points_1(
+            self.xL,
+            self.xR,
+            self.ncells,
+            self.to_end_L,
+            self.to_end_R,
+            self.cluster_strength,
+        )
         return
 
     def write_face_data(self, fp, tindx, write_header):
@@ -717,49 +820,63 @@ class GasSlug():
         nsp = self.gmodel.n_species
         nmodes = self.gmodel.n_modes
         if write_header:
-            fp.write('# xmid  volume  vel  L_bar  rho  p  T  u  a')
-            fp.write('  shear_stress  heat_flux')
-            for i in range(nsp): fp.write('  massf[%d]' % i)
-            if nsp > 1: fp.write('  dt_chem')
-            for i in range(nmodes): fp.write('  T_modes[%d]  u_modes[%d]' % (i, i))
-            if nmodes > 0: fp.write('  dt_therm')
-            fp.write('\n')
+            fp.write("# xmid  volume  vel  L_bar  rho  p  T  u  a")
+            fp.write("  shear_stress  heat_flux")
+            for i in range(nsp):
+                fp.write("  massf[%d]" % i)
+            if nsp > 1:
+                fp.write("  dt_chem")
+            for i in range(nmodes):
+                fp.write("  T_modes[%d]  u_modes[%d]" % (i, i))
+            if nmodes > 0:
+                fp.write("  dt_therm")
+            fp.write("\n")
         fp.write("# tindx %d\n" % tindx)
-        L_bar = 0.0; dt_chem = -1.0; dt_therm = -1.0
-        shear_stress=0.0; heat_flux = 0.0
+        L_bar = 0.0
+        dt_chem = -1.0
+        dt_therm = -1.0
+        shear_stress = 0.0
+        heat_flux = 0.0
         for j in range(self.ncells):
-            xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
+            xmid = 0.5 * (self.ifxs[j + 1] + self.ifxs[j])
             d, area, K_over_L, Twall, vf, htcf = tube.eval(xmid)
-            volume = area * (self.ifxs[j+1] - self.ifxs[j])
+            volume = area * (self.ifxs[j + 1] - self.ifxs[j])
             #
             if callable(self.initial_fs_fun):
                 fs = self.initial_fs_fun(xmid)
                 # We assemble a local flow state from the pieces of flow state data.
                 # that are (presumably) present in the returned dictionary.
-                self.gas.p = fs['p']
-                self.gas.massf = fs['massf']
-                self.gas.T = fs['T']
+                self.gas.p = fs["p"]
+                self.gas.massf = fs["massf"]
+                self.gas.T = fs["T"]
                 if nmodes > 0:
-                    if len(fs['T_modes']) != nmodes:
-                        raise Exception("T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s"
-                                        % (nmodes, fs['T_modes']));
-                    self.gas.T_modes = fs['T_modes']
+                    if len(fs["T_modes"]) != nmodes:
+                        raise Exception(
+                            "T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s"
+                            % (nmodes, fs["T_modes"])
+                        )
+                    self.gas.T_modes = fs["T_modes"]
                 else:
                     self.gas.T_modes = []
                 self.gas.update_thermo_from_pT()
                 self.gas.update_sound_speed()
                 self.gas.update_trans_coeffs()
-                self.vel = fs['vel']
+                self.vel = fs["vel"]
             #
-            fp.write('%e %e %e %e' % (xmid, volume, self.vel, L_bar))
-            fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
-            fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
-            for i in range(nsp): fp.write(' %e' % (self.gas.massf[i]))
-            if nsp > 1: fp.write(' %e' % dt_chem)
+            fp.write("%e %e %e %e" % (xmid, volume, self.vel, L_bar))
+            fp.write(
+                " %e %e %e %e" % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u)
+            )
+            fp.write(" %e %e %e" % (self.gas.a, shear_stress, heat_flux))
+            for i in range(nsp):
+                fp.write(" %e" % (self.gas.massf[i]))
+            if nsp > 1:
+                fp.write(" %e" % dt_chem)
             for i in range(nmodes):
-                fp.write(' %e %e' % (self.gas.T_modes[i], self.gas.u_modes[i]))
-            if nmodes > 0: fp.write(' %e' % dt_therm)
-            fp.write('\n')
+                fp.write(" %e %e" % (self.gas.T_modes[i], self.gas.u_modes[i]))
+            if nmodes > 0:
+                fp.write(" %e" % dt_therm)
+            fp.write("\n")
         fp.write("# end\n")
         return
 
@@ -769,21 +886,29 @@ class GasSlug():
 
         We assume that the data is constant for the whole slug.
         """
-        L_bar = 0.0; shear_stress=0.0; heat_flux = 0.0
-        fp.write('%e %e %e %e' % (t, x, self.vel, L_bar))
-        fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
-        fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
-        massf = [0.0,]*config.overall_species_count
+        L_bar = 0.0
+        shear_stress = 0.0
+        heat_flux = 0.0
+        fp.write("%e %e %e %e" % (t, x, self.vel, L_bar))
+        fp.write(" %e %e %e %e" % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
+        fp.write(" %e %e %e" % (self.gas.a, shear_stress, heat_flux))
+        massf = [
+            0.0,
+        ] * config.overall_species_count
         gs_massf = self.gas.massf
         for i in range(len(gs_massf)):
             massf[config.overall_species_index[self.gmodel_id][i]] = gs_massf[i]
-        for mf in massf: fp.write(' %e' % mf)
-        Tmodes = [0.0,]*config.overall_modes_count
+        for mf in massf:
+            fp.write(" %e" % mf)
+        Tmodes = [
+            0.0,
+        ] * config.overall_modes_count
         gs_Tmodes = self.gas.T_modes
         for i in range(len(gs_Tmodes)):
             Tmodes[config.overall_modes_index[self.gmodel_id][i]] = gs_Tmodes[i]
-        for Tmode in Tmodes: fp.write(' %e' % Tmode)
-        fp.write('\n')
+        for Tmode in Tmodes:
+            fp.write(" %e" % Tmode)
+        fp.write("\n")
         return
 
     def write_history_loc_data(self, fp, t, x):
@@ -794,9 +919,9 @@ class GasSlug():
         covered by a cell in the slug.
         """
         for j in range(self.ncells):
-            if (x >= self.ifxs[j]) and (x <= self.ifxs[j+1]):
+            if (x >= self.ifxs[j]) and (x <= self.ifxs[j + 1]):
                 self.write_initial_flow_data_for_any_cell(fp, t, x)
-                break;
+                break
         return
 
     def write_history_cell_data(self, fp, t, ic):
@@ -806,7 +931,7 @@ class GasSlug():
         We are actually going to assume that all cells
         within the slug have the same data.
         """
-        x = 0.5 * (self.ifxs[ic] + self.ifxs[ic+1])
+        x = 0.5 * (self.ifxs[ic] + self.ifxs[ic + 1])
         self.write_initial_flow_data_for_any_cell(fp, t, x)
         return
 
@@ -817,36 +942,76 @@ class GasSlug():
         """
         e = 0.0
         for j in range(self.ncells):
-            xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
+            xmid = 0.5 * (self.ifxs[j + 1] + self.ifxs[j])
             d, area, K_over_L, Twall, vf, htcf = tube.eval(xmid)
-            volume = area * (self.ifxs[j+1] - self.ifxs[j])
-            e += volume*self.gas.rho*(self.gas.internal_energy + 0.5*self.vel*self.vel)
+            volume = area * (self.ifxs[j + 1] - self.ifxs[j])
+            e += (
+                volume
+                * self.gas.rho
+                * (self.gas.internal_energy + 0.5 * self.vel * self.vel)
+            )
         return e
 
-#----------------------------------------------------------------------------
 
-class Piston():
+# ----------------------------------------------------------------------------
+
+
+class Piston:
     """
     Contains the information for a piston.
     """
 
-    __slots__ = 'indx', 'label', \
-                'mass', 'diam', 'L', 'xL0', 'xR0', 'x0', 'vel0', \
-                'massf', 'dmassfdt', 'massfmin', \
-                'front_seal_f', 'front_seal_area', \
-                'back_seal_f', 'back_seal_area', \
-                'p_restrain', 'is_restrain', \
-                'with_brakes', 'brakes_on', 'brakes_friction_force', \
-                'x_buffer', 'on_buffer', 'ecL', 'ecR'
+    __slots__ = (
+        "indx",
+        "label",
+        "mass",
+        "diam",
+        "L",
+        "xL0",
+        "xR0",
+        "x0",
+        "vel0",
+        "massf",
+        "dmassfdt",
+        "massfmin",
+        "front_seal_f",
+        "front_seal_area",
+        "back_seal_f",
+        "back_seal_area",
+        "p_restrain",
+        "is_restrain",
+        "with_brakes",
+        "brakes_on",
+        "brakes_friction_force",
+        "x_buffer",
+        "on_buffer",
+        "ecL",
+        "ecR",
+    )
 
-    def __init__(self, mass, diam, xL0, xR0, vel0,
-                 massf=1.0, dmassfdt=0.0, massfmin=1.0e-3,
-                 front_seal_f=0.0, front_seal_area=0.0,
-                 back_seal_f=0.0, back_seal_area=0.0,
-                 p_restrain=0.0, is_restrain=0,
-                 with_brakes=False, brakes_on=0, brakes_friction_force=0.0,
-                 x_buffer=10.e6, on_buffer = 0,
-                 label=""):
+    def __init__(
+        self,
+        mass,
+        diam,
+        xL0,
+        xR0,
+        vel0,
+        massf=1.0,
+        dmassfdt=0.0,
+        massfmin=1.0e-3,
+        front_seal_f=0.0,
+        front_seal_area=0.0,
+        back_seal_f=0.0,
+        back_seal_area=0.0,
+        p_restrain=0.0,
+        is_restrain=0,
+        with_brakes=False,
+        brakes_on=0,
+        brakes_friction_force=0.0,
+        x_buffer=10.0e6,
+        on_buffer=0,
+        label="",
+    ):
         """
         Create a piston with specified properties.
         """
@@ -859,7 +1024,7 @@ class Piston():
         self.xL0 = xL0
         self.xR0 = xR0
         self.L = xR0 - xL0
-        self.x0 = 0.5*(xL0 + xR0)
+        self.x0 = 0.5 * (xL0 + xR0)
         self.vel0 = vel0
         self.massf = massf
         self.dmassfdt = dmassfdt
@@ -884,12 +1049,12 @@ class Piston():
         # The Piston objects need an identity that can be
         # transferred to the main simulation program.
         global pistonList
-        self.indx = len(pistonList) # next available index
+        self.indx = len(pistonList)  # next available index
         if len(label) > 0:
             self.label = label
         else:
             # Construct a simple label.
-            self.label = 'piston-' + str(self.indx)
+            self.label = "piston-" + str(self.indx)
         pistonList.append(self)
         return
 
@@ -914,13 +1079,15 @@ class Piston():
         fp.write('  "brakes_friction_force": %e,\n' % self.brakes_friction_force)
         # It may be that the piston has only one face connected.
         ecindx = -1
-        if self.ecL: ecindx = self.ecL.ecindx
+        if self.ecL:
+            ecindx = self.ecL.ecindx
         fp.write('  "ecL_id": %d,\n' % ecindx)
         ecindx = -1
-        if self.ecR: ecindx = self.ecR.ecindx
+        if self.ecR:
+            ecindx = self.ecR.ecindx
         fp.write('  "ecR_id": %d\n' % ecindx)
         # Note no comma after last item in JSON dict.
-        fp.write('},\n') # presume that this dict not the last
+        fp.write("},\n")  # presume that this dict not the last
         return
 
     def write_data(self, fp, tindx, write_header):
@@ -929,10 +1096,18 @@ class Piston():
         """
         if write_header:
             fp.write("# tindx  x  vel  is_restrain  brakes_on  on_buffer  massf\n")
-        fp.write("%d %e %e %d %d %d %e\n" %
-                 (tindx, self.x0, self.vel0,
-                  self.is_restrain, self.brakes_on, self.on_buffer,
-                  self.massf))
+        fp.write(
+            "%d %e %e %d %d %d %e\n"
+            % (
+                tindx,
+                self.x0,
+                self.vel0,
+                self.is_restrain,
+                self.brakes_on,
+                self.on_buffer,
+                self.massf,
+            )
+        )
         return
 
     @property
@@ -940,11 +1115,13 @@ class Piston():
         """
         Returns kinetic energy.
         """
-        return 0.5*self.mass*self.massf*self.vel0*self.vel0
+        return 0.5 * self.mass * self.massf * self.vel0 * self.vel0
 
-#----------------------------------------------------------------------------
 
-class Valve():
+# ----------------------------------------------------------------------------
+
+
+class Valve:
     """
     A valve may be used to retard the motion of the nearest interface
     that lies between gas cells in a slug.
@@ -956,9 +1133,20 @@ class Valve():
     We may construct several of these objects somewhere in the input script
     and the information will be stored for later writing into the config file.
     """
-    __slots__ = 'indx', 'label', 'x', 'times', 'fopen'
 
-    def __init__(self, x, times=[0.0,], fopen=[1.0,], label=""):
+    __slots__ = "indx", "label", "x", "times", "fopen"
+
+    def __init__(
+        self,
+        x,
+        times=[
+            0.0,
+        ],
+        fopen=[
+            1.0,
+        ],
+        label="",
+    ):
         """
         x: location of the valve
         times: list of time values (in seconds)
@@ -985,10 +1173,20 @@ class Valve():
         fp.write('  "times": %s,\n' % json.dumps(self.times))
         fp.write('  "fopen": %s\n' % json.dumps(self.fopen))
         # Note no comma after last item in JSON dict.
-        fp.write('},\n') # presume that this dict not the last
+        fp.write("},\n")  # presume that this dict not the last
         return
 
-def add_valve(x, times=[0.0,], fopen=[1.0,], label=""):
+
+def add_valve(
+    x,
+    times=[
+        0.0,
+    ],
+    fopen=[
+        1.0,
+    ],
+    label="",
+):
     """
     Construct and store a Valve object.
     This function is provided just for neatness in the input script.
@@ -996,23 +1194,40 @@ def add_valve(x, times=[0.0,], fopen=[1.0,], label=""):
     _ = Valve(x, times, fopen, label)
     return len(valveList)
 
-#----------------------------------------------------------------------------
 
-class EndCondition():
+# ----------------------------------------------------------------------------
+
+
+class EndCondition:
     """
     Base class for the particular end-(boundary)-conditions defined below.
 
     This class holds just the connection data.
     """
-    __slots__ = 'ecindx', \
-                'slugL', 'slugL_end', \
-                'slugR', 'slugR_end', \
-                'pistonL', 'pistonL_face', \
-                'pistonR', 'pistonR_face'
-    def __init__(self, slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L',
-                 pistonL=None, pistonL_face='R',
-                 pistonR=None, pistonR_face='L'):
+
+    __slots__ = (
+        "ecindx",
+        "slugL",
+        "slugL_end",
+        "slugR",
+        "slugR_end",
+        "pistonL",
+        "pistonL_face",
+        "pistonR",
+        "pistonR_face",
+    )
+
+    def __init__(
+        self,
+        slugL=None,
+        slugL_end="R",
+        slugR=None,
+        slugR_end="L",
+        pistonL=None,
+        pistonL_face="R",
+        pistonR=None,
+        pistonR_face="L",
+    ):
         # The following may be reassigned during assembly.
         self.slugL = slugL
         self.slugL_end = slugL_end
@@ -1026,26 +1241,30 @@ class EndCondition():
         # The EndCondition objects need an identity that can be
         # transferred to the main simulation program.
         global ecList
-        self.ecindx = len(ecList) # next available index
+        self.ecindx = len(ecList)  # next available index
         ecList.append(self)
         return
 
     def json_str(self):
         myDict = {}
         indx = -1
-        if self.slugL: indx = self.slugL.indx
+        if self.slugL:
+            indx = self.slugL.indx
         myDict["left-slug-id"] = indx
         myDict["left-slug-end-id"] = self.slugL_end
         indx = -1
-        if self.slugR: indx = self.slugR.indx
+        if self.slugR:
+            indx = self.slugR.indx
         myDict["right-slug-id"] = indx
         myDict["right-slug-end-id"] = self.slugR_end
         indx = -1
-        if self.pistonL: indx = self.pistonL.indx
+        if self.pistonL:
+            indx = self.pistonL.indx
         myDict["left-piston-id"] = indx
         myDict["left-piston-face-id"] = self.pistonL_face
         indx = -1
-        if self.pistonR: indx = self.pistonR.indx
+        if self.pistonR:
+            indx = self.pistonR.indx
         myDict["right-piston-id"] = indx
         myDict["right-piston-face-id"] = self.pistonR_face
         return json.dumps(myDict)
@@ -1057,14 +1276,22 @@ class Diaphragm(EndCondition):
     interaction of two GasSlug objects.
     """
 
-    __slots__ = 'indx', \
-                'x0', 'p_burst', 'state', \
-                'dt_hold', 'dxL', 'dxR', 'label'
+    __slots__ = "indx", "x0", "p_burst", "state", "dt_hold", "dxL", "dxR", "label"
 
-    def __init__(self, x0, p_burst, state=0, dt_hold=0.0,
-                 dxL=0.0, dxR=0.0, label="",
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L'):
+    def __init__(
+        self,
+        x0,
+        p_burst,
+        state=0,
+        dt_hold=0.0,
+        dxL=0.0,
+        dxR=0.0,
+        label="",
+        slugL=None,
+        slugL_end="R",
+        slugR=None,
+        slugR_end="L",
+    ):
         """
         Creates a diaphragm with specified properties.
 
@@ -1075,8 +1302,9 @@ class Diaphragm(EndCondition):
         The connections to GasSlugs are made later via the function
         assemble_gas_path.
         """
-        super().__init__(slugL=slugL, slugL_end=slugL_end,
-                         slugR=slugR, slugR_end=slugR_end)
+        super().__init__(
+            slugL=slugL, slugL_end=slugL_end, slugR=slugR, slugR_end=slugR_end
+        )
         self.x0 = x0
         self.p_burst = p_burst
         self.state = state
@@ -1084,7 +1312,7 @@ class Diaphragm(EndCondition):
         self.dxL = dxL
         self.dxR = dxR
         global diaphragmList
-        self.indx = len(diaphragmList) # next available index
+        self.indx = len(diaphragmList)  # next available index
         if len(label) > 0:
             self.label = label
         else:
@@ -1104,8 +1332,8 @@ class Diaphragm(EndCondition):
         fp.write('  "dt_hold": %e,\n' % self.dt_hold)
         fp.write('  "dxL": %e,\n' % self.dxL)
         fp.write('  "dxR": %e,\n' % self.dxR)
-        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
-        fp.write('},\n')
+        fp.write('  "connections": %s\n' % self.json_str())  # no comma for last item
+        fp.write("},\n")
         return
 
     def write_data(self, fp, tindx, write_header):
@@ -1126,18 +1354,17 @@ class GasInterface(EndCondition):
     Implicitly, the logical connections are also made via the assemble_gas_path().
     """
 
-    __slots__ = 'x0'
+    __slots__ = "x0"
 
-    def __init__(self, x0,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L'):
+    def __init__(self, x0, slugL=None, slugL_end="R", slugR=None, slugR_end="L"):
         """
         Creates as interface between two gas slugs at specified location.
 
         :param x0: (float) Initial position, in metres.
         """
-        super().__init__(slugL=slugL, slugL_end=slugL_end,
-                         slugR=slugR, slugR_end=slugR_end)
+        super().__init__(
+            slugL=slugL, slugL_end=slugL_end, slugR=slugR, slugR_end=slugR_end
+        )
         self.x0 = x0
         global interfaceList
         interfaceList.append(self)
@@ -1150,8 +1377,8 @@ class GasInterface(EndCondition):
         fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
-        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
-        fp.write('},\n')
+        fp.write('  "connections": %s\n' % self.json_str())  # no comma for last item
+        fp.write("},\n")
         return
 
 
@@ -1160,18 +1387,17 @@ class FreeEnd(EndCondition):
     Locates the end of a gas slug.
     """
 
-    __slots__ = 'x0'
+    __slots__ = "x0"
 
-    def __init__(self, x0,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L'):
+    def __init__(self, x0, slugL=None, slugL_end="R", slugR=None, slugR_end="L"):
         """
         Creates a GasSlug end-condition with a specified location.
 
         :param x0: (float) Initial position, in metres.
         """
-        super().__init__(slugL=slugL, slugL_end=slugL_end,
-                         slugR=slugR, slugR_end=slugR_end)
+        super().__init__(
+            slugL=slugL, slugL_end=slugL_end, slugR=slugR, slugR_end=slugR_end
+        )
         self.x0 = x0
         global freeEndList
         freeEndList.append(self)
@@ -1184,8 +1410,8 @@ class FreeEnd(EndCondition):
         fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
-        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
-        fp.write('},\n')
+        fp.write('  "connections": %s\n' % self.json_str())  # no comma for last item
+        fp.write("},\n")
         return
 
 
@@ -1196,19 +1422,20 @@ class VelocityEnd(EndCondition):
     Velocity may be zero.
     """
 
-    __slots__ = 'x0', 'vel'
+    __slots__ = "x0", "vel"
 
-    def __init__(self, x0, vel=0.0,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L'):
+    def __init__(
+        self, x0, vel=0.0, slugL=None, slugL_end="R", slugR=None, slugR_end="L"
+    ):
         """
         Creates a GasSlug end-condition with a specified location and velocity.
 
         :param x0: (float) Initial position, in metres.
         :param v: (float) Velocity, in m/s, of the end-point of the GasSlug.
         """
-        super().__init__(slugL=slugL, slugL_end=slugL_end,
-                         slugR=slugR, slugR_end=slugR_end)
+        super().__init__(
+            slugL=slugL, slugL_end=slugL_end, slugR=slugR, slugR_end=slugR_end
+        )
         self.x0 = x0
         self.vel = vel
         global velocityEndList
@@ -1223,8 +1450,8 @@ class VelocityEnd(EndCondition):
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
         fp.write('  "vel": %e,\n' % self.vel)
-        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
-        fp.write('},\n')
+        fp.write('  "connections": %s\n' % self.json_str())  # no comma for last item
+        fp.write("},\n")
         return
 
 
@@ -1233,13 +1460,19 @@ class PistonFace(EndCondition):
     Just connection data between gas slug and piston.
     """
 
-    __slots__ = 'x0'
+    __slots__ = "x0"
 
-    def __init__(self,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L',
-                 pistonL=None, pistonL_face='R',
-                 pistonR=None, pistonR_face='L'):
+    def __init__(
+        self,
+        slugL=None,
+        slugL_end="R",
+        slugR=None,
+        slugR_end="L",
+        pistonL=None,
+        pistonL_face="R",
+        pistonR=None,
+        pistonR_face="L",
+    ):
         """
         Creates a GasSlug end-condition at a piston face.
         """
@@ -1247,16 +1480,22 @@ class PistonFace(EndCondition):
             raise Exception("Cannot have two pistons attached to a PistonFace.")
         if (not slugL) and (not slugR):
             raise Exception("Cannot have two gas slugs attached to a PistonFace.")
-        if (pistonL):
+        if pistonL:
             self.x0 = pistonL.xR0
-        elif (pistonR):
+        elif pistonR:
             self.x0 = pistonR.xL0
         else:
             raise Exception("Could not find a position of a piston face.")
-        super().__init__(slugL=slugL, slugL_end=slugL_end,
-                         slugR=slugR, slugR_end=slugR_end,
-                         pistonL=pistonL, pistonL_face=pistonL_face,
-                         pistonR=pistonR, pistonR_face=pistonR_face)
+        super().__init__(
+            slugL=slugL,
+            slugL_end=slugL_end,
+            slugR=slugR,
+            slugR_end=slugR_end,
+            pistonL=pistonL,
+            pistonL_face=pistonL_face,
+            pistonR=pistonR,
+            pistonR_face=pistonR_face,
+        )
         global pistonFaceList
         pistonFaceList.append(self)
         return
@@ -1268,11 +1507,13 @@ class PistonFace(EndCondition):
         fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
-        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
-        fp.write('},\n')
+        fp.write('  "connections": %s\n' % self.json_str())  # no comma for last item
+        fp.write("},\n")
         return
 
+
 # --------------------------------------------------------------------
+
 
 def assemble_gas_path(*components):
     """
@@ -1295,12 +1536,12 @@ def assemble_gas_path(*components):
     print("Assemble gas path:")
     clist = []
     for c in components:
-        if isinstance(c,tuple) or isinstance(c,list):
+        if isinstance(c, tuple) or isinstance(c, list):
             clist.extend(c)
         else:
             clist.append(c)
-    for i in range(len(clist)-1):
-        connect_pair(clist[i], clist[i+1])
+    for i in range(len(clist) - 1):
+        connect_pair(clist[i], clist[i + 1])
     # Now that we have made all connections,
     # we can locate the ends of the gas slugs.
     for c in components:
@@ -1319,72 +1560,69 @@ def connect_pair(cL, cR):
 
     Usually called by assemble_gas_path.
     """
-    print("connect_pair L:", cL.__class__.__name__,
-          " R:", cR.__class__.__name__)
+    print("connect_pair L:", cL.__class__.__name__, " R:", cR.__class__.__name__)
 
-    if isinstance(cL,VelocityEnd) and isinstance(cR, GasSlug):
+    if isinstance(cL, VelocityEnd) and isinstance(cR, GasSlug):
         cR.ecL = cL
         cL.slugR = cR
-        cL.slugR_end = 'L'
+        cL.slugR_end = "L"
         print("  velocity-end <--> gas-slug is done")
-    elif isinstance(cL,FreeEnd) and isinstance(cR, GasSlug):
+    elif isinstance(cL, FreeEnd) and isinstance(cR, GasSlug):
         cR.ecL = cL
         cL.slugR = cR
-        cL.slugR_end = 'L'
+        cL.slugR_end = "L"
         print("  free-end <--> gas-slug is done")
-    elif isinstance(cL,GasInterface) and isinstance(cR, GasSlug):
+    elif isinstance(cL, GasInterface) and isinstance(cR, GasSlug):
         cR.ecL = cL
         cL.slugR = cR
-        cL.slugR_end = 'L'
+        cL.slugR_end = "L"
         print("  gas-interface <--> gas-slug is done")
-    elif isinstance(cL,Piston) and isinstance(cR, GasSlug):
+    elif isinstance(cL, Piston) and isinstance(cR, GasSlug):
         print("  constructing a new PistonFace")
-        pf = PistonFace(pistonL=cL, pistonL_face='R',
-                        slugR=cR, slugR_end='L')
+        pf = PistonFace(pistonL=cL, pistonL_face="R", slugR=cR, slugR_end="L")
         cL.ecR = pf
         cR.ecL = pf
         print("  piston <--> piston-face <--> gas-slug connections done")
-    elif isinstance(cL,PistonFace) and isinstance(cR, GasSlug):
+    elif isinstance(cL, PistonFace) and isinstance(cR, GasSlug):
         cL.slugR = cR
-        cL.slugR_end = 'L'
+        cL.slugR_end = "L"
         cR.ecL = cL
         print("  piston-face <--> gas-slug is done")
-    elif isinstance(cL,Diaphragm) and isinstance(cR, GasSlug):
+    elif isinstance(cL, Diaphragm) and isinstance(cR, GasSlug):
         cL.slugR = cR
-        cL.slugR_end = 'L'
+        cL.slugR_end = "L"
         cR.ecL = cL
         print("  diaphragm <--> gas-slug is done")
-    elif isinstance(cL,GasSlug) and isinstance(cR, VelocityEnd):
+    elif isinstance(cL, GasSlug) and isinstance(cR, VelocityEnd):
         cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_end = 'R'
+        cR.slugL_end = "R"
         print("  gas-slug <--> velocity-end is done")
-    elif isinstance(cL,GasSlug) and isinstance(cR, FreeEnd):
+    elif isinstance(cL, GasSlug) and isinstance(cR, FreeEnd):
         cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_end = 'R'
+        cR.slugL_end = "R"
         print("  gas-slug <--> free-end is done")
-    elif isinstance(cL,GasSlug) and isinstance(cR, GasInterface):
+    elif isinstance(cL, GasSlug) and isinstance(cR, GasInterface):
         cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_end = 'R'
+        cR.slugL_end = "R"
         print("  gas-slug <--> gas-interface is done")
-    elif isinstance(cL,GasSlug) and isinstance(cR, Piston):
+    elif isinstance(cL, GasSlug) and isinstance(cR, Piston):
         print("  constructing a new PistonFace")
-        pf = PistonFace(pistonR=cR, pistonR_face='L',
-                        slugL=cL, slugL_end='R')
+        pf = PistonFace(pistonR=cR, pistonR_face="L", slugL=cL, slugL_end="R")
         cL.ecR = pf
         cR.ecL = pf
         print("  gas-slug <--> piston-face <--> piston connections done")
-    elif isinstance(cL,GasSlug) and isinstance(cR, PistonFace):
+    elif isinstance(cL, GasSlug) and isinstance(cR, PistonFace):
         cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_end = 'R'
+        cR.slugL_end = "R"
         print("  gas-slug <--> piston-face is done")
-    elif isinstance(cL,GasSlug) and isinstance(cR, Diaphragm):
+    elif isinstance(cL, GasSlug) and isinstance(cR, Diaphragm):
         cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_end = 'R'
+        cR.slugL_end = "R"
         print("  gas-slug <--> diaphragm is done")
     else:
         raise Exception("  Invalid pair to connect.")
@@ -1392,6 +1630,7 @@ def connect_pair(cL, cR):
 
 
 # --------------------------------------------------------------------
+
 
 def write_initial_files():
     """
@@ -1404,102 +1643,115 @@ def write_initial_files():
     if not os.path.exists(config.job_name):
         os.mkdir(config.job_name)
     #
-    fp = open(config.job_name+'/config.json', 'w')
+    fp = open(config.job_name + "/config.json", "w")
     fp.write("{\n")
     config.write(fp)
-    for slug in slugList: slug.write_config(fp)
-    for piston in pistonList: piston.write_config(fp)
-    for valve in valveList: valve.write_config(fp)
-    for ec in ecList: ec.write_config(fp)
+    for slug in slugList:
+        slug.write_config(fp)
+    for piston in pistonList:
+        piston.write_config(fp)
+    for valve in valveList:
+        valve.write_config(fp)
+    for ec in ecList:
+        ec.write_config(fp)
     # Previous entries all presume that they are not the last.
     fp.write('"dummy_item": 0\n')
-    fp.write('}\n')
+    fp.write("}\n")
     fp.close()
     #
     tube.set_up_tables()
-    fp = open(config.job_name+'/tube.data', 'w')
+    fp = open(config.job_name + "/tube.data", "w")
     tube.write(fp)
     fp.close()
     #
     for slug in slugList:
         slug.construct_cells_and_faces()
-        fileName = config.job_name + ('/slug-%04d-faces.data' % slug.indx)
-        fp = open(fileName, 'w')
+        fileName = config.job_name + ("/slug-%04d-faces.data" % slug.indx)
+        fp = open(fileName, "w")
         slug.write_face_data(fp, 0, True)
         fp.close()
-        fileName = config.job_name + ('/slug-%04d-cells.data' %  slug.indx)
-        fp = open(fileName, 'w')
+        fileName = config.job_name + ("/slug-%04d-cells.data" % slug.indx)
+        fp = open(fileName, "w")
         slug.write_cell_data(fp, 0, True)
         fp.close()
     #
     for piston in pistonList:
-        fileName = config.job_name + ('/piston-%04d.data' % piston.indx)
-        fp = open(fileName, 'w')
+        fileName = config.job_name + ("/piston-%04d.data" % piston.indx)
+        fp = open(fileName, "w")
         piston.write_data(fp, 0, True)
         fp.close()
     #
     for diaphragm in diaphragmList:
-        fileName = config.job_name + ('/diaphragm-%04d.data' % diaphragm.indx)
-        fp = open(fileName, 'w')
+        fileName = config.job_name + ("/diaphragm-%04d.data" % diaphragm.indx)
+        fp = open(fileName, "w")
         diaphragm.write_data(fp, 0, True)
         fp.close()
     #
-    fileName = config.job_name + '/times.data'
-    fp = open(fileName, 'w')
-    fp.write('# tindx time\n')
-    fp.write('%d %e\n' % (0, 0.0))
+    fileName = config.job_name + "/times.data"
+    fp = open(fileName, "w")
+    fp.write("# tindx time\n")
+    fp.write("%d %e\n" % (0, 0.0))
     fp.close()
     #
-    history_header_line = '# 1:t  2:x  3:vel  4:L_bar  5:rho  6:p  7:T  8:u  9:a  10:shear_stress  11:heat_flux'
+    history_header_line = "# 1:t  2:x  3:vel  4:L_bar  5:rho  6:p  7:T  8:u  9:a  10:shear_stress  11:heat_flux"
     column_count = 12
     for gi in range(len(config.gmodels)):
         species_names = config.gmodels[gi].species_names
         for i in range(config.gmodels[gi].n_species):
-            history_header_line += ('  %d:gas-%d-massf-%s' % (column_count, gi, species_names[i]))
+            history_header_line += "  %d:gas-%d-massf-%s" % (
+                column_count,
+                gi,
+                species_names[i],
+            )
             column_count += 1
     for gi in range(len(config.gmodels)):
         for i in range(config.gmodels[gi].n_modes):
-            history_header_line += ('  %d:gas-%d-Tmode[%d]' % (column_count, gi, i))
+            history_header_line += "  %d:gas-%d-Tmode[%d]" % (column_count, gi, i)
             column_count += 1
-    history_header_line += '\n'
+    history_header_line += "\n"
     #
     for slug in slugList:
         for ic in slug.hcells:
-            fileName = config.job_name + ('/history-cell-%04d-in-slug-%04d.data' % (ic, slug.indx))
-            fp = open(fileName, 'w')
+            fileName = config.job_name + (
+                "/history-cell-%04d-in-slug-%04d.data" % (ic, slug.indx)
+            )
+            fp = open(fileName, "w")
             fp.write(history_header_line)
             slug.write_history_cell_data(fp, 0.0, ic)
             fp.close()
     #
     for ih in range(len(config.hloc_list)):
-        fileName = config.job_name + ('/history-loc-%04d.data' % ih)
-        fp = open(fileName, 'w')
+        fileName = config.job_name + ("/history-loc-%04d.data" % ih)
+        fp = open(fileName, "w")
         fp.write(history_header_line)
-        for slug in slugList: slug.write_history_loc_data(fp, 0.0, config.hloc_list[ih])
+        for slug in slugList:
+            slug.write_history_loc_data(fp, 0.0, config.hloc_list[ih])
         fp.close()
     #
-    fileName = config.job_name + '/energies.data'
-    fp = open(fileName, 'w')
-    fp.write('# time')
-    for i in range(len(slugList)): fp.write(' slug-%d' % i)
-    for i in range(len(pistonList)): fp.write(' piston-%d' % i)
-    fp.write(' total\n')
-    fp.write('%e' % 0.0)
+    fileName = config.job_name + "/energies.data"
+    fp = open(fileName, "w")
+    fp.write("# time")
+    for i in range(len(slugList)):
+        fp.write(" slug-%d" % i)
+    for i in range(len(pistonList)):
+        fp.write(" piston-%d" % i)
+    fp.write(" total\n")
+    fp.write("%e" % 0.0)
     e_total = 0.0
     for s in slugList:
         e = s.energy
-        fp.write(' %e' % e)
+        fp.write(" %e" % e)
         e_total += e
     for p in pistonList:
         e = p.energy
-        fp.write(' %e' % e)
+        fp.write(" %e" % e)
         e_total += e
-    fp.write(' %e\n' % e_total)
+    fp.write(" %e\n" % e_total)
     fp.close()
     #
-    fileName = config.job_name + '/events.txt'
-    fp = open(fileName, 'w')
-    fp.write('# time-stamped event descriptions\n')
+    fileName = config.job_name + "/events.txt"
+    fp = open(fileName, "w")
+    fp.write("# time-stamped event descriptions\n")
     fp.close()
     #
     print("End write initial files.")
@@ -1508,14 +1760,13 @@ def write_initial_files():
 
 # --------------------------------------------------------------------
 
-if __name__ == '__main__':
+
+def main():
     print("Begin l1d4-prep...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
-    if len(userOptions[0]) == 0 or \
-           "--help" in uoDict or \
-           "-h" in uoDict:
+    if len(userOptions[0]) == 0 or "--help" in uoDict or "-h" in uoDict:
         printUsage()
     else:
         if "--job" in uoDict:
@@ -1530,7 +1781,7 @@ if __name__ == '__main__':
 
         # The user-specified input comes in the form of Python code.
         # It is up to the user to be careful; there is no security.
-        exec(compile(open(inputScriptName, "rb").read(), inputScriptName, 'exec'))
+        exec(compile(open(inputScriptName, "rb").read(), inputScriptName, "exec"))
         print("Summary of components:")
         print("  gas slugs         :", len(slugList))
         print("  pistons           :", len(pistonList))
@@ -1545,3 +1796,7 @@ if __name__ == '__main__':
         write_initial_files()
     print("Done.")
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
