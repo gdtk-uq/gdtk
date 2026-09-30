@@ -439,29 +439,33 @@ lmr%run: $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) | buildinfo.json
 	$(call build_lmr_entry)
 
-# Priority:
-#   1. VIRTUAL_ENV - Standard set by python virtual-environments
-#   2. CONDA_PREFIX - Set by (ana)conda environments
-#   3. INSTALL_DIR/.venv - Create our own if none already exist
-CONDA_PREFIX ?= $(INSTALL_DIR)/.venv
-VIRTUAL_ENV ?= $(CONDA_PREFIX)
-
+# INSTALL_DIR/.venv - Create our own if none already exist
+# Allow the user to specify their own virtual environment.
+# This can be done with `make VENV=$VIRTUAL_ENV install` if the
+# environment is already active.
+VENV ?= $(INSTALL_DIR)/.venv
 PYTHON ?= python3
 
+# For backwards compatibility during the transition, a user should be able to
+# use PYTHONPATH on a new system. A user would call `make USE_PYTHONPATH=1 install`
 USE_PYTHONPATH ?= $(shell echo ":$$PYTHONPATH:" | grep -c ":$(INSTALL_DIR)/lib:")
 
 # If it doesn't already exist
-$(VIRTUAL_ENV):
+$(VENV):
 	- mkdir -p $(INSTALL_DIR)
 	$(info Creating virtual environment ...)
-	$(PYTHON) -m venv $(VIRTUAL_ENV) --prompt gdtk --upgrade-deps
+	$(PYTHON) -m venv $(VENV) --prompt gdtk --upgrade-deps
 
 ifeq ($(USE_PYTHONPATH), 0)
-$(PY_PROGRAMS): | $(VIRTUAL_ENV)
+$(PY_PROGRAMS): | $(VENV)
+ifeq (,$(wildcard $(VENV)/bin/pip))
+	$(error ERROR: Virtual environment must include pip)
+else
 	$(info Installing python tool/s)
-	$(VIRTUAL_ENV)/bin/pip install ./$(PY_PROG_DIR)
+	$(VENV)/bin/pip install ./$(PY_PROG_DIR)
 	- install -d $(INSTALL_DIR)/bin
-	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+	- ln -sf $(VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+endif
 else
 # This is just a fallback while we migrate to virtual-environments
 $(PY_PROGRAMS):
