@@ -16,8 +16,7 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-PROGRAMS := l1d4
-PY_PROGRAMS := l1d4-prep l1d4-xt-viewer
+PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
@@ -140,11 +139,11 @@ ifeq ($(WITH_FPE),1)
     DFLAGS += $(DVERSION)enable_fp_exceptions
 endif
 
-default: $(PROGRAMS) $(PY_PROGRAMS)
+default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) $(PY_PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
+install: $(PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -219,7 +218,7 @@ $(VIRTUAL_ENV):
 l1d4-prep l1d4-xt-viewer: $(VIRTUAL_ENV)
 	make -C $(GDTK_PY_DIR) build
 	$(info Installing python tools)
-	$(PIP) install  .
+	$(PIP) install --find-links $(INSTALL_DIR)/share/python-packages .
 	- mkdir -p $(INSTALL_DIR)/bin
 	- ln -sf $(VIRTUAL_ENV)/bin/$@ $(INSTALL_DIR)/bin/$@
 
