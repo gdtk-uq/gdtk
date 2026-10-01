@@ -223,7 +223,7 @@ local function checkEquationSpecies(r, reactionstring)
    local errstring = "ERROR: Species %s in reaction %s not found in gas model!"
    for _,p in ipairs(r[1]) do
       local sp = p[2]
-      if sp ~= "M" then
+      if sp ~= "M" and p ~= "pressure dependent" then
          if db[sp] == nil then
             print(string.format(errstring, sp, reactionstring))
             os.exit(1)
@@ -233,7 +233,7 @@ local function checkEquationSpecies(r, reactionstring)
 
    for _,p in ipairs(r[3]) do
       local sp = p[2]
-      if sp ~= "M" then
+      if sp ~= "M" and p~= "pressure dependent" then
          if db[sp] == nil then
             print(string.format(errstring, sp, reactionstring))
             os.exit(1)
