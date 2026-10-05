@@ -446,34 +446,41 @@ lmr%check-jacobian: $(LMR_CMD)/checkjacobian.d $(LMR_SRC_DEPS) $(LMR_LUA_DEPS) |
 VENV ?= $(INSTALL_DIR)/.venv
 PYTHON ?= python3
 
+ifeq ($(wildcard $(VENV)),)
+# The venv directory doesn't exist at all; we shall create it w/ pip
+$(VENV)/bin/pip:
+	$(info Creating virtual environment ...)
+	$(PYTHON) -m venv $(VENV) --prompt gdtk
+else
+# The venv directory exists, but we don't manage it.
+# It's a user error if they haven't installed pip to this venv.
+$(VENV)/bin/pip:
+	$(error $(VENV) exists but has no pip. Install pip to $(VENV) or delete $(VENV) to continue)
+endif
+
 # For backwards compatibility during the transition, a user should be able to
 # use PYTHONPATH on a new system. A user would call `make USE_PYTHONPATH=1 install`
 USE_PYTHONPATH ?= $(shell echo ":$$PYTHONPATH:" | grep -c ":$(INSTALL_DIR)/lib:")
 
-# If it doesn't already exist
-$(VENV):
-	- mkdir -p $(INSTALL_DIR)
-	$(info Creating virtual environment ...)
-	$(PYTHON) -m venv $(VENV) --prompt gdtk --upgrade-deps
-
 ifeq ($(USE_PYTHONPATH), 0)
-$(PY_PROGRAMS): | $(VENV)
-ifeq (,$(wildcard $(VENV)/bin/pip))
-	$(error ERROR: Virtual environment must include pip)
-else
+# Here, we use virtual environments
+
+$(PY_PROGRAMS): | $(VENV)/bin/pip
 	$(info Installing python tool/s)
 	$(VENV)/bin/pip install ./$(PY_PROG_DIR)
 	- install -d $(INSTALL_DIR)/bin
 	- ln -sf $(VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
-endif
-else
+
+else  # USE_PYTHONPATH == 1
 # This is just a fallback while we migrate to virtual-environments
+
 $(PY_PROGRAMS):
 	$(info Installing python tool/s)
 	$(warning $(pythonpath-dep-msg))
 	- install -d $(INSTALL_DIR)/bin
 	- install -m 755 $(PY_PROG_DIR)/lmr_verify.py $(INSTALL_DIR)/bin/lmr-verify
-endif
+
+endif  # if USE_PYTHONPATH
 
 #### Auxiliary programs but part of making an eilmer install useful
 prep-gas:
