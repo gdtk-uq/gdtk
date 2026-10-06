@@ -150,7 +150,7 @@ def writeCrossFile(jobName, n_streams, ncells_all, xLocation):
 
 # ----------------------------------------------------------------------
 #
-if __name__ == '__main__':
+def main():
     print("Begin puffin postprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
@@ -223,3 +223,7 @@ if __name__ == '__main__':
     os.chdir(startDir)
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
