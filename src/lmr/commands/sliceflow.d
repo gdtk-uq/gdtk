@@ -71,7 +71,7 @@ options ([+] can be repeated):
 
  -l, --slice-list
      slices the flow field in a range of blocks by accepting a string of the form
-     "blk-range,i-range,j-range:k-range;"
+     "blk-range,i-range,j-range,k-range;"
 
      examples:
        --slice-list=0:2,:,$,0
