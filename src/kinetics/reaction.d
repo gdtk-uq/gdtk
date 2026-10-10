@@ -87,14 +87,18 @@ public:
         _rctIndex_b = rctIndex_b;
     }
 
+
     abstract Reaction dup();
 
     @nogc abstract void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies, int rct_index);
+
+    @nogc abstract number eval_reaction_quotient(in number [] conc);
 
     @nogc final void eval_rate_constants(in GasState Q, in number[] gibbs_energies)
     {
         if ( _compute_kf_then_kb ) {
             _k_f = eval_forward_rate_constant(Q);
+            if (_forward.non_boltzmann_correction !is null) { _k_f *= _k_nb_f; }
             if ( _backward is null ) { // we need the equilibrium constant
                 // Let's take assume that n_modes >= 1 indicates a multi-temperature
                 // simulation. In which case, we need to evaluate the k_f at equilibrium
@@ -116,10 +120,12 @@ public:
             }
             else {
                 _k_b = eval_backward_rate_constant(Q);
+                if (_backward.non_boltzmann_correction !is null) { _k_b *= _k_nb_b; }
             }
         }
         else {
             _k_b = eval_backward_rate_constant(Q);
+            if (_backward.non_boltzmann_correction !is null) { _k_b *= _k_nb_b; }
             if ( _forward is null ) { // we need the equilibrium constant
                 if (_gmodel.n_modes >= 1) {
                     // re-evaluate the backward rate constsant at the 
@@ -138,7 +144,25 @@ public:
             }
             else {
                 _k_f = eval_forward_rate_constant(Q);
+                if (_forward.non_boltzmann_correction !is null)  { _k_f *= _k_nb_f; }
             }
+        }
+    }
+
+    @nogc final void eval_non_boltzmann_correction(in GasState Q, in number[] conc, in number[] gibbs_energies)
+    {
+        if ((_forward is null || _forward.non_boltzmann_correction is null) &&
+            (_backward is null || _backward.non_boltzmann_correction is null)) {
+            return;
+        }
+
+        eval_equilibrium_constant(Q, gibbs_energies, -1);
+        _Q = eval_reaction_quotient(conc);
+        if ((_forward !is null) && (_forward.non_boltzmann_correction !is null)) {
+            _k_nb_f = _forward.non_boltzmann_correction.eval(_Q / _K_eq);
+        }
+        if ((_backward !is null) && (_backward.non_boltzmann_correction !is null)) {
+            _k_nb_b = _backward.non_boltzmann_correction.eval(_Q / _K_eq);
         }
     }
 
@@ -158,6 +182,7 @@ public:
         return _w_b;
     }
 
+
     @nogc abstract number production(int isp) const;
     @nogc abstract number loss(int isp) const;
 
@@ -169,6 +194,8 @@ private:
     RateConstant _forward, _backward;
     number _k_f, _k_b; // Storage of computed rate constants
     number _K_eq; // Equilibrium constant based on concentration
+    number _Q; // Reaction quotient based on concentration
+    number _k_nb_f, _k_nb_b; // Storage of computed non-boltzmann corrections
     bool _compute_kf_then_kb = true;
     number _w_f, _w_b; // Storage of computed rates of change
     GasModel _gmodel;
@@ -310,6 +337,24 @@ protected:
         return val;
     }
 
+    @nogc
+    override number eval_reaction_quotient(in number[] conc)
+    {
+        number num = to!number(1.0);
+        foreach (ref p; _products) {
+            int isp = p[0];
+            int coeff = p[1];
+            num *= pow(conc[isp], coeff);
+        }
+        number den = to!number(1.0);
+        foreach (ref r; _reactants) {
+            int isp = r[0];
+            int coeff = r[1];
+            den *= pow(conc[isp], coeff);
+        }
+        return num / den;
+    }
+
 private:
     Tuple!(int, int)[] _reactants;
     Tuple!(int, int)[] _products;
@@ -375,8 +420,8 @@ public:
     }
     override AnonymousColliderReaction dup()
     {
-        return new AnonymousColliderReaction(_forward, _backward, _gmodel, _participants,
-                                             _reactants, _products, _nu, _efficiencies);
+        return new AnonymousColliderReaction(_forward, _backward, _gmodel,
+                                             _participants, _reactants, _products, _nu, _efficiencies);
     }
 
     @nogc
@@ -437,6 +482,24 @@ protected:
             val *= pow(conc[isp], coeff);
         }
         return val;
+    }
+
+    @nogc
+    override number eval_reaction_quotient(in number[] conc)
+    {
+        number num = to!number(1.0);
+        foreach (ref p; _products) {
+            int isp = p[0];
+            int coeff = p[1];
+            num *= pow(conc[isp], coeff);
+        }
+        number den = to!number(1.0);
+        foreach (ref r; _reactants) {
+            int isp = r[0];
+            int coeff = r[1];
+            den *= pow(conc[isp], coeff);
+        }
+        return num / den;
     }
 
 private:

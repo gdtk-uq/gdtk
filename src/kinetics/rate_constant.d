@@ -24,9 +24,14 @@ import gas;
   a chemical reaction.
 +/
 
-interface RateConstant {
-    RateConstant dup();
-    @nogc number eval(in GasState Q);
+class RateConstant {
+    abstract RateConstant dup();
+    @nogc abstract number eval(in GasState Q);
+
+    @property @nogc NonBoltzmannCorrection non_boltzmann_correction()
+    {
+        return null;
+    }
 }
 
 /++
@@ -65,7 +70,7 @@ public:
         _rctIdx = getInt(L, -1, "rctIndex");
     }
 
-    ArrheniusRateConstant dup() {
+    override ArrheniusRateConstant dup() {
         return new ArrheniusRateConstant(_A, _n, _C, _rctIdx);
     }
 
@@ -95,7 +100,7 @@ public:
         _rctIdx = getInt(L, -1, "rctIndex");
     }
 
-    ArrheniusRateConstant2 dup() {
+    override ArrheniusRateConstant2 dup() {
         return new ArrheniusRateConstant2(_logA, _B, _C, _rctIdx);
     }
 
@@ -143,7 +148,7 @@ public:
         _gmodel = gmodel;
     }
 
-    LHRateConstant dup() {
+    override LHRateConstant dup() {
         return new LHRateConstant(_kInf, _k0, _efficiencies, _gmodel);
     }
 
@@ -229,7 +234,7 @@ public:
         _gmodel = gmodel;
     }
 
-    TroeRateConstant dup() {
+    override TroeRateConstant dup() {
         return new TroeRateConstant(_kInf, _k0, _Fcent, _Fcent_supplied,
                 _a, _T1, _T2, _T3, _T1_supplied, _T2_supplied,
                 _efficiencies, _gmodel);
@@ -328,7 +333,7 @@ public:
         _gmodel = gmodel;
     }
 
-    YRRateConstant dup() {
+    override YRRateConstant dup() {
         return new YRRateConstant(_kInf, _k0, _a, _b, _c, _efficiencies, _gmodel);
     }
 
@@ -380,7 +385,7 @@ public:
         _mode = getInt(L, -1, "mode");
     }
 
-    Park2TRateConstant dup() {
+    override Park2TRateConstant dup() {
         return new Park2TRateConstant(_A, _n, _C, _s, _mode);
     }
 
@@ -451,11 +456,11 @@ public:
         lua_pop(L, 1);
     }
 
-    MarroneTreanorRateConstant dup() {
+    override MarroneTreanorRateConstant dup() {
         return new MarroneTreanorRateConstant(_rate, _U, _T_D, _theta, _mode);
     }
 
-    @nogc number eval(in GasState Q) {
+    override @nogc number eval(in GasState Q) {
         // first, evaluate the original rate
         number kEQ = _rate.eval(Q);
 
@@ -476,53 +481,11 @@ private:
     int _mode;
 }
 
-// This interface is used by the modified Marrone-Treanor model to approximately account
-// for non-Boltzmann effects (see AIAA 2020-3272)
-interface MMTNonBoltzmannCorrection {
-    MMTNonBoltzmannCorrection dup();
-    @nogc number eval(in GasState Q);
-}
-
-class ConstantNonBoltzmann : MMTNonBoltzmannCorrection {
-    this(number factor) {
-        _factor = factor;
-    }
-
-    ConstantNonBoltzmann dup() {
-        return new ConstantNonBoltzmann(_factor);
-    }
-
-    @nogc number eval(in GasState Q) {
-        return _factor;
-    }
-
-private:
-    number _factor;
-}
-
-MMTNonBoltzmannCorrection create_non_boltzmann_correction(lua_State* L) {
-    // If a non-boltzmann correction model hasn't been supplied,
-    // we return null here. The Modified-Marrone-Treanor rate constant
-    // checks for a null non-boltzmann correction and handles it
-    // appropiately.
-    if (lua_isnil(L, -1)) {
-        return null;
-    }
-
-    string model = getString(L, -1, "model");
-    switch (model) {
-    case "constant":
-        double factor = getDouble(L, -1, "factor");
-        return new ConstantNonBoltzmann(to!number(factor));
-    default:
-        throw new Exception("Invalid non Boltzmann correction factor for MMT");
-    }
-}
 
 class MMTRateConstant : RateConstant {
 public:
     this(RateConstant rate, number T_D, number theta, number aU, number U_star,
-            int mode, MMTNonBoltzmannCorrection nb_correction = null) {
+            int mode, NonBoltzmannCorrection nb_correction) {
         _rate = rate;
         _T_D = T_D;
         _theta = theta;
@@ -532,7 +495,7 @@ public:
         _nb_correction = nb_correction;
     }
 
-    MMTRateConstant dup() {
+    override MMTRateConstant dup() {
         return new MMTRateConstant(_rate, _T_D, _theta, _aU, _U_star, _mode, _nb_correction);
     }
 
@@ -552,7 +515,7 @@ public:
         lua_pop(L, 1);
     }
 
-    @nogc number eval(in GasState Q) {
+    override @nogc number eval(in GasState Q) {
         // Depending on the conditions, Q(TF) can overflow. Without floating point
         // limitations, a small kEQ would recover a sensible rate constant.
         // To avoid the overflow, compute the log of each term, and only perform
@@ -569,8 +532,11 @@ public:
         number ln_Q_TF = _log_Q(TF, _T_D, _theta);
         number ln_Q_Tv = _log_Q(Q.T_modes[_mode], _T_D, _theta);
         number ln_Q_U = _log_Q(-U, _T_D, _theta);
-        number nb_correction = _nb_correction ? _nb_correction.eval(Q) : to!number(1.0);
-        return nb_correction * exp(ln_kEQ + ln_Q_T + ln_Q_TF - ln_Q_Tv - ln_Q_U);
+        return exp(ln_kEQ + ln_Q_T + ln_Q_TF - ln_Q_Tv - ln_Q_U);
+    }
+
+    @property @nogc override NonBoltzmannCorrection non_boltzmann_correction() {
+        return _nb_correction;
     }
 
 private:
@@ -582,8 +548,74 @@ private:
     int _mode;
 
     // A correction for non Boltzmann distributions
-    MMTNonBoltzmannCorrection _nb_correction;
+    NonBoltzmannCorrection _nb_correction;
 
+}
+
+// This interface is used by the modified Marrone-Treanor model to approximately account
+// for non-Boltzmann effects (see AIAA 2020-3272)
+interface NonBoltzmannCorrection {
+    NonBoltzmannCorrection dup();
+    @nogc number eval(number eta) const;
+}
+
+class ConstantNonBoltzmann : NonBoltzmannCorrection {
+    this(number factor) {
+        _factor = factor;
+    }
+
+    override ConstantNonBoltzmann dup() {
+        return new ConstantNonBoltzmann(_factor);
+    }
+
+    @nogc number eval(number eta) const {
+        return _factor;
+    }
+
+private:
+    number _factor;
+}
+
+class LinearDissociatingNonBoltzmann : NonBoltzmannCorrection {
+    this (number factor) {
+        _factor = factor;
+    }
+
+    LinearDissociatingNonBoltzmann dup() {
+        return new LinearDissociatingNonBoltzmann(_factor);
+    }
+
+    @nogc number eval(number eta) const {
+        number f_VNB = (1.0 - _factor) * eta + _factor;
+        return min(to!number(1.0), f_VNB);
+    }
+
+private:
+    number _factor;
+}
+
+NonBoltzmannCorrection create_non_boltzmann_correction(lua_State* L) {
+    // If a non-boltzmann correction model hasn't been supplied,
+    // we return null here. The Modified-Marrone-Treanor rate constant
+    // checks for a null non-boltzmann correction and handles it
+    // appropiately.
+    if (lua_isnil(L, -1)) {
+        return null;
+    }
+
+    string model = getString(L, -1, "model");
+    switch (model) {
+    case "constant":
+        double factor = getDouble(L, -1, "factor");
+        return new ConstantNonBoltzmann(to!number(factor));
+    case "linear_dissociating":
+        double factor = getDouble(L, -1, "factor");
+        return new LinearDissociatingNonBoltzmann(to!number(factor));
+    case "none":
+        return null;
+    default:
+        throw new Exception("Invalid non Boltzmann correction factor for MMT");
+    }
 }
 
 /++
