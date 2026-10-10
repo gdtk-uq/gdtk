@@ -71,6 +71,7 @@ LMR_BC_FILES = $(LMR)/bc/package.d \
 	$(LMR)/bc/ghost_cell_effect/full_face_copy.d \
 	$(LMR)/bc/ghost_cell_effect/mapped_cell_copy.d \
 	$(LMR)/bc/ghost_cell_effect/gas_solid_full_face_copy.d \
+	$(LMR)/bc/ghost_cell_effect/characteristic_bc.d \
 	$(LMR)/bc/user_defined_effects.d \
 	$(LMR)/bc/boundary_flux_effect.d \
 	$(LMR)/bc/boundary_cell_effect.d \
