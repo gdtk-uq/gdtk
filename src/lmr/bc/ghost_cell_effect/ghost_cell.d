@@ -193,6 +193,11 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         string fname = getJSONstring(jsonData, "filename", "none");
         newGCE = new UserDefinedGhostCell(blk_id, boundary, fname);
         break;
+    case "characteristic_bc":
+        // double ptarget = getJSONint(jsonData, "p_target", 0);
+        // double lx = getJSONint(jsonData, "l_x", 0);
+        newGCE = new GhostCellCharacteristic(blk_id, boundary);
+        break;
     default:
         string errMsg = format("ERROR: The GhostCellEffect type: '%s' is unknown.", gceType);
         throw new Exception(errMsg);
