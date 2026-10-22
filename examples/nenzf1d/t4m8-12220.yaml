@@ -7,7 +7,7 @@ title: "T4 shot 12220 with Mach 8 nozzle."
 
 species: ['N2', 'O2', 'N', 'O', 'NO']
 molef: {'N2': 0.79, 'O2': 0.21}
-gas-model-1: cea-air5species-gas-model.lua
+gas-model-1: air-5sp-eq.lua
 gas-model-2: air-5sp-1T.lua
 reactions: air-5sp-1T-reactions.lua
 

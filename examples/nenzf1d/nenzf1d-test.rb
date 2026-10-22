@@ -222,8 +222,8 @@ class TestNENZF1D < Test::Unit::TestCase
     assert((mach - 7.64642).abs < 0.01, "Failed to compute correct Mach number.")
     assert((temperature - 219.023).abs < 0.1, "Failed to compute correct temperature.")
     assert((pressure - 2.81165e3).abs < 0.01e3, "Failed to compute correct pressure.")
-    assert((massf_NO - 0.00972722).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
-    assert((tvib - 1385.79).abs < 0.1, "Failed to compute correct vibrational temperature.")
+    assert((massf_NO - 0.00840738).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
+    assert((tvib - 1385.4).abs < 0.1, "Failed to compute correct vibrational temperature.")
   end
 
   def test_5_t4m8_11742_python

@@ -10,7 +10,7 @@ molef: {'N2': 1.0}           # Map of nonzero values will suffice.
 # Gas model and reactions files need to be consistent with the species above.
 # Gas model 1 is usually a CEAGas model file.
 # Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
-gas-model-1: cea-n2-gas-model.lua
+gas-model-1: nitrogen-2sp-eq.lua
 gas-model-2: nitrogen-2sp-1T.lua
 reactions: nitrogen-2sp-1T-reactions.lua
 
