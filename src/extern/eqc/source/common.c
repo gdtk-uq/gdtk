@@ -10,7 +10,7 @@ C library for equilibrium chemistry calculations
 #include <stdlib.h>
 
 const double TRACELIMIT=1e-99;   // Trace species limiter (for ns/n)
-const double tol=1e-11;
+const double tol=1e-10;
 const int attempts=50;
 const double relaxation_limit = 0.75;
 
