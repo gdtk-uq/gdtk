@@ -129,8 +129,23 @@ public:
     }
     override void update_thermo_from_rhou(ref GasState Q)
     {
+    /*
+        Users rightly expect that they can call this routine
+        without setting Q.T. However, eqc uses Q.T as it's
+        starting guess for the rhou problem, which improves
+        the convergence speed of many problems because the 
+        old Q.T is usually pretty close.
+
+        To solve this, we now explicitly check for bad tpgs.T
+        and amend a low temperature guess is it is unset.
+
+        Low temperature is better, by the way, to make sure
+        the first, large, step goes up instead of down,
+        where it might go negative.
+    */
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
+        if (isNaN(tpgs.T)) { tpgs.T = 300.0; }
 
         tpEqCalc.set_massf_and_T_from_rhou(tpgs);
         tpGasEqModel.update_thermo_from_rhoT(tpgs); // Faster than calling from_rhou, and eqc set T for us
@@ -160,8 +175,12 @@ public:
     }
     override void update_thermo_from_ps(ref GasState Q, number s)
     {
+    /*
+        See notes about tpgs.T in the rhou routine above.
+    */
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
+        if (isNaN(tpgs.T)) { tpgs.T = 300.0; }
 
         tpEqCalc.set_massf_and_T_from_ps(tpgs, s.re);
         tpGasEqModel.update_thermo_from_pT(tpgs); // p and T are now set, so call the pT method
