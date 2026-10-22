@@ -351,42 +351,42 @@ static void update_unknowns(double* S, double* dlnns, int nsp, int nel, double* 
     return;
 }
 
-static double temperature_guess(int nsp, double st, double pt, double n, double* ns, double* lewis){
-    /*
-    Guess a first iteration temperature assuming constant Cp from 298 K and target p and s
-    Inputs:
-        nsp   : Number of species
-        st    : Target mixture specific entropy (J/kg)
-        pt    : Target pressure (Pa)
-        n     : Mixture mixture weight [nsp]
-        ns    : Intiial composition mixture weights [nsp]
-        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
-
-    Output:
-        T : Temperature Guess (K)
-    */
-    int s;
-    double* lp;
-    double cp,s0,Cps298,S0s298,nss,T;
-
-    cp = 0.0;
-    s0 = 0.0;
-    for (s=0; s<nsp; s++){
-        lp = lewis + 9*3*s;
-        Cps298 = compute_Cp0_R(298.15, lp)*Ru;
-        S0s298 = compute_S0_R(298.15, lp)*Ru;
-
-        nss = ns[s];
-        cp += nss*Cps298;
-        s0 += nss*S0s298;
-    }
-
-    // Guess with fixed cp at current composition
-    T = 298.15*exp((st - s0 + n*Ru*log(pt/1e5))/cp)/5.0; // See 06/08/2019
-    //printf("s0: %e\n", s0);
-    T = fmin(fmax(T, 200.0),20000.0); // Limit in case of bad initial state.
-    return T;
-}
+//static double temperature_guess(int nsp, double st, double pt, double n, double* ns, double* lewis){
+//    /*
+//    Guess a first iteration temperature assuming constant Cp from 298 K and target p and s
+//    Inputs:
+//        nsp   : Number of species
+//        st    : Target mixture specific entropy (J/kg)
+//        pt    : Target pressure (Pa)
+//        n     : Mixture mixture weight [nsp]
+//        ns    : Intiial composition mixture weights [nsp]
+//        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
+//
+//    Output:
+//        T : Temperature Guess (K)
+//    */
+//    int s;
+//    double* lp;
+//    double cp,s0,Cps298,S0s298,nss,T;
+//
+//    cp = 0.0;
+//    s0 = 0.0;
+//    for (s=0; s<nsp; s++){
+//        lp = lewis + 9*3*s;
+//        Cps298 = compute_Cp0_R(298.15, lp)*Ru;
+//        S0s298 = compute_S0_R(298.15, lp)*Ru;
+//
+//        nss = ns[s];
+//        cp += nss*Cps298;
+//        s0 += nss*S0s298;
+//    }
+//
+//    // Guess with fixed cp at current composition
+//    T = 298.15*exp((st - s0 + n*Ru*log(pt/1e5))/cp)/5.0; // See 06/08/2019
+//    //printf("s0: %e\n", s0);
+//    T = fmin(fmax(T, 200.0),20000.0); // Limit in case of bad initial state.
+//    return T;
+//}
 
 int solve_ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double* M,double* a,
                double* X1, double* Teq, int verbose){
@@ -427,7 +427,8 @@ int solve_ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double
     dlnns = (double*) malloc(sizeof(double)*nsp);     // raw change in log(ns)
 
     composition_guess(a, M, X0, nsp, nel, ns, &n, bi0);
-    T = temperature_guess(nsp, st, pt, n, ns, lewis);
+    //T = temperature_guess(nsp, st, pt, n, ns, lewis);
+    T = *Teq; // For Eilmer, use the supplied temperature as an initial guess.
     if (verbose>0) printf("Guess T from ps: %f\n", T);
     for (s=0; s<nsp; s++) lnns[s] = log(ns[s]);
 
