@@ -3,6 +3,7 @@
  *
  * Authors: RJG, PJ, KAD, NNG
  * Date: 2024-02-18, adapted from computenorms.d and src/eilmer/postprocess.d
+ *       2026-11-03, also report position in logical coordinates
  */
 
 module lmr.commands.probeflow;
@@ -28,6 +29,8 @@ import lmr.flowsolution;
 import lmr.globalconfig;
 import lmr.init : initConfiguration;
 import lmr.lmrconfig : lmrCfg;
+
+import geom : Grid_t;
 
 Command probeFlowCmd;
 
@@ -218,10 +221,17 @@ int main_(string[] args)
             }
             auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
             size_t iblk = nearest[0]; size_t icell = nearest[1];
-            // Each probe point becomes a YAML list item and
-            // all of the data for this probe point is in a YAML map.
-            outfile.writeln("pointdata:");
-            outfile.writefln("  - x: %s\n    y: %s\n    z: %s",
+            // Report logical coordinates in grid
+            outfile.writeln("");
+            outfile.writefln("logical-coordinates-%02d:", ip);
+            outfile.writefln("    blk-id: %d", iblk);
+            outfile.writefln("    cell-index: %d", icell);
+            if (soln.gridBlocks[iblk].grid_type == Grid_t.structured_grid) {
+                size_t[3] ijk = soln.gridBlocks[iblk].ijk_indices(icell);
+                outfile.writefln("    ijk: [ %d, %d, %d ]", ijk[0], ijk[1], ijk[2]);
+            }
+            outfile.writefln("pointdata-%02d:", ip);
+            outfile.writefln("    x: %s\n    y: %s\n    z: %s",
                              soln.get_value_str(iblk, icell, "pos.x"),
                              soln.get_value_str(iblk, icell, "pos.y"),
                              soln.get_value_str(iblk, icell, "pos.z"));
