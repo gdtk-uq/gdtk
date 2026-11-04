@@ -385,7 +385,7 @@ public:
         number logTve = log(Tve);
         foreach(isp; 0 .. mNSpecies){
             number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-            number h_ve = vibElecEnergyPerSpecies(Tve, logTve, isp);
+            number h_ve = vibElecEnthalpyPerSpecies(Tve, logTve, isp);
             hs[isp] = h_tr + h_ve;
         }
     }
@@ -394,7 +394,7 @@ public:
     override number enthalpyPerSpecies(in GasState gs, int isp)
     {
         number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-        number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+        number h_ve = vibElecEnthalpyPerSpecies(gs.T_modes[0], isp);
         return h_tr + h_ve;
     }
 
@@ -402,7 +402,7 @@ public:
     override number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode)
     {
         if (imode == 0) {
-            return vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            return vibElecEnthalpyPerSpecies(gs.T_modes[0], isp);
         }
         return mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
     }
@@ -429,7 +429,10 @@ public:
         // The electron possess energy only in translation.
         // We put this contribution in the electronic energy since
         // its translation is governed by the vibroelectronic temperature.
-        if (isp == mElectronIdx) return (3./2.)* mR[isp] * (Tve-T_REF);
+        if (isp == mElectronIdx) {
+            // Keep the CEA reference and place the electron energy in the VE mode.
+            return vibElecEnthalpyPerSpecies(Tve, logTve, isp) - mR[isp]*Tve;
+        }
         // For heavy particles
         number h_at_Tve = mCurves[isp].eval_h(Tve, logTve);
         number h_ve = h_at_Tve - mCpTR[isp]*(Tve - T_REF) - mDel_hf[isp];
