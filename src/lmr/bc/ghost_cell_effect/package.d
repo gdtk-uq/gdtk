@@ -14,3 +14,4 @@ public import lmr.bc.ghost_cell_effect.fixed_pt;
 public import lmr.bc.ghost_cell_effect.from_stagnation;
 public import lmr.bc.ghost_cell_effect.full_face_copy;
 public import lmr.bc.ghost_cell_effect.mapped_cell_copy;
+public import lmr.bc.ghost_cell_effect.characteristic_bc;

@@ -1567,6 +1567,27 @@ function OutFlowBC_SimpleExtrapolate:new(o)
    return o
 end
 
+OutFlowBC_Characteristic = BoundaryCondition:new()
+OutFlowBC_Characteristic.type = "outflow_characteristic"
+function OutFlowBC_Characteristic:new(o)
+   local flag = type(self)=='table' and self.type=='outflow_characteristic'
+   if not flag then
+      error("Make sure that you are using OutFlowBC_characteristic:new{}"..
+               " and not OutFlowBC_characteristic.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"label", "group","field_bc"})
+   if not flag then
+      error("Invalid name for item supplied to OutFlowBC_characteristic constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
+   o.is_configured = true
+   return o
+end
+
 OutFlowBC_SimpleFlux = BoundaryCondition:new()
 OutFlowBC_SimpleFlux.type = "outflow_simple_flux"
 function OutFlowBC_SimpleFlux:new(o)
