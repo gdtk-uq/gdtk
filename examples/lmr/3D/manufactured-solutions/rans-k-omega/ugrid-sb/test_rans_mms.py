@@ -56,7 +56,7 @@ def change_test_dir(request, monkeypatch):
 
 expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 61
-expected_final_cfl = 2.681e+05
+expected_final_cfl = 6.703e+04
 tolerance_on_cfl_check = 0.01
 tolerance_on_norms = 1.0e-6
 

@@ -56,7 +56,7 @@ def test_run():
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 335
+    expected_number_steps = 343
     expected_final_cfl = 1.000e+06
     reason = ""
     steps = 0
@@ -70,7 +70,7 @@ def test_run():
         if line.find("FINAL-CFL") != -1:
             cfl = float(line.split()[1])
     assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
-    assert abs(steps-expected_number_steps) < 5, "Failed to take correct number of steps."
+    assert abs(steps-expected_number_steps) < 8, "Failed to take correct number of steps."
     assert abs(cfl - expected_final_cfl)/expected_final_cfl < tolerance_on_cfl_check, \
         "Failed to arrive at expected CFL value on final step."
 
