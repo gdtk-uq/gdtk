@@ -1285,8 +1285,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                     // On step 1, we have no previous residual, so we can't make an adjustment.
                     // Also, we need to check on a residual drop, but this makes no sense
                     // until the reference residuals are established.
+                    // TODO: consider only limiting CFL growth based on the relaxation factor for the residual-based cflSelector
                     if (step > nkCfg.numberOfStepsForSettingReferenceResiduals &&
-                      omega >= nkCfg.minRelaxationFactorForCFLGrowth) { // TODO: consider only limiting CFL growth based on the relaxation factor for the residual-based cflSelector
+                       omega >= nkCfg.minRelaxationFactorForCFLGrowth &&
+                       stepsIntoCurrentPhase > 1) {
                        cfl = cflSelector.nextCFL(cfl, step, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
                     }
                 }
