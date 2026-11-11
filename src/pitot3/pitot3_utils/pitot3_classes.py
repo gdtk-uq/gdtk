@@ -2885,15 +2885,14 @@ class Facility_State(object):
 
         gas_state = self.get_gas_state()
 
-        if gas_state.mu == 0.0: # this seems to be the default value before it is set. We only set it if needed, as we may be trying to load a pickle object and not want to use CEA again...
-            try:
-                gas_state.update_trans_coeffs()
-            except Exception as e:
-                print("Getting the dynamic viscosity of this facility state has failed.")
-                print(e)
-                print("None will be returned instead.")
+        try:
+            gas_state.update_trans_coeffs()
+        except Exception as e:
+            print("Getting the dynamic viscosity of this facility state has failed.")
+            print(e)
+            print("None will be returned instead.")
 
-                return None
+            return None
 
         return gas_state.mu
 
