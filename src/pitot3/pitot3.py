@@ -20,7 +20,7 @@ from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expan
 #-----------------------------------------------------------------------------------
 
 def run_pitot3(config_dict = {}, config_filename = None,
-               pitot3_data_folder = '$PITOT3_DATA', default_config_yaml_filename = 'PITOT3_default_config.yaml',
+               pitot3_data_folder = '$DGD/share/pitot3_data', default_config_yaml_filename = 'PITOT3_default_config.yaml',
                just_setup_simulation = False, verbose = True):
     """
 

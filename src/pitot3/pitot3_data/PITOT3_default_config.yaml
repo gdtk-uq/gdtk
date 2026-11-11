@@ -10,9 +10,9 @@ output_filename : 'PITOT3_result'
 
 #locations of internal structure.
 
-facilities_folder : '$PITOT3_DATA/facilities'
-preset_gas_models_folder : '$PITOT3_DATA/preset_gas_models'
-species_molecular_weights_file : '$PITOT3_DATA/PITOT3_species_molecular_weights.yaml'
+facilities_folder : '$DGD/share/pitot3_data/facilities'
+preset_gas_models_folder : '$DGD/share/pitot3_data/preset_gas_models'
+species_molecular_weights_file : '$DGD/share/pitot3_data/PITOT3_species_molecular_weights.yaml'
 
 # control of the output and what is done at the end of the calculation
 generate_output_files : True

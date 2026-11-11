@@ -32,7 +32,7 @@ from pitot3_utils.pitot3_classes import pitot3_remote_run_creator, pitot3_pickle
 #----------------------------------------------------------------------------------------
 
 def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
-                                 pitot3_data_folder = '$PITOT3_DATA', default_config_yaml_filename = 'PITOT3_default_config.yaml',
+                                 pitot3_data_folder = '$DGD/share/pitot3_data', default_config_yaml_filename = 'PITOT3_default_config.yaml',
                                  condition_builder_cleanup = False):
 
     print('-' * 60)
