@@ -57,9 +57,6 @@ endif
 CUDA_SOURCE_FILES := main.cu config.cu simulate.cu bcs.cu block.cu cell.cu face.cu \
   flow.cu gas.cu vector3.cu number.cu
 
-# Default target builds selected targets
-all: $(SELECTED_TARGETS)
-
 # Target for FP64 (double) numbers.
 chicken_for_cuda : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
