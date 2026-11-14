@@ -54,8 +54,11 @@ public:
         if ( Q.T < _T_lower_limit ) { Q.T = _T_lower_limit; }
         if ( Q.T > _T_upper_limit ) { Q.T = _T_upper_limit; }
         eval_gibbs_free_energies(gm, Q);
+        gm.massf2conc(Q, _conc_for_source_terms);
 
         foreach ( ref r; _reactions ) {
+            // compute non-boltzmann here
+            r.eval_non_boltzmann_correction(Q, _conc_for_source_terms, _gibbs_energies);
             r.eval_rate_constants(Q, _gibbs_energies);
         }
         // Always reset Q.T on exit
