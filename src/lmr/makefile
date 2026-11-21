@@ -102,6 +102,7 @@ SHARE_FILES :=
 ETC_FILES := lmr.cfg
 PY_PROG_DIR := python-programs
 PY_PROGRAMS := lmr-verify
+WITH_PY_TOOLS ?= 0
 AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
 AUX_PROGRAMS += gdtk-module
 
@@ -305,6 +306,11 @@ endif
 
 default: $(PROGRAMS) $(SUB_PROGRAMS)
 
+# Optional requirements for installation
+ifeq ($(WITH_PY_TOOLS),1)
+install: $(PY_PROGRAMS)
+endif
+
 # The pipe symbol (|) separates normal prerequisites from order-only ones.
 # Order-only prerequisites being updated do *not* cause the target to
 # become out of date. This prevents unneccesary rebuilds of targets when
@@ -313,7 +319,7 @@ default: $(PROGRAMS) $(SUB_PROGRAMS)
 # Including `buildinfo.json` as a order-only prerequisite here ensures that
 # all programs have the same build information (i.e. build-time) when
 # calling `make install`.
-install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.json
+install: $(PROGRAMS) $(SUB_PROGRAMS) $(AUX_PROGRAMS) | buildinfo.json
 	- mkdir -p $(INSTALL_DIR)/bin
 	- mkdir -p $(INSTALL_DIR)/lib
 	- mkdir -p $(INSTALL_DIR)/etc
@@ -465,11 +471,12 @@ USE_PYTHONPATH ?= $(shell echo ":$$PYTHONPATH:" | grep -c ":$(INSTALL_DIR)/lib:"
 ifeq ($(USE_PYTHONPATH), 0)
 # Here, we use virtual environments
 
-$(PY_PROGRAMS): | $(VENV)/bin/pip
+# Any individual target will just use the "bundle" target
+python-tools $(PY_PROGRAMS) &: | $(VENV)/bin/pip
 	$(info Installing python tool/s)
 	$(VENV)/bin/pip install ./$(PY_PROG_DIR)
 	- install -d $(INSTALL_DIR)/bin
-	- ln -sf $(VENV)/bin/$@ $(INSTALL_DIR)/bin/$@
+	- ln -sf $(addprefix $(INSTALL_DIR)/.venv/bin/,$(PY_PROGRAMS)) $(INSTALL_DIR)/bin/.
 
 else  # USE_PYTHONPATH == 1
 # This is just a fallback while we migrate to virtual-environments
