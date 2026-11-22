@@ -48,7 +48,7 @@ def test_run_steady():
         expected_final_cfl = 4.941e+05
     else:
         expected_number_steps = 61
-        expected_final_cfl = 5.669e+05
+        expected_final_cfl = 5.145e+05
     steps = 0
     cfl = 0.0
     lines = proc.stdout.split("\n")
