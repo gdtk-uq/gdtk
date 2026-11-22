@@ -69,7 +69,7 @@ def test_probe():
     probe_result = yaml.safe_load(proc.stdout)
     expected_result = {'x':0.283, 'T':398.5, 'vel.x':293.0, 'p':30258.0}
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return

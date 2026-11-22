@@ -73,7 +73,7 @@ def test_probe_post_shock_region_A():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
@@ -85,7 +85,7 @@ def test_probe_before_shock_region_A():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
@@ -153,7 +153,7 @@ def test_probe_post_shock_region_B():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
@@ -165,7 +165,7 @@ def test_probe_before_shock_region_B():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
@@ -234,7 +234,7 @@ def test_probe_post_shock_region_C():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
@@ -246,7 +246,7 @@ def test_probe_before_shock_region_C():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return

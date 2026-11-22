@@ -69,7 +69,7 @@ def test_probe_post_shock_region():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
@@ -81,7 +81,7 @@ def test_probe_expanded_driver_region():
     assert proc.returncode == 0, "Failed during: " + cmd
     probe_result = yaml.safe_load(proc.stdout)
     for key in expected_result.keys():
-        val = float(probe_result['pointdata'][0][key])
+        val = float(probe_result['pointdata-00'][key])
         v = expected_result[key]
         assert abs(val - v)/(abs(v)+1.0) < 0.01, "Failed to see correct "+key
     return
