@@ -322,7 +322,7 @@ public:
         number Cp = 0.0;
         number Cp_vib;
         foreach (isp; 0 .. mNSpecies) {
-            Cp_vib = vibElecCvPerSpecies(gs.T_modes[0], isp);
+            Cp_vib = vibElecCpPerSpecies(gs.T_modes[0], isp);
             Cp += gs.massf[isp] * (mCpTR[isp] + Cp_vib);
         }
         return Cp;
@@ -385,7 +385,7 @@ public:
         number logTve = log(Tve);
         foreach(isp; 0 .. mNSpecies){
             number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-            number h_ve = vibElecEnergyPerSpecies(Tve, logTve, isp);
+            number h_ve = vibElecEnthalpyPerSpecies(Tve, logTve, isp);
             hs[isp] = h_tr + h_ve;
         }
     }
@@ -394,7 +394,7 @@ public:
     override number enthalpyPerSpecies(in GasState gs, int isp)
     {
         number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
-        number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+        number h_ve = vibElecEnthalpyPerSpecies(gs.T_modes[0], isp);
         return h_tr + h_ve;
     }
 
@@ -402,7 +402,7 @@ public:
     override number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode)
     {
         if (imode == 0) {
-            return vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            return vibElecEnthalpyPerSpecies(gs.T_modes[0], isp);
         }
         return mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
     }
