@@ -26,8 +26,10 @@ int main(int argc, char* argv[])
 {
     cout << "Chicken compressible-flow CFD" << endl;
     cout << "Revision-id: PUT_REVISION_STRING_HERE" << endl;
-#ifdef CUDA
+#if defined(CUDA)
     cout << "CUDA flavour of program" << endl;
+#elif defined(HIP)
+    cout << "HIP flavour of program" << endl;
 #else
     cout << "CPU flavour of program." << endl;
 #endif
@@ -68,13 +70,19 @@ int main(int argc, char* argv[])
     if (Config::verbosity > 0) cout << "binary_data: " << binary_data << endl;
     try {
         initialize_simulation(tindx_start, binary_data);
-#ifdef CUDA
+#if defined(CUDA)
         if (!filesystem::exists(filesystem::status("/proc/driver/nvidia"))) {
             throw runtime_error("Cannot find NVIDIA driver in /proc/driver.");
         }
         cudaGetDeviceCount(&Config::nDevices);
         cout << "CUDA devices found: " << Config::nDevices << endl;
         if (Config::nDevices > 0) { march_in_time_using_gpu(binary_data); }
+#elif defined(HIP)
+        if (cudaGetDeviceCount(&Config::nDevices) != cudaSuccess || Config::nDevices <= 0) {
+            throw runtime_error("No AMD GPU devices found.");
+        }
+        cout << "HIP devices found: " << Config::nDevices << endl;
+        march_in_time_using_gpu(binary_data);
 #else
         march_in_time_using_cpu_only(binary_data);
 #endif

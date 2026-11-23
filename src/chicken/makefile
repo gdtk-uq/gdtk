@@ -14,14 +14,24 @@
 # $ make GPU=1 AB_GAS=1 install
 
 SELECTED_TARGETS := chkn-prep chkn-post
-ifeq ($(GPU),1)
-  SELECTED_TARGETS += chicken_for_cuda
+ifeq ($(HIP),1)
+  SELECTED_TARGETS += chicken_for_hip
   ifeq ($(FP32),1)
-    SELECTED_TARGETS += chicken_for_cuda_fp32
+    SELECTED_TARGETS += chicken_for_hip_fp32
   endif
 else
-  SELECTED_TARGETS += chicken_for_cpu
+  ifeq ($(GPU),1)
+    SELECTED_TARGETS += chicken_for_cuda
+    ifeq ($(FP32),1)
+      SELECTED_TARGETS += chicken_for_cuda_fp32
+    endif
+  else
+    SELECTED_TARGETS += chicken_for_cpu
+  endif
 endif
+
+# HIP architecture for AMD GPUs (default: gfx90a for MI200 series)
+HIP_ARCH ?= gfx90a
 
 GAS_MODEL ?= IDEAL_AIR
 ifeq ($(AB_GAS),1)
@@ -60,6 +70,20 @@ chicken_for_cuda_fp32 : $(CUDA_SOURCE_FILES)
 		main.cu > main_with_rev_string.cu
 	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run-fp32 -D$(GAS_MODEL) \
 		main_with_rev_string.cu -lz -Xcompiler -fopenmp
+
+# Target for HIP (AMD GPU) FP64 (double) numbers.
+chicken_for_hip : $(CUDA_SOURCE_FILES) cuda_to_hip.h
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		main.cu > main_with_rev_string.cu
+	hipcc -DHIP -std=c++17 -O2 --offload-arch=$(HIP_ARCH) -o chkn-run -D$(GAS_MODEL) \
+		-include cuda_to_hip.h main_with_rev_string.cu -lz -fopenmp
+
+# Target for HIP (AMD GPU) FP32 (float) numbers.
+chicken_for_hip_fp32 : $(CUDA_SOURCE_FILES) cuda_to_hip.h
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		main.cu > main_with_rev_string.cu
+	hipcc -DHIP -DFLOAT_NUMBERS -std=c++17 -O2 --offload-arch=$(HIP_ARCH) -o chkn-run-fp32 -D$(GAS_MODEL) \
+		-include cuda_to_hip.h main_with_rev_string.cu -lz -fopenmp
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
 # -O2 is usual optimization flag

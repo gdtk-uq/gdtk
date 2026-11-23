@@ -89,7 +89,7 @@ void initialize_simulation(int tindx_start, bool binary_data)
     cout << "Cells in simulation: " << cells_in_simulation << endl;
     cout << "Bytes allocated on CPU: " << fixed << setprecision(3) << bytes_allocated/1.0e6 << "MB" << endl;
     configure_exchange_info(fluidBlocks, blk_configs);
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
     // We need to put a copy of the block and config data onto the GPU.
     size_t nbytes = blk_configs.size()*sizeof(BConfig);
     auto status = cudaMalloc(&blk_configs_on_gpu, nbytes);
@@ -769,7 +769,7 @@ __host__
 void finalize_simulation(bool binary_data)
 {
     if (SimState::steps_since_last_plot > 0) {
-        #ifdef CUDA
+        #if defined(CUDA) || defined(HIP)
         // Copy cell data back to the CPU for just the active cells.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];

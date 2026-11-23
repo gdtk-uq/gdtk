@@ -16,6 +16,21 @@ test: $(PROGRAMS)
 clean:
 	-rm $(PROGRAMS)
 
+ifeq ($(HIP),1)
+# HIP (AMD GPU) build targets
+gas_test: gas_test.cu ../number.cu ../gas.cu
+	hipcc -std=c++17 -o gas_test -DIDEAL_AIR gas_test.cu
+
+rsla_test: rsla_test.cu ../number.cu ../rsla.cu
+	hipcc -std=c++17 -o rsla_test rsla_test.cu
+
+vector3_test: vector3_test.cu ../vector3.cu ../number.cu
+	hipcc -std=c++17 -o vector3_test vector3_test.cu
+
+spline_test: spline_test.cu ../spline.cu ../rsla.cu ../number.cu
+	hipcc -std=c++17 -o spline_test spline_test.cu
+else
+# CUDA (NVIDIA GPU) build targets
 gas_test: gas_test.cu ../number.cu ../gas.cu
 	nvcc --expt-relaxed-constexpr -o gas_test -DIDEAL_AIR gas_test.cu
 
@@ -27,3 +42,4 @@ vector3_test: vector3_test.cu ../vector3.cu ../number.cu
 
 spline_test: spline_test.cu ../spline.cu ../rsla.cu ../number.cu
 	nvcc --expt-relaxed-constexpr -o spline_test spline_test.cu
+endif

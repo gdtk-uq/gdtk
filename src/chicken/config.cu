@@ -176,7 +176,7 @@ struct BConfig {
         n_kFaces = nic*njc*(nkc+1);
         nFaces = n_iFaces + n_jFaces + n_kFaces;
         //
-        #ifdef CUDA
+        #if defined(CUDA) || defined(HIP)
         // We need to allocate corresponding resources on the GPU.
         nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
         nGPUblocks_for_faces = ceil(double(nFaces)/threads_per_GPUblock);
